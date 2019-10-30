@@ -394,7 +394,7 @@ def test_command(ctx, **kwargs):
 
     t = [tests_path + '/small.bam', '--post-fix', 'dysgu_test']
     click.echo(t)
-    result = runner.invoke(get_reads, t)
+    result = runner.invoke(sv2fq, t)
 
     t = [tests_path + '/small.bam', '--post-fix', 'dysgu_test']
     click.echo(t)
