@@ -183,7 +183,7 @@ class GenomeScanner:
         self.procs = read_threads
         self.buff_size = buffer_size
 
-        self.bam_iter = inputbam.fetch(until_eof=True)  # Single thread for now
+        self.bam_iter = inputbam.fetch(until_eof=True)
 
         self.current_bin = []
         self.current_cov = 0

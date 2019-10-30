@@ -316,7 +316,7 @@ def cluster_reads(args):
 
     click.echo("Input file is {}, (.{} format). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
 
-    infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=1)
+    infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
 
     sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
 

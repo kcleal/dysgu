@@ -435,7 +435,9 @@ cpdef dict base_assemble(rd):
             r.seq
         except:
             continue
-        if r.seq is None or len(r.seq) != len(r.query_qualities):
+        if r.seq is None:
+            continue
+        if len(r.seq) != len(r.query_qualities):
             continue
 
         add_to_graph(G, r, node_weights, node_dict_r)
