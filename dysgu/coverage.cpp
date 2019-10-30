@@ -5413,14 +5413,14 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner___init__(CYTHON_UNUSE
  *         self.procs = read_threads
  *         self.buff_size = buffer_size             # <<<<<<<<<<<<<<
  * 
- *         self.bam_iter = inputbam.fetch(until_eof=True)  # Single thread for now
+ *         self.bam_iter = inputbam.fetch(until_eof=True)
  */
   if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_buff_size, __pyx_v_buffer_size) < 0) __PYX_ERR(0, 184, __pyx_L1_error)
 
   /* "dysgu/coverage.pyx":186
  *         self.buff_size = buffer_size
  * 
- *         self.bam_iter = inputbam.fetch(until_eof=True)  # Single thread for now             # <<<<<<<<<<<<<<
+ *         self.bam_iter = inputbam.fetch(until_eof=True)             # <<<<<<<<<<<<<<
  * 
  *         self.current_bin = []
  */
@@ -5437,7 +5437,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner___init__(CYTHON_UNUSE
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "dysgu/coverage.pyx":188
- *         self.bam_iter = inputbam.fetch(until_eof=True)  # Single thread for now
+ *         self.bam_iter = inputbam.fetch(until_eof=True)
  * 
  *         self.current_bin = []             # <<<<<<<<<<<<<<
  *         self.current_cov = 0
