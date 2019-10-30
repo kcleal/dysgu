@@ -1,0 +1,13 @@
+cython
+click
+numpy
+pandas
+pysam
+networkx>=2.4
+networkit
+scikit-learn==0.21.2
+ncls
+scikit-bio
+sortedcontainers
+mmh3
+seaborn
