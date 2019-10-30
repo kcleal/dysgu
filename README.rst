@@ -2,7 +2,7 @@
 dysgu-SV
 ========
 
-dysgu (pronounced duss-key) is a collection of tools for mapping and calling structural variants.
+dysgu (pronounced "*duss-key*") is a collection of tools for mapping and calling structural variants.
 
 
 Installation
