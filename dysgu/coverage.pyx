@@ -1,10 +1,9 @@
 #cython: language_level=3, boundscheck=False
 
 from __future__ import absolute_import
-from collections import deque, defaultdict
+from collections import deque
 import click
-from . import data_io, io_funcs
-from sortedcontainers import SortedDict
+from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
 import mmh3
@@ -13,9 +12,6 @@ import pysam
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint32_t, uint8_t
-
-
-from . cimport map_set_utils
 
 
 DTYPE = np.float
@@ -98,77 +94,6 @@ def merge_intervals(intervals, srt=True, pad=0):
     return merged
 
 
-def complement(chrom_lengths, chrom_order, intervals):
-
-    new_intervals = []
-    seen_i = []
-
-    current_chrom = chrom_order.popleft()
-
-    # Get the complement of sorted intervals
-    for i in range(len(intervals)):
-
-        current_i = intervals[i]
-        # Add any previous chroms
-        while len(chrom_order) != 0:
-            if current_chrom != current_i[0]:
-                if len(new_intervals) > 0:
-                    last_i = new_intervals[-1]
-                    if last_i[0] == current_chrom and last_i[2] != chrom_lengths[last_i[0]]:  # Add end of last chrom
-                        new_intervals.append((last_i[0], last_i[2] + 1, chrom_lengths[last_i[0]]))
-                    else:
-                        new_intervals.append((current_chrom, 0, chrom_lengths[current_chrom]))
-                else:
-                    new_intervals.append((current_chrom, 0, chrom_lengths[current_chrom]))
-                current_chrom = chrom_order.popleft()
-            else:
-                break
-
-        if current_i[1] == 0:
-            seen_i.append(current_i)
-            continue
-
-        if len(new_intervals) == 0 or current_i[0] != new_intervals[-1][0]:
-            # Add previous end of last chromosome, if not already added
-            if len(new_intervals) > 0:
-                last_i = new_intervals[-1]
-                if last_i[2] != chrom_lengths[last_i[0]]:
-                    new_intervals.append((last_i[0], last_i[2] + 1, chrom_lengths[last_i[0]]))
-
-            # Add from start of chrom to current i start
-            new_intervals.append((current_i[0], 0, current_i[1] - 1))
-            seen_i.append(current_i)
-            continue
-        else:  # Middle or end of chromosome
-            # Use last seen
-            last_i = seen_i[-1]
-
-            if last_i[0] == current_i[0]:
-                intervals.append((current_i[0], last_i[2] + 1, current_i[1] - 1))
-            else:  # Add end of last seen chrom interval
-                intervals.append((last_i[0], last_i[2] + 1, chrom_lengths[last_i[0]]))
-
-            if i == len(intervals) - 1:  # Last interval add to end of chromosome
-                new_intervals.append((current_i[0], current_i[2] + 1, chrom_lengths[current_i[0]]))
-                break
-
-            seen_i.append(current_i)
-
-    # Add end of last chrom
-    last_i = new_intervals[-1]
-    if last_i[2] != chrom_lengths[last_i[0]]:
-        new_intervals.append((last_i[0], last_i[2] + 1, chrom_lengths[last_i[0]]))
-
-    # Add any remaining chroms
-    if len(chrom_order) > 0:
-
-        while len(chrom_order) > 0:
-            chrom = chrom_order.popleft()
-            new_intervals.append((chrom, 0, chrom_lengths[chrom]))
-
-    return new_intervals
-
-
 class GenomeScanner:
 
     def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only):
@@ -189,6 +114,7 @@ class GenomeScanner:
         self.current_cov = 0
         self.current_chrom = 0
         self.current_pos = 0
+        self.current_cov_array = None
 
         self.reads_dropped = 0
         self.depth_d = {} # Use array for fast lookup # defaultdict(lambda: defaultdict(int))
@@ -198,15 +124,9 @@ class GenomeScanner:
 
         self.approx_read_length = -1
 
-        self.last_tell = 0  # self.input_bam.tell()
-
-        self._scanner = self._get_reads()
-
+        self.last_tell = 0
 
     def _get_reads(self):
-
-        # cdef AlignedSegment a
-        # cdef long int tell
 
         if not self.include_regions or not self.regions_only:
 
@@ -214,10 +134,13 @@ class GenomeScanner:
             for a in self.bam_iter:
 
                 self._add_to_bin_buffer(a, tell)
-                yield a, tell
-
                 tell = self.input_bam.tell()
 
+                while len(self.staged_reads) > 0:
+                    yield self.staged_reads.popleft()
+
+            if len(self.current_bin) > 0:
+                yield self.current_bin
 
         else:
             # Reads must be fed into graph in sorted order, find regions of interest first
@@ -229,6 +152,7 @@ class GenomeScanner:
                 intervals_to_check.append((c, int(s), int(e)))
 
             for c, s, e in regions:
+
                 for a in self.input_bam.fetch(c, int(s), int(e)):
                     # Mate unmapped, not primary, fails QC, duplicate
                     if not a.flag & 1800:
@@ -256,31 +180,35 @@ class GenomeScanner:
                         continue
 
                     self._add_to_bin_buffer(a, tell)
-                    yield a, tell
-
                     seen_reads.add(name)
 
+                    while len(self.staged_reads) > 0:
+                        yield self.staged_reads.popleft()
 
-    def get_read_length(self, int max_tlen, int insert_median, int insert_stdev):
+                if len(self.current_bin) > 0:
+                    yield self.current_bin
 
-        # self.input_bam.reset()
+    def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len):
+
+        if read_len != -1:
+            click.echo(f"Read length {read_len}, "
+                   f"insert_median {insert_median}, "
+                   f"insert stdev {insert_stdev}", err=True)
+            self.approx_read_length = read_len
+            return insert_median, insert_stdev
 
         approx_read_length_l = []
         inserts = []
 
         cdef int c = 0
-        tell = 0  # self.input_bam.tell()  # cdef long int
+        tell = 0
         cdef int flag, tlen
         cdef float approx_read_length
 
-        for a, tell in self._scanner:
-        # for a in self.bam_iter:
+        for a in self.bam_iter:
 
-            # self._add_to_bin_buffer(a, tell)
-            # tell = self.input_bam.tell()
-
-            # if self.approx_read_length == -1:
-            if len(approx_read_length_l) < 10000:
+            tell = self.input_bam.tell()
+            if len(approx_read_length_l) < 20000:
                 flag = a.flag
                 if a.seq is not None:
 
@@ -294,7 +222,7 @@ class GenomeScanner:
                 break
 
             if c > 10000000:
-                raise ValueError("Cant infer read length after 10 million reads, is max-tlen set properly?")
+                raise ValueError("Cant infer read length after 10 million reads, is max-tlen < 8000?")
             c += 1
 
         if len(approx_read_length_l) == 0:
@@ -302,7 +230,7 @@ class GenomeScanner:
 
         approx_read_length = int(np.median(approx_read_length_l))
         self.approx_read_length = approx_read_length
-        if len(inserts) == 0:
+        if len(inserts) == 0 and insert_median == -1:
             insert_median = 300
             insert_stdev = 150
 
@@ -310,44 +238,26 @@ class GenomeScanner:
             insert_stdev = int(np.std(inserts))
             insert_median = int(np.median(inserts))
 
-        click.echo(f"Read length {approx_read_length}, "
+        click.echo(f"Inferred Read length {approx_read_length}, "
                    f"insert_median {insert_median}, "
                    f"insert stdev {insert_stdev}", err=True)
         self.last_tell = tell
 
-        return approx_read_length, insert_median, insert_stdev
+        self.input_bam.reset()
+        return insert_median, insert_stdev
 
     def iter_genome(self):
-        # Send any already stages reads
+        # Send any staged reads
         cdef int total_reads = 0
 
-        # tell = self.input_bam.tell()
-        for _ in self._scanner:
-        # for a in self.bam_iter:
-
-            # self._add_to_bin_buffer(a, tell)
-            # tell = self.input_bam.tell()
-
-            while len(self.staged_reads) > 0:
-                total_reads += len(self.staged_reads[0])
-                yield self.staged_reads.popleft()
-
-        while len(self.staged_reads) > 0:
-            total_reads += len(self.staged_reads[0])
-            yield self.staged_reads.popleft()
+        for staged in self._get_reads():
+            total_reads += len(staged)
+            yield staged
 
         # Add last seen coverage bin
         if total_reads == 0:
             click.echo("No reads, finishing", err=True)
             quit()
-
-        if self.current_chrom not in self.depth_d:
-            # Get the chromosome size from infile
-            ref_length = int(self.input_bam.get_reference_length(
-                self.input_bam.get_reference_name(self.current_chrom)) / 100)
-            # Define a big numpy array to hold count information
-            self.depth_d[self.current_chrom] = np.zeros(ref_length + 1, dtype=np.float)
-        self.depth_d[self.current_chrom][self.current_pos] = self.current_cov
 
         click.echo(f"Total input reads {total_reads}", err=True)
 
@@ -369,70 +279,98 @@ class GenomeScanner:
                 self.read_buffer[n1] = r.to_string()
 
 
-    def _add_to_bin_buffer(self, a, tell):  # long int
+    def _add_to_bin_buffer(self, a, tell):
 
         cdef int flag = a.flag
 
         # PCR duplicate, fails quality check, not primary alignment, read unmapped
-        if flag & 1796 or map_set_utils.cigar_exists(a) == 0 or a.seq is None:
+        if flag & 1796 or a.cigartuples is None or a.seq is None:
             return
 
         cdef int rname = a.rname
         cdef int apos = a.pos
-        cdef int bin_pos = int(apos / 100) #* 100
+        cdef int bin_pos = int(apos / 100)
         cdef int ref_length
         cdef str reference_name = ""
+        cdef int aend = a.infer_query_length() + apos
+        cdef float current_coverage
+
+        if rname not in self.depth_d:
+
+            # Get the chromosome size from infile
+            ref_length = int(self.input_bam.get_reference_length(
+                self.input_bam.get_reference_name(rname)) / 100)
+
+            click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)
+
+            # Define a big numpy array to hold count information
+            self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)
+
+        if self.current_chrom != rname:
+            self.current_chrom = rname
+            self.current_cov_array = self.depth_d[rname]
+        elif self.current_cov_array is None:
+            self.current_cov_array = self.depth_d[rname]
+
+        current_cov = add_coverage(apos, aend, self.current_cov_array)
+
         in_roi = False
 
         if self.overlap_regions:
-            # reference_name = self.input_bam.get_reference_name(a.rname)
             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
 
         if rname == self.current_chrom and bin_pos == self.current_pos:
 
-            if self.current_cov >= self.max_cov and not in_roi:
-
+            if current_cov >= self.max_cov and not in_roi:
                 if len(self.current_bin) > 0:
-                    self.current_bin = []  # Drop reads
-                # Still count coverage
+                    self.current_bin = []
+                    self.reads_dropped += len(self.current_bin)
                 self.reads_dropped += 1
-                if self.approx_read_length == -1:
-                    self.current_cov += (a.infer_read_length() / 100.)
-                else:
-                    self.current_cov += (self.approx_read_length / 100.)
                 return
 
             self.current_bin.append((a, tell))  # Add to staging area
 
-            if self.approx_read_length == -1:
-                self.current_cov += (a.infer_read_length() / 100.)
-            else:
-                self.current_cov += (self.approx_read_length / 100.)
+        else:  # New staged bin
 
-        else:
-
-            if len(self.current_bin) != 0 and (self.current_cov < self.max_cov or in_roi):
+            if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
                 self.staged_reads.append(self.current_bin)  # Send for further processing
-
-            if self.current_chrom not in self.depth_d:
-                # Get the chromosome size from infile
-                ref_length = int(self.input_bam.get_reference_length(
-                    self.input_bam.get_reference_name(self.current_chrom)) / 100)
-                # Define a big numpy array to hold count information
-                self.depth_d[self.current_chrom] = np.zeros(ref_length + 1, dtype=np.float)
-
-            self.depth_d[self.current_chrom][self.current_pos] = self.current_cov  # Set last seen pos coverage
 
             self.current_chrom = rname
             self.current_pos = bin_pos
-            if self.approx_read_length == -1:
-                self.current_cov = (a.infer_read_length() / 100.)
-            else:
-                self.current_cov = (self.approx_read_length / 100.)
-
             self.current_bin = [(a, tell)]
 
 
+cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
+
+    # Round start and end to get index
+    cdef float fs = start / 100
+    cdef float fe = end / 100
+
+    cdef int bin_start = <int> fs  # Cast to int
+    cdef int bin_end = <int > fe
+
+    if bin_start < 0:
+        bin_start = 0
+    if bin_end > <int> len(chrom_depth) - 1:
+        bin_end = <int> len(chrom_depth) - 1
+
+    # Fraction overlapping start and end bins
+    cdef float ol_start = <float> bin_start + 1 - fs
+
+    chrom_depth[bin_start] += ol_start
+
+    cdef float ol_end = 0
+    if bin_start != bin_end:  # Read spans more than one bin
+        ol_end = fe - (<float> bin_end)
+
+        chrom_depth[bin_end] += ol_end
+
+        if bin_end - bin_start > 1:
+            # Fill in between
+            for i in range(bin_start + 1, bin_end):
+                chrom_depth[i] += 1
+
+    return chrom_depth[bin_start]
 
 
 # def scan_whole_genome(inputbam, int max_cov, tree):

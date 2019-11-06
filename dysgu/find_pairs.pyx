@@ -10,18 +10,16 @@ import click
 from subprocess import call
 from collections import deque
 
-# from pysam.libcalignmentfile cimport AlignmentFile
-# from pysam.libcalignedsegment cimport AlignedSegment
-
 from libc.stdint cimport uint32_t
 
 from dysgu import data_io, io_funcs
 from dysgu cimport map_set_utils
 
 
-# def iter_bam(AlignmentFile bam, search, show=True):
+def echo(*args):
+    click.echo(args, err=True)
+
 def iter_bam(bam, search, show=True):
-    # cdef AlignedSegment aln
 
     if not search:
         click.echo("Searching input file", err=True)
@@ -46,8 +44,6 @@ def config(args):
     kind = args["bam"].split(".")[-1]
     opts = {"bam": "rb", "cram": "rc", "sam": "rs"}
     click.echo("Input file: {}".format(args["bam"], kind), err=True)
-
-    # cdef AlignmentFile bam
 
     try:
         bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
@@ -88,11 +84,9 @@ cdef tuple get_reads(args):
 
     cdef uint32_t clip_length
     cdef str out_name
-    # cdef AlignmentFile bam, outbam
     cdef int flag, tmpl, ct2, good_clip
     cdef str qname
     cdef list cigartuples
-    # cdef AlignedSegment r
 
     bam, bam_i, exc_tree, clip_length, out_name, outbam = config(args)
 

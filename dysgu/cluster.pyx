@@ -178,11 +178,12 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
     for grp in nx.algorithms.components.connected_components(G):
         try:
-            c = [potential[n] for n in grp.nodes()]
+            c = [potential[n] for n in grp]
         except:
-
-            echo(grp.nodes())
-            quit()
+            echo("WARN", len(grp), len(potential))
+            continue
+            # echo(grp.nodes())
+            # quit()
 
         best = sorted(c, key=lambda x: sum([x["pe"], x["supp"]]), reverse=True)
         w0 = best[0]["pe"] + best[0]["supp"]  # Weighting for base result
@@ -343,13 +344,15 @@ def cluster_reads(args):
 
         genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
                                                    args["buffer_size"], regions_only)
-        insert_median, insert_stdev = -1, -1
+        insert_median, insert_stdev, read_len = -1, -1, -1
         if args["template_size"] != "":
-            insert_median, insert_stdev = list(map(int, args["template_size"].split(",")))
+            try:
+                insert_median, insert_stdev, read_len = list(map(int, args["template_size"].split(",")))
+            except:
+                raise ValueError("Template-size must be in the format 'INT,INT,INT'")
 
-        approx_rl, insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"],
-                                                                                insert_median,
-                                                                                insert_stdev)
+        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
+                                                                     read_len)
 
 
         max_clust_dist = 2 * (int(insert_median + (5 * insert_stdev)))

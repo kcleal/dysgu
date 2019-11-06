@@ -791,15 +791,18 @@ def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min
 
     # if isinstance(bam, tuple):
     #     bam = pysam.AlignmentFile(bam[0], bam[1])  # Re open
-    # for k, v in data["parts"].items():
-    #     if 47412 in v:
-    #         echo(k, v)
-    #         echo(data["s_between"])
-    #         echo("s within", data["s_within"])
-    #         echo("here1")
-    #         echo(len(data["parts"]))
-    #         echo(data["parts"])
-            # quit()
+    # try:
+    #     for k, v in data["parts"].items():
+    #         if 851383 in v:
+    #             echo(k, v)
+    #             echo(data["s_between"])
+    #             echo("s within", data["s_within"])
+    #             echo("here1")
+    #             echo(len(data["parts"]))
+    #             echo(data["parts"])
+    #             quit()
+    # except:
+    #     pass
     n_parts = len(data["parts"])
     n_reads = len(data["reads"])
     if n_parts >= 2:

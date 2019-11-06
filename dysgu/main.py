@@ -330,7 +330,7 @@ def dysgu_aligner(ctx, **kwargs):
               default=defaults["z_depth"], type=int, show_default=True)
 @click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
               default=defaults["z_breadth"], type=int, show_default=True)
-@click.option("--template-size", help="Manually set insert size and stdev as 'INT,INT'",
+@click.option("--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default=defaults["template_size"], type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),

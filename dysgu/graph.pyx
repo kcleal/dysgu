@@ -11,23 +11,23 @@ import sortedcontainers
 import operator
 import ncls
 import networkit as nk
-
+import pysam
 cimport numpy as c_np
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
-from libcpp.set cimport set as cpp_set
-from libcpp.unordered_set cimport unordered_set as cpp_u_set
+# from libcpp.set cimport set as cpp_set
+# from libcpp.unordered_set cimport unordered_set as cpp_u_set
 
-from libcpp.string cimport string as cpp_string
-from libc.stdint cimport int32_t, int64_t
-from cython.operator cimport dereference as deref, preincrement as inc
+# from libcpp.string cimport string as cpp_string
+# from libc.stdint cimport int32_t, int64_t
+# from cython.operator cimport dereference as deref, preincrement as inc
 
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
-from libc.stdint cimport uint32_t, uint8_t
+# from libc.stdint cimport uint32_t, uint8_t
 
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
@@ -414,7 +414,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     cdef int ii = 0
     cdef int grey_added = 0
 
-    cdef int flag, pos, rname, pnext, rnext, node_name, node_name2, chrom, chrom2
+    cdef int flag, pos, rname, pnext, rnext, node_name, node_name2, chrom, chrom2, clip_left, clip_right
     cdef str qname, seq
 
     cdef int warn = 0
@@ -425,23 +425,20 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     G = nk.graph.Graph(weighted=True)
 
+    # testout = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/AshkenazimTrio/calls/strange.bam", "wb", template=infile)
     # cdef list chunk
     # cdef AlignedSegment r
 
-    # debug = "simulated_reads.intra.0.2-id10079_A_chr17:113639_B_chr17:114293-5429"
-    # debug_nodes = set([])
+    debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"
+    debug_nodes = set([])
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
 
+            # testout.write(r)
+
             seq = r.seq
-            # cigartuples = r.cigartuples
+
             clip_left, clip_right = map_set_utils.clip_sizes(r)
-            # clip_left = 0
-            # clip_right = 0
-            # if cigartuples[0][0] == 4:
-            #     clip_left = cigartuples[0][1]
-            # if cigartuples[-1][0] == 4:
-            #     clip_right = cigartuples[-1][1]
 
             chrom = r.rname
             pos = r.pos
@@ -456,6 +453,10 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
             genome_scanner.add_to_buffer(r, node_name)
 
             all_flags[qname].append(node_name)  # Used for paired-end edges
+
+            if qname == debug:
+                echo(qname, n1, "NODE NAME", node_name, clip_left, clip_right)
+                debug_nodes.add(node_name)
 
             # Cluster soft-clips
             # if cigartuples[0][0] == 4 or cigartuples[-1][0] == 4:
@@ -498,6 +499,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                                                                     pos+1)
             # if node_name in debug_nodes:
             #     echo("current overlaps roi", node_name, current_overlaps_roi)
+
             if chrom == rnext and abs(pnext - pos) < (max_dist * 3):  # Same loci
 
                 if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
@@ -518,8 +520,8 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                         else:
                             other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
 
-                            if qname == debug:
-                                echo(node_name, other_nodes)
+                            # if qname == debug:
+                            #     echo(node_name, other_nodes)
 
                             if other_nodes:
                                 for other_node in other_nodes:
@@ -527,8 +529,8 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                                     if not G.hasEdge(node_name, other_node):
                                         G.addEdge(node_name, other_node, w=2)
 
-                                        if qname == debug:
-                                            echo(node_name, other_node, "SA")
+                                        # if qname == debug:
+                                        #     echo(node_name, other_node, "SA")
 
             #
             if add_primark_link == 1:
@@ -554,6 +556,10 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                             # if node_name in debug_nodes or node_name2 in debug_nodes:
                             #     echo("normal edge", node_name, node_name2, current_overlaps_roi, next_overlaps_roi)
                             #     echo(node_name, str(r.qname))
+
+    # testout.close()
+    # import subprocess
+    # subprocess.call("samtools index /Users/kezcleal/Documents/Data/fusion_finder_development/AshkenazimTrio/calls/strange.bam", shell=True)
 
     click.echo(f"Processed minimizers {time.time() - t0}", err=True)
     # Make nested containment list
@@ -601,14 +607,14 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     read_buffer = genome_scanner.read_buffer
 
     click.echo("Constructed graph, processing block model", err=True)
-    for component in get_block_components(G, node_to_name, infile, max_dist, minimizer_dist, read_buffer, min_support):
-                                          # debug_nodes):
+    for component in get_block_components(G, node_to_name, infile, max_dist, minimizer_dist, read_buffer, min_support,
+                                          debug_nodes):
 
         yield component
 
 
 def get_block_components(G, list node_to_name, infile, int max_dist, int read_length, dict read_buffer,
-                         int min_support): # debug_nodes):
+                         int min_support, debug_nodes):
 
     # Turn graph into a block model, first split into connected components,
     # Then for each component, split into block nodes which are locally interacting nodes (black and grey edges)
