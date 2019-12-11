@@ -2663,7 +2663,6 @@ static const char __pyx_k_popleft[] = "popleft";
 static const char __pyx_k_prepare[] = "__prepare__";
 static const char __pyx_k_regions[] = "regions";
 static const char __pyx_k_Ellipsis[] = "Ellipsis";
-static const char __pyx_k_Got_here[] = "Got here";
 static const char __pyx_k_bam_iter[] = "bam_iter";
 static const char __pyx_k_getstate[] = "__getstate__";
 static const char __pyx_k_inputbam[] = "inputbam";
@@ -2818,7 +2817,6 @@ static PyObject *__pyx_n_s_GenomeScanner__get_reads;
 static PyObject *__pyx_n_s_GenomeScanner_add_to_buffer;
 static PyObject *__pyx_n_s_GenomeScanner_get_read_length;
 static PyObject *__pyx_n_s_GenomeScanner_iter_genome;
-static PyObject *__pyx_kp_u_Got_here;
 static PyObject *__pyx_n_s_ImportError;
 static PyObject *__pyx_kp_s_Incompatible_checksums_s_vs_0xb0;
 static PyObject *__pyx_n_s_IndexError;
@@ -7548,7 +7546,7 @@ static PyObject *__pyx_gb_5dysgu_8coverage_13GenomeScanner_9generator1(__pyx_Cor
  *             total_reads += len(staged)
  *             yield staged             # <<<<<<<<<<<<<<
  * 
- *         echo("Got here")
+ *         # Add last seen coverage bin
  */
     __Pyx_INCREF(__pyx_cur_scope->__pyx_v_staged);
     __pyx_r = __pyx_cur_scope->__pyx_v_staged;
@@ -7580,33 +7578,7 @@ static PyObject *__pyx_gb_5dysgu_8coverage_13GenomeScanner_9generator1(__pyx_Cor
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/coverage.pyx":257
- *             yield staged
- * 
- *         echo("Got here")             # <<<<<<<<<<<<<<
- * 
- *         # Add last seen coverage bin
- */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 257, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = NULL;
-  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
-    __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_1);
-    if (likely(__pyx_t_3)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
-      __Pyx_INCREF(__pyx_t_3);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_1, function);
-    }
-  }
-  __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_3, __pyx_kp_u_Got_here) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_kp_u_Got_here);
-  __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 257, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-
-  /* "dysgu/coverage.pyx":260
+  /* "dysgu/coverage.pyx":258
  * 
  *         # Add last seen coverage bin
  *         if total_reads == 0:             # <<<<<<<<<<<<<<
@@ -7616,39 +7588,39 @@ static PyObject *__pyx_gb_5dysgu_8coverage_13GenomeScanner_9generator1(__pyx_Cor
   __pyx_t_7 = ((__pyx_cur_scope->__pyx_v_total_reads == 0) != 0);
   if (__pyx_t_7) {
 
-    /* "dysgu/coverage.pyx":261
+    /* "dysgu/coverage.pyx":259
  *         # Add last seen coverage bin
  *         if total_reads == 0:
  *             click.echo("No reads, finishing", err=True)             # <<<<<<<<<<<<<<
  *             quit()
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_click); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 261, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_click); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 259, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 261, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 259, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 261, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 259, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 261, __pyx_L1_error)
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__12, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 261, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 259, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__12, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 259, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "dysgu/coverage.pyx":262
+    /* "dysgu/coverage.pyx":260
  *         if total_reads == 0:
  *             click.echo("No reads, finishing", err=True)
  *             quit()             # <<<<<<<<<<<<<<
  * 
  *         click.echo(f"Total input reads {total_reads}", err=True)
  */
-    __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_builtin_quit); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 262, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_builtin_quit); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 260, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-    /* "dysgu/coverage.pyx":260
+    /* "dysgu/coverage.pyx":258
  * 
  *         # Add last seen coverage bin
  *         if total_reads == 0:             # <<<<<<<<<<<<<<
@@ -7657,32 +7629,32 @@ static PyObject *__pyx_gb_5dysgu_8coverage_13GenomeScanner_9generator1(__pyx_Cor
  */
   }
 
-  /* "dysgu/coverage.pyx":264
+  /* "dysgu/coverage.pyx":262
  *             quit()
  * 
  *         click.echo(f"Total input reads {total_reads}", err=True)             # <<<<<<<<<<<<<<
  * 
  *     def add_to_buffer(self, r, n1):
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_click); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_click); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_echo); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_echo); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = __Pyx_PyUnicode_From_int(__pyx_cur_scope->__pyx_v_total_reads, 0, ' ', 'd'); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyUnicode_From_int(__pyx_cur_scope->__pyx_v_total_reads, 0, ' ', 'd'); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Total_input_reads, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyUnicode_Concat(__pyx_kp_u_Total_input_reads, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_1);
   __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 264, __pyx_L1_error)
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 264, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -7718,7 +7690,7 @@ static PyObject *__pyx_gb_5dysgu_8coverage_13GenomeScanner_9generator1(__pyx_Cor
   return __pyx_r;
 }
 
-/* "dysgu/coverage.pyx":266
+/* "dysgu/coverage.pyx":264
  *         click.echo(f"Total input reads {total_reads}", err=True)
  * 
  *     def add_to_buffer(self, r, n1):             # <<<<<<<<<<<<<<
@@ -7761,17 +7733,17 @@ static PyObject *__pyx_pw_5dysgu_8coverage_13GenomeScanner_11add_to_buffer(PyObj
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_r)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, 1); __PYX_ERR(0, 266, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, 1); __PYX_ERR(0, 264, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_n1)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, 2); __PYX_ERR(0, 266, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, 2); __PYX_ERR(0, 264, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "add_to_buffer") < 0)) __PYX_ERR(0, 266, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "add_to_buffer") < 0)) __PYX_ERR(0, 264, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -7786,7 +7758,7 @@ static PyObject *__pyx_pw_5dysgu_8coverage_13GenomeScanner_11add_to_buffer(PyObj
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 266, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("add_to_buffer", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 264, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.coverage.GenomeScanner.add_to_buffer", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -7809,51 +7781,51 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
   Py_ssize_t __pyx_t_5;
   __Pyx_RefNannySetupContext("add_to_buffer", 0);
 
-  /* "dysgu/coverage.pyx":268
+  /* "dysgu/coverage.pyx":266
  *     def add_to_buffer(self, r, n1):
  * 
  *         if self.first == 1:             # <<<<<<<<<<<<<<
  *             # Not possible to get tell position from first read in region, so put into buffer instead
  *             if self.procs == 1:
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_first); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_first); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_EqObjC(__pyx_t_1, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_EqObjC(__pyx_t_1, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 266, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":270
+    /* "dysgu/coverage.pyx":268
  *         if self.first == 1:
  *             # Not possible to get tell position from first read in region, so put into buffer instead
  *             if self.procs == 1:             # <<<<<<<<<<<<<<
  *                 self.read_buffer[n1] = r
  *             else:
  */
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_procs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_procs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_1 = __Pyx_PyInt_EqObjC(__pyx_t_2, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 270, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_EqObjC(__pyx_t_2, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 268, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 270, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 268, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     if (__pyx_t_3) {
 
-      /* "dysgu/coverage.pyx":271
+      /* "dysgu/coverage.pyx":269
  *             # Not possible to get tell position from first read in region, so put into buffer instead
  *             if self.procs == 1:
  *                 self.read_buffer[n1] = r             # <<<<<<<<<<<<<<
  *             else:
  *                 self.read_buffer[n1] = r.to_string()
  */
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 269, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      if (unlikely(PyObject_SetItem(__pyx_t_1, __pyx_v_n1, __pyx_v_r) < 0)) __PYX_ERR(0, 271, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_t_1, __pyx_v_n1, __pyx_v_r) < 0)) __PYX_ERR(0, 269, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "dysgu/coverage.pyx":270
+      /* "dysgu/coverage.pyx":268
  *         if self.first == 1:
  *             # Not possible to get tell position from first read in region, so put into buffer instead
  *             if self.procs == 1:             # <<<<<<<<<<<<<<
@@ -7863,7 +7835,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
       goto __pyx_L4;
     }
 
-    /* "dysgu/coverage.pyx":273
+    /* "dysgu/coverage.pyx":271
  *                 self.read_buffer[n1] = r
  *             else:
  *                 self.read_buffer[n1] = r.to_string()             # <<<<<<<<<<<<<<
@@ -7871,7 +7843,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
  *             self.first = 0
  */
     /*else*/ {
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_r, __pyx_n_s_to_string); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 273, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_r, __pyx_n_s_to_string); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __pyx_t_4 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -7885,27 +7857,27 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
       }
       __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
+      if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 273, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_n1, __pyx_t_1) < 0)) __PYX_ERR(0, 273, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_n1, __pyx_t_1) < 0)) __PYX_ERR(0, 271, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     }
     __pyx_L4:;
 
-    /* "dysgu/coverage.pyx":275
+    /* "dysgu/coverage.pyx":273
  *                 self.read_buffer[n1] = r.to_string()
  * 
  *             self.first = 0             # <<<<<<<<<<<<<<
  * 
  *         elif len(self.read_buffer) < self.buff_size:
  */
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_first, __pyx_int_0) < 0) __PYX_ERR(0, 275, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_first, __pyx_int_0) < 0) __PYX_ERR(0, 273, __pyx_L1_error)
 
-    /* "dysgu/coverage.pyx":268
+    /* "dysgu/coverage.pyx":266
  *     def add_to_buffer(self, r, n1):
  * 
  *         if self.first == 1:             # <<<<<<<<<<<<<<
@@ -7915,57 +7887,57 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
     goto __pyx_L3;
   }
 
-  /* "dysgu/coverage.pyx":277
+  /* "dysgu/coverage.pyx":275
  *             self.first = 0
  * 
  *         elif len(self.read_buffer) < self.buff_size:             # <<<<<<<<<<<<<<
  *             if self.procs == 1:
  *                 self.read_buffer[n1] = r
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_5 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_1 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_buff_size); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_buff_size); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_4 = PyObject_RichCompare(__pyx_t_1, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_4 = PyObject_RichCompare(__pyx_t_1, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 277, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 275, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":278
+    /* "dysgu/coverage.pyx":276
  * 
  *         elif len(self.read_buffer) < self.buff_size:
  *             if self.procs == 1:             # <<<<<<<<<<<<<<
  *                 self.read_buffer[n1] = r
  *             else:
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_procs); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_procs); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_2 = __Pyx_PyInt_EqObjC(__pyx_t_4, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_EqObjC(__pyx_t_4, __pyx_int_1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 278, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 276, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     if (__pyx_t_3) {
 
-      /* "dysgu/coverage.pyx":279
+      /* "dysgu/coverage.pyx":277
  *         elif len(self.read_buffer) < self.buff_size:
  *             if self.procs == 1:
  *                 self.read_buffer[n1] = r             # <<<<<<<<<<<<<<
  *             else:
  *                 self.read_buffer[n1] = r.to_string()
  */
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_n1, __pyx_v_r) < 0)) __PYX_ERR(0, 279, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_t_2, __pyx_v_n1, __pyx_v_r) < 0)) __PYX_ERR(0, 277, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-      /* "dysgu/coverage.pyx":278
+      /* "dysgu/coverage.pyx":276
  * 
  *         elif len(self.read_buffer) < self.buff_size:
  *             if self.procs == 1:             # <<<<<<<<<<<<<<
@@ -7975,7 +7947,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
       goto __pyx_L5;
     }
 
-    /* "dysgu/coverage.pyx":281
+    /* "dysgu/coverage.pyx":279
  *                 self.read_buffer[n1] = r
  *             else:
  *                 self.read_buffer[n1] = r.to_string()             # <<<<<<<<<<<<<<
@@ -7983,7 +7955,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
  * 
  */
     /*else*/ {
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_r, __pyx_n_s_to_string); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 281, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_r, __pyx_n_s_to_string); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 279, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __pyx_t_1 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
@@ -7997,18 +7969,18 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
       }
       __pyx_t_2 = (__pyx_t_1) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 281, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 279, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 281, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_read_buffer); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 279, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
-      if (unlikely(PyObject_SetItem(__pyx_t_4, __pyx_v_n1, __pyx_t_2) < 0)) __PYX_ERR(0, 281, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_t_4, __pyx_v_n1, __pyx_t_2) < 0)) __PYX_ERR(0, 279, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     }
     __pyx_L5:;
 
-    /* "dysgu/coverage.pyx":277
+    /* "dysgu/coverage.pyx":275
  *             self.first = 0
  * 
  *         elif len(self.read_buffer) < self.buff_size:             # <<<<<<<<<<<<<<
@@ -8018,7 +7990,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
   }
   __pyx_L3:;
 
-  /* "dysgu/coverage.pyx":266
+  /* "dysgu/coverage.pyx":264
  *         click.echo(f"Total input reads {total_reads}", err=True)
  * 
  *     def add_to_buffer(self, r, n1):             # <<<<<<<<<<<<<<
@@ -8041,10 +8013,10 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_10add_to_buffer(CYTHO
   return __pyx_r;
 }
 
-/* "dysgu/coverage.pyx":284
+/* "dysgu/coverage.pyx":282
  * 
  * 
- *     def _add_to_bin_buffer(self, a, tell):  # long int             # <<<<<<<<<<<<<<
+ *     def _add_to_bin_buffer(self, a, tell):             # <<<<<<<<<<<<<<
  * 
  *         cdef int flag = a.flag
  */
@@ -8084,17 +8056,17 @@ static PyObject *__pyx_pw_5dysgu_8coverage_13GenomeScanner_13_add_to_bin_buffer(
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_a)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, 1); __PYX_ERR(0, 284, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, 1); __PYX_ERR(0, 282, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_tell)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, 2); __PYX_ERR(0, 284, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, 2); __PYX_ERR(0, 282, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_add_to_bin_buffer") < 0)) __PYX_ERR(0, 284, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "_add_to_bin_buffer") < 0)) __PYX_ERR(0, 282, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -8109,7 +8081,7 @@ static PyObject *__pyx_pw_5dysgu_8coverage_13GenomeScanner_13_add_to_bin_buffer(
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 284, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("_add_to_bin_buffer", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 282, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.coverage.GenomeScanner._add_to_bin_buffer", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -8152,25 +8124,25 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   int __pyx_t_16;
   __Pyx_RefNannySetupContext("_add_to_bin_buffer", 0);
 
-  /* "dysgu/coverage.pyx":286
- *     def _add_to_bin_buffer(self, a, tell):  # long int
+  /* "dysgu/coverage.pyx":284
+ *     def _add_to_bin_buffer(self, a, tell):
  * 
  *         cdef int flag = a.flag             # <<<<<<<<<<<<<<
  * 
  *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_flag); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_flag); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 284, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 286, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 284, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_flag = __pyx_t_2;
 
-  /* "dysgu/coverage.pyx":289
+  /* "dysgu/coverage.pyx":287
  * 
  *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
  *         if flag & 1796 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
  *             return
- *         # printy = False
+ * 
  */
   __pyx_t_4 = ((__pyx_v_flag & 0x704) != 0);
   if (!__pyx_t_4) {
@@ -8178,7 +8150,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_3 = __pyx_t_4;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_cigartuples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 289, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_cigartuples); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 287, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_4 = (__pyx_t_1 == Py_None);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -8188,7 +8160,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_3 = __pyx_t_5;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_seq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 289, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_seq); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 287, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_5 = (__pyx_t_1 == Py_None);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -8197,53 +8169,53 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":290
+    /* "dysgu/coverage.pyx":288
  *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
  *         if flag & 1796 or a.cigartuples is None or a.seq is None:
  *             return             # <<<<<<<<<<<<<<
- *         # printy = False
- *         # if a.qname == "D00360:19:H8VDAADXX:2:1109:10968:47097":
+ * 
+ *         cdef int rname = a.rname
  */
     __Pyx_XDECREF(__pyx_r);
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "dysgu/coverage.pyx":289
+    /* "dysgu/coverage.pyx":287
  * 
  *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
  *         if flag & 1796 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
  *             return
- *         # printy = False
+ * 
  */
   }
 
-  /* "dysgu/coverage.pyx":296
- *         #     printy = True
+  /* "dysgu/coverage.pyx":290
+ *             return
  * 
  *         cdef int rname = a.rname             # <<<<<<<<<<<<<<
  *         cdef int apos = a.pos
  *         cdef int bin_pos = int(apos / 100)
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_rname); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_rname); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 290, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 290, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_rname = __pyx_t_2;
 
-  /* "dysgu/coverage.pyx":297
+  /* "dysgu/coverage.pyx":291
  * 
  *         cdef int rname = a.rname
  *         cdef int apos = a.pos             # <<<<<<<<<<<<<<
  *         cdef int bin_pos = int(apos / 100)
  *         cdef int ref_length
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_pos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_pos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 297, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 291, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_apos = __pyx_t_2;
 
-  /* "dysgu/coverage.pyx":298
+  /* "dysgu/coverage.pyx":292
  *         cdef int rname = a.rname
  *         cdef int apos = a.pos
  *         cdef int bin_pos = int(apos / 100)             # <<<<<<<<<<<<<<
@@ -8252,7 +8224,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  */
   __pyx_v_bin_pos = ((int)(((double)__pyx_v_apos) / 100.0));
 
-  /* "dysgu/coverage.pyx":300
+  /* "dysgu/coverage.pyx":294
  *         cdef int bin_pos = int(apos / 100)
  *         cdef int ref_length
  *         cdef str reference_name = ""             # <<<<<<<<<<<<<<
@@ -8262,14 +8234,14 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   __Pyx_INCREF(__pyx_kp_u__13);
   __pyx_v_reference_name = __pyx_kp_u__13;
 
-  /* "dysgu/coverage.pyx":301
+  /* "dysgu/coverage.pyx":295
  *         cdef int ref_length
  *         cdef str reference_name = ""
  *         cdef int aend = a.infer_query_length() + apos             # <<<<<<<<<<<<<<
  *         cdef float current_coverage
  * 
  */
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_infer_query_length); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_infer_query_length); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_7 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
@@ -8283,62 +8255,62 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   }
   __pyx_t_1 = (__pyx_t_7) ? __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_7) : __Pyx_PyObject_CallNoArg(__pyx_t_6);
   __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_apos); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_apos); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = PyNumber_Add(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Add(__pyx_t_1, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_7); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_7); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_v_aend = __pyx_t_2;
 
-  /* "dysgu/coverage.pyx":304
+  /* "dysgu/coverage.pyx":298
  *         cdef float current_coverage
  * 
  *         if rname not in self.depth_d:             # <<<<<<<<<<<<<<
  * 
  *             # Get the chromosome size from infile
  */
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_3 = (__Pyx_PySequence_ContainsTF(__pyx_t_7, __pyx_t_6, Py_NE)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 304, __pyx_L1_error)
+  __pyx_t_3 = (__Pyx_PySequence_ContainsTF(__pyx_t_7, __pyx_t_6, Py_NE)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 298, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_4 = (__pyx_t_3 != 0);
   if (__pyx_t_4) {
 
-    /* "dysgu/coverage.pyx":307
+    /* "dysgu/coverage.pyx":301
  * 
  *             # Get the chromosome size from infile
  *             ref_length = int(self.input_bam.get_reference_length(             # <<<<<<<<<<<<<<
  *                 self.input_bam.get_reference_name(rname)) / 100)
  * 
  */
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 301, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_get_reference_length); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_get_reference_length); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-    /* "dysgu/coverage.pyx":308
+    /* "dysgu/coverage.pyx":302
  *             # Get the chromosome size from infile
  *             ref_length = int(self.input_bam.get_reference_length(
  *                 self.input_bam.get_reference_name(rname)) / 100)             # <<<<<<<<<<<<<<
  * 
  *             click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)
  */
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 308, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_get_reference_name); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 308, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_get_reference_name); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 308, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_t_10 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_9))) {
@@ -8353,7 +8325,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_7 = (__pyx_t_10) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_10, __pyx_t_8) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_t_8);
     __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 308, __pyx_L1_error)
+    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     __pyx_t_9 = NULL;
@@ -8369,49 +8341,49 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_6 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_9, __pyx_t_7) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_7);
     __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 307, __pyx_L1_error)
+    if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 301, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyInt_TrueDivideObjC(__pyx_t_6, __pyx_int_100, 0x64, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 308, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_TrueDivideObjC(__pyx_t_6, __pyx_int_100, 0x64, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "dysgu/coverage.pyx":307
+    /* "dysgu/coverage.pyx":301
  * 
  *             # Get the chromosome size from infile
  *             ref_length = int(self.input_bam.get_reference_length(             # <<<<<<<<<<<<<<
  *                 self.input_bam.get_reference_name(rname)) / 100)
  * 
  */
-    __pyx_t_6 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyNumber_Int(__pyx_t_1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 301, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_2 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 301, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __pyx_v_ref_length = __pyx_t_2;
 
-    /* "dysgu/coverage.pyx":310
+    /* "dysgu/coverage.pyx":304
  *                 self.input_bam.get_reference_name(rname)) / 100)
  * 
  *             click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)             # <<<<<<<<<<<<<<
  * 
  *             # Define a big numpy array to hold count information
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_click); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_click); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __pyx_t_11 = 0;
     __pyx_t_12 = 127;
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_input_bam); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_get_reference_name); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_get_reference_name); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __pyx_t_10 = NULL;
     if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_8))) {
@@ -8426,10 +8398,10 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_7 = (__pyx_t_10) ? __Pyx_PyObject_Call2Args(__pyx_t_8, __pyx_t_10, __pyx_t_9) : __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_9);
     __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 310, __pyx_L1_error)
+    if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyObject_FormatSimple(__pyx_t_7, __pyx_empty_unicode); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_FormatSimple(__pyx_t_7, __pyx_empty_unicode); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __pyx_t_12 = (__Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_8) > __pyx_t_12) ? __Pyx_PyUnicode_MAX_CHAR_VALUE(__pyx_t_8) : __pyx_t_12;
@@ -8441,70 +8413,70 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __pyx_t_11 += 16;
     __Pyx_GIVEREF(__pyx_kp_u_coverage_bins);
     PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_kp_u_coverage_bins);
-    __pyx_t_8 = __Pyx_PyUnicode_From_int(__pyx_v_ref_length, 0, ' ', 'd'); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyUnicode_From_int(__pyx_v_ref_length, 0, ' ', 'd'); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __pyx_t_11 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_8);
     __Pyx_GIVEREF(__pyx_t_8);
     PyTuple_SET_ITEM(__pyx_t_6, 2, __pyx_t_8);
     __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyUnicode_Join(__pyx_t_6, 3, __pyx_t_11, __pyx_t_12); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyUnicode_Join(__pyx_t_6, 3, __pyx_t_11, __pyx_t_12); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_GIVEREF(__pyx_t_8);
     PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_8);
     __pyx_t_8 = 0;
-    __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 310, __pyx_L1_error)
-    __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, __pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 310, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 304, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_6, __pyx_t_8); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 304, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-    /* "dysgu/coverage.pyx":313
+    /* "dysgu/coverage.pyx":307
  * 
  *             # Define a big numpy array to hold count information
  *             self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)             # <<<<<<<<<<<<<<
  * 
  *         if self.current_chrom != rname:
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_zeros); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_zeros); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyInt_From_long((__pyx_v_ref_length + 1)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyInt_From_long((__pyx_v_ref_length + 1)); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_GIVEREF(__pyx_t_7);
     PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_7);
     __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_float); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 313, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_dtype, __pyx_t_9) < 0) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    if (unlikely(__Pyx_SetItemInt(__pyx_t_7, __pyx_v_rname, __pyx_t_9, int, 1, __Pyx_PyInt_From_int, 0, 1, 0) < 0)) __PYX_ERR(0, 313, __pyx_L1_error)
+    if (unlikely(__Pyx_SetItemInt(__pyx_t_7, __pyx_v_rname, __pyx_t_9, int, 1, __Pyx_PyInt_From_int, 0, 1, 0) < 0)) __PYX_ERR(0, 307, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "dysgu/coverage.pyx":304
+    /* "dysgu/coverage.pyx":298
  *         cdef float current_coverage
  * 
  *         if rname not in self.depth_d:             # <<<<<<<<<<<<<<
@@ -8513,52 +8485,52 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  */
   }
 
-  /* "dysgu/coverage.pyx":315
+  /* "dysgu/coverage.pyx":309
  *             self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)
  * 
  *         if self.current_chrom != rname:             # <<<<<<<<<<<<<<
  *             self.current_chrom = rname
  *             self.current_cov_array = self.depth_d[rname]
  */
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_6 = PyObject_RichCompare(__pyx_t_9, __pyx_t_7, Py_NE); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_t_6 = PyObject_RichCompare(__pyx_t_9, __pyx_t_7, Py_NE); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 309, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (__pyx_t_4) {
 
-    /* "dysgu/coverage.pyx":316
+    /* "dysgu/coverage.pyx":310
  * 
  *         if self.current_chrom != rname:
  *             self.current_chrom = rname             # <<<<<<<<<<<<<<
  *             self.current_cov_array = self.depth_d[rname]
  *         elif self.current_cov_array is None:
  */
-    __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 316, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 310, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom, __pyx_t_6) < 0) __PYX_ERR(0, 316, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom, __pyx_t_6) < 0) __PYX_ERR(0, 310, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "dysgu/coverage.pyx":317
+    /* "dysgu/coverage.pyx":311
  *         if self.current_chrom != rname:
  *             self.current_chrom = rname
  *             self.current_cov_array = self.depth_d[rname]             # <<<<<<<<<<<<<<
  *         elif self.current_cov_array is None:
  *             self.current_cov_array = self.depth_d[rname]
  */
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 317, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 311, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_6, __pyx_v_rname, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 317, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_GetItemInt(__pyx_t_6, __pyx_v_rname, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 311, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array, __pyx_t_7) < 0) __PYX_ERR(0, 317, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array, __pyx_t_7) < 0) __PYX_ERR(0, 311, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
-    /* "dysgu/coverage.pyx":315
+    /* "dysgu/coverage.pyx":309
  *             self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)
  * 
  *         if self.current_chrom != rname:             # <<<<<<<<<<<<<<
@@ -8568,36 +8540,36 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     goto __pyx_L8;
   }
 
-  /* "dysgu/coverage.pyx":318
+  /* "dysgu/coverage.pyx":312
  *             self.current_chrom = rname
  *             self.current_cov_array = self.depth_d[rname]
  *         elif self.current_cov_array is None:             # <<<<<<<<<<<<<<
  *             self.current_cov_array = self.depth_d[rname]
  * 
  */
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 318, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 312, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_t_4 = (__pyx_t_7 == Py_None);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_3 = (__pyx_t_4 != 0);
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":319
+    /* "dysgu/coverage.pyx":313
  *             self.current_cov_array = self.depth_d[rname]
  *         elif self.current_cov_array is None:
  *             self.current_cov_array = self.depth_d[rname]             # <<<<<<<<<<<<<<
  * 
  *         current_cov = add_coverage(apos, aend, self.current_cov_array)
  */
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 319, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_depth_d); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 313, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_6 = __Pyx_GetItemInt(__pyx_t_7, __pyx_v_rname, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 319, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_GetItemInt(__pyx_t_7, __pyx_v_rname, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 313, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array, __pyx_t_6) < 0) __PYX_ERR(0, 319, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array, __pyx_t_6) < 0) __PYX_ERR(0, 313, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-    /* "dysgu/coverage.pyx":318
+    /* "dysgu/coverage.pyx":312
  *             self.current_chrom = rname
  *             self.current_cov_array = self.depth_d[rname]
  *         elif self.current_cov_array is None:             # <<<<<<<<<<<<<<
@@ -8607,18 +8579,18 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   }
   __pyx_L8:;
 
-  /* "dysgu/coverage.pyx":321
+  /* "dysgu/coverage.pyx":315
  *             self.current_cov_array = self.depth_d[rname]
  * 
  *         current_cov = add_coverage(apos, aend, self.current_cov_array)             # <<<<<<<<<<<<<<
  * 
- *         # echo(list(self.depth_d[rname][bin_pos - 1: bin_pos + 2]))
+ *         in_roi = False
  */
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 321, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_cov_array); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_13 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(__pyx_t_6, PyBUF_WRITABLE); if (unlikely(!__pyx_t_13.memview)) __PYX_ERR(0, 321, __pyx_L1_error)
+  __pyx_t_13 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(__pyx_t_6, PyBUF_WRITABLE); if (unlikely(!__pyx_t_13.memview)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_6 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_add_coverage(__pyx_v_apos, __pyx_v_aend, __pyx_t_13, 0)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 321, __pyx_L1_error)
+  __pyx_t_6 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_add_coverage(__pyx_v_apos, __pyx_v_aend, __pyx_t_13, 0)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __PYX_XDEC_MEMVIEW(&__pyx_t_13, 1);
   __pyx_t_13.memview = NULL;
@@ -8626,9 +8598,9 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   __pyx_v_current_cov = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/coverage.pyx":325
- *         # echo(list(self.depth_d[rname][bin_pos - 1: bin_pos + 2]))
- *         # quit()
+  /* "dysgu/coverage.pyx":317
+ *         current_cov = add_coverage(apos, aend, self.current_cov_array)
+ * 
  *         in_roi = False             # <<<<<<<<<<<<<<
  * 
  *         if self.overlap_regions:
@@ -8636,38 +8608,38 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   __Pyx_INCREF(Py_False);
   __pyx_v_in_roi = Py_False;
 
-  /* "dysgu/coverage.pyx":327
+  /* "dysgu/coverage.pyx":319
  *         in_roi = False
  * 
  *         if self.overlap_regions:             # <<<<<<<<<<<<<<
- *             # reference_name = self.input_bam.get_reference_name(a.rname)
  *             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
+ * 
  */
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_overlap_regions); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 327, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_overlap_regions); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 319, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 327, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 319, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":329
+    /* "dysgu/coverage.pyx":320
+ * 
  *         if self.overlap_regions:
- *             # reference_name = self.input_bam.get_reference_name(a.rname)
  *             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)             # <<<<<<<<<<<<<<
- *         # if printy:
- *         #     echo(rname == self.current_chrom, bin_pos == self.current_pos, current_cov >= self.max_cov, bin_pos)
+ * 
+ *         if rname == self.current_chrom and bin_pos == self.current_pos:
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_intersecter_int_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_intersecter_int_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_overlap_regions); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_overlap_regions); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_rname); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_rname); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_apos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_apos); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_10 = __Pyx_PyInt_From_long((__pyx_v_apos + 1)); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 329, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_From_long((__pyx_v_apos + 1)); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 320, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_10);
     __pyx_t_14 = NULL;
     __pyx_t_2 = 0;
@@ -8684,7 +8656,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_9)) {
       PyObject *__pyx_temp[5] = {__pyx_t_14, __pyx_t_7, __pyx_t_8, __pyx_t_1, __pyx_t_10};
-      __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_2, 4+__pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 329, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_2, 4+__pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 320, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -8696,7 +8668,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_9)) {
       PyObject *__pyx_temp[5] = {__pyx_t_14, __pyx_t_7, __pyx_t_8, __pyx_t_1, __pyx_t_10};
-      __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_2, 4+__pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 329, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_9, __pyx_temp+1-__pyx_t_2, 4+__pyx_t_2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 320, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -8706,7 +8678,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     } else
     #endif
     {
-      __pyx_t_15 = PyTuple_New(4+__pyx_t_2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 329, __pyx_L1_error)
+      __pyx_t_15 = PyTuple_New(4+__pyx_t_2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 320, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_15);
       if (__pyx_t_14) {
         __Pyx_GIVEREF(__pyx_t_14); PyTuple_SET_ITEM(__pyx_t_15, 0, __pyx_t_14); __pyx_t_14 = NULL;
@@ -8723,7 +8695,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
       __pyx_t_8 = 0;
       __pyx_t_1 = 0;
       __pyx_t_10 = 0;
-      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_15, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 329, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_15, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 320, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
     }
@@ -8731,122 +8703,122 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __Pyx_DECREF_SET(__pyx_v_in_roi, __pyx_t_6);
     __pyx_t_6 = 0;
 
-    /* "dysgu/coverage.pyx":327
+    /* "dysgu/coverage.pyx":319
  *         in_roi = False
  * 
  *         if self.overlap_regions:             # <<<<<<<<<<<<<<
- *             # reference_name = self.input_bam.get_reference_name(a.rname)
  *             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
+ * 
  */
   }
 
-  /* "dysgu/coverage.pyx":333
- *         #     echo(rname == self.current_chrom, bin_pos == self.current_pos, current_cov >= self.max_cov, bin_pos)
+  /* "dysgu/coverage.pyx":322
+ *             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
  * 
  *         if rname == self.current_chrom and bin_pos == self.current_pos:             # <<<<<<<<<<<<<<
  * 
  *             if current_cov >= self.max_cov and not in_roi:
  */
-  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_15 = PyObject_RichCompare(__pyx_t_6, __pyx_t_9, Py_EQ); __Pyx_XGOTREF(__pyx_t_15); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_15 = PyObject_RichCompare(__pyx_t_6, __pyx_t_9, Py_EQ); __Pyx_XGOTREF(__pyx_t_15); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_15); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_15); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
   if (__pyx_t_4) {
   } else {
     __pyx_t_3 = __pyx_t_4;
     goto __pyx_L11_bool_binop_done;
   }
-  __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_bin_pos); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_bin_pos); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_15);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_pos); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_pos); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
-  __pyx_t_6 = PyObject_RichCompare(__pyx_t_15, __pyx_t_9, Py_EQ); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_6 = PyObject_RichCompare(__pyx_t_15, __pyx_t_9, Py_EQ); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 333, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 322, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_3 = __pyx_t_4;
   __pyx_L11_bool_binop_done:;
   if (__pyx_t_3) {
 
-    /* "dysgu/coverage.pyx":335
+    /* "dysgu/coverage.pyx":324
  *         if rname == self.current_chrom and bin_pos == self.current_pos:
  * 
  *             if current_cov >= self.max_cov and not in_roi:             # <<<<<<<<<<<<<<
  *                 if len(self.current_bin) > 0:
  *                     self.current_bin = []
  */
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_max_cov); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 335, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_max_cov); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 324, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_9 = PyObject_RichCompare(__pyx_v_current_cov, __pyx_t_6, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 335, __pyx_L1_error)
+    __pyx_t_9 = PyObject_RichCompare(__pyx_v_current_cov, __pyx_t_6, Py_GE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 324, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 335, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 324, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     if (__pyx_t_4) {
     } else {
       __pyx_t_3 = __pyx_t_4;
       goto __pyx_L14_bool_binop_done;
     }
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_v_in_roi); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 335, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_v_in_roi); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 324, __pyx_L1_error)
     __pyx_t_5 = ((!__pyx_t_4) != 0);
     __pyx_t_3 = __pyx_t_5;
     __pyx_L14_bool_binop_done:;
     if (__pyx_t_3) {
 
-      /* "dysgu/coverage.pyx":336
+      /* "dysgu/coverage.pyx":325
  * 
  *             if current_cov >= self.max_cov and not in_roi:
  *                 if len(self.current_bin) > 0:             # <<<<<<<<<<<<<<
  *                     self.current_bin = []
  *                     self.reads_dropped += len(self.current_bin)
  */
-      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 336, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 325, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_11 = PyObject_Length(__pyx_t_9); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 336, __pyx_L1_error)
+      __pyx_t_11 = PyObject_Length(__pyx_t_9); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 325, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __pyx_t_3 = ((__pyx_t_11 > 0) != 0);
       if (__pyx_t_3) {
 
-        /* "dysgu/coverage.pyx":337
+        /* "dysgu/coverage.pyx":326
  *             if current_cov >= self.max_cov and not in_roi:
  *                 if len(self.current_bin) > 0:
  *                     self.current_bin = []             # <<<<<<<<<<<<<<
  *                     self.reads_dropped += len(self.current_bin)
  *                 self.reads_dropped += 1
  */
-        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 337, __pyx_L1_error)
+        __pyx_t_9 = PyList_New(0); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 326, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_bin, __pyx_t_9) < 0) __PYX_ERR(0, 337, __pyx_L1_error)
+        if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_bin, __pyx_t_9) < 0) __PYX_ERR(0, 326, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-        /* "dysgu/coverage.pyx":338
+        /* "dysgu/coverage.pyx":327
  *                 if len(self.current_bin) > 0:
  *                     self.current_bin = []
  *                     self.reads_dropped += len(self.current_bin)             # <<<<<<<<<<<<<<
  *                 self.reads_dropped += 1
  *                 return
  */
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 338, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 338, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_11 = PyObject_Length(__pyx_t_6); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 338, __pyx_L1_error)
+        __pyx_t_11 = PyObject_Length(__pyx_t_6); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __pyx_t_6 = PyInt_FromSsize_t(__pyx_t_11); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 338, __pyx_L1_error)
+        __pyx_t_6 = PyInt_FromSsize_t(__pyx_t_11); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_15 = PyNumber_InPlaceAdd(__pyx_t_9, __pyx_t_6); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 338, __pyx_L1_error)
+        __pyx_t_15 = PyNumber_InPlaceAdd(__pyx_t_9, __pyx_t_6); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_15);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-        if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped, __pyx_t_15) < 0) __PYX_ERR(0, 338, __pyx_L1_error)
+        if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped, __pyx_t_15) < 0) __PYX_ERR(0, 327, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-        /* "dysgu/coverage.pyx":336
+        /* "dysgu/coverage.pyx":325
  * 
  *             if current_cov >= self.max_cov and not in_roi:
  *                 if len(self.current_bin) > 0:             # <<<<<<<<<<<<<<
@@ -8855,22 +8827,22 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  */
       }
 
-      /* "dysgu/coverage.pyx":339
+      /* "dysgu/coverage.pyx":328
  *                     self.current_bin = []
  *                     self.reads_dropped += len(self.current_bin)
  *                 self.reads_dropped += 1             # <<<<<<<<<<<<<<
  *                 return
  * 
  */
-      __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 339, __pyx_L1_error)
+      __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 328, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_15);
-      __pyx_t_6 = __Pyx_PyInt_AddObjC(__pyx_t_15, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 339, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyInt_AddObjC(__pyx_t_15, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 328, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped, __pyx_t_6) < 0) __PYX_ERR(0, 339, __pyx_L1_error)
+      if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_reads_dropped, __pyx_t_6) < 0) __PYX_ERR(0, 328, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-      /* "dysgu/coverage.pyx":340
+      /* "dysgu/coverage.pyx":329
  *                     self.reads_dropped += len(self.current_bin)
  *                 self.reads_dropped += 1
  *                 return             # <<<<<<<<<<<<<<
@@ -8881,7 +8853,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
       __pyx_r = Py_None; __Pyx_INCREF(Py_None);
       goto __pyx_L0;
 
-      /* "dysgu/coverage.pyx":335
+      /* "dysgu/coverage.pyx":324
  *         if rname == self.current_chrom and bin_pos == self.current_pos:
  * 
  *             if current_cov >= self.max_cov and not in_roi:             # <<<<<<<<<<<<<<
@@ -8890,16 +8862,16 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  */
     }
 
-    /* "dysgu/coverage.pyx":342
+    /* "dysgu/coverage.pyx":331
  *                 return
  * 
  *             self.current_bin.append((a, tell))  # Add to staging area             # <<<<<<<<<<<<<<
  * 
  *         else:  # New staged bin
  */
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 342, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 331, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 342, __pyx_L1_error)
+    __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 331, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
     __Pyx_INCREF(__pyx_v_a);
     __Pyx_GIVEREF(__pyx_v_a);
@@ -8907,12 +8879,12 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __Pyx_INCREF(__pyx_v_tell);
     __Pyx_GIVEREF(__pyx_v_tell);
     PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_v_tell);
-    __pyx_t_16 = __Pyx_PyObject_Append(__pyx_t_6, __pyx_t_15); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 342, __pyx_L1_error)
+    __pyx_t_16 = __Pyx_PyObject_Append(__pyx_t_6, __pyx_t_15); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 331, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-    /* "dysgu/coverage.pyx":333
- *         #     echo(rname == self.current_chrom, bin_pos == self.current_pos, current_cov >= self.max_cov, bin_pos)
+    /* "dysgu/coverage.pyx":322
+ *             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
  * 
  *         if rname == self.current_chrom and bin_pos == self.current_pos:             # <<<<<<<<<<<<<<
  * 
@@ -8921,7 +8893,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     goto __pyx_L10;
   }
 
-  /* "dysgu/coverage.pyx":346
+  /* "dysgu/coverage.pyx":335
  *         else:  # New staged bin
  * 
  *             if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):             # <<<<<<<<<<<<<<
@@ -8929,9 +8901,9 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  * 
  */
   /*else*/ {
-    __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 335, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
-    __pyx_t_11 = PyObject_Length(__pyx_t_15); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_11 = PyObject_Length(__pyx_t_15); if (unlikely(__pyx_t_11 == ((Py_ssize_t)-1))) __PYX_ERR(0, 335, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
     __pyx_t_5 = ((__pyx_t_11 != 0) != 0);
     if (__pyx_t_5) {
@@ -8939,38 +8911,38 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
       __pyx_t_3 = __pyx_t_5;
       goto __pyx_L18_bool_binop_done;
     }
-    __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_max_cov); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_max_cov); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 335, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
-    __pyx_t_6 = PyObject_RichCompare(__pyx_v_current_cov, __pyx_t_15, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_6 = PyObject_RichCompare(__pyx_v_current_cov, __pyx_t_15, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 335, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 335, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     if (!__pyx_t_5) {
     } else {
       __pyx_t_3 = __pyx_t_5;
       goto __pyx_L18_bool_binop_done;
     }
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_in_roi); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 346, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_in_roi); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 335, __pyx_L1_error)
     __pyx_t_3 = __pyx_t_5;
     __pyx_L18_bool_binop_done:;
     if (__pyx_t_3) {
 
-      /* "dysgu/coverage.pyx":347
+      /* "dysgu/coverage.pyx":336
  * 
  *             if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
  *                 self.staged_reads.append(self.current_bin)  # Send for further processing             # <<<<<<<<<<<<<<
  * 
  *             self.current_chrom = rname
  */
-      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_staged_reads); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 347, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_staged_reads); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 336, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 347, __pyx_L1_error)
+      __pyx_t_15 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_current_bin); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 336, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_15);
-      __pyx_t_16 = __Pyx_PyObject_Append(__pyx_t_6, __pyx_t_15); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 347, __pyx_L1_error)
+      __pyx_t_16 = __Pyx_PyObject_Append(__pyx_t_6, __pyx_t_15); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 336, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-      /* "dysgu/coverage.pyx":346
+      /* "dysgu/coverage.pyx":335
  *         else:  # New staged bin
  * 
  *             if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):             # <<<<<<<<<<<<<<
@@ -8979,38 +8951,38 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  */
     }
 
-    /* "dysgu/coverage.pyx":349
+    /* "dysgu/coverage.pyx":338
  *                 self.staged_reads.append(self.current_bin)  # Send for further processing
  * 
  *             self.current_chrom = rname             # <<<<<<<<<<<<<<
  *             self.current_pos = bin_pos
  *             self.current_bin = [(a, tell)]
  */
-    __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 349, __pyx_L1_error)
+    __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_rname); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 338, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom, __pyx_t_15) < 0) __PYX_ERR(0, 349, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_chrom, __pyx_t_15) < 0) __PYX_ERR(0, 338, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-    /* "dysgu/coverage.pyx":350
+    /* "dysgu/coverage.pyx":339
  * 
  *             self.current_chrom = rname
  *             self.current_pos = bin_pos             # <<<<<<<<<<<<<<
  *             self.current_bin = [(a, tell)]
  * 
  */
-    __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_bin_pos); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 350, __pyx_L1_error)
+    __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_bin_pos); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_pos, __pyx_t_15) < 0) __PYX_ERR(0, 350, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_pos, __pyx_t_15) < 0) __PYX_ERR(0, 339, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
 
-    /* "dysgu/coverage.pyx":351
+    /* "dysgu/coverage.pyx":340
  *             self.current_chrom = rname
  *             self.current_pos = bin_pos
  *             self.current_bin = [(a, tell)]             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 351, __pyx_L1_error)
+    __pyx_t_15 = PyTuple_New(2); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 340, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_15);
     __Pyx_INCREF(__pyx_v_a);
     __Pyx_GIVEREF(__pyx_v_a);
@@ -9018,20 +8990,20 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
     __Pyx_INCREF(__pyx_v_tell);
     __Pyx_GIVEREF(__pyx_v_tell);
     PyTuple_SET_ITEM(__pyx_t_15, 1, __pyx_v_tell);
-    __pyx_t_6 = PyList_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 351, __pyx_L1_error)
+    __pyx_t_6 = PyList_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 340, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_GIVEREF(__pyx_t_15);
     PyList_SET_ITEM(__pyx_t_6, 0, __pyx_t_15);
     __pyx_t_15 = 0;
-    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_bin, __pyx_t_6) < 0) __PYX_ERR(0, 351, __pyx_L1_error)
+    if (__Pyx_PyObject_SetAttrStr(__pyx_v_self, __pyx_n_s_current_bin, __pyx_t_6) < 0) __PYX_ERR(0, 340, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   }
   __pyx_L10:;
 
-  /* "dysgu/coverage.pyx":284
+  /* "dysgu/coverage.pyx":282
  * 
  * 
- *     def _add_to_bin_buffer(self, a, tell):  # long int             # <<<<<<<<<<<<<<
+ *     def _add_to_bin_buffer(self, a, tell):             # <<<<<<<<<<<<<<
  * 
  *         cdef int flag = a.flag
  */
@@ -9060,7 +9032,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   return __pyx_r;
 }
 
-/* "dysgu/coverage.pyx":354
+/* "dysgu/coverage.pyx":343
  * 
  * 
  * cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:             # <<<<<<<<<<<<<<
@@ -9088,7 +9060,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
   Py_ssize_t __pyx_t_8;
   Py_ssize_t __pyx_t_9;
 
-  /* "dysgu/coverage.pyx":357
+  /* "dysgu/coverage.pyx":346
  * 
  *     # Round start and end to get index
  *     cdef float fs = start / 100             # <<<<<<<<<<<<<<
@@ -9097,7 +9069,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   __pyx_v_fs = (((double)__pyx_v_start) / 100.0);
 
-  /* "dysgu/coverage.pyx":358
+  /* "dysgu/coverage.pyx":347
  *     # Round start and end to get index
  *     cdef float fs = start / 100
  *     cdef float fe = end / 100             # <<<<<<<<<<<<<<
@@ -9106,7 +9078,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   __pyx_v_fe = (((double)__pyx_v_end) / 100.0);
 
-  /* "dysgu/coverage.pyx":360
+  /* "dysgu/coverage.pyx":349
  *     cdef float fe = end / 100
  * 
  *     cdef int bin_start = <int> fs  # Cast to int             # <<<<<<<<<<<<<<
@@ -9115,7 +9087,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   __pyx_v_bin_start = ((int)__pyx_v_fs);
 
-  /* "dysgu/coverage.pyx":361
+  /* "dysgu/coverage.pyx":350
  * 
  *     cdef int bin_start = <int> fs  # Cast to int
  *     cdef int bin_end = <int > fe             # <<<<<<<<<<<<<<
@@ -9124,7 +9096,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   __pyx_v_bin_end = ((int)__pyx_v_fe);
 
-  /* "dysgu/coverage.pyx":363
+  /* "dysgu/coverage.pyx":352
  *     cdef int bin_end = <int > fe
  * 
  *     if bin_start < 0:             # <<<<<<<<<<<<<<
@@ -9134,7 +9106,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
   __pyx_t_1 = ((__pyx_v_bin_start < 0) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":364
+    /* "dysgu/coverage.pyx":353
  * 
  *     if bin_start < 0:
  *         bin_start = 0             # <<<<<<<<<<<<<<
@@ -9143,7 +9115,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
     __pyx_v_bin_start = 0;
 
-    /* "dysgu/coverage.pyx":363
+    /* "dysgu/coverage.pyx":352
  *     cdef int bin_end = <int > fe
  * 
  *     if bin_start < 0:             # <<<<<<<<<<<<<<
@@ -9152,7 +9124,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   }
 
-  /* "dysgu/coverage.pyx":365
+  /* "dysgu/coverage.pyx":354
  *     if bin_start < 0:
  *         bin_start = 0
  *     if bin_end > <int> len(chrom_depth) - 1:             # <<<<<<<<<<<<<<
@@ -9163,7 +9135,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
   __pyx_t_1 = ((__pyx_v_bin_end > (((int)__pyx_t_2) - 1)) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":366
+    /* "dysgu/coverage.pyx":355
  *         bin_start = 0
  *     if bin_end > <int> len(chrom_depth) - 1:
  *         bin_end = <int> len(chrom_depth) - 1             # <<<<<<<<<<<<<<
@@ -9173,7 +9145,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
     __pyx_t_2 = __Pyx_MemoryView_Len(__pyx_v_chrom_depth); 
     __pyx_v_bin_end = (((int)__pyx_t_2) - 1);
 
-    /* "dysgu/coverage.pyx":365
+    /* "dysgu/coverage.pyx":354
  *     if bin_start < 0:
  *         bin_start = 0
  *     if bin_end > <int> len(chrom_depth) - 1:             # <<<<<<<<<<<<<<
@@ -9182,18 +9154,18 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   }
 
-  /* "dysgu/coverage.pyx":369
+  /* "dysgu/coverage.pyx":358
  * 
  *     # Fraction overlapping start and end bins
  *     cdef float ol_start = <float> bin_start + 1 - fs             # <<<<<<<<<<<<<<
- *     # if bin_start >= len(chrom_depth) or bin_end >= len(chrom_depth):
- *     #     echo(bin_start, len(chrom_depth), bin_end)
+ * 
+ *     chrom_depth[bin_start] += ol_start
  */
   __pyx_v_ol_start = ((((float)__pyx_v_bin_start) + 1.0) - __pyx_v_fs);
 
-  /* "dysgu/coverage.pyx":373
- *     #     echo(bin_start, len(chrom_depth), bin_end)
- *     #     quit()
+  /* "dysgu/coverage.pyx":360
+ *     cdef float ol_start = <float> bin_start + 1 - fs
+ * 
  *     chrom_depth[bin_start] += ol_start             # <<<<<<<<<<<<<<
  * 
  *     cdef float ol_end = 0
@@ -9202,7 +9174,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
   if (__pyx_t_3 < 0) __pyx_t_3 += __pyx_v_chrom_depth.shape[0];
   *((__pyx_t_5dysgu_8coverage_DTYPE_t *) ( /* dim=0 */ (__pyx_v_chrom_depth.data + __pyx_t_3 * __pyx_v_chrom_depth.strides[0]) )) += __pyx_v_ol_start;
 
-  /* "dysgu/coverage.pyx":375
+  /* "dysgu/coverage.pyx":362
  *     chrom_depth[bin_start] += ol_start
  * 
  *     cdef float ol_end = 0             # <<<<<<<<<<<<<<
@@ -9211,7 +9183,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   __pyx_v_ol_end = 0.0;
 
-  /* "dysgu/coverage.pyx":376
+  /* "dysgu/coverage.pyx":363
  * 
  *     cdef float ol_end = 0
  *     if bin_start != bin_end:  # Read spans more than one bin             # <<<<<<<<<<<<<<
@@ -9221,7 +9193,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
   __pyx_t_1 = ((__pyx_v_bin_start != __pyx_v_bin_end) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":377
+    /* "dysgu/coverage.pyx":364
  *     cdef float ol_end = 0
  *     if bin_start != bin_end:  # Read spans more than one bin
  *         ol_end = fe - (<float> bin_end)             # <<<<<<<<<<<<<<
@@ -9230,7 +9202,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
     __pyx_v_ol_end = (__pyx_v_fe - ((float)__pyx_v_bin_end));
 
-    /* "dysgu/coverage.pyx":379
+    /* "dysgu/coverage.pyx":366
  *         ol_end = fe - (<float> bin_end)
  * 
  *         chrom_depth[bin_end] += ol_end             # <<<<<<<<<<<<<<
@@ -9241,7 +9213,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
     if (__pyx_t_4 < 0) __pyx_t_4 += __pyx_v_chrom_depth.shape[0];
     *((__pyx_t_5dysgu_8coverage_DTYPE_t *) ( /* dim=0 */ (__pyx_v_chrom_depth.data + __pyx_t_4 * __pyx_v_chrom_depth.strides[0]) )) += __pyx_v_ol_end;
 
-    /* "dysgu/coverage.pyx":381
+    /* "dysgu/coverage.pyx":368
  *         chrom_depth[bin_end] += ol_end
  * 
  *         if bin_end - bin_start > 1:             # <<<<<<<<<<<<<<
@@ -9251,7 +9223,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
     __pyx_t_1 = (((__pyx_v_bin_end - __pyx_v_bin_start) > 1) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/coverage.pyx":383
+      /* "dysgu/coverage.pyx":370
  *         if bin_end - bin_start > 1:
  *             # Fill in between
  *             for i in range(bin_start + 1, bin_end):             # <<<<<<<<<<<<<<
@@ -9263,7 +9235,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
       for (__pyx_t_7 = (__pyx_v_bin_start + 1); __pyx_t_7 < __pyx_t_6; __pyx_t_7+=1) {
         __pyx_v_i = __pyx_t_7;
 
-        /* "dysgu/coverage.pyx":384
+        /* "dysgu/coverage.pyx":371
  *             # Fill in between
  *             for i in range(bin_start + 1, bin_end):
  *                 chrom_depth[i] += 1             # <<<<<<<<<<<<<<
@@ -9275,7 +9247,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
         *((__pyx_t_5dysgu_8coverage_DTYPE_t *) ( /* dim=0 */ (__pyx_v_chrom_depth.data + __pyx_t_8 * __pyx_v_chrom_depth.strides[0]) )) += 1.0;
       }
 
-      /* "dysgu/coverage.pyx":381
+      /* "dysgu/coverage.pyx":368
  *         chrom_depth[bin_end] += ol_end
  * 
  *         if bin_end - bin_start > 1:             # <<<<<<<<<<<<<<
@@ -9284,7 +9256,7 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
     }
 
-    /* "dysgu/coverage.pyx":376
+    /* "dysgu/coverage.pyx":363
  * 
  *     cdef float ol_end = 0
  *     if bin_start != bin_end:  # Read spans more than one bin             # <<<<<<<<<<<<<<
@@ -9293,19 +9265,19 @@ static float __pyx_f_5dysgu_8coverage_add_coverage(int __pyx_v_start, int __pyx_
  */
   }
 
-  /* "dysgu/coverage.pyx":386
+  /* "dysgu/coverage.pyx":373
  *                 chrom_depth[i] += 1
  * 
  *     return chrom_depth[bin_start]             # <<<<<<<<<<<<<<
  * 
- *     # echo(chrom_depth[start:end+100])
+ * 
  */
   __pyx_t_9 = __pyx_v_bin_start;
   if (__pyx_t_9 < 0) __pyx_t_9 += __pyx_v_chrom_depth.shape[0];
   __pyx_r = (*((__pyx_t_5dysgu_8coverage_DTYPE_t *) ( /* dim=0 */ (__pyx_v_chrom_depth.data + __pyx_t_9 * __pyx_v_chrom_depth.strides[0]) )));
   goto __pyx_L0;
 
-  /* "dysgu/coverage.pyx":354
+  /* "dysgu/coverage.pyx":343
  * 
  * 
  * cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:             # <<<<<<<<<<<<<<
@@ -9352,17 +9324,17 @@ static PyObject *__pyx_pw_5dysgu_8coverage_5add_coverage(PyObject *__pyx_self, P
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_end)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, 1); __PYX_ERR(0, 354, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, 1); __PYX_ERR(0, 343, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_chrom_depth)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, 2); __PYX_ERR(0, 354, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, 2); __PYX_ERR(0, 343, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "add_coverage") < 0)) __PYX_ERR(0, 354, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "add_coverage") < 0)) __PYX_ERR(0, 343, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -9371,13 +9343,13 @@ static PyObject *__pyx_pw_5dysgu_8coverage_5add_coverage(PyObject *__pyx_self, P
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
     }
-    __pyx_v_start = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_start == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 354, __pyx_L3_error)
-    __pyx_v_end = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_end == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 354, __pyx_L3_error)
-    __pyx_v_chrom_depth = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_chrom_depth.memview)) __PYX_ERR(0, 354, __pyx_L3_error)
+    __pyx_v_start = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_start == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 343, __pyx_L3_error)
+    __pyx_v_end = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_end == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 343, __pyx_L3_error)
+    __pyx_v_chrom_depth = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_chrom_depth.memview)) __PYX_ERR(0, 343, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 354, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("add_coverage", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 343, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.coverage.add_coverage", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9396,8 +9368,8 @@ static PyObject *__pyx_pf_5dysgu_8coverage_4add_coverage(CYTHON_UNUSED PyObject 
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("add_coverage", 0);
   __Pyx_XDECREF(__pyx_r);
-  if (unlikely(!__pyx_v_chrom_depth.memview)) { __Pyx_RaiseUnboundLocalError("chrom_depth"); __PYX_ERR(0, 354, __pyx_L1_error) }
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_add_coverage(__pyx_v_start, __pyx_v_end, __pyx_v_chrom_depth, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 354, __pyx_L1_error)
+  if (unlikely(!__pyx_v_chrom_depth.memview)) { __Pyx_RaiseUnboundLocalError("chrom_depth"); __PYX_ERR(0, 343, __pyx_L1_error) }
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_add_coverage(__pyx_v_start, __pyx_v_end, __pyx_v_chrom_depth, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 343, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9415,7 +9387,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_4add_coverage(CYTHON_UNUSED PyObject 
   return __pyx_r;
 }
 
-/* "dysgu/coverage.pyx":599
+/* "dysgu/coverage.pyx":584
  * 
  * 
  * cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:             # <<<<<<<<<<<<<<
@@ -9438,7 +9410,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   int __pyx_t_5;
   Py_ssize_t __pyx_t_6;
 
-  /* "dysgu/coverage.pyx":601
+  /* "dysgu/coverage.pyx":586
  * cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
  *     # Round start and end to get index
  *     cdef float fs = start / 100             # <<<<<<<<<<<<<<
@@ -9447,7 +9419,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   __pyx_v_fs = (((double)__pyx_v_start) / 100.0);
 
-  /* "dysgu/coverage.pyx":602
+  /* "dysgu/coverage.pyx":587
  *     # Round start and end to get index
  *     cdef float fs = start / 100
  *     cdef float fe = end / 100             # <<<<<<<<<<<<<<
@@ -9456,7 +9428,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   __pyx_v_fe = (((double)__pyx_v_end) / 100.0);
 
-  /* "dysgu/coverage.pyx":604
+  /* "dysgu/coverage.pyx":589
  *     cdef float fe = end / 100
  * 
  *     start = <int> fs  # Cast to int             # <<<<<<<<<<<<<<
@@ -9465,7 +9437,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   __pyx_v_start = ((int)__pyx_v_fs);
 
-  /* "dysgu/coverage.pyx":605
+  /* "dysgu/coverage.pyx":590
  * 
  *     start = <int> fs  # Cast to int
  *     end = <int > fe             # <<<<<<<<<<<<<<
@@ -9474,7 +9446,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   __pyx_v_end = ((int)__pyx_v_fe);
 
-  /* "dysgu/coverage.pyx":606
+  /* "dysgu/coverage.pyx":591
  *     start = <int> fs  # Cast to int
  *     end = <int > fe
  *     if start < 0:             # <<<<<<<<<<<<<<
@@ -9484,7 +9456,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   __pyx_t_1 = ((__pyx_v_start < 0) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":607
+    /* "dysgu/coverage.pyx":592
  *     end = <int > fe
  *     if start < 0:
  *         start = 0             # <<<<<<<<<<<<<<
@@ -9493,7 +9465,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
     __pyx_v_start = 0;
 
-    /* "dysgu/coverage.pyx":606
+    /* "dysgu/coverage.pyx":591
  *     start = <int> fs  # Cast to int
  *     end = <int > fe
  *     if start < 0:             # <<<<<<<<<<<<<<
@@ -9502,7 +9474,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   }
 
-  /* "dysgu/coverage.pyx":608
+  /* "dysgu/coverage.pyx":593
  *     if start < 0:
  *         start = 0
  *     cdef int len_chrom = <int> len(chrom_depth)             # <<<<<<<<<<<<<<
@@ -9512,7 +9484,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   __pyx_t_2 = __Pyx_MemoryView_Len(__pyx_v_chrom_depth); 
   __pyx_v_len_chrom = ((int)__pyx_t_2);
 
-  /* "dysgu/coverage.pyx":609
+  /* "dysgu/coverage.pyx":594
  *         start = 0
  *     cdef int len_chrom = <int> len(chrom_depth)
  *     if end > len_chrom:             # <<<<<<<<<<<<<<
@@ -9522,7 +9494,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   __pyx_t_1 = ((__pyx_v_end > __pyx_v_len_chrom) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":610
+    /* "dysgu/coverage.pyx":595
  *     cdef int len_chrom = <int> len(chrom_depth)
  *     if end > len_chrom:
  *         end = len_chrom             # <<<<<<<<<<<<<<
@@ -9531,7 +9503,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
     __pyx_v_end = __pyx_v_len_chrom;
 
-    /* "dysgu/coverage.pyx":609
+    /* "dysgu/coverage.pyx":594
  *         start = 0
  *     cdef int len_chrom = <int> len(chrom_depth)
  *     if end > len_chrom:             # <<<<<<<<<<<<<<
@@ -9540,7 +9512,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   }
 
-  /* "dysgu/coverage.pyx":612
+  /* "dysgu/coverage.pyx":597
  *         end = len_chrom
  *     cdef int i
  *     cdef float total = 0             # <<<<<<<<<<<<<<
@@ -9549,7 +9521,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   __pyx_v_total = 0.0;
 
-  /* "dysgu/coverage.pyx":614
+  /* "dysgu/coverage.pyx":599
  *     cdef float total = 0
  * 
  *     for i in range(start, end):             # <<<<<<<<<<<<<<
@@ -9561,7 +9533,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   for (__pyx_t_5 = __pyx_v_start; __pyx_t_5 < __pyx_t_4; __pyx_t_5+=1) {
     __pyx_v_i = __pyx_t_5;
 
-    /* "dysgu/coverage.pyx":615
+    /* "dysgu/coverage.pyx":600
  * 
  *     for i in range(start, end):
  *         total += chrom_depth[i]             # <<<<<<<<<<<<<<
@@ -9573,7 +9545,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
     __pyx_v_total = (__pyx_v_total + (*((__pyx_t_5dysgu_8coverage_DTYPE_t *) ( /* dim=0 */ (__pyx_v_chrom_depth.data + __pyx_t_6 * __pyx_v_chrom_depth.strides[0]) ))));
   }
 
-  /* "dysgu/coverage.pyx":617
+  /* "dysgu/coverage.pyx":602
  *         total += chrom_depth[i]
  * 
  *     if total == 0:             # <<<<<<<<<<<<<<
@@ -9583,7 +9555,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
   __pyx_t_1 = ((__pyx_v_total == 0.0) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/coverage.pyx":618
+    /* "dysgu/coverage.pyx":603
  * 
  *     if total == 0:
  *         return 0             # <<<<<<<<<<<<<<
@@ -9592,7 +9564,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
     __pyx_r = 0.0;
     goto __pyx_L0;
 
-    /* "dysgu/coverage.pyx":617
+    /* "dysgu/coverage.pyx":602
  *         total += chrom_depth[i]
  * 
  *     if total == 0:             # <<<<<<<<<<<<<<
@@ -9601,7 +9573,7 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
  */
   }
 
-  /* "dysgu/coverage.pyx":619
+  /* "dysgu/coverage.pyx":604
  *     if total == 0:
  *         return 0
  *     return total / (end - start)             # <<<<<<<<<<<<<<
@@ -9615,12 +9587,12 @@ static float __pyx_f_5dysgu_8coverage_calculate_coverage(int __pyx_v_start, int 
     #ifdef WITH_THREAD
     __Pyx_PyGILState_Release(__pyx_gilstate_save);
     #endif
-    __PYX_ERR(0, 619, __pyx_L1_error)
+    __PYX_ERR(0, 604, __pyx_L1_error)
   }
   __pyx_r = (__pyx_v_total / ((float)__pyx_t_3));
   goto __pyx_L0;
 
-  /* "dysgu/coverage.pyx":599
+  /* "dysgu/coverage.pyx":584
  * 
  * 
  * cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:             # <<<<<<<<<<<<<<
@@ -9670,17 +9642,17 @@ static PyObject *__pyx_pw_5dysgu_8coverage_7calculate_coverage(PyObject *__pyx_s
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_end)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, 1); __PYX_ERR(0, 599, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, 1); __PYX_ERR(0, 584, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_chrom_depth)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, 2); __PYX_ERR(0, 599, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, 2); __PYX_ERR(0, 584, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "calculate_coverage") < 0)) __PYX_ERR(0, 599, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "calculate_coverage") < 0)) __PYX_ERR(0, 584, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -9689,13 +9661,13 @@ static PyObject *__pyx_pw_5dysgu_8coverage_7calculate_coverage(PyObject *__pyx_s
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
     }
-    __pyx_v_start = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_start == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 599, __pyx_L3_error)
-    __pyx_v_end = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_end == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 599, __pyx_L3_error)
-    __pyx_v_chrom_depth = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_chrom_depth.memview)) __PYX_ERR(0, 599, __pyx_L3_error)
+    __pyx_v_start = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_start == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 584, __pyx_L3_error)
+    __pyx_v_end = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_end == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 584, __pyx_L3_error)
+    __pyx_v_chrom_depth = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5dysgu_8coverage_DTYPE_t(values[2], PyBUF_WRITABLE); if (unlikely(!__pyx_v_chrom_depth.memview)) __PYX_ERR(0, 584, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 599, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("calculate_coverage", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 584, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.coverage.calculate_coverage", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -9714,8 +9686,8 @@ static PyObject *__pyx_pf_5dysgu_8coverage_6calculate_coverage(CYTHON_UNUSED PyO
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("calculate_coverage", 0);
   __Pyx_XDECREF(__pyx_r);
-  if (unlikely(!__pyx_v_chrom_depth.memview)) { __Pyx_RaiseUnboundLocalError("chrom_depth"); __PYX_ERR(0, 599, __pyx_L1_error) }
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_calculate_coverage(__pyx_v_start, __pyx_v_end, __pyx_v_chrom_depth, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 599, __pyx_L1_error)
+  if (unlikely(!__pyx_v_chrom_depth.memview)) { __Pyx_RaiseUnboundLocalError("chrom_depth"); __PYX_ERR(0, 584, __pyx_L1_error) }
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_f_5dysgu_8coverage_calculate_coverage(__pyx_v_start, __pyx_v_end, __pyx_v_chrom_depth, 0)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 584, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -25947,7 +25919,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_GenomeScanner_add_to_buffer, __pyx_k_GenomeScanner_add_to_buffer, sizeof(__pyx_k_GenomeScanner_add_to_buffer), 0, 0, 1, 1},
   {&__pyx_n_s_GenomeScanner_get_read_length, __pyx_k_GenomeScanner_get_read_length, sizeof(__pyx_k_GenomeScanner_get_read_length), 0, 0, 1, 1},
   {&__pyx_n_s_GenomeScanner_iter_genome, __pyx_k_GenomeScanner_iter_genome, sizeof(__pyx_k_GenomeScanner_iter_genome), 0, 0, 1, 1},
-  {&__pyx_kp_u_Got_here, __pyx_k_Got_here, sizeof(__pyx_k_Got_here), 0, 1, 0, 0},
   {&__pyx_n_s_ImportError, __pyx_k_ImportError, sizeof(__pyx_k_ImportError), 0, 0, 1, 1},
   {&__pyx_kp_s_Incompatible_checksums_s_vs_0xb0, __pyx_k_Incompatible_checksums_s_vs_0xb0, sizeof(__pyx_k_Incompatible_checksums_s_vs_0xb0), 0, 0, 1, 0},
   {&__pyx_n_s_IndexError, __pyx_k_IndexError, sizeof(__pyx_k_IndexError), 0, 0, 1, 1},
@@ -26190,8 +26161,8 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_open = __Pyx_GetBuiltinName(__pyx_n_s_open); if (!__pyx_builtin_open) __PYX_ERR(0, 150, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 225, __pyx_L1_error)
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(0, 229, __pyx_L1_error)
-  __pyx_builtin_quit = __Pyx_GetBuiltinName(__pyx_n_s_quit); if (!__pyx_builtin_quit) __PYX_ERR(0, 262, __pyx_L1_error)
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 383, __pyx_L1_error)
+  __pyx_builtin_quit = __Pyx_GetBuiltinName(__pyx_n_s_quit); if (!__pyx_builtin_quit) __PYX_ERR(0, 260, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 370, __pyx_L1_error)
   __pyx_builtin_ImportError = __Pyx_GetBuiltinName(__pyx_n_s_ImportError); if (!__pyx_builtin_ImportError) __PYX_ERR(1, 1038, __pyx_L1_error)
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(2, 148, __pyx_L1_error)
   __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(2, 151, __pyx_L1_error)
@@ -26263,14 +26234,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
 
-  /* "dysgu/coverage.pyx":261
+  /* "dysgu/coverage.pyx":259
  *         # Add last seen coverage bin
  *         if total_reads == 0:
  *             click.echo("No reads, finishing", err=True)             # <<<<<<<<<<<<<<
  *             quit()
  * 
  */
-  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_u_No_reads_finishing); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 261, __pyx_L1_error)
+  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_u_No_reads_finishing); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__12);
   __Pyx_GIVEREF(__pyx_tuple__12);
 
@@ -26615,29 +26586,29 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__49);
   __pyx_codeobj__11 = (PyObject*)__Pyx_PyCode_New(1, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__49, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_coverage_pyx, __pyx_n_s_iter_genome, 249, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__11)) __PYX_ERR(0, 249, __pyx_L1_error)
 
-  /* "dysgu/coverage.pyx":266
+  /* "dysgu/coverage.pyx":264
  *         click.echo(f"Total input reads {total_reads}", err=True)
  * 
  *     def add_to_buffer(self, r, n1):             # <<<<<<<<<<<<<<
  * 
  *         if self.first == 1:
  */
-  __pyx_tuple__50 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_r, __pyx_n_s_n1); if (unlikely(!__pyx_tuple__50)) __PYX_ERR(0, 266, __pyx_L1_error)
+  __pyx_tuple__50 = PyTuple_Pack(3, __pyx_n_s_self, __pyx_n_s_r, __pyx_n_s_n1); if (unlikely(!__pyx_tuple__50)) __PYX_ERR(0, 264, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__50);
   __Pyx_GIVEREF(__pyx_tuple__50);
-  __pyx_codeobj__51 = (PyObject*)__Pyx_PyCode_New(3, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__50, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_coverage_pyx, __pyx_n_s_add_to_buffer, 266, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__51)) __PYX_ERR(0, 266, __pyx_L1_error)
+  __pyx_codeobj__51 = (PyObject*)__Pyx_PyCode_New(3, 0, 3, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__50, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_coverage_pyx, __pyx_n_s_add_to_buffer, 264, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__51)) __PYX_ERR(0, 264, __pyx_L1_error)
 
-  /* "dysgu/coverage.pyx":284
+  /* "dysgu/coverage.pyx":282
  * 
  * 
- *     def _add_to_bin_buffer(self, a, tell):  # long int             # <<<<<<<<<<<<<<
+ *     def _add_to_bin_buffer(self, a, tell):             # <<<<<<<<<<<<<<
  * 
  *         cdef int flag = a.flag
  */
-  __pyx_tuple__52 = PyTuple_Pack(13, __pyx_n_s_self, __pyx_n_s_a, __pyx_n_s_tell, __pyx_n_s_flag, __pyx_n_s_rname, __pyx_n_s_apos, __pyx_n_s_bin_pos, __pyx_n_s_ref_length, __pyx_n_s_reference_name, __pyx_n_s_aend, __pyx_n_s_current_coverage, __pyx_n_s_current_cov, __pyx_n_s_in_roi); if (unlikely(!__pyx_tuple__52)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_tuple__52 = PyTuple_Pack(13, __pyx_n_s_self, __pyx_n_s_a, __pyx_n_s_tell, __pyx_n_s_flag, __pyx_n_s_rname, __pyx_n_s_apos, __pyx_n_s_bin_pos, __pyx_n_s_ref_length, __pyx_n_s_reference_name, __pyx_n_s_aend, __pyx_n_s_current_coverage, __pyx_n_s_current_cov, __pyx_n_s_in_roi); if (unlikely(!__pyx_tuple__52)) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__52);
   __Pyx_GIVEREF(__pyx_tuple__52);
-  __pyx_codeobj__53 = (PyObject*)__Pyx_PyCode_New(3, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__52, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_coverage_pyx, __pyx_n_s_add_to_bin_buffer, 284, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__53)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_codeobj__53 = (PyObject*)__Pyx_PyCode_New(3, 0, 13, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__52, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_coverage_pyx, __pyx_n_s_add_to_bin_buffer, 282, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__53)) __PYX_ERR(0, 282, __pyx_L1_error)
 
   /* "View.MemoryView":286
  *         return self.name
@@ -27270,28 +27241,28 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_iter_genome, __pyx_t_1) < 0) __PYX_ERR(0, 249, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/coverage.pyx":266
+  /* "dysgu/coverage.pyx":264
  *         click.echo(f"Total input reads {total_reads}", err=True)
  * 
  *     def add_to_buffer(self, r, n1):             # <<<<<<<<<<<<<<
  * 
  *         if self.first == 1:
  */
-  __pyx_t_1 = __Pyx_CyFunction_NewEx(&__pyx_mdef_5dysgu_8coverage_13GenomeScanner_11add_to_buffer, 0, __pyx_n_s_GenomeScanner_add_to_buffer, NULL, __pyx_n_s_dysgu_coverage, __pyx_d, ((PyObject *)__pyx_codeobj__51)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 266, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_CyFunction_NewEx(&__pyx_mdef_5dysgu_8coverage_13GenomeScanner_11add_to_buffer, 0, __pyx_n_s_GenomeScanner_add_to_buffer, NULL, __pyx_n_s_dysgu_coverage, __pyx_d, ((PyObject *)__pyx_codeobj__51)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 264, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_add_to_buffer, __pyx_t_1) < 0) __PYX_ERR(0, 266, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_add_to_buffer, __pyx_t_1) < 0) __PYX_ERR(0, 264, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/coverage.pyx":284
+  /* "dysgu/coverage.pyx":282
  * 
  * 
- *     def _add_to_bin_buffer(self, a, tell):  # long int             # <<<<<<<<<<<<<<
+ *     def _add_to_bin_buffer(self, a, tell):             # <<<<<<<<<<<<<<
  * 
  *         cdef int flag = a.flag
  */
-  __pyx_t_1 = __Pyx_CyFunction_NewEx(&__pyx_mdef_5dysgu_8coverage_13GenomeScanner_13_add_to_bin_buffer, 0, __pyx_n_s_GenomeScanner__add_to_bin_buffer, NULL, __pyx_n_s_dysgu_coverage, __pyx_d, ((PyObject *)__pyx_codeobj__53)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_CyFunction_NewEx(&__pyx_mdef_5dysgu_8coverage_13GenomeScanner_13_add_to_bin_buffer, 0, __pyx_n_s_GenomeScanner__add_to_bin_buffer, NULL, __pyx_n_s_dysgu_coverage, __pyx_d, ((PyObject *)__pyx_codeobj__53)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_add_to_bin_buffer, __pyx_t_1) < 0) __PYX_ERR(0, 284, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_2, __pyx_n_s_add_to_bin_buffer, __pyx_t_1) < 0) __PYX_ERR(0, 282, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "dysgu/coverage.pyx":97

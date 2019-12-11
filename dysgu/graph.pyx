@@ -429,7 +429,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     # cdef list chunk
     # cdef AlignedSegment r
 
-    debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"
+    debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"
     debug_nodes = set([])
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:

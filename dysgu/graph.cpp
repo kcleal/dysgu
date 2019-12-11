@@ -2867,7 +2867,7 @@ static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype cod
 static const char __pyx_k_Building_graph_with_clustering_d[] = "Building graph with clustering distance {}bp";
 static const char __pyx_k_ClipScoper__add_m_find_candidate[] = "ClipScoper._add_m_find_candidates";
 static const char __pyx_k_Constructed_graph_processing_blo[] = "Constructed graph, processing block model";
-static const char __pyx_k_D00360_19_H8VDAADXX_2_1109_10968[] = "D00360:19:H8VDAADXX:2:1109:10968:47097";
+static const char __pyx_k_D00360_18_H8VC6ADXX_2_2210_15612[] = "D00360:18:H8VC6ADXX:2:2210:15612:70818";
 static const char __pyx_k_Format_string_allocated_too_shor[] = "Format string allocated too short, see comment in numpy.pxd";
 static const char __pyx_k_Incompatible_checksums_s_vs_0x45[] = "Incompatible checksums (%s vs 0x456c8bd = (ends, starts, values))";
 static const char __pyx_k_Keeps_track_of_which_reads_are_i[] = "Keeps track of which reads are in scope. Maximum distance depends on the template insert_median";
@@ -2885,7 +2885,7 @@ static PyObject *__pyx_n_s_ClipScoper__pop_minimizers;
 static PyObject *__pyx_n_s_ClipScoper_update;
 static PyObject *__pyx_n_s_ConnectedComponents;
 static PyObject *__pyx_kp_u_Constructed_graph_processing_blo;
-static PyObject *__pyx_kp_u_D00360_19_H8VDAADXX_2_1109_10968;
+static PyObject *__pyx_kp_u_D00360_18_H8VC6ADXX_2_2210_15612;
 static PyObject *__pyx_kp_u_Format_string_allocated_too_shor;
 static PyObject *__pyx_kp_u_Format_string_allocated_too_shor_2;
 static PyObject *__pyx_n_s_ForwardScope;
@@ -10261,18 +10261,18 @@ static PyObject *__pyx_gb_5dysgu_5graph_4generator(__pyx_CoroutineObject *__pyx_
   /* "dysgu/graph.pyx":432
  *     # cdef AlignedSegment r
  * 
- *     debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"             # <<<<<<<<<<<<<<
+ *     debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"             # <<<<<<<<<<<<<<
  *     debug_nodes = set([])
  *     for chunk in genome_scanner.iter_genome():
  */
-  __Pyx_INCREF(__pyx_kp_u_D00360_19_H8VDAADXX_2_1109_10968);
+  __Pyx_INCREF(__pyx_kp_u_D00360_18_H8VC6ADXX_2_2210_15612);
   __Pyx_GOTREF(__pyx_cur_scope->__pyx_v_debug);
-  __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_debug, __pyx_kp_u_D00360_19_H8VDAADXX_2_1109_10968);
-  __Pyx_GIVEREF(__pyx_kp_u_D00360_19_H8VDAADXX_2_1109_10968);
+  __Pyx_DECREF_SET(__pyx_cur_scope->__pyx_v_debug, __pyx_kp_u_D00360_18_H8VC6ADXX_2_2210_15612);
+  __Pyx_GIVEREF(__pyx_kp_u_D00360_18_H8VC6ADXX_2_2210_15612);
 
   /* "dysgu/graph.pyx":433
  * 
- *     debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"
+ *     debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"
  *     debug_nodes = set([])             # <<<<<<<<<<<<<<
  *     for chunk in genome_scanner.iter_genome():
  *         for r, tell in chunk:
@@ -10284,7 +10284,7 @@ static PyObject *__pyx_gb_5dysgu_5graph_4generator(__pyx_CoroutineObject *__pyx_
   __pyx_t_1 = 0;
 
   /* "dysgu/graph.pyx":434
- *     debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"
+ *     debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"
  *     debug_nodes = set([])
  *     for chunk in genome_scanner.iter_genome():             # <<<<<<<<<<<<<<
  *         for r, tell in chunk:
@@ -12433,7 +12433,7 @@ static PyObject *__pyx_gb_5dysgu_5graph_4generator(__pyx_CoroutineObject *__pyx_
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
     /* "dysgu/graph.pyx":434
- *     debug = "D00360:19:H8VDAADXX:2:1109:10968:47097"
+ *     debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"
  *     debug_nodes = set([])
  *     for chunk in genome_scanner.iter_genome():             # <<<<<<<<<<<<<<
  *         for r, tell in chunk:
@@ -21531,7 +21531,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_ClipScoper_update, __pyx_k_ClipScoper_update, sizeof(__pyx_k_ClipScoper_update), 0, 0, 1, 1},
   {&__pyx_n_s_ConnectedComponents, __pyx_k_ConnectedComponents, sizeof(__pyx_k_ConnectedComponents), 0, 0, 1, 1},
   {&__pyx_kp_u_Constructed_graph_processing_blo, __pyx_k_Constructed_graph_processing_blo, sizeof(__pyx_k_Constructed_graph_processing_blo), 0, 1, 0, 0},
-  {&__pyx_kp_u_D00360_19_H8VDAADXX_2_1109_10968, __pyx_k_D00360_19_H8VDAADXX_2_1109_10968, sizeof(__pyx_k_D00360_19_H8VDAADXX_2_1109_10968), 0, 1, 0, 0},
+  {&__pyx_kp_u_D00360_18_H8VC6ADXX_2_2210_15612, __pyx_k_D00360_18_H8VC6ADXX_2_2210_15612, sizeof(__pyx_k_D00360_18_H8VC6ADXX_2_2210_15612), 0, 1, 0, 0},
   {&__pyx_kp_u_Format_string_allocated_too_shor, __pyx_k_Format_string_allocated_too_shor, sizeof(__pyx_k_Format_string_allocated_too_shor), 0, 1, 0, 0},
   {&__pyx_kp_u_Format_string_allocated_too_shor_2, __pyx_k_Format_string_allocated_too_shor_2, sizeof(__pyx_k_Format_string_allocated_too_shor_2), 0, 1, 0, 0},
   {&__pyx_n_s_ForwardScope, __pyx_k_ForwardScope, sizeof(__pyx_k_ForwardScope), 0, 0, 1, 1},
