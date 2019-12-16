@@ -38,6 +38,7 @@ HEADER = """##fileformat=VCFv4.2
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=DP,Number=1,Type=Float,Description="Mean distance-to-pair metric supporting the variant">
 ##FORMAT=<ID=DN,Number=1,Type=Float,Description="Mean distance-to-normal metric supporting the variant">
 ##FORMAT=<ID=DAP,Number=1,Type=Float,Description="Mean distance-to-alignment metric for primary alignments">
@@ -53,9 +54,10 @@ HEADER = """##fileformat=VCFv4.2
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
-##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break sites">
+##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
 ##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other beak points within 100 bp or break sites">
+##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
@@ -186,7 +188,7 @@ def make_main_record(r, version, index, format_f, df_rows, df):
                    f"KIND={r['kind']}",
 
                    ] + info_extras),
-           "DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PROB"
+           "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PROB"
            ]
     # FORMAT line(s)
     for item in format_f.values():
@@ -218,7 +220,7 @@ def gen_format_fields(r, df, names):
     for name in names:
 
         if name in cols:
-            format_fields[name] = ([r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+            format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                   r['ref_bases'], r['Prob']])
@@ -242,6 +244,15 @@ def to_vcf(df, args, names, outfile):
         dm = df
 
     seen_idx = set([])
+
+    for col in ['raw_reads_10kb', 'DP', 'DN', 'DApri', 'DAsupp', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']:
+        dm[col] = dm[col].round(2)
+
+    for col in ['maxASsupp', 'neigh']:
+        dm[col] = [int(i) for i in dm[col]]
+
+    dm["chrA"] = [i.replace("chr", "") for i in dm["chrA"]]
+    dm["chrB"] = [i.replace("chr", "") for i in dm["chrB"]]
 
     count = 0
     recs = []
