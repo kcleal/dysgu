@@ -355,15 +355,15 @@ def cluster_reads(args):
                                                                      read_len)
 
 
-        max_clust_dist = 2 * (int(insert_median + (5 * insert_stdev)))
+        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))  # 2
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
         event_id = 0
         block_edge_events = []
 
         for component in graph.construct_graph(genome_scanner,
                                                   infile,
-                                                  insert_median,
-                                                  max_clust_dist,
+                                                  max_dist=insert_median + (insert_stdev * 5),
+                                                  clustering_dist=max_clust_dist,
                                                   minimizer_dist=8,
                                                   minimizer_support_thresh=args["z_depth"],
                                                   minimizer_breadth=args["z_breadth"],

@@ -317,8 +317,8 @@ class ForwardScope:
 class PairedEndScoper:
 
     def __init__(self, max_dist):
-        self.clst_dist = 3*max_dist  # Keep reads within this distance in scope  # todo sensible threshold
-        self.max_dist = 3*max_dist
+        self.clst_dist = max_dist  # 1.5  # Keep reads within this distance in scope
+        self.max_dist = max_dist  # 1.5
         self.local_chrom = None
         self.local_scope = deque([])
         self.forward_scope = defaultdict(lambda: ForwardScope())
@@ -352,11 +352,10 @@ class PairedEndScoper:
             t.add((pos2, node_name, current_pos))
             return None
 
-        # pnext - max_dist, pnext + max_dist
         idx = t.bisect_left((pos2, None))
         found = []
         if idx == 0:
-            # echo("t", t, idx)
+
             item_forward_pos, item_node, item_local_pos = t[idx]
 
             if abs(item_local_pos - current_pos) < self.max_dist and \
@@ -386,8 +385,83 @@ class PairedEndScoper:
         # Add to scopes
         self.local_scope.append((current_pos, chrom2))
         self.forward_scope[chrom2].add((pos2, node_name, current_pos))
+
+        # if node_name == 70:
+        #     echo(self.local_scope)
+        #     echo(self.forward_scope[chrom2])
         return found
 
+
+class TemplateEdges:
+    def __init__(self):
+        self.templates = dict()
+
+    def add(self, template_name, flag, node, query_start):
+        if flag & 64:
+            if template_name not in self.templates:
+                self.templates[template_name] = [[(query_start, node, flag)], []]
+            else:
+                self.templates[template_name][0].append((query_start, node, flag))
+        else:
+            if template_name not in self.templates:
+                self.templates[template_name] = [[], [(query_start, node, flag)]]
+            else:
+                self.templates[template_name][1].append((query_start, node, flag))
+
+
+def add_template_edges(G, template_edges):
+
+    cdef int ii, u_start, v_start, u, v, uflag, vflag
+
+    for qname, (read1_aligns, read2_aligns) in template_edges.templates.items():  # normally 2 reads, or >2 if supplementary reads
+
+        primary1 = None
+        primary2 = None
+
+        if len(read1_aligns) > 0:
+            if len(read1_aligns) == 1:
+                if not read1_aligns[0][2] & 2304:  # Is primary
+                    primary1 = read1_aligns[0][1]
+            else:
+                if len(read1_aligns) > 2:
+                    read1_aligns = sorted(read1_aligns)
+                # Add edge between alignments that are neighbors on the query sequence, or between primary alignments
+                for ii in range(len(read1_aligns) - 1):
+
+                    u_start, u, uflag = read1_aligns[ii]
+                    if not uflag & 2304:  # Is primary
+                        primary1 = u
+
+                    v_start, v, vflag = read1_aligns[ii + 1]
+                    if not G.hasEdge(u, v):
+                        G.addEdge(u, v, w=1)
+                if primary1 is None:  # Check last in list
+                    if not read1_aligns[-1][2] & 2304:
+                        primary1 = read1_aligns[-1][1]
+
+        if len(read2_aligns) > 0:
+            if len(read2_aligns) == 1:
+                if not read2_aligns[0][2] & 2304:  # Is primary
+                    primary2 = read2_aligns[0][1]
+            else:
+                if len(read2_aligns) > 2:
+                    read2_aligns = sorted(read2_aligns)
+
+                for ii in range(len(read2_aligns) - 1):
+                    u_start, u, uflag = read2_aligns[ii]
+                    if not uflag & 2304:  # Is primary
+                        primary2 = u
+
+                    v_start, v, vflag = read2_aligns[ii + 1]
+                    if not G.hasEdge(u, v):
+                        G.addEdge(u, v, w=1)
+                if primary2 is None:  # Check last in list
+                    if not read2_aligns[-1][2] & 2304:
+                        primary2 = read2_aligns[-1][1]
+
+        if primary1 is not None and primary2 is not None:
+            if not G.hasEdge(primary1, primary2):
+                G.addEdge(primary1, primary2, w=1)
 
 
 def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
@@ -397,7 +471,8 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     t0 = time.time()
     click.echo("Building graph with clustering distance {}bp".format(max_dist), err=True)
 
-    all_flags = defaultdict(list)  # Linking clusters together rname: set([(flag, pos)..])
+    all_flags = defaultdict(list)  # Linking clusters together rname: [node_name..]
+    template_edges = TemplateEdges()
 
     node_to_name = []
 
@@ -407,7 +482,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     pe_scope = PairedEndScoper(max_dist)
 
-    overlap_regions = genome_scanner.overlap_regions
+    overlap_regions = genome_scanner.overlap_regions  # Get overlapper
 
     cdef int count = 0
     cdef int buf_del_index = 0
@@ -421,6 +496,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     cdef int ol_include, add_primary_link
     cdef int current_overlaps_roi, next_overlaps_roi
 
+    cdef int loci_dist = int(max_dist * 1.5)
     t0 = time.time()
 
     G = nk.graph.Graph(weighted=True)
@@ -429,7 +505,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     # cdef list chunk
     # cdef AlignedSegment r
 
-    debug = "D00360:18:H8VC6ADXX:2:2210:15612:70818"
+    debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
     debug_nodes = set([])
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
@@ -447,31 +523,33 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
             n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)
             node_name = G.addNode()
-            node_to_name.append(n1)
+            node_to_name.append(n1)  # Index this list to get the template_name
+
+            # if node_name == 11 or node_name == 37 or node_name == 70:
+            #     echo(node_name, r.to_string().replace("\t", " "))
 
                 # quit()
             genome_scanner.add_to_buffer(r, node_name)
 
-            all_flags[qname].append(node_name)  # Used for paired-end edges
+            #all_flags[qname].append(node_name)  # Used for paired-end edges
+            template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
-            if qname == debug:
-                echo(qname, n1, "NODE NAME", node_name, clip_left, clip_right)
-                debug_nodes.add(node_name)
+            # if qname == debug:
+            #     echo(qname, n1, "NODE NAME", node_name, clip_left, clip_right, f"{r.rname}:{r.pos}", r.query_alignment_start)
+            #     debug_nodes.add(node_name)
 
+            # templates_connected = set([])  # Only one black/normal edge per pair of templates
             # Cluster soft-clips
-            # if cigartuples[0][0] == 4 or cigartuples[-1][0] == 4:
             if clip_left > clip_l or clip_right > clip_l:
                 best_candidates = scope.update(node_name, seq, clip_left, clip_right, chrom, pos)
-
-                # if qname == debug:
-                #     echo(qname, n1, "NODE NAME", node_name)
-                #     echo(best_candidates)
-                #     debug_nodes.add(node_name)
 
                 if best_candidates is not None:
                     for node_name2 in best_candidates:
                         if not G.hasEdge(node_name, node_name2):
                             G.addEdge(node_name, node_name2, w=3)  # weight 3 for black edge
+
+                            # templates_connected.add(node_to_name[node_name2])
+
                             # if node_name in debug_nodes or node_name2 in debug_nodes:
                             #     echo("black edge", node_name, node_name2)
                             #     echo(node_name, str(r.qname))
@@ -493,26 +571,20 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
             # same loci as the read which leads to problems when linking no.2 edges
             add_primark_link = 1
 
-            current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions,
-                                                                    r.rname,
-                                                                    pos,
-                                                                    pos+1)
+            current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, pos, pos+1)
             # if node_name in debug_nodes:
             #     echo("current overlaps roi", node_name, current_overlaps_roi)
 
-            if chrom == rnext and abs(pnext - pos) < (max_dist * 3):  # Same loci
+            if chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
 
                 if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
                     sa = r.get_tag("SA").split(",", 2)
                     chrom2 = infile.gettid(sa[0])
                     pos2 = int(sa[1])
-                    if chrom2 != chrom or abs(pos2 - pos) > (max_dist * 3):
+                    if chrom2 != chrom or abs(pos2 - pos) > loci_dist:
 
                         add_primark_link = 0
-                        next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions,
-                                                                             chrom2,
-                                                                             pos2,
-                                                                             pos2+1)
+                        next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
 
                         # if not next_overlaps_roi:
                         if current_overlaps_roi and next_overlaps_roi:
@@ -521,11 +593,12 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                             other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
 
                             # if qname == debug:
-                            #     echo(node_name, other_nodes)
+                            #     echo("same loci?", node_name, other_nodes)
 
                             if other_nodes:
                                 for other_node in other_nodes:
 
+                                    #if node_to_name[other_node] not in templates_connected and \
                                     if not G.hasEdge(node_name, other_node):
                                         G.addEdge(node_name, other_node, w=2)
 
@@ -534,12 +607,10 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
             #
             if add_primark_link == 1:
-                next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions,
-                                                                     rnext,
-                                                                     pnext,
-                                                                     pnext+1)
+                next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, rnext, pnext, pnext+1)
 
                 if current_overlaps_roi and next_overlaps_roi:
+                    # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
                     continue
 
                 if flag & 2 and not flag & 2048:  # Skip non-discordant that are same loci
@@ -549,12 +620,18 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                 other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext)
                 if other_nodes:
                     for other_node in other_nodes:
-                        # pass
+                        # if (node_name, other_node) == (70, 37):
+                        #     echo(other_nodes)
+                        #     echo(max_dist)
+                        #     quit()
+
+                        # if node_to_name[other_node] not in templates_connected and \
                         if not G.hasEdge(node_name, other_node):
+
                             G.addEdge(node_name, other_node, w=2)
 
-                            # if node_name in debug_nodes or node_name2 in debug_nodes:
-                            #     echo("normal edge", node_name, node_name2, current_overlaps_roi, next_overlaps_roi)
+                            # if node_name in debug_nodes:
+                            #     echo("normal edge", node_name, other_node, current_overlaps_roi, next_overlaps_roi, chrom, pos, rnext, pnext)
                             #     echo(node_name, str(r.qname))
 
     # testout.close()
@@ -594,26 +671,35 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     # echo(">", all_flags[debug])
 
     t2 = time.time()
-    cdef list node_names
-    for qname, node_names in all_flags.items():  # 2 reads, or 3 if supplementary read
-        for u, v in itertools.combinations_with_replacement(node_names, 2):  # Check all edges within template
-            if u != v and not G.hasEdge(u, v):
-                G.addEdge(u, v, w=1)
+
+    add_template_edges(G, template_edges)
+
 
     click.echo(f"Paired end info in {time.time() - t2}", err=True)
+
+    # quit()
+    #
+    # t2 = time.time()
+    # cdef list node_names
+    # for qname, node_names in all_flags.items():  # normally 2 reads, or >2 if supplementary reads
+    #     for u, v in itertools.combinations_with_replacement(node_names, 2):  # Check all edges within template
+    #         # Only add edge between Primary pairs, or alignments from same read
+    #         if u != v and not G.hasEdge(u, v):
+    #             G.addEdge(u, v, w=1)
+    #
+    # click.echo(f"Paired end info in {time.time() - t2}", err=True)
 
     cdef dict component
 
     read_buffer = genome_scanner.read_buffer
 
     click.echo("Constructed graph, processing block model", err=True)
-    for component in get_block_components(G, node_to_name, infile, max_dist, minimizer_dist, read_buffer, min_support,
+    for component in get_block_components(G, node_to_name, infile, read_buffer, min_support,
                                           debug_nodes):
-
         yield component
 
 
-def get_block_components(G, list node_to_name, infile, int max_dist, int read_length, dict read_buffer,
+def get_block_components(G, list node_to_name, infile, dict read_buffer,
                          int min_support, debug_nodes):
 
     # Turn graph into a block model, first split into connected components,
@@ -684,79 +770,6 @@ cpdef dict get_reads(infile, dict sub_graph_reads):
     return rd
 
 
-cdef dict proc_component(list node_to_name, list component, dict read_buffer, infile, G, int min_support):
-
-    n2n = {}
-    reads = {}
-
-    cdef int v
-    for v in component:
-        if v in read_buffer:
-            reads[v] = read_buffer[v]
-        else:
-            n2n[v] = node_to_name[v]
-
-
-    # Get any reads that are in read buffer, leave the rest in n2n (these will be fetched later)
-
-
-    # if len(missing) > 0:
-    #     click.echo(f"Warning missing reads n={len(missing)}", err=True)
-    #     echo(missing)
-    #     for item in missing:
-    #         del n2n[item]
-    #     component = list(set(component).difference(missing))
-    #     for rn in missing:
-    #         G.removeNode(rn)
-    #     if len(component) == 0:
-    #         return None
-
-
-    # Explore component for locally interacting nodes; create partitions using these
-    partitions = get_partitions(G, component)
-
-    support_between, support_within = count_support_between(G, partitions)
-
-    # echo("support wthi", support_within)
-    # for k, v in partitions.items():
-    #     if 580 in v:
-    #         echo("in parts")
-    #         echo(partitions)
-    #         echo(support_between)
-    #         echo(support_within)
-    #         quit()
-
-    if len(support_between) == 0 and len(support_within) == 0:
-        return {"parts": [], "s_between": [], "reads": reads, "s_within": [], "n2n": n2n}
-
-    sb = {}
-    kept = set([])
-    deleted = set([])
-    for edge, vd in support_between.items():
-
-        sup = sum([len(vv) for vv in vd.values()])
-        if sup >= min_support:
-            sb[edge] = vd
-            kept.add(edge[0])
-            kept.add(edge[1])
-        else:
-            deleted.add(edge[0])
-            deleted.add(edge[1])
-
-    deleted -= kept
-
-    # check deleted for support within, discard if min_support not reached
-    for block_node in deleted:
-        if block_node in support_within:
-            if len(support_within[block_node]) < min_support:
-                del partitions[block_node]
-        else:
-            del partitions[block_node]
-
-    # debug_component(component, node_to_name, support_between, support_within, G, partitions, {157240, 157241, 157242})
-    return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-
-
 cdef list subgraph_from_nodes(G, list nodes):
     # Mark all the vertices as not visited
     edges_found = set([])
@@ -802,7 +815,7 @@ cdef tuple BFS_local(G, int source):
 
 cdef dict get_partitions(G, list nodes):
 
-    seen = set([])  # Dont use Py_IntSet, unions are not quick at the moment
+    seen = set([])
 
     cdef int u, v, i
     parts = []
@@ -814,7 +827,7 @@ cdef dict get_partitions(G, list nodes):
             if v in seen:
                 continue
 
-            if G.weight(u, v) > 1:  # 2 or 3
+            if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
                 found, visited_local = BFS_local(G, u)
                 seen |= visited_local
                 if found:
@@ -839,7 +852,6 @@ cpdef tuple count_support_between(G, dict parts):
     for i, p in parts.items():
         p2i.update({node: i for node in p})
 
-
     # Count the links between partitions. Split reads into sets ready for assembly
     # counts (part_a, part_b): {part_a: [node 1, node 2 ..], part_b: [node4, ..] }
     counts = {}
@@ -860,12 +872,11 @@ cpdef tuple count_support_between(G, dict parts):
             if seen_nodes.has_key(node):
                 continue
 
-            for child in G.neighbors(node):
-
+            for child in G.neighbors(node):  # w=1, 2, 3; all neighbors
                 if not child in p2i or seen_nodes.has_key(child):
                     continue  # Exterior child, not in any partition
-                j = p2i[child]
 
+                j = p2i[child]  # Partition of neighbor node
                 if j != i:
                     any_out_edges = 1
                     if j < i:
@@ -896,20 +907,115 @@ cpdef tuple count_support_between(G, dict parts):
     return counts, self_counts
 
 
-def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets):
+cdef dict proc_component(list node_to_name, list component, dict read_buffer, infile, G, int min_support):
+
+    n2n = {}
+    reads = {}
+
+    cdef int v
+    for v in component:
+        if v in read_buffer:
+            reads[v] = read_buffer[v]
+        else:
+            n2n[v] = node_to_name[v]
+
+
+    # Get any reads that are in read buffer, leave the rest in n2n (these will be fetched later)
+
+
+    # if len(missing) > 0:
+    #     click.echo(f"Warning missing reads n={len(missing)}", err=True)
+    #     echo(missing)
+    #     for item in missing:
+    #         del n2n[item]
+    #     component = list(set(component).difference(missing))
+    #     for rn in missing:
+    #         G.removeNode(rn)
+    #     if len(component) == 0:
+    #         return None
+
+
+    # Explore component for locally interacting nodes; create partitions using these
+    partitions = get_partitions(G, component)
+
+    support_between, support_within = count_support_between(G, partitions)
+
+    # if (58, 186) in support_between:
+    #     echo("support between", support_between[(58, 186)], support_within[(58, 186)])
+    #     for k in support_between[(58, 186)][58]:
+    #         echo(58, k, reads[k].tostring().replace("\t", " "))
+    #     for k in support_between[(58, 186)][186]:
+    #         echo(186, k, reads[k].tostring().replace("\t", " "))
+    #     quit()
+
+    if len(support_between) == 0 and len(support_within) == 0:
+        return {"parts": [], "s_between": [], "reads": reads, "s_within": [], "n2n": n2n}
+
+    sb = {}
+    kept = set([])
+    deleted = set([])
+    for edge, vd in support_between.items():
+
+        sup = sum([len(vv) for vv in vd.values()])
+        if sup >= min_support:
+            sb[edge] = vd
+            kept.add(edge[0])
+            kept.add(edge[1])
+        else:
+            deleted.add(edge[0])
+            deleted.add(edge[1])
+
+    deleted -= kept
+
+    # check deleted for support within, discard if min_support not reached
+    for block_node in deleted:
+        if block_node in support_within:
+            if len(support_within[block_node]) < min_support:
+                del partitions[block_node]
+        else:
+            del partitions[block_node]
+
+    # if 279 in component:  # 5371604
+    #     echo({"parts": partitions, "s_between": sb, "reads": len(reads), "s_within": support_within})
+    #     samfile = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/NA12878/hg19/alignments/NA12878.bwa.bamreads_fast.bam", "rb")
+    #     outf = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/NA12878/hg19/alignments/test2.bam", "wb", template=samfile)
+    #     for idx, rr in sorted(reads.items(), key=lambda x: x[1].pos):
+    #         outf.write(rr)
+    #     outf.close()
+
+    # debug_component(component, node_to_name, support_between, support_within, G, partitions, {21},
+    #                 subset=False)
+    return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+
+
+def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets, subset=False):
 
     for cmp in component:
         if cmp in targets:
-            echo("Supportbetween", support_between, "Support within", support_within)
+            if not subset:
+                echo("Supportbetween", support_between, "Support within", support_within)
             import networkx as nx
             nxG = nx.Graph()
+
             nxG.add_edges_from(subgraph_from_nodes(G, component))
-            nx.write_gml(nxG, "/Users/kezcleal/Documents/Data/fusion_finder_development/NA12878/giab_compare/alignments/testnewtest.gml")
-            echo("Partitons")
-            for pp1, ppv in partitions.items():
-                echo(pp1, ppv)
-            echo()
-            for cmp2 in sorted(component):
-                echo(cmp2, node_to_name[cmp2])
+            if subset:
+                # Keep only nodes that share an edge with targets, useful for large components
+                bad_nodes = set([])
+                for u, v in nxG.edges():
+                    if u not in targets and v not in targets:
+                        # Also check neighbors
+                        if not any(k in targets for k in nxG.neighbors(u)) and not any(k in targets for k in nxG.neighbors(v)):
+                            bad_nodes.add(u)
+                            bad_nodes.add(v)
+                nxG.remove_nodes_from(bad_nodes)
+            echo("Nodes", len(G.nodes()), "nxG nodes", len(nxG.nodes()), "nxG edges", len(nxG.edges()))
+            nx.write_gml(nxG, "/Volumes/Kez6T/For_kate/Fibroblast_Fusions_P170078/Fusions/dysgu/set1/test/component.gml")
+            if not subset:
+                echo("Partitons")
+                for pp1, ppv in partitions.items():
+                    echo(pp1, ppv)
+                echo()
+                for cmp2 in sorted(component):
+                    echo(cmp2, node_to_name[cmp2])
             quit()
             break

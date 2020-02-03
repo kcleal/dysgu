@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
+import itertools
 import click
 import numpy as np
 from . import data_io, assembler, graph, coverage
@@ -433,7 +434,128 @@ cdef list cluster_by_distance(list bpt, int t, int t2):
     return [i.breaks for i in sorted(clusters, key=lambda x: x.count, reverse=True)][:2]
 
 
+def guess_informative_pair(aligns):
+
+    if len(aligns) == 2:
+        # Make sure aligns map different break points
+        a = aligns[0]
+        b = aligns[1]
+        if abs(a.pos - b.pos) < 25 or abs(a.reference_end - b.reference_end) < 25:
+            return
+        if a.pos < b.pos:  # a and b will be same on same chrom
+            return a, b
+        return b, a
+
+    pri_first = None
+    sup_first = None
+    pri_second = None
+    sup_second = None
+    for i in aligns:
+        if not i.flag & 2304:  # Not pri, supplementary --> is primary
+            if i.flag & 64:
+                pri_first = i
+            else:
+                pri_second = i
+        elif i.flag & 2048:  # Supplementary
+            if i.flag & 64:
+                sup_first = i
+            else:
+                sup_second = i
+    a = None
+    b = None
+    if pri_first and sup_first:
+        a = pri_first
+        b = sup_first
+    elif pri_second and sup_second:
+        a = pri_second
+        b = sup_second
+    elif pri_first and pri_second:
+        a = pri_first
+        b = pri_second
+    if a is None:
+        return None
+    if a.pos < b.pos:
+        return a, b
+    return b, a
+
+
 cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_length, int min_support,
+                 int to_assemble=1):
+    # Make sure at least one read is worth calling
+    cdef int min_distance = insert_size + (2*insert_stdev)
+    cdef int n_templates = len(set([i.qname for i in data["reads"].values()]))
+    # if n_templates < min_support:
+    #     return {}
+
+    if n_templates == 1:
+        if not any((not i.flag & 2) or (i.rname != i.rnext) or
+                   (abs(i.tlen) > min_distance) for i in data["reads"].values()):
+            return {}
+
+    # Single's can sometimes be seperated into two groups --> send one_edge
+    # Otherwise, infer the other breakpoint from a single group
+
+    # Groupby template name
+    precise_a = []
+    precise_b = []
+    informative = []
+    u_reads = []
+    v_reads = []
+    tmp = defaultdict(list)
+    for align in data["reads"].values():
+        tmp[align.qname].append(align)
+    for temp_name, alignments in tmp.items():
+        l_align = list(alignments)
+        if len(l_align) > 1:
+            pair = guess_informative_pair(l_align)
+            # if temp_name == "HWI-D00360:5:H814YADXX:2:2104:14122:33949":
+            #     echo(pair[0].to_string())
+            #     echo(pair[1].to_string())
+            if pair:
+                u_reads.append(pair[0])
+                v_reads.append(pair[1])
+                process_pair(pair, precise_a, precise_b, informative)
+
+    if not informative:
+        return {}
+
+    call_informative = Counter([(i["svtype"], i["join_type"]) for i in informative]).most_common()
+    svtype, jointype = call_informative[0][0]
+    info = make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
+
+    if not info:
+        return {}
+
+    as1 = None
+    as2 = None
+
+    if info["preciseA"]:
+        as1 = assembler.base_assemble(u_reads)
+
+    if info["preciseB"]:
+        as2 = assembler.base_assemble(v_reads)
+
+    info["linked"] = 0
+
+    info.update(count_attributes(u_reads, v_reads))
+
+    info["block_edge"] = 0
+    info["contig"] = None
+    info["contig2"] = None
+    rbases = 0
+    if as1 is not None and "contig" in as1:
+        info["contig"] = as1["contig"]
+        rbases += as1["ref_bases"]
+
+    if as2 is not None and "contig" in as2:
+        info["contig2"] = as2["contig"]
+        rbases += as2["ref_bases"]
+    info["ref_bases"] = rbases
+
+    return info
+
+
+cdef dict single_old(infile, dict data, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int to_assemble=1):
     # Make sure at least one read is worth calling
     cdef int min_distance = insert_size + (2*insert_stdev)
@@ -465,6 +587,8 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
     clst = cluster_by_distance(query_breaks, t=25, t2=insert_stdev + (2*insert_stdev))
 
     if len(clst) == 2:
+        # echo("0", clst[0])
+        # echo("1", clst[1])
 
         c1, c2 = clst
 
@@ -474,6 +598,11 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
         info = one_edge(infile, u_reads, v_reads, clip_length, insert_size, insert_stdev,
                         block_edge=0, assemble=to_assemble)
 
+        # if 279 in data["reads"]:
+        #     echo("single cll", len(u_reads), len(v_reads))
+        #     echo(info)
+        #
+        #     echo(call_from_reads(u_reads, v_reads, insert_size, insert_stdev))
         return info
 
     elif len(clst) == 1:
@@ -481,7 +610,6 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
         pass
 
     return {}
-
 #
 # cdef tuple get_tuple(dict j):
 #     # Get breakpoint info from contig. Need (3 or 5 join, read names, chromosome, break point position, soft-clipped)
@@ -497,14 +625,14 @@ def informative_pair(u, v):
     pri_v = None
     for i in u:
         ri_flag = i.flag & 64
-        if not i.flag & 3328:  # Not pri, PCR dup, supplementary --> is primary
+        if not i.flag & 2304:  # Not pri, supplementary --> is primary
             pri_u = i
         for j in v:
             if j.flag & 64 == ri_flag:  # Same read
                 # Same read, primary + supp, or supp + supp
                 return i, j
 
-            if not j.flag & 3328:  # Is primary
+            if not j.flag & 2304:  # Is primary
                 pri_v = j
 
             # else Different read and sup, e.g. read 1 primary + read 2 supplementary (not informative)
@@ -1415,6 +1543,57 @@ cdef tuple mask_soft_clips(int aflag, int bflag, list a_ct, list b_ct):
     return left_clipA, right_clipA, left_clipB, right_clipB
 
 
+cdef void process_pair(tuple pair, list precise_a, list precise_b, list informative):
+    a, b = pair
+    a_ct = a.cigartuples
+    b_ct = b.cigartuples
+    # Soft-clips for the chosen pair, plus template start of alignment
+    left_clipA, right_clipA, left_clipB, right_clipB = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
+
+    d = {"chrA": a.rname,
+        "chrB": b.rname,
+        "priA": not a.flag & 3328,
+        "priB": not b.flag & 3328,
+        "rA": 1 if a.flag & 64 else 2,
+        "rB": 1 if b.flag & 64 else 2,
+        "posA": a.pos,
+        "endA": a.reference_end,
+        "posB": b.pos,
+        "endB": b.reference_end,
+        "strandA": 3 if a.flag & 16 == 0 else 5,
+        "strandB": 3 if b.flag & 16 == 0 else 5,
+        "left_clipA": left_clipA,
+        "right_clipA": right_clipA,
+        "left_clipB": left_clipB,
+        "right_clipB": right_clipB,
+        "qname": a.qname[-5:],
+        "breakA_precise": 0,
+        "breakB_precise": 0
+        }
+
+    # If both sides clipped choose longest soft-clip (works ok)
+    if d["left_clipA"] and d["right_clipA"]:
+        if a_ct[0][1] >= a_ct[-1][1]:
+            d["right_clipA"] = 0
+        else:
+            d["left_clipA"] = 0
+
+    if d["left_clipB"] and d["right_clipB"]:
+        if b_ct[0][1] >= b_ct[-1][1]:
+            d["right_clipB"] = 0
+        else:
+            d["left_clipB"] = 0
+
+    classify_d(d)
+
+    if d["breakA_precise"]:
+        precise_a.append(d["breakA"])
+    if d["breakB_precise"]:
+        precise_b.append(d["breakB"])
+
+    informative.append(d)
+
+
 cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
 
     grp_u = defaultdict(list)
@@ -1439,58 +1618,10 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
             pair = informative_pair(u, v)
 
         if pair:
-            a, b = pair
-            a_ct = a.cigartuples
-            b_ct = b.cigartuples
-            # Soft-clips for the chosen pair, plus template start of alignment
-            left_clipA, right_clipA, left_clipB, right_clipB = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
+            process_pair(pair, precise_a, precise_b, informative)
 
-            d = {"chrA": a.rname,
-                "chrB": b.rname,
-                "priA": not a.flag & 3328,
-                "priB": not b.flag & 3328,
-                "rA": 1 if a.flag & 64 else 2,
-                "rB": 1 if b.flag & 64 else 2,
-                "posA": a.pos,
-                "endA": a.reference_end,
-                "posB": b.pos,
-                "endB": b.reference_end,
-                "strandA": 3 if a.flag & 16 == 0 else 5,
-                "strandB": 3 if b.flag & 16 == 0 else 5,
-                "left_clipA": left_clipA,
-                "right_clipA": right_clipA,
-                "left_clipB": left_clipB,
-                "right_clipB": right_clipB,
-                "qname": a.qname[-5:],
-                "breakA_precise": 0,
-                "breakB_precise": 0
-                }
 
-            # If both sides clipped choose longest soft-clip (for now)
-            if d["left_clipA"] and d["right_clipA"]:
-                if a_ct[0][1] >= a_ct[-1][1]:
-                    d["right_clipA"] = 0
-                else:
-                    d["left_clipA"] = 0
-
-            if d["left_clipB"] and d["right_clipB"]:
-                if b_ct[0][1] >= b_ct[-1][1]:
-                    d["right_clipB"] = 0
-                else:
-                    d["left_clipB"] = 0
-
-            classify_d(d)
-            # if d["join_type"] == "5to5":
-            #     print(d)
-            #     quit()
-
-            if d["breakA_precise"]:
-                precise_a.append(d["breakA"])
-            if d["breakB_precise"]:
-                precise_b.append(d["breakB"])
-
-            informative.append(d)
-
+    # echo("informative", informative)
     if not informative:
         return {}
 
@@ -1519,6 +1650,12 @@ cdef dict one_edge(infile, list u_reads, list v_reads, int clip_length, int inse
         if info["preciseB"]:
             as2 = assembler.base_assemble(v_reads)
 
+    # if info["posB"] == 46698003:
+    #     echo(info)
+    #
+    #     echo("--")
+    #     echo(as1)
+    #     echo(as2)
 
     # if as1 is None or len(as1) == 0:
     #     guess_a = [guess_break_point(r) for r in u_reads]
@@ -1572,11 +1709,16 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
 
     seen = set(data["parts"].keys())
 
-    out_counts = defaultdict(int)
+    out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     for (u, v), d in data["s_between"].items():
 
         input_reads = fetch_reads(data, d, bam)  # {Node: alignment,..}
 
+        #     echo("main edge")
+        #     for nodename in d[u]:
+        #         echo(nodename, str(input_reads[nodename]))
+        #     for nodename in d[v]:
+        #         echo(nodename, str(input_reads[nodename]))
         rd_u = []
         for n in d[u]:
             try:
@@ -1602,6 +1744,9 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             seen.remove(u)
         if v in seen:
             seen.remove(v)
+        # if 5371604 in d[u] or 5371604 in d[v]:
+        #     echo("u, v", u, v)
+        #     echo(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev))
 
         yield one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev)
 
@@ -1627,13 +1772,13 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
 
                 yield single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True)
 
-    # Check for events within nodes - happens rarely
+    # Check for events within clustered nodes - happens rarely
     for k, d in data["s_within"].items():
 
         o_count = out_counts[k]
         i_counts = len(d)
-
-        if o_count > 0 and i_counts > (2*min_support) and i_counts > (3*o_count):
+        # echo(o_count > 0, i_counts > (2*min_support), i_counts > (3*o_count), i_counts, o_count)
+        if o_count > 0 and i_counts > (2*min_support) and i_counts > (o_count):
 
             rds = {}
             to_collect = {}
@@ -1648,56 +1793,55 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             if len(rds) < min_support:
                 continue
 
+            # if 279 in d:
+
+            #     echo(len(rds))
+            #     echo("here", k)
             yield single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True)
 
 
 
 def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support):
 
-    # if isinstance(bam, tuple):
-    #     bam = pysam.AlignmentFile(bam[0], bam[1])  # Re open
-    # try:
-    #     for k, v in data["parts"].items():
-    #         if 80 in v:
-    #             echo(k, v)
-    #             echo(data["s_between"])
-    #             echo("s within", data["s_within"])
-    #             echo("here1")
-    #             echo(len(data["parts"]))
-    #             echo(data["parts"])
-    #             quit()
-    # except:
-    #     pass
-
     n_parts = len(data["parts"])
     n_reads = len(data["reads"])
-
-    if n_parts >= 2:
+    # if 279 in data["reads"]:
+    # echo("reads and parts", n_reads, n_parts)
+    # echo(data["reads"])
+    # quit()
+    if n_parts >= 1:
         # Processed single edges and break apart connected
         for event in multi(data, bam, insert_size, insert_stdev, clip_length, min_support):
+            # if 279 in data["reads"]:
+            #     echo("called2", event)
             yield event
 
-    elif n_parts == 1:
+    # elif n_parts == -1:
         # Single isolated node, multiple reads
 
-        d = data["parts"][next(iter(data["parts"]))]  # Get first key
+        # d = data["parts"][next(iter(data["parts"]))]  # Get first key
 
         # rds = {}
-        to_collect = {}
-        for v in d:
-            if v not in data["reads"]:
+        # to_collect = {}
+        # for v in d:
+        #     if v not in data["reads"]:
             # try:
             #     rds[v] = data["reads"][v]  # May have been collected already
 
             # except KeyError:
-                to_collect[v] = data["n2n"][v]
+            #     to_collect[v] = data["n2n"][v]
 
         # rds.update(cy_graph.get_reads(bam, to_collect))
         # data["reads"] = rds
-        data["reads"].update(graph.get_reads(bam, to_collect))
-        yield single(bam, data, insert_size, insert_stdev, clip_length, min_support)
-    #
-    #
+        # data["reads"].update(graph.get_reads(bam, to_collect))
+
+        # if 67 in data["parts"][0]:
+        #     echo("single", )
+        #     echo(single(bam, data, insert_size, insert_stdev, clip_length, min_support))
+
+        # yield single(bam, data, insert_size, insert_stdev, clip_length, min_support)
+
+
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
         yield single(bam, data, insert_size, insert_stdev, clip_length, 0, to_assemble=1)

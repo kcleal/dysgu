@@ -388,8 +388,10 @@ def view_file(args):
     # df["old_indexes"] = indexes
     if args["merge_across"] == "True":
         if len(seen_names) > 1:
-            df = merge_df(df, seen_names)
+            df = merge_df(df, {}) #seen_names)
             # echo("here", df[["chrA", "posA", "chrB", "posB", "partners"]])
+
+    df = df.sort_values(["chrA", "posA", "chrB", "posB"])
     outfile = open_outfile(args)
 
     if args["out_format"] == "vcf":
