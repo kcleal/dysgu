@@ -434,7 +434,7 @@ def cluster_reads(args):
                     preliminaries.append(event_dict)
 
 
-        preliminaries = assembler.contig_info(preliminaries)  # GC info, pretetitiveness
+        preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
         preliminaries = sample_level_density(preliminaries, regions)
 
         return preliminaries
@@ -448,9 +448,9 @@ def cluster_reads(args):
     # Out order
     k = ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "pe", "supp", "sc", "block_edge",
+          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "Prob"]
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "svlen", "Prob"]
 
     c = 0
     if classified_events_df is not None and len(classified_events_df) > 0:

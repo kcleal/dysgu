@@ -1938,7 +1938,11 @@ def get_raw_coverage_information(r, regions, regions_depth, infile):
 
     r["kind"] = kind
     r["raw_reads_10kb"] = reads_10kb
-
+    if r["chrA"] != r["chrB"]:
+        r["svlen"] = 1000000
+    else:
+        r["svlen"] = abs(r["posB"] - r["posA"])
+    r["su"] = r["pe"] + r["supp"]
     return r
 
 
@@ -1950,8 +1954,8 @@ def calculate_prob_from_model(all_rows, models):
     df = pd.DataFrame.from_records(all_rows).sort_values(["kind", "chrA", "posA"])
 
     features = ['cipos95A', 'cipos95B', 'DP', 'DApri', 'DN', 'NMpri', 'NP', 'DAsupp', 'NMsupp', 'maxASsupp',
-                'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
-                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases']
+                'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
+                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
     if not models:
         df["Prob"] = [1] * len(df)  # Nothing to be done
         return df
