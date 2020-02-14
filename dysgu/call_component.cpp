@@ -2116,6 +2116,7 @@ static const char __pyx_k_p2_neg[] = "p2_neg";
 static const char __pyx_k_pandas[] = "pandas";
 static const char __pyx_k_pickle[] = "pickle";
 static const char __pyx_k_reduce[] = "__reduce__";
+static const char __pyx_k_rep_sc[] = "rep_sc";
 static const char __pyx_k_sorted[] = "sorted";
 static const char __pyx_k_source[] = "source";
 static const char __pyx_k_strand[] = "strand";
@@ -2506,6 +2507,7 @@ static PyObject *__pyx_n_s_reference_end;
 static PyObject *__pyx_n_s_regions;
 static PyObject *__pyx_n_s_regions_depth;
 static PyObject *__pyx_n_u_rep;
+static PyObject *__pyx_n_u_rep_sc;
 static PyObject *__pyx_n_s_reverse;
 static PyObject *__pyx_n_s_ri_flag;
 static PyObject *__pyx_n_u_right_clipA;
@@ -33573,9 +33575,9 @@ static PyObject *__pyx_pf_5dysgu_14call_component_22calculate_prob_from_model(CY
  * 
  *     features = ['cipos95A', 'cipos95B', 'DP', 'DApri', 'DN', 'NMpri', 'NP', 'DAsupp', 'NMsupp', 'maxASsupp',             # <<<<<<<<<<<<<<
  *                 'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
- *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
+ *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
  */
-  __pyx_t_3 = PyList_New(26); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1956, __pyx_L1_error)
+  __pyx_t_3 = PyList_New(27); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1956, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_n_u_cipos95A);
   __Pyx_GIVEREF(__pyx_n_u_cipos95A);
@@ -33649,18 +33651,21 @@ static PyObject *__pyx_pf_5dysgu_14call_component_22calculate_prob_from_model(CY
   __Pyx_INCREF(__pyx_n_u_rep);
   __Pyx_GIVEREF(__pyx_n_u_rep);
   PyList_SET_ITEM(__pyx_t_3, 23, __pyx_n_u_rep);
+  __Pyx_INCREF(__pyx_n_u_rep_sc);
+  __Pyx_GIVEREF(__pyx_n_u_rep_sc);
+  PyList_SET_ITEM(__pyx_t_3, 24, __pyx_n_u_rep_sc);
   __Pyx_INCREF(__pyx_n_u_ref_bases);
   __Pyx_GIVEREF(__pyx_n_u_ref_bases);
-  PyList_SET_ITEM(__pyx_t_3, 24, __pyx_n_u_ref_bases);
+  PyList_SET_ITEM(__pyx_t_3, 25, __pyx_n_u_ref_bases);
   __Pyx_INCREF(__pyx_n_u_svlen);
   __Pyx_GIVEREF(__pyx_n_u_svlen);
-  PyList_SET_ITEM(__pyx_t_3, 25, __pyx_n_u_svlen);
+  PyList_SET_ITEM(__pyx_t_3, 26, __pyx_n_u_svlen);
   __pyx_v_features = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
   /* "dysgu/call_component.pyx":1959
  *                 'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
- *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
+ *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
  *     if not models:             # <<<<<<<<<<<<<<
  *         df["Prob"] = [1] * len(df)  # Nothing to be done
  *         return df
@@ -33670,7 +33675,7 @@ static PyObject *__pyx_pf_5dysgu_14call_component_22calculate_prob_from_model(CY
   if (__pyx_t_7) {
 
     /* "dysgu/call_component.pyx":1960
- *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
+ *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
  *     if not models:
  *         df["Prob"] = [1] * len(df)  # Nothing to be done             # <<<<<<<<<<<<<<
  *         return df
@@ -33703,7 +33708,7 @@ static PyObject *__pyx_pf_5dysgu_14call_component_22calculate_prob_from_model(CY
 
     /* "dysgu/call_component.pyx":1959
  *                 'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
- *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
+ *                 'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
  *     if not models:             # <<<<<<<<<<<<<<
  *         df["Prob"] = [1] * len(df)  # Nothing to be done
  *         return df
@@ -36522,6 +36527,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_regions, __pyx_k_regions, sizeof(__pyx_k_regions), 0, 0, 1, 1},
   {&__pyx_n_s_regions_depth, __pyx_k_regions_depth, sizeof(__pyx_k_regions_depth), 0, 0, 1, 1},
   {&__pyx_n_u_rep, __pyx_k_rep, sizeof(__pyx_k_rep), 0, 1, 0, 1},
+  {&__pyx_n_u_rep_sc, __pyx_k_rep_sc, sizeof(__pyx_k_rep_sc), 0, 1, 0, 1},
   {&__pyx_n_s_reverse, __pyx_k_reverse, sizeof(__pyx_k_reverse), 0, 0, 1, 1},
   {&__pyx_n_s_ri_flag, __pyx_k_ri_flag, sizeof(__pyx_k_ri_flag), 0, 0, 1, 1},
   {&__pyx_n_u_right_clipA, __pyx_k_right_clipA, sizeof(__pyx_k_right_clipA), 0, 1, 0, 1},

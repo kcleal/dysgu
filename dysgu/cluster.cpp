@@ -1720,6 +1720,7 @@ static const char __pyx_k_merged[] = "merged";
 static const char __pyx_k_pickle[] = "pickle";
 static const char __pyx_k_random[] = "random";
 static const char __pyx_k_rename[] = "rename";
+static const char __pyx_k_rep_sc[] = "rep_sc";
 static const char __pyx_k_sample[] = "sample";
 static const char __pyx_k_sorted[] = "sorted";
 static const char __pyx_k_stdout[] = "stdout";
@@ -2083,6 +2084,7 @@ static PyObject *__pyx_n_s_regions_only;
 static PyObject *__pyx_n_u_regions_only;
 static PyObject *__pyx_n_s_rename;
 static PyObject *__pyx_n_u_rep;
+static PyObject *__pyx_n_u_rep_sc;
 static PyObject *__pyx_n_s_return_int;
 static PyObject *__pyx_n_s_reverse;
 static PyObject *__pyx_n_s_rnext;
@@ -10200,19 +10202,45 @@ static PyObject *__pyx_pf_5dysgu_7cluster_13cluster_reads_pipe1(PyObject *__pyx_
  *                 # Collect coverage information
  *                 event_dict = call_component.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile) # regions_depth)
  */
-    if (unlikely(__pyx_v_merged == Py_None)) {
-      PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
-      __PYX_ERR(0, 429, __pyx_L1_error)
+    if (likely(PyList_CheckExact(__pyx_v_merged)) || PyTuple_CheckExact(__pyx_v_merged)) {
+      __pyx_t_2 = __pyx_v_merged; __Pyx_INCREF(__pyx_t_2); __pyx_t_17 = 0;
+      __pyx_t_18 = NULL;
+    } else {
+      __pyx_t_17 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_v_merged); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 429, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_18 = Py_TYPE(__pyx_t_2)->tp_iternext; if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 429, __pyx_L1_error)
     }
-    __pyx_t_2 = __pyx_v_merged; __Pyx_INCREF(__pyx_t_2); __pyx_t_17 = 0;
     for (;;) {
-      if (__pyx_t_17 >= PyList_GET_SIZE(__pyx_t_2)) break;
-      #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-      __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_17); __Pyx_INCREF(__pyx_t_1); __pyx_t_17++; if (unlikely(0 < 0)) __PYX_ERR(0, 429, __pyx_L1_error)
-      #else
-      __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_17); __pyx_t_17++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      #endif
+      if (likely(!__pyx_t_18)) {
+        if (likely(PyList_CheckExact(__pyx_t_2))) {
+          if (__pyx_t_17 >= PyList_GET_SIZE(__pyx_t_2)) break;
+          #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+          __pyx_t_1 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_17); __Pyx_INCREF(__pyx_t_1); __pyx_t_17++; if (unlikely(0 < 0)) __PYX_ERR(0, 429, __pyx_L1_error)
+          #else
+          __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_17); __pyx_t_17++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          #endif
+        } else {
+          if (__pyx_t_17 >= PyTuple_GET_SIZE(__pyx_t_2)) break;
+          #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
+          __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_17); __Pyx_INCREF(__pyx_t_1); __pyx_t_17++; if (unlikely(0 < 0)) __PYX_ERR(0, 429, __pyx_L1_error)
+          #else
+          __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_17); __pyx_t_17++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 429, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_1);
+          #endif
+        }
+      } else {
+        __pyx_t_1 = __pyx_t_18(__pyx_t_2);
+        if (unlikely(!__pyx_t_1)) {
+          PyObject* exc_type = PyErr_Occurred();
+          if (exc_type) {
+            if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
+            else __PYX_ERR(0, 429, __pyx_L1_error)
+          }
+          break;
+        }
+        __Pyx_GOTREF(__pyx_t_1);
+      }
       __Pyx_XDECREF_SET(__pyx_v_event, __pyx_t_1);
       __pyx_t_1 = 0;
 
@@ -11646,7 +11674,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_20cluster_reads(CYTHON_UNUSED PyObject
  *          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
  *           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
  */
-  __pyx_t_2 = PyList_New(36); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 449, __pyx_L1_error)
+  __pyx_t_2 = PyList_New(37); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 449, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_u_chrA);
   __Pyx_GIVEREF(__pyx_n_u_chrA);
@@ -11747,20 +11775,23 @@ static PyObject *__pyx_pf_5dysgu_7cluster_20cluster_reads(CYTHON_UNUSED PyObject
   __Pyx_INCREF(__pyx_n_u_rep);
   __Pyx_GIVEREF(__pyx_n_u_rep);
   PyList_SET_ITEM(__pyx_t_2, 32, __pyx_n_u_rep);
+  __Pyx_INCREF(__pyx_n_u_rep_sc);
+  __Pyx_GIVEREF(__pyx_n_u_rep_sc);
+  PyList_SET_ITEM(__pyx_t_2, 33, __pyx_n_u_rep_sc);
   __Pyx_INCREF(__pyx_n_u_ref_bases);
   __Pyx_GIVEREF(__pyx_n_u_ref_bases);
-  PyList_SET_ITEM(__pyx_t_2, 33, __pyx_n_u_ref_bases);
+  PyList_SET_ITEM(__pyx_t_2, 34, __pyx_n_u_ref_bases);
   __Pyx_INCREF(__pyx_n_u_svlen);
   __Pyx_GIVEREF(__pyx_n_u_svlen);
-  PyList_SET_ITEM(__pyx_t_2, 34, __pyx_n_u_svlen);
+  PyList_SET_ITEM(__pyx_t_2, 35, __pyx_n_u_svlen);
   __Pyx_INCREF(__pyx_n_u_Prob);
   __Pyx_GIVEREF(__pyx_n_u_Prob);
-  PyList_SET_ITEM(__pyx_t_2, 35, __pyx_n_u_Prob);
+  PyList_SET_ITEM(__pyx_t_2, 36, __pyx_n_u_Prob);
   __pyx_v_k = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
   /* "dysgu/cluster.pyx":455
- *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "svlen", "Prob"]
+ *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
  * 
  *     c = 0             # <<<<<<<<<<<<<<
  *     if classified_events_df is not None and len(classified_events_df) > 0:
@@ -12775,6 +12806,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_regions_only, __pyx_k_regions_only, sizeof(__pyx_k_regions_only), 0, 1, 0, 1},
   {&__pyx_n_s_rename, __pyx_k_rename, sizeof(__pyx_k_rename), 0, 0, 1, 1},
   {&__pyx_n_u_rep, __pyx_k_rep, sizeof(__pyx_k_rep), 0, 1, 0, 1},
+  {&__pyx_n_u_rep_sc, __pyx_k_rep_sc, sizeof(__pyx_k_rep_sc), 0, 1, 0, 1},
   {&__pyx_n_s_return_int, __pyx_k_return_int, sizeof(__pyx_k_return_int), 0, 0, 1, 1},
   {&__pyx_n_s_reverse, __pyx_k_reverse, sizeof(__pyx_k_reverse), 0, 0, 1, 1},
   {&__pyx_n_s_rnext, __pyx_k_rnext, sizeof(__pyx_k_rnext), 0, 0, 1, 1},

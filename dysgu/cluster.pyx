@@ -450,7 +450,7 @@ def cluster_reads(args):
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "svlen", "Prob"]
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
 
     c = 0
     if classified_events_df is not None and len(classified_events_df) > 0:

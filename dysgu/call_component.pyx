@@ -1955,7 +1955,7 @@ def calculate_prob_from_model(all_rows, models):
 
     features = ['cipos95A', 'cipos95B', 'DP', 'DApri', 'DN', 'NMpri', 'NP', 'DAsupp', 'NMsupp', 'maxASsupp',
                 'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
-                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'ref_bases', 'svlen']
+                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
     if not models:
         df["Prob"] = [1] * len(df)  # Nothing to be done
         return df

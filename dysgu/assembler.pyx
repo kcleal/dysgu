@@ -17,6 +17,9 @@ from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
+from libc.math cimport exp
+
+
 def echo(*args):
     click.echo(args, err=True)
 
@@ -486,43 +489,113 @@ cpdef dict base_assemble(rd):
             "bamrname": rd[0].rname}
 
 
-cdef float sliding_window_minimum_density(int k, int m, str s):
-    """End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
-    `li`. Then returns an iterator such that the ith element yielded is equal
-    to min(list(li)[max(i - k + 1, 0):i+1]).
-    Each yield takes amortized O(1) time, and overall the generator takes O(k)
-    space.
-    https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
+# cdef float sliding_window_minimum_density(int k, int m, str s):
+#     """End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
+#     `li`. Then returns an iterator such that the ith element yielded is equal
+#     to min(list(li)[max(i - k + 1, 0):i+1]).
+#     Each yield takes amortized O(1) time, and overall the generator takes O(k)
+#     space.
+#     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
+#
+#     cdef int i = 0
+#     cdef str hx2
+#     cdef int minimizer_i
+#     window2 = deque([])
+#     seen2 = set([])
+#     for i in range(0, len(s) - m + 1):
+#
+#         hx2 = s[i:i+m]
+#         while len(window2) != 0 and window2[-1][0] >= hx2:
+#             window2.pop()
+#
+#         window2.append((hx2, i))
+#         while window2[0][1] <= i - k:
+#             window2.popleft()
+#
+#         i += 1
+#
+#         minimizer_i = window2[0][1]
+#         if minimizer_i not in seen2:
+#             seen2.add(minimizer_i)
+#
+#     return float(len(seen2)) / len(s)
 
-    cdef int i = 0
-    cdef str hx2
-    cdef int minimizer_i
-    window2 = deque([])
-    seen2 = set([])
-    for i in range(0, len(s) - m + 1):
 
-        hx2 = s[i:i+m]
-        while len(window2) != 0 and window2[-1][0] >= hx2:
-            window2.pop()
+cdef float compute_rep(str seq):
 
-        window2.append((hx2, i))
-        while window2[0][1] <= i - k:
-            window2.popleft()
+    last_visited = {}
+    tot = []
 
-        i += 1
+    cdef int k, i, diff
+    cdef float decay, max_amount, amount
+    cdef str a
 
-        minimizer_i = window2[0][1]
-        if minimizer_i not in seen2:
-            seen2.add(minimizer_i)
+    for k in (2, 3, 4, 5, 6):
 
-    return float(len(seen2)) / len(s)
+        decay = 0.25 * 1/k
+        max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
+
+        for i in range(len(seq) - k):
+            a = seq[i:i+k]
+
+            if a in last_visited:
+                diff = i - last_visited[a]
+                amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+            else:
+                amount = 0
+
+            if i > k:
+                tot.append(amount)
+
+            last_visited[a] = i
+
+    if len(tot) == 0:
+        return 0
+    return sum(tot) / len(tot)
+
+
+cdef tuple get_rep(str contig_seq):
+
+    cdef int left_clip_end, right_clip_start
+    cdef float aligned_portion, clip_rep
+    cdef str clip
+    # Get left clip
+    for left_clip_end in range(len(contig_seq)):
+        if contig_seq[left_clip_end].isupper():
+            break
+
+
+    for right_clip_start in range(len(contig_seq) - 1, -1, -1):
+        if contig_seq[right_clip_start].isupper():
+            right_clip_start += 1
+            break
+
+    aligned_portion = compute_rep(contig_seq[left_clip_end: right_clip_start])
+
+    clip_rep = 0
+    clip_seen = 0
+    if left_clip_end > 0:
+        clip = contig_seq[:left_clip_end]
+        clip_rep += compute_rep(clip)
+        clip_seen += 1
+
+    elif right_clip_start < len(contig_seq):
+        clip = contig_seq[right_clip_start:]
+        clip_rep += compute_rep(clip)
+        clip_seen += 1
+
+    clip_rep = clip_rep / clip_seen
+    return aligned_portion, clip_rep, right_clip_start - left_clip_end
+
+
 
 
 cpdef list contig_info(list events):
 
-    cdef int i
+    cdef int i, aligned, seen, aligned_bases
     cdef float gc_count, seq_length
-    cdef float c, n_conts
+    # cdef float c, n_conts
+    cdef float sc_rep, aln_rep, sc_rep1, aln_rep1
     cdef str letter
     for i in range(len(events)):
         e = events[i]
@@ -530,13 +603,11 @@ cpdef list contig_info(list events):
         seq_length = 0
         if e["contig"]:
             seq_length += <float>len(e["contig"])
-
             for letter in e["contig"]:
                 if letter == "G" or letter == "C" or letter == "c" or letter == "g":
                     gc_count += 1
         if e["contig2"]:
             seq_length += <float>len(e["contig2"])
-
             for letter in e["contig2"]:
                 if letter == "G" or letter == "C" or letter == "c" or letter == "g":
                     gc_count += 1
@@ -545,23 +616,45 @@ cpdef list contig_info(list events):
         else:
             e["gc"] = 0
 
-        c, n_conts = 0., 0.
-        # ref_bases = 0
+        sc_rep = 0
+        aln_rep = 0
+        aligned = 0
+        seen = 0
         if e["contig"]:
-            # ref_bases += len([let for let in e["contig"] if let.isupper()])
-            c += sliding_window_minimum_density(k=10, m=5, s=e["contig"].upper())
-            n_conts += 1
+            aln_rep1, sc_rep1, aligned_bases = get_rep(e["contig"])
+            sc_rep += sc_rep1
+            aln_rep += aln_rep1
+            aligned += aligned_bases
+            seen += 1
+
         if e["contig2"]:
-            # ref_bases += len([let for let in e["contig2"] if let.isupper()])
-            c += sliding_window_minimum_density(k=10, m=5, s=e["contig2"].upper())
-            n_conts += 1
+            aln_rep1, sc_rep1, aligned_bases = get_rep(e["contig2"])
+            seen += 1
+            sc_rep += sc_rep1
+            aln_rep += aln_rep1
+            aligned += aligned_bases
 
-        if n_conts == 0:
-            e["rep"] = 0
-        else:
-            e["rep"] = round(c / n_conts, 3)
+        aln_rep = aln_rep / seen
+        sc_rep = sc_rep / seen
 
-        # e["ref_bases"] = ref_bases
+
+        # ref_bases = 0
+        # if e["contig"]:
+        #     ref_bases += len([let for let in e["contig"] if let.isupper()])
+        #     c += sliding_window_minimum_density(k=10, m=5, s=e["contig"].upper())
+        #     n_conts += 1
+        # if e["contig2"]:
+        #     ref_bases += len([let for let in e["contig2"] if let.isupper()])
+        #     c += sliding_window_minimum_density(k=10, m=5, s=e["contig2"].upper())
+        #     n_conts += 1
+        #
+        # if n_conts == 0:
+        #     e["rep"] = 0
+        # else:
+        #     e["rep"] = round(c / n_conts, 3)
+        e["rep"] = round(aln_rep, 3)
+        e["rep_sc"] = round(sc_rep, 3)
+        e["ref_bases"] = aligned  #ref_bases
 
     return events
 
