@@ -489,38 +489,6 @@ cpdef dict base_assemble(rd):
             "bamrname": rd[0].rname}
 
 
-# cdef float sliding_window_minimum_density(int k, int m, str s):
-#     """End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
-#     `li`. Then returns an iterator such that the ith element yielded is equal
-#     to min(list(li)[max(i - k + 1, 0):i+1]).
-#     Each yield takes amortized O(1) time, and overall the generator takes O(k)
-#     space.
-#     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
-#
-#     cdef int i = 0
-#     cdef str hx2
-#     cdef int minimizer_i
-#     window2 = deque([])
-#     seen2 = set([])
-#     for i in range(0, len(s) - m + 1):
-#
-#         hx2 = s[i:i+m]
-#         while len(window2) != 0 and window2[-1][0] >= hx2:
-#             window2.pop()
-#
-#         window2.append((hx2, i))
-#         while window2[0][1] <= i - k:
-#             window2.popleft()
-#
-#         i += 1
-#
-#         minimizer_i = window2[0][1]
-#         if minimizer_i not in seen2:
-#             seen2.add(minimizer_i)
-#
-#     return float(len(seen2)) / len(s)
-
-
 cdef float compute_rep(str seq):
 
     last_visited = {}
@@ -589,7 +557,6 @@ cdef tuple get_rep(str contig_seq):
 
 
 
-
 cpdef list contig_info(list events):
 
     cdef int i, aligned, seen, aligned_bases
@@ -637,24 +604,9 @@ cpdef list contig_info(list events):
         aln_rep = aln_rep / seen
         sc_rep = sc_rep / seen
 
-
-        # ref_bases = 0
-        # if e["contig"]:
-        #     ref_bases += len([let for let in e["contig"] if let.isupper()])
-        #     c += sliding_window_minimum_density(k=10, m=5, s=e["contig"].upper())
-        #     n_conts += 1
-        # if e["contig2"]:
-        #     ref_bases += len([let for let in e["contig2"] if let.isupper()])
-        #     c += sliding_window_minimum_density(k=10, m=5, s=e["contig2"].upper())
-        #     n_conts += 1
-        #
-        # if n_conts == 0:
-        #     e["rep"] = 0
-        # else:
-        #     e["rep"] = round(c / n_conts, 3)
         e["rep"] = round(aln_rep, 3)
         e["rep_sc"] = round(sc_rep, 3)
-        e["ref_bases"] = aligned  #ref_bases
+        e["ref_bases"] = aligned
 
     return events
 
