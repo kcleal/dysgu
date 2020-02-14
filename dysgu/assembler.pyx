@@ -561,7 +561,6 @@ cpdef list contig_info(list events):
 
     cdef int i, aligned, seen, aligned_bases
     cdef float gc_count, seq_length
-    # cdef float c, n_conts
     cdef float sc_rep, aln_rep, sc_rep1, aln_rep1
     cdef str letter
     for i in range(len(events)):
@@ -601,8 +600,9 @@ cpdef list contig_info(list events):
             aln_rep += aln_rep1
             aligned += aligned_bases
 
-        aln_rep = aln_rep / seen
-        sc_rep = sc_rep / seen
+        if seen > 0:
+            aln_rep = aln_rep / seen
+            sc_rep = sc_rep / seen
 
         e["rep"] = round(aln_rep, 3)
         e["rep_sc"] = round(sc_rep, 3)

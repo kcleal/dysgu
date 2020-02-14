@@ -1654,6 +1654,7 @@ static const char __pyx_k_median[] = "median";
 static const char __pyx_k_name_2[] = "name";
 static const char __pyx_k_pandas[] = "pandas";
 static const char __pyx_k_r_main[] = "r_main";
+static const char __pyx_k_rep_sc[] = "rep_sc";
 static const char __pyx_k_sample[] = "sample";
 static const char __pyx_k_sorted[] = "sorted";
 static const char __pyx_k_stdout[] = "stdout";
@@ -1939,6 +1940,7 @@ static PyObject *__pyx_n_s_rec;
 static PyObject *__pyx_n_s_recs;
 static PyObject *__pyx_n_u_ref_bases;
 static PyObject *__pyx_n_u_rep;
+static PyObject *__pyx_n_u_rep_sc;
 static PyObject *__pyx_n_s_replace;
 static PyObject *__pyx_n_s_require;
 static PyObject *__pyx_n_s_reset_index;
@@ -1963,8 +1965,10 @@ static PyObject *__pyx_n_s_sr;
 static PyObject *__pyx_n_s_stdin;
 static PyObject *__pyx_n_s_stdout;
 static PyObject *__pyx_n_s_su;
+static PyObject *__pyx_n_u_su;
 static PyObject *__pyx_n_u_supp;
 static PyObject *__pyx_n_s_svlen;
+static PyObject *__pyx_n_u_svlen;
 static PyObject *__pyx_n_u_svs_out;
 static PyObject *__pyx_n_u_svtype;
 static PyObject *__pyx_n_s_sys;
@@ -2038,7 +2042,7 @@ static PyObject *__pyx_codeobj__39;
 
 /* "dysgu/view.pyx":65
  * 
- * 
+ * #todo more cols to vcf
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 
@@ -2073,7 +2077,7 @@ static PyObject *__pyx_pf_5dysgu_4view_echo(CYTHON_UNUSED PyObject *__pyx_self, 
   __Pyx_RefNannySetupContext("echo", 0);
 
   /* "dysgu/view.pyx":66
- * 
+ * #todo more cols to vcf
  * def echo(*args):
  *     click.echo(args, err=True)             # <<<<<<<<<<<<<<
  * 
@@ -2101,7 +2105,7 @@ static PyObject *__pyx_pf_5dysgu_4view_echo(CYTHON_UNUSED PyObject *__pyx_self, 
 
   /* "dysgu/view.pyx":65
  * 
- * 
+ * #todo more cols to vcf
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 
@@ -6950,9 +6954,9 @@ static PyObject *__pyx_pf_5dysgu_4view_12to_csv(CYTHON_UNUSED PyObject *__pyx_se
  *     # Convert the partners to a human readable format
  *     keytable = ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",             # <<<<<<<<<<<<<<
  *          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
- *           "maxASsupp",  "pe", "supp", "sc", "block_edge",
+ *           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
  */
-  __pyx_t_1 = PyList_New(34); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 281, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(37); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 281, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_u_chrA);
   __Pyx_GIVEREF(__pyx_n_u_chrA);
@@ -7017,50 +7021,59 @@ static PyObject *__pyx_pf_5dysgu_4view_12to_csv(CYTHON_UNUSED PyObject *__pyx_se
   __Pyx_INCREF(__pyx_n_u_maxASsupp);
   __Pyx_GIVEREF(__pyx_n_u_maxASsupp);
   PyList_SET_ITEM(__pyx_t_1, 20, __pyx_n_u_maxASsupp);
+  __Pyx_INCREF(__pyx_n_u_su);
+  __Pyx_GIVEREF(__pyx_n_u_su);
+  PyList_SET_ITEM(__pyx_t_1, 21, __pyx_n_u_su);
   __Pyx_INCREF(__pyx_n_u_pe);
   __Pyx_GIVEREF(__pyx_n_u_pe);
-  PyList_SET_ITEM(__pyx_t_1, 21, __pyx_n_u_pe);
+  PyList_SET_ITEM(__pyx_t_1, 22, __pyx_n_u_pe);
   __Pyx_INCREF(__pyx_n_u_supp);
   __Pyx_GIVEREF(__pyx_n_u_supp);
-  PyList_SET_ITEM(__pyx_t_1, 22, __pyx_n_u_supp);
+  PyList_SET_ITEM(__pyx_t_1, 23, __pyx_n_u_supp);
   __Pyx_INCREF(__pyx_n_u_sc);
   __Pyx_GIVEREF(__pyx_n_u_sc);
-  PyList_SET_ITEM(__pyx_t_1, 23, __pyx_n_u_sc);
+  PyList_SET_ITEM(__pyx_t_1, 24, __pyx_n_u_sc);
   __Pyx_INCREF(__pyx_n_u_block_edge);
   __Pyx_GIVEREF(__pyx_n_u_block_edge);
-  PyList_SET_ITEM(__pyx_t_1, 24, __pyx_n_u_block_edge);
+  PyList_SET_ITEM(__pyx_t_1, 25, __pyx_n_u_block_edge);
   __Pyx_INCREF(__pyx_n_u_raw_reads_10kb);
   __Pyx_GIVEREF(__pyx_n_u_raw_reads_10kb);
-  PyList_SET_ITEM(__pyx_t_1, 25, __pyx_n_u_raw_reads_10kb);
+  PyList_SET_ITEM(__pyx_t_1, 26, __pyx_n_u_raw_reads_10kb);
   __Pyx_INCREF(__pyx_n_u_linked);
   __Pyx_GIVEREF(__pyx_n_u_linked);
-  PyList_SET_ITEM(__pyx_t_1, 26, __pyx_n_u_linked);
+  PyList_SET_ITEM(__pyx_t_1, 27, __pyx_n_u_linked);
   __Pyx_INCREF(__pyx_n_u_contigA);
   __Pyx_GIVEREF(__pyx_n_u_contigA);
-  PyList_SET_ITEM(__pyx_t_1, 27, __pyx_n_u_contigA);
+  PyList_SET_ITEM(__pyx_t_1, 28, __pyx_n_u_contigA);
   __Pyx_INCREF(__pyx_n_u_contigB);
   __Pyx_GIVEREF(__pyx_n_u_contigB);
-  PyList_SET_ITEM(__pyx_t_1, 28, __pyx_n_u_contigB);
+  PyList_SET_ITEM(__pyx_t_1, 29, __pyx_n_u_contigB);
   __Pyx_INCREF(__pyx_n_u_gc);
   __Pyx_GIVEREF(__pyx_n_u_gc);
-  PyList_SET_ITEM(__pyx_t_1, 29, __pyx_n_u_gc);
+  PyList_SET_ITEM(__pyx_t_1, 30, __pyx_n_u_gc);
   __Pyx_INCREF(__pyx_n_u_neigh);
   __Pyx_GIVEREF(__pyx_n_u_neigh);
-  PyList_SET_ITEM(__pyx_t_1, 30, __pyx_n_u_neigh);
+  PyList_SET_ITEM(__pyx_t_1, 31, __pyx_n_u_neigh);
   __Pyx_INCREF(__pyx_n_u_rep);
   __Pyx_GIVEREF(__pyx_n_u_rep);
-  PyList_SET_ITEM(__pyx_t_1, 31, __pyx_n_u_rep);
+  PyList_SET_ITEM(__pyx_t_1, 32, __pyx_n_u_rep);
+  __Pyx_INCREF(__pyx_n_u_rep_sc);
+  __Pyx_GIVEREF(__pyx_n_u_rep_sc);
+  PyList_SET_ITEM(__pyx_t_1, 33, __pyx_n_u_rep_sc);
   __Pyx_INCREF(__pyx_n_u_ref_bases);
   __Pyx_GIVEREF(__pyx_n_u_ref_bases);
-  PyList_SET_ITEM(__pyx_t_1, 32, __pyx_n_u_ref_bases);
+  PyList_SET_ITEM(__pyx_t_1, 34, __pyx_n_u_ref_bases);
+  __Pyx_INCREF(__pyx_n_u_svlen);
+  __Pyx_GIVEREF(__pyx_n_u_svlen);
+  PyList_SET_ITEM(__pyx_t_1, 35, __pyx_n_u_svlen);
   __Pyx_INCREF(__pyx_n_u_Prob);
   __Pyx_GIVEREF(__pyx_n_u_Prob);
-  PyList_SET_ITEM(__pyx_t_1, 33, __pyx_n_u_Prob);
+  PyList_SET_ITEM(__pyx_t_1, 36, __pyx_n_u_Prob);
   __pyx_v_keytable = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
   /* "dysgu/view.pyx":287
- *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "Prob"]
+ *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
  * 
  *     if "partners" not in df.columns:             # <<<<<<<<<<<<<<
  *         if "table_name" in df.columns:
@@ -7176,7 +7189,7 @@ static PyObject *__pyx_pf_5dysgu_4view_12to_csv(CYTHON_UNUSED PyObject *__pyx_se
     goto __pyx_L0;
 
     /* "dysgu/view.pyx":287
- *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "Prob"]
+ *           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
  * 
  *     if "partners" not in df.columns:             # <<<<<<<<<<<<<<
  *         if "table_name" in df.columns:
@@ -10248,6 +10261,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_recs, __pyx_k_recs, sizeof(__pyx_k_recs), 0, 0, 1, 1},
   {&__pyx_n_u_ref_bases, __pyx_k_ref_bases, sizeof(__pyx_k_ref_bases), 0, 1, 0, 1},
   {&__pyx_n_u_rep, __pyx_k_rep, sizeof(__pyx_k_rep), 0, 1, 0, 1},
+  {&__pyx_n_u_rep_sc, __pyx_k_rep_sc, sizeof(__pyx_k_rep_sc), 0, 1, 0, 1},
   {&__pyx_n_s_replace, __pyx_k_replace, sizeof(__pyx_k_replace), 0, 0, 1, 1},
   {&__pyx_n_s_require, __pyx_k_require, sizeof(__pyx_k_require), 0, 0, 1, 1},
   {&__pyx_n_s_reset_index, __pyx_k_reset_index, sizeof(__pyx_k_reset_index), 0, 0, 1, 1},
@@ -10272,8 +10286,10 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_stdin, __pyx_k_stdin, sizeof(__pyx_k_stdin), 0, 0, 1, 1},
   {&__pyx_n_s_stdout, __pyx_k_stdout, sizeof(__pyx_k_stdout), 0, 0, 1, 1},
   {&__pyx_n_s_su, __pyx_k_su, sizeof(__pyx_k_su), 0, 0, 1, 1},
+  {&__pyx_n_u_su, __pyx_k_su, sizeof(__pyx_k_su), 0, 1, 0, 1},
   {&__pyx_n_u_supp, __pyx_k_supp, sizeof(__pyx_k_supp), 0, 1, 0, 1},
   {&__pyx_n_s_svlen, __pyx_k_svlen, sizeof(__pyx_k_svlen), 0, 0, 1, 1},
+  {&__pyx_n_u_svlen, __pyx_k_svlen, sizeof(__pyx_k_svlen), 0, 1, 0, 1},
   {&__pyx_n_u_svs_out, __pyx_k_svs_out, sizeof(__pyx_k_svs_out), 0, 1, 0, 1},
   {&__pyx_n_u_svtype, __pyx_k_svtype, sizeof(__pyx_k_svtype), 0, 1, 0, 1},
   {&__pyx_n_s_sys, __pyx_k_sys, sizeof(__pyx_k_sys), 0, 0, 1, 1},
@@ -10429,7 +10445,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "dysgu/view.pyx":65
  * 
- * 
+ * #todo more cols to vcf
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 
@@ -10980,7 +10996,7 @@ if (!__Pyx_RefNanny) {
 
   /* "dysgu/view.pyx":65
  * 
- * 
+ * #todo more cols to vcf
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 

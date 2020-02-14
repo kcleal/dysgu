@@ -301,7 +301,7 @@ class GenomeScanner:
             ref_length = int(self.input_bam.get_reference_length(
                 self.input_bam.get_reference_name(rname)) / 100)
 
-            click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)
+            # click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)
 
             # Define a big numpy array to hold count information
             self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)

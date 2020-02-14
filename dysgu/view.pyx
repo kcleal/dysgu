@@ -61,7 +61,7 @@ HEADER = """##fileformat=VCFv4.2
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-
+#todo more cols to vcf
 def echo(*args):
     click.echo(args, err=True)
 
@@ -280,9 +280,9 @@ def to_csv(df, args, names, outfile):
     # Convert the partners to a human readable format
     keytable = ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "pe", "supp", "sc", "block_edge",
+          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "ref_bases", "Prob"]
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
 
     if "partners" not in df.columns:
         if "table_name" in df.columns:

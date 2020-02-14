@@ -484,6 +484,8 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper
 
+    gettid = infile.gettid
+
     cdef int count = 0
     cdef int buf_del_index = 0
     cdef int ii = 0
@@ -579,31 +581,31 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
                 if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
                     sa = r.get_tag("SA").split(",", 2)
-                    chrom2 = infile.gettid(sa[0])
+                    chrom2 = gettid(sa[0])
                     pos2 = int(sa[1])
-                    if chrom2 != chrom or abs(pos2 - pos) > loci_dist:
+                    # if chrom2 != chrom or abs(pos2 - pos) > loci_dist:  # Chaned in 0.23
 
-                        add_primark_link = 0
-                        next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
+                    add_primark_link = 0
+                    next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
 
-                        # if not next_overlaps_roi:
-                        if current_overlaps_roi and next_overlaps_roi:
-                            continue
-                        else:
-                            other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
+                    # if not next_overlaps_roi:
+                    if current_overlaps_roi and next_overlaps_roi:
+                        continue
+                    else:
+                        other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
 
-                            # if qname == debug:
-                            #     echo("same loci?", node_name, other_nodes)
+                        # if qname == debug:
+                        #     echo("same loci?", node_name, other_nodes)
 
-                            if other_nodes:
-                                for other_node in other_nodes:
+                        if other_nodes:
+                            for other_node in other_nodes:
 
-                                    #if node_to_name[other_node] not in templates_connected and \
-                                    if not G.hasEdge(node_name, other_node):
-                                        G.addEdge(node_name, other_node, w=2)
+                                #if node_to_name[other_node] not in templates_connected and \
+                                if not G.hasEdge(node_name, other_node):
+                                    G.addEdge(node_name, other_node, w=2)
 
-                                        # if qname == debug:
-                                        #     echo(node_name, other_node, "SA")
+                                    # if qname == debug:
+                                    #     echo(node_name, other_node, "SA")
 
             #
             if add_primark_link == 1:
