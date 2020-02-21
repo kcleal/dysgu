@@ -5,7 +5,6 @@ import time
 import numpy as np
 import click
 from collections import defaultdict, deque
-import itertools
 import mmh3
 import sortedcontainers
 import operator
@@ -838,8 +837,8 @@ cdef dict get_partitions(G, list nodes):
     return {i: p for i, p in enumerate(parts)}
 
 
-cpdef tuple count_support_between(G, dict parts):
-    # todo sometimes supplementary reads get confused with support within (use SA tag to get mate info)
+cdef tuple count_support_between(G, dict parts):  # cpdef
+
     cdef int i, j, node, child, any_out_edges
     cdef set p
     cdef tuple t
@@ -855,6 +854,7 @@ cpdef tuple count_support_between(G, dict parts):
         p2i.update({node: i for node in p})
 
     # Count the links between partitions. Split reads into sets ready for assembly
+    # No counting of read-pairs templates or 'support', just a count of linking alignments
     # counts (part_a, part_b): {part_a: [node 1, node 2 ..], part_b: [node4, ..] }
     counts = {}
 
@@ -895,7 +895,7 @@ cpdef tuple count_support_between(G, dict parts):
             # seen.add(node)
             seen_nodes.insert(node)
             # Count self links, important for resolving small SVs
-            if any_out_edges == 0: #G.weight(node, child) == 2:
+            if any_out_edges == 0:  # G.weight(node, child) == 2:
 
                 # if i in self_counts and node in self_counts[i]:
                 #     raise ValueError
@@ -950,8 +950,8 @@ cdef dict proc_component(list node_to_name, list component, dict read_buffer, in
     #         echo(186, k, reads[k].tostring().replace("\t", " "))
     #     quit()
 
-    if len(support_between) == 0 and len(support_within) == 0:
-        return {"parts": [], "s_between": [], "reads": reads, "s_within": [], "n2n": n2n}
+    if len(support_between) == 0 and len(support_within) == 0 and len(reads) >= min_support:
+        return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
 
     sb = {}
     kept = set([])
@@ -976,14 +976,6 @@ cdef dict proc_component(list node_to_name, list component, dict read_buffer, in
                 del partitions[block_node]
         else:
             del partitions[block_node]
-
-    # if 279 in component:  # 5371604
-    #     echo({"parts": partitions, "s_between": sb, "reads": len(reads), "s_within": support_within})
-    #     samfile = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/NA12878/hg19/alignments/NA12878.bwa.bamreads_fast.bam", "rb")
-    #     outf = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/NA12878/hg19/alignments/test2.bam", "wb", template=samfile)
-    #     for idx, rr in sorted(reads.items(), key=lambda x: x[1].pos):
-    #         outf.write(rr)
-    #     outf.close()
 
     # debug_component(component, node_to_name, support_between, support_within, G, partitions, {21},
     #                 subset=False)

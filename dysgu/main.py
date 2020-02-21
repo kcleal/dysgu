@@ -364,14 +364,13 @@ def call_events(ctx, **kwargs):
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",
               default="dysgu", type=str, show_default=True)
-# @click.option("--filter", help="Pandas compatible filter argument, where d corresponds to output .csv table"
-#                                " e.g. 'd['Prob' > 0.5]'",
-#               default="", type=str, show_default=False)
-# @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
-# @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
-#               default=None, type=click.Path(exists=True))
-# @click.option('--dest', help="Destination folder to use/create for saving results. Defaults to current directory",
-#               default=None, type=click.Path())
+@click.option("--no-chr", help="Remove 'chr' from chromosome names in vcf output", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--no-contigs", help="Remove contig sequences from vcf output", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--add-kind", help="Add region-overlap 'kind' to vcf output", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
 @click.pass_context
 def view_data(ctx, **kwargs):
     """Convert .csv table(s) to .vcf. Merges multiple .csv files into wide .vcf format."""

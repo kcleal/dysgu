@@ -2,164 +2,17 @@
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
-import itertools
 import click
 import numpy as np
 from . import data_io, assembler, graph, coverage
 import pandas as pd
-from subprocess import call
-import os
-import time
-import pysam
 
 
 def echo(*args):
     click.echo(args, err=True)
 
 
-cdef tuple guess_break_point(read, int node=0):
-    # Node id is optional
-
-    # If the read is non-discordant and no clip is present, skip
-    cdef int p, t, left, right, exact, flag, rname
-    flag = read.flag
-
-    ct = read.cigartuples
-    rname = read.rname
-    if flag & 2 and not any(i[0] == 4 or i[0] == 5 for i in ct):
-        exact = 0
-        # Breakpoint position is beyond the end of the last read
-        if flag & 16:  # Read on reverse strand guess to the left
-            p = read.pos
-            t = 5
-        else:  # Guess right
-            p = read.reference_end
-            t = 3
-
-        return t, rname, p, 0, flag, exact, node  #, read.rnext, read.pnext
-
-    # Sometimes a clip may be present, use this as a break point if available
-    left = 0
-    right = 0
-    if ct[0][0] == 4 or ct[0][0] == 5:  # Left soft or hard-clip
-        left = ct[0][1]
-    if ct[-1][0] == 4 or ct[-1][0] == 5:
-        right = ct[-1][0]
-
-    if left > 0 or right > 0:
-        exact = 1
-        if left > right:
-            # prime, rname, pos, soft-clipped, flag, exact
-            return 5, rname, read.pos, 1, flag, exact, node  #, read.rnext, read.pnext
-        else:
-            return 3, rname, read.reference_end, 1, flag, exact, node  #, read.rnext, read.pnext
-    else:
-        exact = 0
-        # Breakpoint position is beyond the end of the last read
-        if flag & 16:  # Read on reverse strand guess to the left
-            p = read.pos
-            t = 5
-        else:  # Guess right
-            p = read.reference_end
-            t = 3
-        return t, rname, p, 0, flag, exact, node  #, read.rnext, read.pnext
-
-
-cpdef dict call_break_points(list c1, list c2):
-    """
-    Makes a call from a list of break points. Can take a list of break points, or one merged cluster of breaks.
-    Outliers are dropped. Breakpoints are clustered into sets
-    :param c1: A 5 tuple (3 or 5 join, chromosome, break point position, soft-clipped)
-    :param c2: Same as c1
-    :return: Info dict containing a summary of the call
-    """
-
-    info = {}
-    cdef int count = 0
-    cdef str x, y, side
-    cdef int mean_pos, mean_95, chrom, sc_side
-    cdef list grp
-    cdef tuple t
-
-    # Fields are: prime, rname, pos, soft-clipped, flag, exact
-    for grp in (c1, c2):
-
-        if len(grp) == 0:
-            continue  # When no c2 is found
-
-        if count == 0:
-            side = "A"
-        else:
-            side = "B"
-
-        f_strand, r_strand = 0, 0
-        for item in grp:
-            if item[0] == 3:
-                f_strand += 1
-            else:
-                r_strand += 1
-        info["strand" + side] = (f_strand, r_strand)
-
-        soft_clipped = [i for i in grp if i[3]]
-
-        if len(soft_clipped) > len(grp) / 2.:
-            grp = soft_clipped  # Often true for small variants
-
-        if len(grp) == 1:
-            t = grp[0]
-            chrom = t[1]
-            sc_side = t[0]
-            mean_pos = t[2]
-            mean_95 = 0
-
-        else:
-            chrom = Counter([i[1] for i in grp]).most_common()[0][0]
-            grp = [i for i in grp if i[1] == chrom]
-
-            sc_side = Counter([i[0] for i in grp]).most_common()[0][0]
-            bp = [i[2] for i in grp]
-            mean_pos = int(np.mean(bp))
-            mean_95 = abs(int(np.percentile(bp, [97.5])) - mean_pos)
-
-
-        info["chr" + side] = chrom
-        info["pos" + side] = mean_pos
-        info["cipos95" + side] = mean_95
-        info["join" + side] = sc_side
-        count += 1
-
-    if "chrB" in info and info["chrA"] == info["chrB"]:
-        if info["joinA"] == info["joinB"]:
-            info["svtype"] = "INV"
-            info["join_type"] = f"{info['joinA']}to{info['joinB']}"
-        else:
-            if info["posA"] <= info["posB"]:
-                x = "joinA"
-                y = "joinB"
-            else:
-                x = "joinB"
-                y = "joinA"
-            if info[x] == 3 and info[y] == 5:
-                info["svtype"] = "DEL"
-                info["join_type"] = "3to5"
-            elif info[x] == 5 and info[y] == 3:
-                info["svtype"] = "DUP"
-                info["join_type"] = "5to3"
-
-    elif "chrB" in info:
-        info["svtype"] = "TRA"
-        info["join_type"] =  f"{info['joinA']}to{info['joinB']}"
-    else:
-        info["svtype"] = "BND"
-        if "joinA" in info:
-            info["join_type"] = f"{info['joinA']}to?"
-        else:
-            info["join_type"] = "?to?"
-
-    return info
-
-
-cdef dict count_attributes(list reads1, list reads2):
+cdef dict count_attributes(list reads1, list reads2, int min_support):
 
     if len(reads1) == 0:
         raise ValueError("No reads in set")
@@ -211,6 +64,9 @@ cdef dict count_attributes(list reads1, list reads2):
             if ct[0][0] == 4 or ct[-1][0] == 4:
                 r["sc"] += 1
 
+    if r["pe"] + r["supp"] < min_support:
+        return {}
+
     cdef str k
     for k in ("DP", "DApri", "DN", "NMpri", "DAsupp", "NMsupp", "MAPQpri", "MAPQsupp"):
         if len(r[k]) > 0:
@@ -240,198 +96,6 @@ cdef dict fetch_reads(dict data, d, bam):
         input_reads.update(graph.get_reads(bam, n2n))
 
     return input_reads
-
-
-def guess_break_point_from_mate(reads, candidates, max_dist, infile):
-    # Candidates is the already processed list from guess_break_point, supplement this with SA information
-    # Make a list of possible breaks in the form;
-    # (node_name, i), where i = prime, rname, pos, soft-clipped, flag, exact
-
-    count = 0
-    for node_name, r in reads.items():
-
-        # If the read is non-discordant and no clip is present, skip
-        flag = r.flag
-        chrom = r.rname
-        rnext = r.rnext
-        pnext = r.pnext
-        if chrom == rnext and abs(pnext - r.pos) < max_dist:  # Same loci
-
-            if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
-                sa = r.get_tag("SA").split(",", 3)
-                chrom2 = infile.gettid(sa[0])
-                pos2 = int(sa[1])
-                p1_neg = bool(flag & 16)
-                p2_neg = sa[3] == "-"
-                same_strand = (p1_neg and p2_neg) or (not p1_neg and not p2_neg)
-                if same_strand:
-                    if p1_neg:
-                        strand = 3
-                    else:
-                        strand = 5
-                else:
-                    if p1_neg:
-                        strand = 5
-                    else:
-                        strand = 3
-
-                if chrom2 != chrom or abs(pos2 - r.pos) > (max_dist * 3):
-
-                    candidates.append((node_name, (strand, chrom2, pos2, False, flag, False)))
-                    count += 1
-        else:
-            candidates.append((node_name, (0, rnext, pnext, False, flag, False)))
-            count += 1
-    if count == 0:
-        return None
-
-    return candidates
-
-
-def one_read(infile, data, insert_size, insert_stdev, clip_length):
-    # Same as single (below) but with no assembly step
-    return single(infile, data, insert_size, insert_stdev, clip_length, 0, to_assemble=False)
-
-
-cpdef tuple BFS_local(G, int source, int thresh):
-
-    # Mark all the vertices as not visited
-    visited = set([])
-
-    # Create a queue for BFS
-    queue = [source]
-    nodes_found = set([])
-    cdef int u, v
-
-    while queue:
-        u = queue.pop(0)
-
-        for v in G.neighbors(u):
-
-            if v not in visited:
-                if G.weight(u, v) < thresh:
-                    if u not in nodes_found:
-                        nodes_found.add(u)
-                    if v not in nodes_found:
-                        nodes_found.add(v)
-                        queue.append(v)
-
-        visited.add(u)
-
-    return nodes_found, visited
-
-
-cdef class ReadCluster:
-    cdef public list breaks
-    cdef public int chrom
-    # cdef public int chrom_next
-    # cdef public int mean_pos_next
-    cdef public int mean_pos
-    cdef public int count
-
-    def __init__(self, vals):
-        self.breaks = vals
-        self.chrom = vals[0][2]
-        self.mean_pos = int(np.median([i[2] for i in vals]))
-        # self.chrom_next = vals[0][7]
-        # self.mean_pos_next = int(np.median([i[8] for i in vals]))
-        self.count = len(vals)
-
-    cpdef int distance_to(self, int chrom, int pos, int thresh):
-        cdef int dis
-        if chrom == self.chrom:
-            dis = int(abs(self.mean_pos - <float> pos))
-            if dis < thresh:
-                return dis
-        return -1
-
-    cpdef void add_item(self, v):
-        self.breaks.append(v)
-        self.count += 1
-
-
-cdef list cluster_by_distance(list bpt, int t, int t2):
-    """
-    Naively merge breakpoints into clusters based on a distance threshold.
-    :param bpt: list of break tuples
-    :param t: clustering distance threshold, if this fails use t2
-    :param t2: more relaxed clustering distance
-    :return: a list of clusters, each cluster is a dict with items of key=(read_name, flag), value=breakpoint info
-    """
-
-    clst = []
-    current = []
-    inexact = []
-    # tuple is join-type, rname, pos, soft-clipped, flag, exact, node-name
-
-    cdef int chrom, pos, exact, last_chrom, last_pos, j
-
-    for i in sorted(bpt, key=lambda x: (x[1], x[2])):  # Sort by chrom and pos
-
-        chrom, pos, exact = i[1], i[2], i[5]
-        if len(current) == 0 and exact:
-            current.append(i)
-            continue
-
-        if exact:
-            last_chrom, last_pos = current[-1][1], current[-1][2]
-            if chrom == last_chrom and abs(last_pos - pos) < t:
-                current.append(i)
-            else:
-                clst.append(current)
-                current = [i]
-        else:
-            inexact.append(i)
-
-    # Last value
-    if len(current) > 0:
-        clst.append(current)
-
-    if len(clst) == 2:
-        return clst
-
-    if len(inexact) == 0:
-        if len(clst) > 2:
-            # Choose biggest, make call from one side
-            return [sorted(clst, key=lambda x: len(x))[-1]]
-
-        else:
-            return clst
-
-    # Greedy cluster
-    clusters = [ReadCluster(i) for i in clst]
-
-    # Merge inexact, or start new cluster
-    cdef int idx, min_d, distance, break_next
-    for item in inexact:
-        if len(clusters) == 0:
-            clusters.append(ReadCluster([item]))
-            continue
-        else:
-            idx = -1
-            min_d = 1000000000
-            break_next = 0
-            for j, cl in enumerate(clusters):
-
-                distance = cl.distance_to(item[1], item[2], thresh=t2)
-                if distance!= -1 and distance < min_d:
-                    min_d = distance
-                    idx = j
-                    if break_next:  # Clusters are sorted so only check neighbour cluster
-                        break
-                    break_next = 1
-
-            if idx != -1:
-                clusters[idx].add_item(item)
-            else:
-                clusters.append(ReadCluster([item]))
-
-    if len(clusters) == 2:
-        return [i.breaks for i in clusters]
-
-    # Return largest 2 clusters, doesnt always make sense; cluster 1 and 2 could involve different breaks
-    # works well enough most of thr time
-    return [i.breaks for i in sorted(clusters, key=lambda x: x.count, reverse=True)][:2]
 
 
 def guess_informative_pair(aligns):
@@ -504,27 +168,82 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
     tmp = defaultdict(list)
     for align in data["reads"].values():
         tmp[align.qname].append(align)
+
+    cdef AlignmentItem v_item, itm
+    cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
+
     for temp_name, alignments in tmp.items():
         l_align = list(alignments)
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
-            # if temp_name == "HWI-D00360:5:H814YADXX:2:2104:14122:33949":
-            #     echo(pair[0].to_string())
-            #     echo(pair[1].to_string())
             if pair:
                 u_reads.append(pair[0])
                 v_reads.append(pair[1])
-                process_pair(pair, precise_a, precise_b, informative)
+
+                a, b = pair
+                a_ct = a.cigartuples
+                b_ct = b.cigartuples
+                # Soft-clips for the chosen pair, plus template start of alignment
+                left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
+
+                v_item = AlignmentItem(a.rname,
+                                       b.rname,
+                                       int(not a.flag & 3328),
+                                       int(not b.flag & 3328),
+                                       1 if a.flag & 64 else 2,
+                                       1 if b.flag & 64 else 2,
+                                       a.pos,
+                                       a.reference_end,
+                                       b.pos,
+                                       b.reference_end,
+                                       3 if a.flag & 16 == 0 else 5,
+                                       3 if b.flag & 16 == 0 else 5,
+                                       left_clip_a,
+                                       right_clip_a,
+                                       left_clip_b,
+                                       right_clip_b,
+                                       )
+                
+                if v_item.left_clipA and v_item.right_clipA:
+                    if a_ct[0][1] >= a_ct[-1][1]:
+                        v_item.right_clipA = 0
+                    else:
+                        v_item.left_clipA = 0
+
+                if v_item.left_clipB and v_item.right_clipB:
+                    if b_ct[0][1] >= b_ct[-1][1]:
+                        v_item.right_clipB = 0
+                    else:
+                        v_item.left_clipB = 0
+
+                classify_d(v_item)
+
+                if v_item.breakA_precise:
+                    precise_a.append(v_item.breakA)
+                if v_item.breakB_precise:
+                    precise_b.append(v_item.breakB)
+
+                informative.append(v_item)
 
     if not informative:
         return {}
 
-    call_informative = Counter([(i["svtype"], i["join_type"]) for i in informative]).most_common()
+    attrs = count_attributes(u_reads, v_reads, min_support)
+
+    if not attrs:
+        return {}
+
+    call_informative = Counter([(itm.svtype, itm.join_type) for itm in informative]).most_common()
+
+    cdef str svtype, jointype
+
     svtype, jointype = call_informative[0][0]
     info = make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
     if not info:
         return {}
+
+    info.update(attrs)
 
     as1 = None
     as2 = None
@@ -536,9 +255,6 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
         as2 = assembler.base_assemble(v_reads)
 
     info["linked"] = 0
-
-    info.update(count_attributes(u_reads, v_reads))
-
     info["block_edge"] = 0
     info["contig"] = None
     info["contig2"] = None
@@ -553,70 +269,6 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
     info["ref_bases"] = rbases
 
     return info
-
-
-cdef dict single_old(infile, dict data, int insert_size, int insert_stdev, int clip_length, int min_support,
-                 int to_assemble=1):
-    # Make sure at least one read is worth calling
-    cdef int min_distance = insert_size + (2*insert_stdev)
-    cdef int n_templates = len(set([i.qname for i in data["reads"].values()]))
-    # if n_templates < min_support:
-    #     return {}
-
-    if n_templates == 1:
-        if not any((not i.flag & 2) or (i.rname != i.rnext) or
-                   (abs(i.tlen) > min_distance) for i in data["reads"].values()):
-            return {}
-
-    # Single's can sometimes be seperated into two groups --> send one_edge
-    # Otherwise, infer the other breakpoint from a single group
-
-    query_breaks = [guess_break_point(r, n) for n, r in data["reads"].items()]
-
-    if not query_breaks or not len(query_breaks) >= min_support:
-        return {}
-
-    if len(query_breaks) == 2:
-        u_reads = [data["reads"][query_breaks[0][6]]]
-        v_reads = [data["reads"][query_breaks[1][6]]]
-
-        info = one_edge(infile, u_reads, v_reads, clip_length, insert_size, insert_stdev,
-                        block_edge=0, assemble=to_assemble)
-        return info
-
-    clst = cluster_by_distance(query_breaks, t=25, t2=insert_stdev + (2*insert_stdev))
-
-    if len(clst) == 2:
-        # echo("0", clst[0])
-        # echo("1", clst[1])
-
-        c1, c2 = clst
-
-        u_reads = [data["reads"][t[6]] for t in c1]
-        v_reads = [data["reads"][t[6]] for t in c2]
-
-        info = one_edge(infile, u_reads, v_reads, clip_length, insert_size, insert_stdev,
-                        block_edge=0, assemble=to_assemble)
-
-        # if 279 in data["reads"]:
-        #     echo("single cll", len(u_reads), len(v_reads))
-        #     echo(info)
-        #
-        #     echo(call_from_reads(u_reads, v_reads, insert_size, insert_stdev))
-        return info
-
-    elif len(clst) == 1:
-        c1 = clst[0]  # Assume one cluster
-        pass
-
-    return {}
-#
-# cdef tuple get_tuple(dict j):
-#     # Get breakpoint info from contig. Need (3 or 5 join, read names, chromosome, break point position, soft-clipped)
-#     return (5 if j["left_clips"] > j["right_clips"] else 3,
-#             j["bamrname"],
-#             j["ref_start"] if j["left_clips"] > j["right_clips"] else j["ref_end"],
-#             j["contig"][0].islower() or j["contig"][-1].islower())
 
 
 def informative_pair(u, v):
@@ -641,742 +293,653 @@ def informative_pair(u, v):
         return pri_u, pri_v
 
 
-cdef void two_primary(dict d):
+cdef void two_primary(AlignmentItem v):
 
-    if d["posA"] < d["posB"] or (d["posA"] == d["posB"] and d["endA"] < d["endB"]):
+    if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):
 
-        if d["strandA"] == 3 and d["strandB"] == 5:  # DEL type
-            d["breakA"] = d["endA"]
-            if d["right_clipA"]:
-                d["breakA_precise"] = 1
+        if v.strandA == 3 and v.strandB == 5:  # DEL type
+            v.breakA = v.endA
+            if v.right_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["posB"]
-            if d["left_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.posB
+            if v.left_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DEL"
-            d["join_type"] = "3to5"
+            v.svtype = "DEL"
+            v.join_type = "3to5"
 
-        elif d["strandA"] == 5 and d["strandB"] == 3:  # DUP type
-            d["breakA"] = d["posA"]
-            if d["left_clipA"]:
-                d["breakA_precise"] = 1
+        elif v.strandA == 5 and v.strandB == 3:  # DUP type
+            v.breakA = v.posA
+            if v.left_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["endB"]
-            if d["right_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.endB
+            if v.right_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DUP"
-            d["join_type"] = "5to3"
+            v.svtype = "DUP"
+            v.join_type = "5to3"
 
-        elif d["strandA"] == d["strandB"]:  # INV type
+        elif v.strandA == v.strandB:  # INV type
             # Break to left
-            if d["strandA"] == 5:
+            if v.strandA == 5:
 
-                if not (d["left_clipA"] or d["left_clipB"]) and (d["right_clipA"] or d["right_clipB"]):
-                    d["breakA"] = d["endA"]
-                    if d["right_clipA"]:
-                        d["breakA_precise"] = 1
+                if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
+                    v.breakA = v.endA
+                    if v.right_clipA:
+                        v.breakA_precise = 1
 
-                    d["breakB"] = d["endB"]
-                    if d["right_clipB"]:
-                        d["breakB_precise"] = 1
+                    v.breakB = v.endB
+                    if v.right_clipB:
+                        v.breakB_precise = 1
 
-                    d["svtype"] = "INV"
-                    d["join_type"] = "3to3"
-
-                else:
-                    d["breakA"] = d["posA"]
-                    if d["left_clipA"]:
-                        d["breakA_precise"] = 1
-
-                    d["breakB"] = d["posB"]
-                    if d["right_clipB"]:
-                        d["breakB_precise"] = 1
-
-                    d["svtype"] = "INV"
-                    d["join_type"] = "5to5"
-
-            elif d["strandA"] == 3:
-
-                if not (d["right_clipA"] or d["right_clipB"]) and (d["left_clipA"] or d["left_clipB"]):
-                    d["breakA"] = d["posA"]
-                    if d["right_clipA"]:
-                        d["breakA_precise"] = 1
-
-                    d["breakB"] = d["posB"]
-                    if d["right_clipB"]:
-                        d["breakB_precise"] = 1
-
-                    d["svtype"] = "INV"
-                    d["join_type"] = "5to5"
+                    v.svtype = "INV"
+                    v.join_type = "3to3"
 
                 else:
+                    v.breakA = v.posA
+                    if v.left_clipA:
+                        v.breakA_precise = 1
 
-                    d["breakA"] = d["endA"]
-                    if d["left_clipA"]:
-                        d["breakA_precise"] = 1
+                    v.breakB = v.posB
+                    if v.right_clipB:
+                        v.breakB_precise = 1
 
-                    d["breakB"] = d["endB"]
-                    if d["right_clipB"]:
-                        d["breakB_precise"] = 1
+                    v.svtype = "INV"
+                    v.join_type = "5to5"
 
-                    d["svtype"] = "INV"
-                    d["join_type"] = "3to3"
+            elif v.strandA == 3:
 
-            # if not d["right_clipA"] and not d["right_clipB"]:
-            #     d["breakA"] = d["posA"]
-            #     if d["left_clipA"]:
-            #         d["breakA_precise"] = 1
-            #
-            #     d["breakB"] = d["posB"]
-            #     if d["left_clipB"]:
-            #         d["breakB_precise"] = 1
-            #
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "5to5"
+                if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
+                    v.breakA = v.posA
+                    if v.right_clipA:
+                        v.breakA_precise = 1
 
-            # elif d["strandA"] == 5:
-            #     d["breakA"] = d["posA"]
-            #     if d["left_clipA"]:
-            #         d["breakA_precise"] = 1
-            #
-            #     d["breakB"] = d["posB"]
-            #     if d["right_clipB"]:
-            #         d["breakB_precise"] = 1
-            #
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "5to5"
+                    v.breakB = v.posB
+                    if v.right_clipB:
+                        v.breakB_precise = 1
 
-            # Break to right
-            # elif not d["left_clipA"] and not d["left_clipB"]:
-            #     d["breakA"] = d["endA"]
-            #     if d["right_clipA"]:
-            #         d["breakA_precise"] = 1
-            #
-            #     d["breakB"] = d["endB"]
-            #     if d["right_clipB"]:
-            #         d["breakB_precise"] = 1
-            #
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "3to3"
+                    v.svtype = "INV"
+                    v.join_type = "5to5"
 
-            # elif d["strandA"] == 3:
-            #     d["breakA"] = d["endA"]
-            #     if d["left_clipA"]:
-            #         d["breakA_precise"] = 1
-            #
-            #     d["breakB"] = d["endB"]
-            #     if d["right_clipB"]:
-            #         d["breakB_precise"] = 1
-            #
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "3to3"
+                else:
+
+                    v.breakA = v.endA
+                    if v.left_clipA:
+                        v.breakA_precise = 1
+
+                    v.breakB = v.endB
+                    if v.right_clipB:
+                        v.breakB_precise = 1
+
+                    v.svtype = "INV"
+                    v.join_type = "3to3"
 
             # Break INV:DUP
             else:
-            # elif d["left_clipA"] and d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
+            # elif v.left_clipA and v.right_clipB:
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
 
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
 
-                d["svtype"] = "INV:DUP"
-                d["join_type"] = "3to5"
+                v.svtype = "INV:DUP"
+                v.join_type = "3to5"
 
     else:  # B < A
 
-        if d["strandA"] == 5 and d["strandB"] == 3:  # DEL type
-            d["breakA"] = d["posA"]
-            if d["left_clipA"]:
-                d["breakA_precise"] = 1
+        if v.strandA == 5 and v.strandB == 3:  # DEL type
+            v.breakA = v.posA
+            if v.left_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["endB"]
-            if d["right_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.endB
+            if v.right_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DEL"
-            d["join_type"] = "3to5"
+            v.svtype = "DEL"
+            v.join_type = "3to5"
 
-        elif d["strandB"] == 5 and d["strandA"] == 3:  # DUP type
-            d["breakA"] = d["endA"]
-            if d["right_clipA"]:
-                d["breakA_precise"] = 1
+        elif v.strandB == 5 and v.strandA == 3:  # DUP type
+            v.breakA = v.endA
+            if v.right_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["posB"]
-            if d["left_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.posB
+            if v.left_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DUP"
-            d["join_type"] = "5to3"
+            v.svtype = "DUP"
+            v.join_type = "5to3"
 
-        # else:  # INV type
-            # Break to left
-            # if not d["right_clipA"] and not d["right_clipB"]:
-            #     d["breakA"] = d["posA"]
-            #     if d["left_clipA"]:
-            #         d["breakA_precise"] = 1
-            #     d["breakB"] = d["posB"]
-            #     if d["left_clipB"]:
-            #         d["breakB_precise"] = 1
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "5to5"
-            #
-            # # Break to the right
-            # elif not d["left_clipA"] and not d["left_clipB"]:
-            #     d["breakA"] = d["endA"]
-            #     if d["right_clipA"]:
-            #         d["breakA_precise"] = 1
-            #     d["breakB"] = d["endB"]
-            #     if d["right_clipB"]:
-            #         d["breakB_precise"] = 1
-            #     d["svtype"] = "INV"
-            #     d["join_type"] = "3to3"
-            #
-            # elif d["left_clipA"] and d["right_clipB"]:
-            #     d["breakA"] = d["posA"]
-            #     d["breakA_precise"] = 1
-            #     d["breakB"] = d["endB"]
-            #     d["breakB_precise"] = 1
-            #     d["svtype"] = "INV:DUP"
-            #     d["join_type"] = "5to3"
-            #
-            # else:
-            # # elif d["right_clipA"] and d["left_clipB"]:
-            #     d["breakA"] = d["endA"]
-            #     d["breakA_precise"] = 1
-            #     d["breakB"] = d["posB"]
-            #     d["breakB_precise"] = 1
-            #     d["svtype"] = "INV:DUP"
-            #     d["join_type"] = "3to5"
             # INV type
-        elif d["strandA"] == 5:
+        elif v.strandA == 5:
 
-            if not (d["left_clipA"] or d["left_clipB"]) and (d["right_clipA"] or d["right_clipB"]):
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
+            if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
 
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
 
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
-
-            else:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-
-                d["breakB"] = d["posB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
-
-        elif d["strandA"] == 3:
-
-            if not (d["right_clipA"] or d["right_clipB"]) and (d["left_clipA"] or d["left_clipB"]):
-                d["breakA"] = d["posA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-
-                d["breakB"] = d["posB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             else:
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
 
-                d["breakA"] = d["endA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
+                v.breakB = v.posB
+                if v.right_clipB:
+                    v.breakB_precise = 1
 
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+        elif v.strandA == 3:
+
+            if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
+                v.breakA = v.posA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+
+                v.breakB = v.posB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+
+                v.svtype = "INV"
+                v.join_type = "5to5"
+
+            else:
+
+                v.breakA = v.endA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
 
-cdef void same_read(dict d):
-
+cdef void same_read(AlignmentItem v):
     # A is first
-    if d["posA"] < d["posB"] or (d["posA"] == d["posB"] and d["endA"] <= d["endB"]):
+    if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):
 
-        if d["strandA"] == d["strandB"]:  # Same for 3 and 5 strand reads
+        if v.strandA == v.strandB:  # Same for 3 and 5 strand reads
 
-            if is_overlapping(d["posA"], d["endA"], d["posB"], d["endB"]):  # Nested DUP
-                if d["left_clipA"]:
-                    d["breakA"] = d["posA"]
-                    d["breakA_precise"] = 1
-                elif d["right_clipA"]:
-                    d["breakA"] = d["endA"]
-                    d["breakA_precise"] = 1
+            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
+                if v.left_clipA:
+                    v.breakA = v.posA
+                    v.breakA_precise = 1
+                elif v.right_clipA:
+                    v.breakA = v.endA
+                    v.breakA_precise = 1
                 else:
-                    d["breakA"] = d["endA"]
+                    v.breakA = v.endA
 
-                if d["left_clipB"]:
-                    d["breakB"] = d["posB"]
-                    d["breakB_precise"] = 1
-                elif d["right_clipB"]:
-                    d["breakB"] = d["endB"]
-                    d["breakB_precise"] = 1
+                if v.left_clipB:
+                    v.breakB = v.posB
+                    v.breakB_precise = 1
+                elif v.right_clipB:
+                    v.breakB = v.endB
+                    v.breakB_precise = 1
                 else:
-                    d["breakB"] = d["endB"]
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+                    v.breakB = v.endB
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
-            elif not d["left_clipA"] and not d["right_clipB"]:
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "DEL"
-                d["join_type"] = "3to5"
+            elif not v.left_clipA and not v.right_clipB:
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "DEL"
+                v.join_type = "3to5"
 
-            elif not d["right_clipA"] and not d["left_clipB"]:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+            elif not v.right_clipA and not v.left_clipB:
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
-            elif not d["left_clipA"] and not d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+            elif not v.left_clipA and not v.left_clipB:
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             else:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
-        elif d["strandA"] == 5 and d["strandB"] == 3:
+        elif v.strandA == 5 and v.strandB == 3:
 
             # Break right
-            if not d["left_clipA"] and not d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
+            if not v.left_clipA and not v.left_clipB:
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
 
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
 
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             # Break left
-            elif not d["right_clipA"] and not d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
+            elif not v.right_clipA and not v.right_clipB:
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
 
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
 
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
-            elif is_overlapping(d["posA"], d["endA"], d["posB"], d["endB"]):  # Inverted duplication
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV:DUP"
-                d["join_type"] = "5to3"
+            elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV:DUP"
+                v.join_type = "5to3"
 
-            elif d["right_clipA"] and d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "INV"
-                d["join_type"] = "3to5"
+            elif v.right_clipA and v.left_clipB:
+                v.breakA = v.endA
+                v.breakB = v.posB
+                v.svtype = "INV"
+                v.join_type = "3to5"
 
             else:
-            # elif d["left_clipA"] and d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["endB"]
-                d["svtype"] = "INV"
-                d["join_type"] = "5to3"
+            # elif v.left_clipA and v.right_clipB:
+                v.breakA = v.posA
+                v.breakB = v.endB
+                v.svtype = "INV"
+                v.join_type = "5to3"
 
         else:  # INV type
             # Break left
-            if d["left_clipA"] and d["left_clipB"]:
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+            if v.left_clipA and v.left_clipB:
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.breakA = v.posA
+                v.breakB = v.posB
+                v.svtype = "INV"
+                v.join_type = "5to5"
             # Break right
-            elif d["right_clipA"] and d["right_clipB"]:
-                d["breakA"] = d["endA"]
-                d["breakB"] = d["endB"]
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+            elif v.right_clipA and v.right_clipB:
+                v.breakA = v.endA
+                v.breakB = v.endB
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             else:  # Guess using pos only
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "INV"
-                if d["strandA"] == 5:
-                    d["join_type"] = "5to5"
+                v.breakA = v.posA
+                v.breakB = v.posB
+                v.svtype = "INV"
+                if v.strandA == 5:
+                    v.join_type = "5to5"
                 else:
-                    d["join_type"] = "3to3"
+                    v.join_type = "3to3"
 
     # B is first
     else:
-        if d["strandA"] == d["strandB"]:
+        if v.strandA == v.strandB:
 
-            if is_overlapping(d["posA"], d["endA"], d["posB"], d["endB"]):  # Nested DUP
-                if d["left_clipA"]:
-                    d["breakA"] = d["posA"]
-                    d["breakA_precise"] = 1
-                elif d["right_clipA"]:
-                    d["breakA"] = d["endA"]
-                    d["breakA_precise"] = 1
+            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
+                if v.left_clipA:
+                    v.breakA = v.posA
+                    v.breakA_precise = 1
+                elif v.right_clipA:
+                    v.breakA = v.endA
+                    v.breakA_precise = 1
                 else:
-                    d["breakA"] = d["endA"]
+                    v.breakA = v.endA
 
-                if d["left_clipB"]:
-                    d["breakB"] = d["posB"]
-                    d["breakB_precise"] = 1
-                elif d["right_clipB"]:
-                    d["breakB"] = d["endB"]
-                    d["breakB_precise"] = 1
+                if v.left_clipB:
+                    v.breakB = v.posB
+                    v.breakB_precise = 1
+                elif v.right_clipB:
+                    v.breakB = v.endB
+                    v.breakB_precise = 1
                 else:
-                    d["breakB"] = d["endB"]
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+                    v.breakB = v.endB
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
-            elif not d["left_clipB"] and not d["right_clipA"]:
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["endB"]
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["svtype"] = "DEL"
-                d["join_type"] = "3to5"
+            elif not v.left_clipB and not v.right_clipA:
+                v.breakA = v.posA
+                v.breakB = v.endB
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.svtype = "DEL"
+                v.join_type = "3to5"
 
-            elif not d["right_clipB"] and not d["left_clipA"]:
-                d["breakA"] = d["endA"]
-                d["breakB"] = d["posB"]
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+            elif not v.right_clipB and not v.left_clipA:
+                v.breakA = v.endA
+                v.breakB = v.posB
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
             else:
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "BND"
-                d["join_type"] = f"{d['strandA']}to{d['strandB']}"
+                v.breakA = v.posA
+                v.breakB = v.posB
+                v.svtype = "BND"
+                v.join_type = f"{v.strandA}to{v.strandB}"
 
         else:  # INV type
             # Break left
-            if d["left_clipA"] and d["left_clipB"]:
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+            if v.left_clipA and v.left_clipB:
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.breakA = v.posA
+                v.breakB = v.posB
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
             # Break right
-            elif d["right_clipA"] and d["right_clipB"]:
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["breakA"] = d["endA"]
-                d["breakB"] = d["endB"]
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+            elif v.right_clipA and v.right_clipB:
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.breakA = v.endA
+                v.breakB = v.endB
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             else:  # Guess using pos only
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["posB"]
-                d["svtype"] = "INV"
-                if d["strandA"] == 5:
-                    d["join_type"] = "5to5"
+                v.breakA = v.posA
+                v.breakB = v.posB
+                v.svtype = "INV"
+                if v.strandA == 5:
+                    v.join_type = "5to5"
                 else:
-                    d["join_type"] = "3to3"
+                    v.join_type = "3to3"
 
 
-cdef void different_read(dict d):
+cdef void different_read(AlignmentItem v):
 
-    if d["posA"] < d["posB"] or (d["posA"] == d["posB"] and d["endA"] <= d["endB"]):  # A is first
+    if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
 
-        if d["strandA"] == 3 and d["strandB"] == 5:  # DEL type
-            d["breakA"] = d["endA"]
-            if d["right_clipA"]:
-                d["breakA_precise"] = 1
+        if v.strandA == 3 and v.strandB == 5:  # DEL type
+            v.breakA = v.endA
+            if v.right_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["posB"]
-            if d["left_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.posB
+            if v.left_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DEL"
-            d["join_type"] = "3to5"
+            v.svtype = "DEL"
+            v.join_type = "3to5"
 
-        elif d["strandA"] == 5 and d["strandB"] == 3:  # DUP type
-            d["breakA"] = d["posA"]
-            if d["left_clipA"]:
-                d["breakA_precise"] = 1
+        elif v.strandA == 5 and v.strandB == 3:  # DUP type
+            v.breakA = v.posA
+            if v.left_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["endB"]
-            if d["right_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.endB
+            if v.right_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DUP"
-            d["join_type"] = "5to3"
+            v.svtype = "DUP"
+            v.join_type = "5to3"
 
-        elif d["strandA"] == d["strandB"]:
-            if is_overlapping(d["posA"], d["endA"], d["posB"], d["endB"]):  # Nested
+        elif v.strandA == v.strandB:
+            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested
 
-                if d["strandA"] == 3:  # Both forward strand
-                    d["breakA"] = d["endA"]
-                    if d["right_clipA"]:
-                        d["breakA_precise"] = 1
+                if v.strandA == 3:  # Both forward strand
+                    v.breakA = v.endA
+                    if v.right_clipA:
+                        v.breakA_precise = 1
 
-                    d["breakB"] = d["endB"]
-                    if d["right_clipB"]:
-                        d["breakB_precise"] = 1
-                    d["svtype"] = "INV"
-                    d["join_type"] = "3to3"
+                    v.breakB = v.endB
+                    if v.right_clipB:
+                        v.breakB_precise = 1
+                    v.svtype = "INV"
+                    v.join_type = "3to3"
 
                 else:  # Both forward strand
-                    d["breakA"] = d["posA"]
-                    if d["left_clipA"]:
-                        d["breakA_precise"] = 1
+                    v.breakA = v.posA
+                    if v.left_clipA:
+                        v.breakA_precise = 1
 
-                    d["breakB"] = d["posB"]
-                    if d["left_clipB"]:
-                        d["breakB_precise"] = 1
-                    d["svtype"] = "INV"
-                    d["join_type"] = "5to5"
+                    v.breakB = v.posB
+                    if v.left_clipB:
+                        v.breakB_precise = 1
+                    v.svtype = "INV"
+                    v.join_type = "5to5"
 
-            elif not d["right_clipA"] and not d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+            elif not v.right_clipA and not v.right_clipB:
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
-            elif not d["left_clipA"] and not d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+            elif not v.left_clipA and not v.left_clipB:
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
-            elif d["right_clipA"] and d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                d["breakA_precise"] = 1
-                d["breakB"] = d["posB"]
-                d["breakB_precise"] = 1
-                d["svtype"] = "INV:DUP"
-                d["join_type"] = "5to3"
+            elif v.right_clipA and v.left_clipB:
+                v.breakA = v.endA
+                v.breakA_precise = 1
+                v.breakB = v.posB
+                v.breakB_precise = 1
+                v.svtype = "INV:DUP"
+                v.join_type = "5to3"
 
             else:
-            # elif d["left_clipA"] and d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                d["breakB_precise"] = 1
-                d["svtype"] = "INV:DUP"
-                d["join_type"] = "3to5"
+            # elif v.left_clipA and v.right_clipB:
+                v.breakA = v.posA
+                v.breakA_precise = 1
+                v.breakB = v.endB
+                v.breakB_precise = 1
+                v.svtype = "INV:DUP"
+                v.join_type = "3to5"
 
     else:  # B is first; B <= A
 
-        if d["strandA"] == 5 and d["strandB"] == 3:  # DEL type
-            d["breakA"] = d["posA"]
-            if d["left_clipA"]:
-                d["breakA_precise"] = 1
+        if v.strandA == 5 and v.strandB == 3:  # DEL type
+            v.breakA = v.posA
+            if v.left_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["endB"]
-            if d["right_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.endB
+            if v.right_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DEL"
-            d["join_type"] = "3to5"
+            v.svtype = "DEL"
+            v.join_type = "3to5"
 
-        elif d["strandA"] == 3 and d["strandB"] == 5:  # DUP type
-            d["breakA"] = d["endA"]
-            if d["right_clipA"]:
-                d["breakA_precise"] = 1
+        elif v.strandA == 3 and v.strandB == 5:  # DUP type
+            v.breakA = v.endA
+            if v.right_clipA:
+                v.breakA_precise = 1
 
-            d["breakB"] = d["posB"]
-            if d["left_clipB"]:
-                d["breakB_precise"] = 1
+            v.breakB = v.posB
+            if v.left_clipB:
+                v.breakB_precise = 1
 
-            d["svtype"] = "DUP"
-            d["join_type"] = "5to3"
+            v.svtype = "DUP"
+            v.join_type = "5to3"
 
-        elif d["strandA"] == d["strandB"]:  # INV type
+        elif v.strandA == v.strandB:  # INV type
 
-            if is_overlapping(d["posA"], d["endA"], d["posB"], d["endB"]):  # Nested DUP
-                if d["left_clipA"]:
-                    d["breakA"] = d["posA"]
-                    d["breakA_precise"] = 1
-                elif d["right_clipA"]:
-                    d["breakA"] = d["endA"]
-                    d["breakA_precise"] = 1
+            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
+                if v.left_clipA:
+                    v.breakA = v.posA
+                    v.breakA_precise = 1
+                elif v.right_clipA:
+                    v.breakA = v.endA
+                    v.breakA_precise = 1
                 else:
-                    d["breakA"] = d["endA"]
+                    v.breakA = v.endA
 
-                if d["left_clipB"]:
-                    d["breakB"] = d["posB"]
-                    d["breakB_precise"] = 1
-                elif d["right_clipB"]:
-                    d["breakB"] = d["endB"]
-                    d["breakB_precise"] = 1
+                if v.left_clipB:
+                    v.breakB = v.posB
+                    v.breakB_precise = 1
+                elif v.right_clipB:
+                    v.breakB = v.endB
+                    v.breakB_precise = 1
                 else:
-                    d["breakB"] = d["endB"]
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+                    v.breakB = v.endB
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
-            elif d["right_clipA"] and d["left_clipB"]:
-                d["breakA"] = d["endA"]
-                d["breakB"] = d["posB"]
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["svtype"] = "DEL"
-                d["join_type"] = "3to5"
+            elif v.right_clipA and v.left_clipB:
+                v.breakA = v.endA
+                v.breakB = v.posB
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.svtype = "DEL"
+                v.join_type = "3to5"
 
-            elif d["left_clipA"] and d["right_clipB"]:
-                d["breakA"] = d["posA"]
-                d["breakB"] = d["endB"]
-                d["breakA_precise"] = 1
-                d["breakB_precise"] = 1
-                d["svtype"] = "DUP"
-                d["join_type"] = "5to3"
+            elif v.left_clipA and v.right_clipB:
+                v.breakA = v.posA
+                v.breakB = v.endB
+                v.breakA_precise = 1
+                v.breakB_precise = 1
+                v.svtype = "DUP"
+                v.join_type = "5to3"
 
-            elif not d["left_clipB"] and not d["left_clipA"]:
+            elif not v.left_clipB and not v.left_clipA:
 
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
 
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
-            elif not d["right_clipB"] and not d["right_clipA"]:
+            elif not v.right_clipB and not v.right_clipA:
 
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
 
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
-            elif d["strandA"] == 3:
-                d["breakA"] = d["endA"]
-                if d["right_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["endB"]
-                if d["right_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "3to3"
+            elif v.strandA == 3:
+                v.breakA = v.endA
+                if v.right_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.endB
+                if v.right_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "3to3"
 
             else:
-                d["breakA"] = d["posA"]
-                if d["left_clipA"]:
-                    d["breakA_precise"] = 1
-                d["breakB"] = d["posB"]
-                if d["left_clipB"]:
-                    d["breakB_precise"] = 1
-                d["svtype"] = "INV"
-                d["join_type"] = "5to5"
+                v.breakA = v.posA
+                if v.left_clipA:
+                    v.breakA_precise = 1
+                v.breakB = v.posB
+                if v.left_clipB:
+                    v.breakB_precise = 1
+                v.svtype = "INV"
+                v.join_type = "5to5"
 
 
-cdef void translocation(dict d):
+cdef void translocation(AlignmentItem v):
 
-    d["svtype"] = "TRA"
+    v.svtype = "TRA"
 
-    if d["left_clipA"]:
-        d["breakA"] = d["posA"]
-        d["breakA_precise"] = 1
-    elif d["right_clipA"]:
-        d["breakA"] = d["endA"]
-        d["breakA_precise"] = 1
+    if v.left_clipA:
+        v.breakA = v.posA
+        v.breakA_precise = 1
+    elif v.right_clipA:
+        v.breakA = v.endA
+        v.breakA_precise = 1
     else:
-        d["breakA"] = d["posA"]
-        d["breakA_precise"] = 1
+        v.breakA = v.posA
+        v.breakA_precise = 1
 
-    if d["left_clipB"]:
-        d["breakB"] = d["posB"]
-        d["breakB_precise"] = 1
-    elif d["right_clipB"]:
-        d["breakB"] = d["endB"]
-        d["breakB_precise"] = 1
+    if v.left_clipB:
+        v.breakB = v.posB
+        v.breakB_precise = 1
+    elif v.right_clipB:
+        v.breakB = v.endB
+        v.breakB_precise = 1
     else:
-        d["breakB"] = d["posB"]
-        d["breakB_precise"] = 1
-    d["join_type"] = f"{d['strandA']}to{d['strandB']}"
+        v.breakB = v.posB
+        v.breakB_precise = 1
+    v.join_type = f"{v.strandA}to{v.strandB}"
 
 
 cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
     return int(max(x1, y1) <= min(x2, y2))
 
 
-cdef void classify_d(dict d):
+cdef void classify_d(AlignmentItem v):
 
-    d["breakA_precise"] = 0
-    d["breakB_precise"] = 0
+    v.breakA_precise = 0
+    v.breakB_precise = 0
 
-    if d["chrA"] != d["chrB"]:
-        translocation(d)
+    if v.chrA != v.chrB:
+        translocation(v)
 
     else:  # Intra-chromosomal
         # Find join type first, different for pri-sup, pri-pri
-        if d["priA"] and d["priB"]:  # Both primary
-            two_primary(d)
+        if v.priA and v.priB:  # Both primary
+            two_primary(v)
 
         else:  # One is a supplementary
-            if d["rA"] == d["rB"]:
-                same_read(d)
+            if v.rA == v.rB:
+                same_read(v)
             else:
-                different_read(d)
+                different_read(v)
 
 
 cdef tuple break_ops(list positions, list precise, int limit, float median_pos):
@@ -1424,8 +987,8 @@ cdef dict make_call(list informative, list breakA_precise, list breakB_precise, 
     cdef int limit = insert_size + insert_stdev
 
     # get bulk call
-    positionsA = [i["breakA"] for i in informative]
-    positionsB = [i["breakB"] for i in informative]
+    positionsA = [i.breakA for i in informative]
+    positionsB = [i.breakB for i in informative]
     cdef float median_A = np.median(positionsA)
     cdef float median_B = np.median(positionsB)
 
@@ -1464,7 +1027,7 @@ cdef dict make_call(list informative, list breakA_precise, list breakB_precise, 
         main_A_break, cipos95A = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B = break_ops(positionsB, breakB_precise, limit, median_B)
 
-    return {"svtype": svtype, "join_type": jointype, "chrA": informative[0]["chrA"], "chrB": informative[0]["chrB"],
+    return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
             "preciseA": True if cipos95A == 0 else False, "preciseB": True if cipos95B == 0 else False}
 
@@ -1543,55 +1106,36 @@ cdef tuple mask_soft_clips(int aflag, int bflag, list a_ct, list b_ct):
     return left_clipA, right_clipA, left_clipB, right_clipB
 
 
-cdef void process_pair(tuple pair, list precise_a, list precise_b, list informative):
-    a, b = pair
-    a_ct = a.cigartuples
-    b_ct = b.cigartuples
-    # Soft-clips for the chosen pair, plus template start of alignment
-    left_clipA, right_clipA, left_clipB, right_clipB = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
+cdef class AlignmentItem:
+    cdef public int chrA, chrB, priA, priB, rA, rB, posA, endA, posB, endB, strandA, strandB, left_clipA, right_clipA,\
+        left_clipB, right_clipB, breakA_precise, breakB_precise, breakA, breakB
+    cdef public str svtype, join_type
+    def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,
+                  int strandA, int strandB, int left_clipA, int right_clipA, int left_clipB, int right_clipB,):
+        self.chrA = chrA
+        self.chrB = chrB
+        self.priA = priA
+        self.priB = priB
+        self.rA = rA
+        self.rB = rB
+        self.posA = posA
+        self.endA = endA
+        self.posB = posB
+        self.endB = endB
+        self.strandA = strandA
+        self.strandB = strandB
+        self.left_clipA = left_clipA
+        self.right_clipA = right_clipA
+        self.left_clipB = left_clipB
+        self.right_clipB = right_clipB
 
-    d = {"chrA": a.rname,
-        "chrB": b.rname,
-        "priA": not a.flag & 3328,
-        "priB": not b.flag & 3328,
-        "rA": 1 if a.flag & 64 else 2,
-        "rB": 1 if b.flag & 64 else 2,
-        "posA": a.pos,
-        "endA": a.reference_end,
-        "posB": b.pos,
-        "endB": b.reference_end,
-        "strandA": 3 if a.flag & 16 == 0 else 5,
-        "strandB": 3 if b.flag & 16 == 0 else 5,
-        "left_clipA": left_clipA,
-        "right_clipA": right_clipA,
-        "left_clipB": left_clipB,
-        "right_clipB": right_clipB,
-        "qname": a.qname[-5:],
-        "breakA_precise": 0,
-        "breakB_precise": 0
-        }
-
-    # If both sides clipped choose longest soft-clip (works ok)
-    if d["left_clipA"] and d["right_clipA"]:
-        if a_ct[0][1] >= a_ct[-1][1]:
-            d["right_clipA"] = 0
-        else:
-            d["left_clipA"] = 0
-
-    if d["left_clipB"] and d["right_clipB"]:
-        if b_ct[0][1] >= b_ct[-1][1]:
-            d["right_clipB"] = 0
-        else:
-            d["left_clipB"] = 0
-
-    classify_d(d)
-
-    if d["breakA_precise"]:
-        precise_a.append(d["breakA"])
-    if d["breakB_precise"]:
-        precise_b.append(d["breakB"])
-
-    informative.append(d)
+        #
+        self.breakA_precise = 0
+        self.breakB_precise = 0
+        self.breakA = -1
+        self.breakB = -1
+        self.svtype = ""
+        self.join_type = ""
 
 
 cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
@@ -1607,6 +1151,10 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
     informative = []
     precise_a = []
     precise_b = []
+
+    cdef AlignmentItem v_item, i
+    cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
+
     for qname in [k for k in grp_u if k in grp_v]:  # Qname fount on both sides
 
         u = grp_u[qname]
@@ -1618,14 +1166,58 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
             pair = informative_pair(u, v)
 
         if pair:
-            process_pair(pair, precise_a, precise_b, informative)
 
+            a, b = pair
+            a_ct = a.cigartuples
+            b_ct = b.cigartuples
+            # Soft-clips for the chosen pair, plus template start of alignment
+            left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
 
-    # echo("informative", informative)
+            v_item = AlignmentItem(a.rname,
+                                   b.rname,
+                                   int(not a.flag & 3328),
+                                   int(not b.flag & 3328),
+                                   1 if a.flag & 64 else 2,
+                                   1 if b.flag & 64 else 2,
+                                   a.pos,
+                                   a.reference_end,
+                                   b.pos,
+                                   b.reference_end,
+                                   3 if a.flag & 16 == 0 else 5,
+                                   3 if b.flag & 16 == 0 else 5,
+                                   left_clip_a,
+                                   right_clip_a,
+                                   left_clip_b,
+                                   right_clip_b,
+                                   )
+
+            if v_item.left_clipA and v_item.right_clipA:
+                if a_ct[0][1] >= a_ct[-1][1]:
+                    v_item.right_clipA = 0
+                else:
+                    v_item.left_clipA = 0
+
+            if v_item.left_clipB and v_item.right_clipB:
+                if b_ct[0][1] >= b_ct[-1][1]:
+                    v_item.right_clipB = 0
+                else:
+                    v_item.left_clipB = 0
+
+            classify_d(v_item)
+
+            if v_item.breakA_precise:
+                precise_a.append(v_item.breakA)
+            if v_item.breakB_precise:
+                precise_b.append(v_item.breakB)
+
+            informative.append(v_item)
+
     if not informative:
         return {}
 
-    call_informative = Counter([(i["svtype"], i["join_type"]) for i in informative]).most_common()
+    call_informative = Counter([(i.svtype, i.join_type) for i in informative]).most_common()
+
+    cdef str svtype, jointype
     svtype, jointype = call_informative[0][0]
     dc = make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
@@ -1633,12 +1225,18 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
 
 
 cdef dict one_edge(infile, list u_reads, list v_reads, int clip_length, int insert_size, int insert_stdev,
-                   int block_edge=1, assemble=True):
+                   int min_support, int block_edge=1, assemble=True):
+
+    attrs = count_attributes(u_reads, v_reads, min_support)
+    if not attrs:
+        return {}
 
     info = call_from_reads(u_reads, v_reads, insert_size, insert_stdev)
 
     if not info:
         return {}
+
+    info.update(attrs)
 
     as1 = None
     as2 = None
@@ -1650,42 +1248,7 @@ cdef dict one_edge(infile, list u_reads, list v_reads, int clip_length, int inse
         if info["preciseB"]:
             as2 = assembler.base_assemble(v_reads)
 
-    # if info["posB"] == 46698003:
-    #     echo(info)
-    #
-    #     echo("--")
-    #     echo(as1)
-    #     echo(as2)
-
-    # if as1 is None or len(as1) == 0:
-    #     guess_a = [guess_break_point(r) for r in u_reads]
-    # else:
-    #     guess_a = [get_tuple(as1)]  # Tuple of breakpoint information
-
-    # if not guess_a:
-    #     return {}
-
-    # if as2 is None or len(as2) == 0:
-    #     guess_b = [guess_break_point(r) for r in v_reads]
-    # else:
-    #     guess_b = [get_tuple(as2)]
-    #
-    # echo()
-
-
-    # weight_call(u_reads, infile)
-    # weight_call(v_reads, infile)
-
-
-    # if not guess_b:
-    #     return {}
-
-    # info = call_break_points(guess_a, guess_b)
-
     info["linked"] = 0
-
-    info.update(count_attributes(u_reads, v_reads))
-
     info["block_edge"] = block_edge
     info["contig"] = None
     info["contig2"] = None
@@ -1748,7 +1311,7 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
         #     echo("u, v", u, v)
         #     echo(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev))
 
-        yield one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev)
+        yield one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support)
 
     # Process any unconnected blocks
     if seen:
@@ -1756,7 +1319,6 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             d = data["parts"][part_key]
             if len(d) >= min_support:
                 # Call single block, only collect local reads to the block
-
                 rds = {}
                 to_collect = {}
                 for v in d:
@@ -1777,8 +1339,7 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
 
         o_count = out_counts[k]
         i_counts = len(d)
-        # echo(o_count > 0, i_counts > (2*min_support), i_counts > (3*o_count), i_counts, o_count)
-        if o_count > 0 and i_counts > (2*min_support) and i_counts > (o_count):
+        if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
 
             rds = {}
             to_collect = {}
@@ -1793,18 +1354,13 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             if len(rds) < min_support:
                 continue
 
-            # if 279 in d:
-
-            #     echo(len(rds))
-            #     echo("here", k)
             yield single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True)
-
 
 
 def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support):
 
     n_parts = len(data["parts"])
-    n_reads = len(data["reads"])
+    # n_reads = len(data["reads"])
     # if 279 in data["reads"]:
     # echo("reads and parts", n_reads, n_parts)
     # echo(data["reads"])
@@ -1812,42 +1368,14 @@ def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min
     if n_parts >= 1:
         # Processed single edges and break apart connected
         for event in multi(data, bam, insert_size, insert_stdev, clip_length, min_support):
-            # if 279 in data["reads"]:
-            #     echo("called2", event)
+        # if 279 in data["reads"]:
+        #     echo("called2", event)
             yield event
-
-    # elif n_parts == -1:
-        # Single isolated node, multiple reads
-
-        # d = data["parts"][next(iter(data["parts"]))]  # Get first key
-
-        # rds = {}
-        # to_collect = {}
-        # for v in d:
-        #     if v not in data["reads"]:
-            # try:
-            #     rds[v] = data["reads"][v]  # May have been collected already
-
-            # except KeyError:
-            #     to_collect[v] = data["n2n"][v]
-
-        # rds.update(cy_graph.get_reads(bam, to_collect))
-        # data["reads"] = rds
-        # data["reads"].update(graph.get_reads(bam, to_collect))
-
-        # if 67 in data["parts"][0]:
-        #     echo("single", )
-        #     echo(single(bam, data, insert_size, insert_stdev, clip_length, min_support))
-
-        # yield single(bam, data, insert_size, insert_stdev, clip_length, min_support)
-
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-        yield single(bam, data, insert_size, insert_stdev, clip_length, 0, to_assemble=1)
-    #
-    # else:
-    #     pass
+        yield single(bam, data, insert_size, insert_stdev, clip_length, min_support, to_assemble=1)
+
 
 def get_raw_coverage_information(r, regions, regions_depth, infile):
 
@@ -1868,7 +1396,10 @@ def get_raw_coverage_information(r, regions, regions_depth, infile):
 
     if not ar and not br:
         kind = "extra-regional"
-        # Skip if regions have been provided; almost always false positives
+        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:
+            switch = True
+
+        # Skip if regions have been provided; almost always false positives?
         # if regions is not None:
         #     return None
 

@@ -11,6 +11,7 @@ import numpy as np
 import time
 import datetime
 from collections import defaultdict
+from joblib import Parallel, delayed
 
 
 HEADER = """##fileformat=VCFv4.2
@@ -31,8 +32,8 @@ HEADER = """##fileformat=VCFv4.2
 ##INFO=<ID=CONTIGA,Number=1,Type=String,Description="Contig from CHROM POS">
 ##INFO=<ID=CONTIGB,Number=1,Type=String,Description="Contig from CHR2 END">
 ##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
-##INFO=<ID=REP,Number=1,Type=Float,Description="Homopolymer repeat score for contigs">
-##INFO=<ID=RB,Number=1,Type=Float,Description="Reference bases assembled">
+##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
+##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
 ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
@@ -61,7 +62,7 @@ HEADER = """##fileformat=VCFv4.2
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-#todo more cols to vcf
+
 def echo(*args):
     click.echo(args, err=True)
 
@@ -126,16 +127,17 @@ def merge_df(df, tree=None, merge_within_sample=False):
         return pd.DataFrame.from_records(found)
 
 
+def make_main_record(args_tuple):
 
-
-def make_main_record(r, version, index, format_f, df_rows, df):
-
+    r, version, index, format_f, df_rows, add_kind = args_tuple
     # Pick best row (best support, or highest prob if available
     if len(format_f) > 1:
         best = sorted([(v["Prob"], v["pe"] + v["supp"], k) for k, v in df_rows.items()],
                       key=lambda x: (-x[0], -x[1]))[0][2]
         r = df_rows[best]
-
+        gc = r["gc"]
+        rep = r["rep"]
+        repsc = r["rep_sc"]
         su, pe, sr, sc = 0, 0, 0, 0
         probs = []
         for row in df_rows.values():
@@ -152,8 +154,22 @@ def make_main_record(r, version, index, format_f, df_rows, df):
         sc = r["sc"]
         su = (r["pe"] + r["supp"])
         probs = r["Prob"]
+        gc = r["gc"]
+        rep = r["rep"]
+        repsc = r["rep_sc"]
 
     samp = r["sample"]
+
+    if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:
+        chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
+        r["chrA"] = r["chrB"]
+        r["posA"] = r["posB"]
+        r["cipos95A"] = r["cipos95B"]
+        r["chrB"] = chrA
+        r["posB"] = posA
+        r["cipos95B"] = cipos95A
+        r["contigB"] = r["contigA"]
+        r["contigA"] = contig2
 
     info_extras = []
     if r["chrA"] == r["chrB"]:
@@ -165,16 +181,17 @@ def make_main_record(r, version, index, format_f, df_rows, df):
     if r["contigB"]:
         info_extras.append(f"CONTIGB={r['contigB']}")
 
-    info_extras += [f"SU={su}",
+    if add_kind:
+        info_extras += [f"KIND={r['kind']}"]
+
+    info_extras += [f"GC={gc}",
+                    f"REP={'%.3f' % rep}",
+                    f"REPSC={'%.3f' % repsc}",
+                    f"SU={su}",
                     f"PE={pe}",
                     f"SR={sr}",
                     f"SC={sc}",
                     f"MPROB={probs}"]
-
-    # if "partners" in r:
-    #     p = "|".join([f"{df.iloc[i]['table_name']},{df.iloc[i]['id']}" for i in r["partners"]])
-    #     if p:
-    #         info_extras += [f"PARTNERS={p}"]
 
     rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", ".",
            # INFO line
@@ -185,7 +202,6 @@ def make_main_record(r, version, index, format_f, df_rows, df):
                    f"CT={r['join_type']}",
                    f"CIPOS95={r['cipos95A']}",
                    f"CIEND95={r['cipos95B']}",
-                   f"KIND={r['kind']}",
 
                    ] + info_extras),
            "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PROB"
@@ -193,7 +209,6 @@ def make_main_record(r, version, index, format_f, df_rows, df):
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
-
 
     return rec
 
@@ -207,10 +222,9 @@ def gen_format_fields(r, df, names):
                 r["partners"] = []
             else:
                 r["partners"] = [int(i.split(",")[1]) for i in r["partners"].split("|")]
-        # echo(r, r["partners"])
-        for idx in r["partners"]:
 
-            r2 = df.iloc[idx]
+        for idx in r["partners"]:
+            r2 = df.loc[idx]  # iloc
             cols[r2["table_name"]] = r2
 
     cols[r["table_name"]] = r
@@ -232,7 +246,7 @@ def gen_format_fields(r, df, names):
 
 
 def to_vcf(df, args, names, outfile):
-
+    pd.set_option('mode.chained_assignment', None)
     outfile.write(HEADER + "\t" + "\t".join(names) + "\n")
     click.echo("Input samples: {}".format(str(list(names))), err=True)
 
@@ -251,28 +265,33 @@ def to_vcf(df, args, names, outfile):
     for col in ['maxASsupp', 'neigh']:
         dm[col] = [int(i) for i in dm[col]]
 
-    dm["chrA"] = [i.replace("chr", "") for i in dm["chrA"]]
-    dm["chrB"] = [i.replace("chr", "") for i in dm["chrB"]]
-
     count = 0
     recs = []
-    for idx, r in dm.iterrows():
+    jobs = []
 
+    add_kind = args["add_kind"] == "True"
+    # for idx, r in dm.iterrows():
+    for idx in dm.index:
         if idx in seen_idx:
             continue
-
+        r = dm.loc[idx]  # <- view, turn off copy warning
         format_f, df_rows = gen_format_fields(r, df, names)
 
         if "partners" in r:
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, df)
+        # if args["procs"] <= 1:
+        r_main = make_main_record((r, version, count, format_f, df_rows, add_kind))
         recs.append(r_main)
+        # else:
+        #     jobs.append((r, version, count, format_f, df_rows, add_kind))
         count += 1
-
+        # if count > 1000:
+        #     break
+    # if jobs:
+    #     recs = Parallel(n_jobs=args["procs"])(delayed(make_main_record)(args_tuple) for args_tuple in jobs)
 
     for rec in sorted(recs, key=lambda x: (x[0], x[1])):
-
         outfile.write("\t".join(list(map(str, rec))) + "\n")
 
 
@@ -370,13 +389,23 @@ def view_file(args):
         if len(set(df["sample"])) > 1:
             raise ValueError("More than one sample per input file")
 
-        df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
-        df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
+        if args["no_chr"] == "True":
+            df["chrA"] = [i.replace("chr", "") for i in df["chrA"]]
+            df["chrB"] = [i.replace("chr", "") for i in df["chrB"]]
+
+        if args["no_contigs"] == "True":
+            df["contigA"] = [None] * len(df)
+            df["contigB"] = [None] * len(df)
+        else:
+            df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
+            df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
 
         df["table_name"] = [name for _ in range(len(df))]
 
         if args["merge_within"] == "True":
+            l_before = len(df)
             df = merge_df(df, {}, merge_within_sample=True)
+            click.echo("{} rows before merge {}, rows after {}".format(name, l_before, len(df)), err=True)
 
         if "partners" in df:
             del df["partners"]
