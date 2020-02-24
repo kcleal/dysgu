@@ -59,10 +59,13 @@ HEADER = """##fileformat=VCFv4.2
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
 ##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other beak points within 100 bp or break sites">
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
+##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
+##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 
+# todo add plus minus
 def echo(*args):
     click.echo(args, err=True)
 
@@ -97,7 +100,7 @@ def merge_df(df, tree=None, merge_within_sample=False):
         potential.append(r)
 
     if not merge_within_sample:
-        found = cluster.merge_events(potential, 15, tree, try_rev=False, pick_best=True, add_partners=True)
+        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=True)
         ff = defaultdict(list)
 
         for f in found:
@@ -123,7 +126,7 @@ def merge_df(df, tree=None, merge_within_sample=False):
         df["partners"] = [ff[i] if i in ff else [] for i in df.index]
         return df
     else:
-        found = cluster.merge_events(potential, 15, tree, try_rev=False, pick_best=True, add_partners=False)
+        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False)
         return pd.DataFrame.from_records(found)
 
 
@@ -204,7 +207,7 @@ def make_main_record(args_tuple):
                    f"CIEND95={r['cipos95B']}",
 
                    ] + info_extras),
-           "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PROB"
+           "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS:PROB"
            ]
     # FORMAT line(s)
     for item in format_f.values():
@@ -237,7 +240,7 @@ def gen_format_fields(r, df, names):
             format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                  r['ref_bases'], r['Prob']])
+                                  r['ref_bases'], r["plus"], r["minus"], r['Prob']])
         else:
             format_fields[name] = [0] * 20
 
@@ -246,7 +249,7 @@ def gen_format_fields(r, df, names):
 
 
 def to_vcf(df, args, names, outfile):
-    pd.set_option('mode.chained_assignment', None)
+
     outfile.write(HEADER + "\t" + "\t".join(names) + "\n")
     click.echo("Input samples: {}".format(str(list(names))), err=True)
 
@@ -270,26 +273,19 @@ def to_vcf(df, args, names, outfile):
     jobs = []
 
     add_kind = args["add_kind"] == "True"
-    # for idx, r in dm.iterrows():
-    for idx in dm.index:
+    for idx, r in dm.iterrows():
+
         if idx in seen_idx:
             continue
-        r = dm.loc[idx]  # <- view, turn off copy warning
+
         format_f, df_rows = gen_format_fields(r, df, names)
 
         if "partners" in r:
             seen_idx |= set(r["partners"])
 
-        # if args["procs"] <= 1:
         r_main = make_main_record((r, version, count, format_f, df_rows, add_kind))
         recs.append(r_main)
-        # else:
-        #     jobs.append((r, version, count, format_f, df_rows, add_kind))
         count += 1
-        # if count > 1000:
-        #     break
-    # if jobs:
-    #     recs = Parallel(n_jobs=args["procs"])(delayed(make_main_record)(args_tuple) for args_tuple in jobs)
 
     for rec in sorted(recs, key=lambda x: (x[0], x[1])):
         outfile.write("\t".join(list(map(str, rec))) + "\n")
@@ -301,7 +297,7 @@ def to_csv(df, args, names, outfile):
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus","Prob"]
 
     if "partners" not in df.columns:
         if "table_name" in df.columns:

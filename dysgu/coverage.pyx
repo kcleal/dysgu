@@ -94,6 +94,47 @@ def merge_intervals(intervals, srt=True, pad=0):
     return merged
 
 
+def median(L):
+    # Stolen from https://github.com/arq5x/lumpy-sv/blob/master/scripts/pairend_distro.py
+    if len(L) % 2 == 1:
+        return L[int(len(L)/2)]  # cast to int since divisions always return floats in python3
+    mid = int(len(L) / 2) - 1
+    return (L[mid] + L[mid+1]) / 2.0
+
+
+def unscaled_upper_mad(xs):
+    """Return a tuple consisting of the median of xs followed by the
+    unscaled median absolute deviation of the values in xs that lie
+    above the median.
+    """
+    xs.sort()
+    med = median(xs)
+    umad = median([x - med for x in xs if x > med])
+    return med, umad
+
+
+def mean_std(L):
+    s = sum(L)
+    mean = np.median(L) #s / float(len(L))
+    sq_sum = 0.0
+    for v in L:
+        sq_sum += (v - mean)**2.0
+    var = sq_sum / float(len(L))
+    return mean, var**0.5
+
+
+def get_insert_params(L, mads=8):  # default for lumpy is 10
+    c = len(L)
+    med, umad = unscaled_upper_mad(L)
+    upper_cutoff = med + mads * umad
+    L = [v for v in L if v < upper_cutoff]
+    new_len = len(L)
+    removed = c - new_len
+    click.echo("Removed {} outliers with isize >= {}".format(removed, upper_cutoff), err=True)
+    mean, stdev = mean_std(L)
+    return mean, stdev
+
+
 class GenomeScanner:
 
     def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only):
@@ -200,6 +241,11 @@ class GenomeScanner:
         approx_read_length_l = []
         inserts = []
 
+        # Borrowed from lumpy
+        cdef int required = 97
+        restricted = 3484
+        cdef int flag_mask = required | restricted
+
         cdef int c = 0
         tell = 0
         cdef int flag, tlen
@@ -208,16 +254,20 @@ class GenomeScanner:
         for a in self.bam_iter:
 
             tell = self.input_bam.tell()
-            if len(approx_read_length_l) < 20000:
+            if len(approx_read_length_l) < 100000:
                 flag = a.flag
                 if a.seq is not None:
 
-                    if not flag & 3852:
+                    if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
                         approx_read_length_l.append(a.infer_read_length())
-                        tlen = abs(a.tlen)
-                        if not flag & 2 and 0 < tlen < max_tlen:  # Skip discordants  # Todo donsnt work for single end
-                            if insert_median == -1:
-                                inserts.append(tlen)
+                        inserts.append(a.tlen)
+
+                    # if not flag & 3852:
+                    #     approx_read_length_l.append(a.infer_read_length())
+                    #     tlen = abs(a.tlen)
+                    #     if not flag & 2 and 0 < tlen < max_tlen:  # Skip discordants  # Todo donsnt work for single end
+                    #         if insert_median == -1:
+                    #             inserts.append(tlen)
             else:
                 break
 
@@ -230,13 +280,14 @@ class GenomeScanner:
 
         approx_read_length = int(np.median(approx_read_length_l))
         self.approx_read_length = approx_read_length
-        if len(inserts) == 0 and insert_median == -1:
+        if len(inserts) <= 1000 and insert_median == -1:
             insert_median = 300
             insert_stdev = 150
 
         if insert_median == -1:
-            insert_stdev = int(np.std(inserts))
-            insert_median = int(np.median(inserts))
+            insert_median, insert_stdev = get_insert_params(inserts)
+            # insert_stdev = int(np.std(inserts))
+            # insert_median = int(np.median(inserts))
 
         click.echo(f"Inferred Read length {approx_read_length}, "
                    f"insert_median {insert_median}, "
@@ -371,214 +422,6 @@ cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
                 chrom_depth[i] += 1
 
     return chrom_depth[bin_start]
-
-
-# def scan_whole_genome(inputbam, int max_cov, tree):
-#
-#     chrom_lengths = {inputbam.get_reference_name(v): k for v, k in enumerate(inputbam.lengths)}
-#     chrom_order = deque([inputbam.get_reference_name(v) for v, k in enumerate(inputbam.lengths)])
-#
-#     depth_d = defaultdict(lambda: defaultdict(int))
-#     approx_read_length_l = []
-#
-#     cdef int bin_pos
-#     cdef int bin_reads = 0
-#     cdef int rname
-#     cdef float approx_read_length = -1
-#     cdef int total_dropped = 0
-#     cdef int reads_dropped = 0
-#     cdef int current_chrom = 0
-#     cdef int current_pos = 0
-#     cdef float current_cov = 0.
-#
-#     bad_intervals = []
-#
-#     c = 0
-#     for a in inputbam.fetch(until_eof=True):
-#
-#         # fails quality checks, PCR duplicate, unmapped, mate unmapped, not primary, proper pair, supplementary
-#         # read unmapped, not primary, fails checks, optical duplicate, supplementary
-#         if a.flag & 3844:
-#             continue
-#
-#         if approx_read_length == -1:
-#             if len(approx_read_length_l) < 10000:
-#                 if a.seq is not None and not a.flag & 2048:
-#                     approx_read_length_l.append(a.infer_read_length())
-#             else:
-#                 approx_read_length = np.median(approx_read_length_l)
-#                 assert approx_read_length != -1
-#
-#         rname = a.rname
-#         bin_pos = int((int(a.pos) / 100)) * 100
-#
-#         if rname == current_chrom and bin_pos == current_pos:
-#
-#             if current_cov > max_cov:
-#                 reads_dropped += 1
-#                 if approx_read_length == -1:
-#                     current_cov += (a.infer_read_length() / 100.)
-#                 else:
-#                     current_cov += (approx_read_length / 100.)
-#
-#                 continue  # Already added to bad intervals below
-#
-#             if approx_read_length == -1:
-#                 current_cov += (a.infer_read_length() / 100.)
-#             else:
-#                 current_cov += (approx_read_length / 100.)
-#
-#
-#         else:
-#             depth_d[inputbam.get_reference_name(current_chrom)][current_pos] = current_cov
-#
-#             current_chrom = rname
-#             current_pos = bin_pos
-#             if approx_read_length == -1:
-#                 current_cov = (a.infer_read_length() / 100.)
-#             else:
-#                 current_cov = (approx_read_length / 100.)
-#             bin_reads = 1
-#
-#         if current_cov > max_cov:
-#             bad_intervals.append((inputbam.get_reference_name(current_chrom), current_pos, current_pos + 101))
-#             reads_dropped += bin_reads
-#             total_dropped += 100
-#
-#
-#     # Add last bin
-#     if current_cov < max_cov:
-#         depth_d[inputbam.get_reference_name(current_chrom)][current_pos] = current_cov
-#
-#     approx_read_length = np.median(approx_read_length_l)
-#     merged_bad = merge_intervals(bad_intervals, srt=False, pad=1)
-#
-#     complemented_intervals = complement(chrom_lengths, chrom_order, merged_bad)
-#     click.echo("Skipping {} kb of reference, primary read-coverage >= {}X ({} reads)".format(
-#         round(total_dropped / 1e3, 3), max_cov, reads_dropped), err=True)
-#
-#     return depth_d, approx_read_length, complemented_intervals
-#
-#
-# def scan_regions(inputbam, include_, max_cov, tree):
-#     # Scan the input regions, then re-scan the locations of the mate-pairs around the genome
-#     depth_d = {}
-#
-#     roi = data_io.get_include_reads(include_, inputbam)
-#     approx_read_length = []
-#     inserts = []
-#
-#     intervals_to_check = set([])  # A list of regions containing many bins
-#     target_regions = set([])  # A list of individual bins to work on
-#     for a in roi:
-#
-#         if a.flag & 1540:
-#             # Unmapped, fails Q, duplicate
-#             continue
-#
-#         if a.flag & 266:
-#             # not primary, mate unmapped, proper-pair
-#             continue
-#
-#         # Skip if both positions are non-canonical chromosomes
-#         rname, rnext = inputbam.get_reference_name(a.rname), inputbam.get_reference_name(a.rnext)
-#
-#         bin_pos1 = int((int(a.pos) / 100)) * 100
-#         bin_pos2 = int((int(a.pnext) / 100)) * 100
-#
-#         # Need to check 10kb around pair and mate, find all intervals to check (limits where SVs will be called)
-#         c1 = (rname, 0 if bin_pos1 - 10000 < 0 else bin_pos1 - 10000, bin_pos1 + 10000)
-#         c2 = (rnext, 0 if bin_pos2 - 10000 < 0 else bin_pos2 - 10000, bin_pos2 + 10000)
-#
-#         intervals_to_check.add(c1)
-#         intervals_to_check.add(c2)
-#
-#         if len(approx_read_length) < 1000:
-#             if not a.flag & 2048:
-#                 approx_read_length.append(len(a.infer_read_length()))
-#                 if abs(a.template_length) < 1000:
-#                     inserts.append(int(abs(a.template_length)))
-#
-#         # Target regions include upstream and downstream of target - means supplementary reads are not missed later
-#         target_regions.add((rname, bin_pos1))
-#         target_regions.add((rnext, bin_pos2))
-#
-#     # Get coverage within 10kb
-#     merged_to_check = merge_intervals(intervals_to_check, srt=True)
-#
-#     # Get coverage in regions
-#     for item in merged_to_check:
-#         for a in inputbam.fetch(*item):
-#
-#             if a.flag & 1540:
-#                 # Unmapped, fails Q, duplicate
-#                 continue
-#
-#             rname = item[0]
-#             bin_pos1 = int(int(a.pos) / 100) * 100
-#
-#             # Get depth at this locus
-#             # Use an ordered dict, obviates need for sorting when merging intervals later on
-#             if rname not in depth_d:
-#                 depth_d[rname] = SortedDict()
-#             if bin_pos1 not in depth_d[rname]:
-#                 depth_d[rname][bin_pos1] = 1
-#             else:
-#                 depth_d[rname][bin_pos1] += 1
-#
-#     approx_read_length = np.array(approx_read_length)
-#     if len(inserts) > 0:
-#         insert_std = np.array(inserts).std()
-#     else:
-#         insert_std = 600
-#     approx_read_length = approx_read_length.mean()
-#
-#     # Increase target region space here. Currently target regions only point to primary alignments, increase to capture
-#     # supplementary mappings nearby
-#     pad = insert_std * 3
-#
-#     new_targets = set([])
-#     for chrom, primary_site in target_regions:
-#         # Pad is determined by insert stdev
-#         lower_bin = int((primary_site - pad) / 100) * 100
-#         lower_bin = 0 if lower_bin < 0 else lower_bin
-#         upper_bin = (int((primary_site + pad) / 100) * 100) + 100
-#         for s in range(lower_bin, upper_bin, 100):
-#             new_targets.add((chrom, s))
-#
-#     total_dropped, reads_dropped = 0, 0
-#     intervals = []
-#     for chrom, bin_start in new_targets:
-#
-#         if bin_start in depth_d[chrom]:
-#             d = depth_d[chrom][bin_start]
-#         else:
-#             d = 0  # No reads found
-#         bin_cov = (d * approx_read_length) / 100
-#
-#         if bin_cov < max_cov or data_io.intersecter(tree, chrom, bin_start, bin_start + 100):
-#             intervals.append((chrom, int(bin_start), int(bin_start + 101)))  # 1 bp overlap with adjacent window
-#         else:
-#             total_dropped += 100
-#             reads_dropped += d
-#
-#     click.echo("Skipping {} kb of reference, read-coverage >= {}X ({} reads)".format(
-#         round(total_dropped / 1e3, 3), max_cov, reads_dropped), err=True)
-#
-#     merged_targets = merge_intervals(intervals, srt=True)
-#
-#     return depth_d, approx_read_length, merged_targets
-#
-#
-# def get_low_coverage_regions(inputbam, max_cov, tree, include_):
-#     # depth_d contains read counts +- 10kb of regions of interest, merged is used to construct the main graph
-#     if tree is None:
-#         depth_d, approx_read_length, merged = scan_whole_genome(inputbam, max_cov, tree)
-#
-#     else:
-#         depth_d, approx_read_length, merged = scan_regions(inputbam, include_, max_cov, tree)
-#
-#     return merged, approx_read_length, depth_d
 
 
 cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:

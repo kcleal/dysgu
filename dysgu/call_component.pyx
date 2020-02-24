@@ -18,7 +18,7 @@ cdef dict count_attributes(list reads1, list reads2, int min_support):
         raise ValueError("No reads in set")
 
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": []}
+         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0}
     paired_end = set([])
     seen = set([])
 
@@ -59,6 +59,11 @@ cdef dict count_attributes(list reads1, list reads2, int min_support):
                     r["DApri"].append(float(a.get_tag("DA")))
                 if a.has_tag("NM"):
                     r["NMpri"].append(float(a.get_tag("NM")))
+
+            if flag & 16:
+                r["minus"] += 1
+            else:
+                r["plus"] += 1
 
             ct = a.cigartuples
             if ct[0][0] == 4 or ct[-1][0] == 4:
@@ -1486,7 +1491,7 @@ def calculate_prob_from_model(all_rows, models):
 
     features = ['cipos95A', 'cipos95B', 'DP', 'DApri', 'DN', 'NMpri', 'NP', 'DAsupp', 'NMsupp', 'maxASsupp',
                 'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
-                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen']
+                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen', 'plus', 'minus']
     if not models:
         df["Prob"] = [1] * len(df)  # Nothing to be done
         return df

@@ -343,6 +343,10 @@ def dysgu_aligner(ctx, **kwargs):
               type=int, show_default=True)
 @click.option("--model", help="A model trained with dysgu train", default=defaults["model"],
               type=click.Path(), show_default=True)
+@click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std)",
+              default=None, type=int, show_default=False)
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural vaiants"""
@@ -360,6 +364,8 @@ def call_events(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-within", help="Perform additional merge within input samples, prior to --merge-across",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--merge-dist", help="Distance threshold for merging",
+              default=25, type=int, show_default=True)
 @click.option("--separate", help="Keep merged tables separate, adds --post-fix to file names, csv format only",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",
@@ -370,7 +376,6 @@ def call_events(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--add-kind", help="Add region-overlap 'kind' to vcf output", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
 @click.pass_context
 def view_data(ctx, **kwargs):
     """Convert .csv table(s) to .vcf. Merges multiple .csv files into wide .vcf format."""

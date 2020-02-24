@@ -12,6 +12,7 @@ import networkx as nx
 import pysam
 import sys
 import pickle
+import resource
 from dysgu import coverage, graph, call_component, assembler, io_funcs
 
 def echo(*args):
@@ -46,10 +47,10 @@ def filter_potential(input_events, tree, regions_only):
 
 
 def compare_subset(potential, max_dist):
-    max_dist = max_dist * 1.5
+    # max_dist = max_dist * 1.5
     interval_table = defaultdict(lambda: graph.Table())
 
-    # Make a nested containment list for faster lookups
+    # Make a nested containment list for lookups
     for idx in range(len(potential)):
         ei = potential[idx]
         interval_table[ei["chrA"]].add(ei["posA"] - max_dist, ei["posA"] + max_dist, idx)
@@ -165,6 +166,8 @@ def enumerate_events(potential, max_dist, try_rev, tree):
 
 
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False):
+    """Try and merge similar events, use overlap of both breaks points
+    """
 
     if len(potential) <= 1:
         return potential  #, seen
@@ -259,7 +262,7 @@ def sample_level_density(potential, regions, max_dist=50):
 
 
 def component_job(infile, component, regions, event_id, max_dist, clip_length, insert_med, insert_stdev, min_supp,
-                  regions_only):
+                  merge_dist, regions_only):
 
     potential_events = []
 
@@ -280,7 +283,7 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
 
     potential_events = filter_potential(potential_events, regions, regions_only)
 
-    potential_events = merge_events(potential_events, max_dist, regions,
+    potential_events = merge_events(potential_events, merge_dist , regions,
                                     try_rev=False, pick_best=True)
 
     return potential_events
@@ -315,6 +318,8 @@ def cluster_reads(args):
     kind = args["sv_aligns"].split(".")[-1]
     opts = {"bam": "rb", "cram": "rc", "sam": "rs"}
 
+    if args["procs"] > 1:
+        raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file is {}, (.{} format). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
 
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
@@ -326,6 +331,7 @@ def cluster_reads(args):
         args["insert_median"] = im
         args["insert_stdev"] = istd
 
+    #
     if args["svs_out"] == "-" or args["svs_out"] is None:
         click.echo("SVs output to stdout", err=True)
         outfile = sys.stdout
@@ -355,7 +361,11 @@ def cluster_reads(args):
                                                                      read_len)
 
 
-        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))  # 2
+        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
+
+        if args["merge_dist"] is None:
+            args["merge_dist"] = max_clust_dist
+
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
         event_id = 0
         block_edge_events = []
@@ -378,6 +388,7 @@ def cluster_reads(args):
                                                       insert_median,
                                                       insert_stdev,
                                                       args["min_support"],
+                                                      args["merge_dist"],
                                                       regions_only)
 
             event_id += 1
@@ -422,8 +433,9 @@ def cluster_reads(args):
         preliminaries = []
 
         # Merge across calls
-        # merged = merge_events(block_edge_events, max_clust_dist / 2., regions,
-        #                             try_rev=False, pick_best=True)
+        if args["merge_within"] == "True":
+            merged = merge_events(block_edge_events, args["merge_dist"], regions,
+                                    try_rev=False, pick_best=True)
         merged = block_edge_events
         if merged:
             for event in merged:
@@ -439,6 +451,7 @@ def cluster_reads(args):
 
         return preliminaries
 
+
     preliminaries = pipe1()
 
     classified_events_df = call_component.calculate_prob_from_model(preliminaries, model)
@@ -450,7 +463,7 @@ def cluster_reads(args):
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "Prob"]
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus", "Prob"]
 
     c = 0
     if classified_events_df is not None and len(classified_events_df) > 0:
@@ -460,8 +473,8 @@ def cluster_reads(args):
         classified_events_df = classified_events_df.rename(columns={"contig": "contigA", "contig2": "contigB"})
         classified_events_df[k].to_csv(outfile, index=False)
 
-    click.echo("call-events {} complete, n={}, {} h:m:s, {}".format(args["sv_aligns"],
-                                                                c,
-                                                                str(datetime.timedelta(seconds=int(time.time() - t0))),
-                                                                time.time() - t0),
-               err=True)
+    click.echo("call-events {} complete, n={}, mem {} Mb, {} h:m:s".format(
+        args["sv_aligns"],
+        c,
+        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+        str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
