@@ -262,12 +262,6 @@ class GenomeScanner:
                         approx_read_length_l.append(a.infer_read_length())
                         inserts.append(a.tlen)
 
-                    # if not flag & 3852:
-                    #     approx_read_length_l.append(a.infer_read_length())
-                    #     tlen = abs(a.tlen)
-                    #     if not flag & 2 and 0 < tlen < max_tlen:  # Skip discordants  # Todo donsnt work for single end
-                    #         if insert_median == -1:
-                    #             inserts.append(tlen)
             else:
                 break
 
@@ -286,8 +280,6 @@ class GenomeScanner:
 
         if insert_median == -1:
             insert_median, insert_stdev = get_insert_params(inserts)
-            # insert_stdev = int(np.std(inserts))
-            # insert_median = int(np.median(inserts))
 
         click.echo(f"Inferred Read length {approx_read_length}, "
                    f"insert_median {insert_median}, "

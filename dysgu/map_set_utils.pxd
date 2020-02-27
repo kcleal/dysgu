@@ -20,6 +20,34 @@ ctypedef cpp_pair[int, int] get_val_result
 
 
 cdef extern from "wrap_map_set2.h":
+    cdef cppclass SimpleGraph:
+        SimpleGraph()
+        int addNode()
+        int hasEdge(int, int)
+        void addEdge(int, int, int)
+        int edgeCount()
+        int weight(int, int)
+        cpp_vector[int] neighbors(int)
+        void removeNode(int)
+        cpp_vector[int] connectedComponents()
+        int showSize()
+
+
+cdef class Py_SimpleGraph:
+    """Graph"""
+    cdef SimpleGraph *thisptr
+    cpdef int addNode(self)
+    cpdef int hasEdge(self, int u, int v)
+    cpdef void addEdge(self, int u, int v, int w)
+    cpdef int edgeCount(self)
+    cpdef int weight(self, int u, int v)
+    cpdef cpp_vector[int] neighbors(self, int u)
+    cpdef void removeNode(self, int u)
+    cpdef cpp_vector[int] connectedComponents(self)
+    cpdef int showSize(self)
+
+
+cdef extern from "wrap_map_set2.h":
     cdef cppclass Int2IntMap:
         Int2IntMap()
         void insert(int, int)
@@ -29,25 +57,23 @@ cdef extern from "wrap_map_set2.h":
         get_val_result get_value(int key)
         int size()
 
+
 cdef class Py_Int2IntMap:
-    """Fast 32bit integer to 32bit integer unordered map using tsl::robin-map"""
+    """Fast integer to integer unordered map using tsl::robin-map"""
     cdef Int2IntMap *thisptr
-    # def __cinit__(self):
-    #     self.thisptr = new Int2IntMap()
-    # def __dealloc__(self):
-    #     del self.thisptr
+
     cpdef void insert(self, int key, int value)
-    #     self.thisptr.insert(key, value)
+
     cpdef void erase(self, int key)
-    #     self.thisptr.erase(key)
+
     cpdef int has_key(self, int key)
-    #     return self.thisptr.has_key(key)
+
     cpdef int get(self, int key)
-    #     return self.thisptr.get(key)
+
     cpdef get_val_result get_value(self, int key)
-    #     return self.thisptr.get_value(key)
+
     cpdef int size(self)
-    #     return self.thisptr.size()
+
 
 
 cdef extern from "wrap_map_set2.h":

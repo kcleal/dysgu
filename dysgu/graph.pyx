@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False
+#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8
 
 from __future__ import absolute_import
 import time
@@ -11,11 +11,18 @@ import operator
 import ncls
 import networkit as nk
 import pysam
+import sys
+import resource
 cimport numpy as c_np
+import array
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
+from libcpp.unordered_map cimport unordered_map
+from libcpp.string cimport string
+from cython.operator import dereference, postincrement
+
 # from libcpp.set cimport set as cpp_set
 # from libcpp.unordered_set cimport unordered_set as cpp_u_set
 
@@ -35,6 +42,8 @@ nk.setSeed(100, True)
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef map_set_utils.Py_IntSet Py_IntSet
+
+ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph
 
 
 def echo(*args):
@@ -113,42 +122,7 @@ cdef str right_soft_clips(str seq, int code_length):
     return seq[len(seq) - code_length:]
 
 
-# cdef set sliding_window_minimum_p(int k, int m, str s):
-#     '''
-#     End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
-#     `li`. Then returns an iterator such that the ith element yielded is equal
-#     to min(list(li)[max(i - k + 1, 0):i+1]).
-#     Each yield takes amortized O(1) time, and overall the generator takes O(k)
-#     space.
-#     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py
-#     '''
-#
-#     # Python version for posterity
-#     window = deque()
-#     cdef int i = 0
-#     cdef set seen = set([])
-#     cdef int hx
-#     for i in range(0, len(s) - m + 1):
-#
-#         hx = mmh3.hash(s[i:i+m], 42)
-#
-#         while window and window[-1][0] >= hx:
-#             window.pop()
-#
-#         window.append((hx, i))
-#
-#         while window[0][1] <= i - k:
-#             window.popleft()
-#
-#         i += 1
-#
-#         minimizer_i = window[0][0]
-#         if minimizer_i not in seen:
-#             seen.add(minimizer_i)
-#     return seen
-
-
-class ClipScoper(object):
+class ClipScoper:
     """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
     def __init__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,
                  int minimizer_breadth):
@@ -179,20 +153,13 @@ class ClipScoper(object):
                 self.minimizer_table[min_id].add(name)
                 continue
 
-            elif find_candidate:
+            elif find_candidate:  # Look for suitable partners
                 targets = self.minimizer_table[min_id]
 
                 for item in targets:
 
                     target_counts[item] += 1
-                    # if name == 63018:
-                    #     echo(item, target_counts)
-                    # if target_counts[item] >= self.minimizer_matches and \
-                    #         len(target_counts) >= self.minimizer_support_thresh:
-                    #     res.add(item)
-                    # if len(res) >= 3:
-                    #     find_candidate = 0
-                    #     break
+
                     if target_counts[item] >= self.minimizer_matches and \
                             len(target_counts) >= self.minimizer_support_thresh:
                         res.add(item)
@@ -200,16 +167,7 @@ class ClipScoper(object):
                         find_candidate = 0
                         break
 
-                            # Do some testing to see if seqs match
-                        # find_candidate = 0
-
             self.minimizer_table[min_id].add(name)
-        # if name in {46411}:
-        #     echo("Res", name, res, target_counts)
-            # echo(self.minimizer_table)
-            # echo(self.read_minimizers)
-            # echo()
-            # quit()
 
         # Return best 3 edges, stop graph getting too dense
         return res
@@ -228,9 +186,8 @@ class ClipScoper(object):
         if cigar_end >= self.clip_length:
             clip_seq = right_soft_clips(seq, cigar_end)
             clip_set = sliding_window_minimum(self.k, self.m, clip_seq)
-            # if input_read in {63010, 63018}:
-            #     echo(input_read, sorted(clip_set))
             targets |= self._add_m_find_candidates(clip_set, input_read, 1)
+
         return targets
 
     def _pop_minimizers(self):
@@ -252,13 +209,7 @@ class ClipScoper(object):
         del self.read_minimizers[name]
 
     def update(self, int input_read, str seq, int cigar_start, int cigar_end, int chrom, int position):
-        # debug = {8, 429, 475, 64, 7}
-        # if input_read in debug:
-        #     echo("Debugging", input_read, position, "---------")
-        #     echo(len(self.scope))
-        #     echo("Scope", list(self.scope)[:100], input_read, position)
-        #     echo(self.max_dist, (self.current_chrom, chrom, position))
-        #     echo()
+
         if len(self.scope) == 0:
             self.scope.append((input_read, position))
             self.current_chrom = chrom
@@ -282,13 +233,9 @@ class ClipScoper(object):
             else:
                 break
         self.scope.append((input_read, position))
-        # if input_read in debug:
-        #     echo("Scope2", list(self.scope)[:100])
 
         cdef set d = self._insert(seq, cigar_start, cigar_end, input_read)
-        # if input_read in debug:
-        #     echo("Set", d)
-            # quit()
+
         if len(d) > 0:
             return d  # max(d, key=d.get)  # Best candidate with most overlapping minimizers
 
@@ -391,11 +338,17 @@ class PairedEndScoper:
         return found
 
 
-class TemplateEdges:
+cdef class TemplateEdges:
+
+    cdef public dict templates
+
+    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict
+
     def __init__(self):
         self.templates = dict()
+        # self.templates_s = unordered_map[string, vector[int]]
 
-    def add(self, template_name, flag, node, query_start):
+    def add_(self, str template_name, int flag, int node, int query_start):
         if flag & 64:
             if template_name not in self.templates:
                 self.templates[template_name] = [[(query_start, node, flag)], []]
@@ -407,12 +360,59 @@ class TemplateEdges:
             else:
                 self.templates[template_name][1].append((query_start, node, flag))
 
+    cdef void add2_(self, str template_name, int flag, int node, int query_start):
+        if template_name not in self.templates:
+            self.templates[template_name] = array.array("L", (query_start, node, flag))
+        else:
+            self.templates[template_name].extend((query_start, node, flag))
 
-def add_template_edges(G, template_edges):
+    cdef inline void add(self, str template_name, int flag, int node, int query_start):
+        cdef vector[int] val
+        cdef vector[int] val2
+        val.push_back(query_start)
+        val.push_back(node)
+        val.push_back(flag)
+
+        cdef bytes key = bytes(template_name, encoding="utf8")
+
+        if self.templates_s.find(key) == self.templates_s.end():
+            self.templates_s[key] = val
+        else:
+            val2 = self.templates_s[key]  # todo avoid reassignment using pointer
+            val2.push_back(query_start)
+            val2.push_back(node)
+            val2.push_back(flag)
+            self.templates_s[key] = val2 #.insert(end, val.begin(), val.end())
+
+    def iterate_map(self):
+
+        cdef unordered_map[string, vector[int]].iterator it = self.templates_s.begin()
+        cdef string first
+        cdef vector[int] second
+        while it != self.templates_s.end():
+            first = dereference(it).first
+            second = dereference(it).second
+            yield str(dereference(it).first), list(dereference(it).second)
+            postincrement(it)
+
+
+
+cdef void add_template_edges(G, template_edges): #TemplateEdges template_edges):
 
     cdef int ii, u_start, v_start, u, v, uflag, vflag
 
-    for qname, (read1_aligns, read2_aligns) in template_edges.templates.items():  # normally 2 reads, or >2 if supplementary reads
+    # for qname, arr in template_edges.templates.items():  # normally 2 reads, or >2 if supplementary reads
+    # for qname, (read1_aligns, read2_aligns) in template_edges.templates.items():
+    for qname, arr in template_edges.iterate_map():
+    #     echo(arr)
+        read1_aligns = []
+        read2_aligns = []
+        for ii in range(0, len(arr), 3):
+            if arr[ii + 2] & 64:
+                read1_aligns.append(arr[ii:ii + 3])
+            else:
+                read2_aligns.append(arr[ii:ii + 3])
+        # echo(read1_aligns, read2_aligns)
 
         primary1 = None
         primary2 = None
@@ -434,6 +434,7 @@ def add_template_edges(G, template_edges):
                     v_start, v, vflag = read1_aligns[ii + 1]
                     if not G.hasEdge(u, v):
                         G.addEdge(u, v, w=1)
+
                 if primary1 is None:  # Check last in list
                     if not read1_aligns[-1][2] & 2304:
                         primary1 = read1_aligns[-1][1]
@@ -454,6 +455,7 @@ def add_template_edges(G, template_edges):
                     v_start, v, vflag = read2_aligns[ii + 1]
                     if not G.hasEdge(u, v):
                         G.addEdge(u, v, w=1)
+
                 if primary2 is None:  # Check last in list
                     if not read2_aligns[-1][2] & 2304:
                         primary2 = read2_aligns[-1][1]
@@ -463,6 +465,27 @@ def add_template_edges(G, template_edges):
                 G.addEdge(primary1, primary2, w=1)
 
 
+class NodeToName:
+
+    def __init__(self):
+        # node names have the form (mmh3.hash(qname, 42), flag, pos, chrom, tell)
+        self.h = array.array("l", [])  # signed long
+        self.f = array.array("H", [])  # unsigned short
+        self.p = array.array("L", [])  # unsigned long
+        self.c = array.array("H", [])
+        self.t = array.array("l", [])
+
+    def append(self, n1):
+        self.h.append(n1[0])
+        self.f.append(n1[1])
+        self.p.append(n1[2])
+        self.c.append(n1[3])
+        self.t.append(n1[4])
+
+    def __getitem__(self, idx):
+        return self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx]
+
+
 def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                     int minimizer_support_thresh=2, int minimizer_breadth=3,
                     int minimizer_dist=10, debug=None, int min_support=3, procs=1):
@@ -470,48 +493,41 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     t0 = time.time()
     click.echo("Building graph with clustering distance {}bp".format(max_dist), err=True)
 
-    all_flags = defaultdict(list)  # Linking clusters together rname: [node_name..]
-    template_edges = TemplateEdges()
+    template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
+    #node_to_name = array.array("l", [])  # Map of useful nodes -> read names
 
-    node_to_name = []
+    node_to_name = NodeToName()
 
-    scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,
+    scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth)
 
-    pe_scope = PairedEndScoper(max_dist)
+    pe_scope = PairedEndScoper(max_dist)  # Infers long-range connections, outside local scope using pe information
 
-    overlap_regions = genome_scanner.overlap_regions  # Get overlapper
+    overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
 
     gettid = infile.gettid
-
-    cdef int count = 0
-    cdef int buf_del_index = 0
-    cdef int ii = 0
-    cdef int grey_added = 0
 
     cdef int flag, pos, rname, pnext, rnext, node_name, node_name2, chrom, chrom2, clip_left, clip_right
     cdef str qname, seq
 
-    cdef int warn = 0
     cdef int ol_include, add_primary_link
     cdef int current_overlaps_roi, next_overlaps_roi
 
     cdef int loci_dist = int(max_dist * 1.5)
     t0 = time.time()
 
-    G = nk.graph.Graph(weighted=True)
+    # G = nk.graph.Graph(weighted=True)
 
-    # testout = pysam.AlignmentFile("/Users/kezcleal/Documents/Data/fusion_finder_development/AshkenazimTrio/calls/strange.bam", "wb", template=infile)
-    # cdef list chunk
-    # cdef AlignedSegment r
+    cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
 
-    debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
+    # debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
+
+
     debug_nodes = set([])
     for chunk in genome_scanner.iter_genome():
-        for r, tell in chunk:
 
-            # testout.write(r)
+        for r, tell in chunk:
 
             seq = r.seq
 
@@ -522,24 +538,22 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
             flag = r.flag
             qname = r.qname
 
-            n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)
+            n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)  # Hash qname so save mem
             node_name = G.addNode()
+
+            # node_name = SG.addNode()
+
             node_to_name.append(n1)  # Index this list to get the template_name
+            # node_to_name.extend(n1)
 
-            # if node_name == 11 or node_name == 37 or node_name == 70:
-            #     echo(node_name, r.to_string().replace("\t", " "))
+            genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
 
-                # quit()
-            genome_scanner.add_to_buffer(r, node_name)
-
-            #all_flags[qname].append(node_name)  # Used for paired-end edges
             template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
             # if qname == debug:
             #     echo(qname, n1, "NODE NAME", node_name, clip_left, clip_right, f"{r.rname}:{r.pos}", r.query_alignment_start)
             #     debug_nodes.add(node_name)
 
-            # templates_connected = set([])  # Only one black/normal edge per pair of templates
             # Cluster soft-clips
             if clip_left > clip_l or clip_right > clip_l:
                 best_candidates = scope.update(node_name, seq, clip_left, clip_right, chrom, pos)
@@ -547,21 +561,12 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                 if best_candidates is not None:
                     for node_name2 in best_candidates:
                         if not G.hasEdge(node_name, node_name2):
-                            G.addEdge(node_name, node_name2, w=3)  # weight 3 for black edge
+                            G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
 
-                            # templates_connected.add(node_to_name[node_name2])
 
                             # if node_name in debug_nodes or node_name2 in debug_nodes:
                             #     echo("black edge", node_name, node_name2)
                             #     echo(node_name, str(r.qname))
-
-            #if flag & 2 and not flag & 2048:  # Skip non-discordant. Supplementary have rnext:pnext mixed up
-            #    if abs(r.tlen) < clustering_dist:
-            #        continue
-
-            # Skip include regions, coverage too high to work with
-            # if tree is not None and data_io.intersecter(tree, infile.get_reference_name(r.rname), pos, pos + 1):
-            #     continue
 
             # Cluster paired-end mates
             pnext = r.pnext
@@ -591,6 +596,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                     if current_overlaps_roi and next_overlaps_roi:
                         continue
                     else:
+                        # other_nodes = []
                         other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
 
                         # if qname == debug:
@@ -599,9 +605,11 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                         if other_nodes:
                             for other_node in other_nodes:
 
-                                #if node_to_name[other_node] not in templates_connected and \
                                 if not G.hasEdge(node_name, other_node):
-                                    G.addEdge(node_name, other_node, w=2)
+                                    # pass
+                                    G.addEdge(node_name, other_node, 2)
+
+
 
                                     # if qname == debug:
                                     #     echo(node_name, other_node, "SA")
@@ -617,78 +625,51 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                 if flag & 2 and not flag & 2048:  # Skip non-discordant that are same loci
                     if abs(r.tlen) < clustering_dist:
                        continue
-
+                # other_nodes = []
                 other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext)
                 if other_nodes:
                     for other_node in other_nodes:
-                        # if (node_name, other_node) == (70, 37):
-                        #     echo(other_nodes)
-                        #     echo(max_dist)
-                        #     quit()
 
                         # if node_to_name[other_node] not in templates_connected and \
                         if not G.hasEdge(node_name, other_node):
+                            # pass
+                            G.addEdge(node_name, other_node, 2)
 
-                            G.addEdge(node_name, other_node, w=2)
+
 
                             # if node_name in debug_nodes:
                             #     echo("normal edge", node_name, other_node, current_overlaps_roi, next_overlaps_roi, chrom, pos, rnext, pnext)
                             #     echo(node_name, str(r.qname))
 
-    # testout.close()
-    # import subprocess
-    # subprocess.call("samtools index /Users/kezcleal/Documents/Data/fusion_finder_development/AshkenazimTrio/calls/strange.bam", shell=True)
-
     click.echo(f"Processed minimizers {time.time() - t0}", err=True)
-    # Make nested containment list
-
-    # t1 = time.time()
-    # nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
-    # click.echo(f"Containement list made in {time.time() - t1}", err=True)
-    # click.echo(f"Length of node_to_next {len(node_to_next)}", err=True)
-    # t1_5 = time.time()
-    # cdef int u, v
-    # cdef set grey_edges = set([])
-    # cdef int start, end
-    #
-    # for u, chrom, pos, rnext, pnext in node_to_next:
-    #     count = 0
-    #
-    #     for start, end, v in (nc[rnext].find_overlap(pnext - max_dist, pnext + max_dist)):
-    #         if u != v and not G.hasEdge(u, v):
-    #
-    #             other_node = node_to_name[v]
-    #             other_pos = other_node[2]
-    #             other_chrom = other_node[3]
-    #
-    #             if other_chrom == chrom and abs(other_pos - pos) < (2*max_dist):
-    #                 G.addEdge(u, v, w=2)
-    #                 count += 1
-    #                 if count > 4:
-    #                     break
-    #
-    # click.echo(f"Containement list run in {time.time() - t1_5}", err=True)
-
-    # echo(">", all_flags[debug])
 
     t2 = time.time()
 
+    # echo("mem", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
+
     add_template_edges(G, template_edges)
 
+    # echo("edges", G.edgeCount(), "size graph Mb", G.showSize() / 1e6, "max mem", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
+
+
+    # echo(len(G.edges()), SG.edgeCount())
+    # import networkx as nx
+    # nxg = nk.nxadapter.nk2nx(G)
+    #
+    # nx.write_graphml(nxg, "/Users/kezcleal/Documents/Data/fusion_finder_development/ChineseTrio/calls/testgraph.gml")
+    #
+    # click.echo("size of mm {}".format(sys.getsizeof(scope.minimizer_table) / 1e6), err=True)
+    # click.echo("size of mmt {}".format(sys.getsizeof(scope.read_minimizers) / 1e6), err=True)
+    #
+    # click.echo("size of n2n {}".format(sys.getsizeof(node_to_name) / 1e6), err=True)
+    # click.echo("size of template edges {}".format(sys.getsizeof(template_edges) / 1e6), err=True)
+    # click.echo("size of pescope {}".format(sys.getsizeof(pe_scope) / 1e6), err=True)
+
+    # Free mem
+    template_edges = None
+    pe_scope = None
 
     click.echo(f"Paired end info in {time.time() - t2}", err=True)
-
-    # quit()
-    #
-    # t2 = time.time()
-    # cdef list node_names
-    # for qname, node_names in all_flags.items():  # normally 2 reads, or >2 if supplementary reads
-    #     for u, v in itertools.combinations_with_replacement(node_names, 2):  # Check all edges within template
-    #         # Only add edge between Primary pairs, or alignments from same read
-    #         if u != v and not G.hasEdge(u, v):
-    #             G.addEdge(u, v, w=1)
-    #
-    # click.echo(f"Paired end info in {time.time() - t2}", err=True)
 
     cdef dict component
 
@@ -700,28 +681,43 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
         yield component
 
 
-def get_block_components(G, list node_to_name, infile, dict read_buffer,
+def get_block_components(G, node_to_name, infile, dict read_buffer,
                          int min_support, debug_nodes):
 
     # Turn graph into a block model, first split into connected components,
     # Then for each component, split into block nodes which are locally interacting nodes (black and grey edges)
     # block nodes edges result from collapsing white edges
-    cc = nk.components.ConnectedComponents(G)
-    cc.run()
+
+
+    # cc = nk.components.ConnectedComponents(G)
+    # cc.run()
 
     cdef dict partitions, support_within, reads
     cdef int v
 
     big_components = []
+
+    cmp = G.connectedComponents()  # Flat array, components are separated by -1
+
+    cc = []
+    last_i = 0
+    for item_idx, item in enumerate(cmp):
+        if item == -1:
+            cc.append((last_i, item_idx))
+            last_i = item_idx + 1
+
     t0 = time.time()
 
     cdef int cnt = 0
+    # G = SG
+    # for component in cc:  #.getComponents():
+    for start_i, end_i in cc:
 
-    for component in cc.getComponents():
 
         cnt += 1
-
-        if len(component) >= min_support:
+        if end_i - start_i >= min_support:
+        #if len(component) >= min_support:
+            component = list(cmp[start_i: end_i])
             res = proc_component(node_to_name, component, read_buffer, infile, G, min_support)
             # if any(itemn in debug_nodes for itemn in component):
             #     echo("hi len component", len(component))
@@ -733,8 +729,8 @@ def get_block_components(G, list node_to_name, infile, dict read_buffer,
                 yield res
 
         # Reduce size of graph
-        for v in component:
-            G.removeNode(v)
+        # for v in component:
+        #     G.removeNode(v)
 
     click.echo(f"Processed components n={cnt} {time.time() - t0}", err=True)
 
@@ -791,7 +787,7 @@ cdef tuple BFS_local(G, int source):
     visited = set([])
 
     # Create a queue for BFS
-    queue = [source]
+    queue = array.array("L", [source])  # [source]  # consider vector
     nodes_found = set([])
     cdef int u, v
 
@@ -832,15 +828,16 @@ cdef dict get_partitions(G, list nodes):
                 found, visited_local = BFS_local(G, u)
                 seen |= visited_local
                 if found:
-                    parts.append(found)
+                    # parts.append(found)
+                    parts.append(array.array("L", found))
         seen.add(u)
     return {i: p for i, p in enumerate(parts)}
 
 
-cdef tuple count_support_between(G, dict parts):  # cpdef
+cdef tuple count_support_between(G, dict parts, int min_support):  # cpdef
 
     cdef int i, j, node, child, any_out_edges
-    cdef set p
+    # cdef set p
     cdef tuple t
 
     if len(parts) == 0:
@@ -858,14 +855,15 @@ cdef tuple count_support_between(G, dict parts):  # cpdef
     # counts (part_a, part_b): {part_a: [node 1, node 2 ..], part_b: [node4, ..] }
     counts = {}
 
-    # self_counts = dict()
-    self_counts = defaultdict(list)
+    self_counts = defaultdict(lambda: array.array("L", []))
 
     # seen = set([])
     cdef Py_IntSet seen_nodes = map_set_utils.Py_IntSet()
 
+    seen_t = set([])
     for i, p in parts.items():
 
+        current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
 
@@ -886,30 +884,38 @@ cdef tuple count_support_between(G, dict parts):  # cpdef
                     else:
                         t = (i, j)
 
+                    if t in seen_t:
+                        continue
+
                     if t not in counts:
                         counts[t] = defaultdict(set)
 
                     counts[t][i].add(node)
                     counts[t][j].add(child)
 
+                    current_t.add(t)
+
             # seen.add(node)
             seen_nodes.insert(node)
             # Count self links, important for resolving small SVs
-            if any_out_edges == 0:  # G.weight(node, child) == 2:
-
-                # if i in self_counts and node in self_counts[i]:
-                #     raise ValueError
+            if any_out_edges == 0:
                 self_counts[i].append(node)
 
-                # if i not in self_counts:
-                #     self_counts[i] = 1
-                # else:
-                #     self_counts[i] += 1
+        seen_t.update(current_t)  # Only count edge once
+
+        for t in current_t:
+            if sum(len(item) for item in counts[t].values()) < min_support:
+                del counts[t]
+
+                if len(self_counts[t[0]]) < min_support:
+                    del self_counts[t[0]]
+                if len(self_counts[t[1]]) < min_support:
+                    del self_counts[t[1]]
 
     return counts, self_counts
 
 
-cdef dict proc_component(list node_to_name, list component, dict read_buffer, infile, G, int min_support):
+cdef dict proc_component(node_to_name, list component, dict read_buffer, infile, G, int min_support):
 
     n2n = {}
     reads = {}
@@ -921,26 +927,9 @@ cdef dict proc_component(list node_to_name, list component, dict read_buffer, in
         else:
             n2n[v] = node_to_name[v]
 
-
-    # Get any reads that are in read buffer, leave the rest in n2n (these will be fetched later)
-
-
-    # if len(missing) > 0:
-    #     click.echo(f"Warning missing reads n={len(missing)}", err=True)
-    #     echo(missing)
-    #     for item in missing:
-    #         del n2n[item]
-    #     component = list(set(component).difference(missing))
-    #     for rn in missing:
-    #         G.removeNode(rn)
-    #     if len(component) == 0:
-    #         return None
-
-
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
-
-    support_between, support_within = count_support_between(G, partitions)
+    support_between, support_within = count_support_between(G, partitions, min_support)
 
     # if (58, 186) in support_between:
     #     echo("support between", support_between[(58, 186)], support_within[(58, 186)])

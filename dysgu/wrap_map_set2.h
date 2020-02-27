@@ -1,14 +1,181 @@
 
 #include <iostream>
 #include <string>
-//#include <tuple>
 #include <utility>
-//#include <functional>
-//#include <unordered_map>
-//#include <map>
+#include <queue>
 #include "robin_map.h"
 #include "robin_set.h"
 #include "robin_hash.h"
+
+
+typedef std::pair<int, int> PairW;  // v, weight
+
+class SimpleGraph {
+
+    public:
+
+        SimpleGraph() {}  // Construct
+        ~SimpleGraph() {}
+
+        // Used for undirected graph
+        std::vector<std::vector<PairW>> adjList;
+
+        // Used for directed graph
+//        std::vector<std::vector<PairW>> inList;
+//        std::vector<std::vector<PairW>> outList;
+
+        int N = 0;
+        int n_edges = 0;
+
+        int addNode() {
+
+            int n = N;
+
+            std::vector<PairW> node;
+            node.push_back(std::make_pair(-1, -1));
+            adjList.push_back(node);
+
+            N++;
+            return n;
+        }
+
+        int hasEdge(int u, int v) {
+            if ((u > N ) || (v > N)) { return 0; }
+
+            // Look for v
+            for (const auto& val: adjList[u]) {
+                if (val.first == v) {
+                    return 1;
+                }
+            }
+            return 0;
+
+        }
+
+        void addEdge(int u, int v, int w) {
+
+            // Assume hasEdge has been call
+            // If node has no edge add first in, otherwise push a new node
+            if ((adjList[u].size() == 1) && (adjList[u].front().first == -1)) {
+                adjList[u].front().first = v;
+                adjList[u].front().second = w;
+            } else {
+                adjList[u].push_back(std::make_pair(v, w));
+            };
+
+            if ((adjList[v].size() == 1) && (adjList[v].front().first == -1)) {
+                adjList[v].front().first = u;
+                adjList[v].front().second = w;
+            } else {
+                adjList[v].push_back(std::make_pair(u, w));
+            };
+
+            n_edges += 1;
+
+        }
+
+        int edgeCount() { return n_edges; }
+
+        int weight(int u, int v) {
+
+            if ((u > N ) || (v > N)) { return 0; }
+
+            for (const auto& val: adjList[u]) {
+                if (val.first == v) {
+                    return val.second;
+                }
+            }
+
+            return 0;
+        }
+
+        std::vector<int> neighbors(int u) {
+
+            std::vector<int> neigh;
+
+            for (const auto& val: adjList[u]) {
+                neigh.push_back(val.first);
+            }
+
+            return neigh;
+
+        }
+
+        void removeNode(int u) {
+            // Set node edges to empty
+            std::vector<PairW> node;
+            node.push_back(std::make_pair(-1, -1));
+            adjList[u] = node;
+        }
+
+        std::vector<int> connectedComponents() {
+
+            std::vector<bool> visited(adjList.size(), false);
+
+            std::vector<int> components;
+
+            for (int u=0; u<N; u++) {
+
+                if (visited[u] == false) {
+
+
+                    components.push_back(u);
+                    visited[u] = true;
+
+
+                    std::vector<int> queue;
+                    // visit direct neighbors
+                    if (adjList[u].size() > 0) {
+
+                        for (const auto& val: adjList[u]) {
+
+                            if ((val.first != -1) && (visited[val.first] == false)) {
+                                queue.push_back(val.first);
+                            }
+                        }
+                    }
+
+
+                    while (!queue.empty()) {
+                        int v = queue.back();
+                        queue.pop_back();
+
+                        if (visited[v] == false) {
+                            components.push_back(v);
+                            visited[v] = true;
+
+                            for (const auto& val2: adjList[v]) {
+
+                                if ((val2.first != -1) && (visited[val2.first] == false)) {
+                                    queue.push_back(val2.first);
+                                }
+                            }
+                        }
+                    }
+
+                    components.push_back(-1);  // -1 is end of component
+                }
+            }
+
+            return components;
+
+
+        }
+
+        std::size_t showSize() {
+            size_t tot = sizeof(adjList);  // outer size
+            for (const auto &v: adjList) {
+                tot += sizeof(v);
+                for (PairW v2: v) {
+                    tot += sizeof(v2);
+                }
+            }
+            return tot;  // bytes
+
+        }
+
+};
+
 
 
 typedef std::pair<int, int> lookup_result;
@@ -154,6 +321,10 @@ class IntVec2IntMap
         tsl::robin_map<std::vector<int>, int, VectorHasher> map;
 
 };
+
+
+
+
 
 
 

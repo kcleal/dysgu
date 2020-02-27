@@ -92,62 +92,6 @@ cdef class Py_IntSet:
     cpdef int size(self):
         return self.thisptr.size()
 
-# Vector as key doesnt work so well, hashing is too slow
-# cdef extern from "wrap_map_set2.h":
-#     cdef cppclass Int2IntVecMap:
-#         Int2IntVecMap()
-#         void insert(int, cpp_vector[int])
-#         void erase(int)
-#         int has_key(int)
-#         cpp_vector[int] get(int)
-#         int size()
-#
-# cdef class Py_Int2IntVecMap:
-#     """Fast 32 bit int key to 32 bit vector value using tsl::robin-map"""
-#     cdef Int2IntVecMap *thisptr
-#     def __cinit__(self):
-#         self.thisptr = new Int2IntVecMap()
-#     def __dealloc__(self):
-#         del self.thisptr
-#     cpdef void insert(self, int key, cpp_vector[int] value):
-#         self.thisptr.insert(key, value)
-#     cpdef void erase(self, int key):
-#         self.thisptr.erase(key)
-#     cpdef int has_key(self, int key):
-#         return self.thisptr.has_key(key)
-#     cpdef cpp_vector[int] get(self, int key):
-#         return self.thisptr.get(key)
-#     cpdef int size(self):
-#         return self.thisptr.size()
-#
-#
-# cdef extern from "wrap_map_set2.h":
-#     cdef cppclass IntVec2IntMap:
-#         IntVec2IntMap()
-#         void insert(cpp_vector[int], int)
-#         void erase(cpp_vector[int])
-#         int has_key(cpp_vector[int])
-#         int get(cpp_vector[int])
-#         int size()
-#
-# cdef class Py_IntVec2IntMap:
-#     """Fast 32 bit int vec key to 32 bit value using tsl::robin-map"""
-#     cdef IntVec2IntMap *thisptr
-#     def __cinit__(self):
-#         self.thisptr = new IntVec2IntMap()
-#     def __dealloc__(self):
-#         del self.thisptr
-#     cpdef void insert(self, cpp_vector[int] key, int value):
-#         self.thisptr.insert(key, value)
-#     cpdef void erase(self, cpp_vector[int] key):
-#         self.thisptr.erase(key)
-#     cpdef int has_key(self, cpp_vector[int] key):
-#         return self.thisptr.has_key(key)
-#     cpdef int get(self, cpp_vector[int] key):
-#         return self.thisptr.get(key)
-#     cpdef int size(self):
-#         return self.thisptr.size()
-
 
 cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
@@ -292,7 +236,7 @@ cdef cpp_deque[int] topo_sort2(G):
     cdef cpp_vector[int] new_nodes
     cdef int v, n, w
 
-    for v in G.nodes():     # process all vertices in G
+    for v in range(G.numberOfNodes()):#G.nodes():     # process all vertices in G
         if explored.has_key(v) == 1:
             continue
         fringe.clear()

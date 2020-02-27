@@ -18,15 +18,31 @@ from libc.stdint cimport uint32_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 
-# cdef extern from "wrap_map_set2.h":
-#     cdef cppclass Int2IntMap:
-#         Int2IntMap()
-#         void insert(int, int)
-#         void erase(int)
-#         int has_key(int)
-#         int get(int)
-#         get_val_result get_value(int key)
-#         int size()
+cdef class Py_SimpleGraph:
+    """Graph"""
+    def __cinit__(self):
+        self.thisptr = new SimpleGraph()
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef int addNode(self):
+        return self.thisptr.addNode()
+    cpdef int hasEdge(self, int u, int v):
+        return self.thisptr.hasEdge(u, v)
+    cpdef void addEdge(self, int u, int v, int w):
+        self.thisptr.addEdge(u, v, w)
+    cpdef int edgeCount(self):
+        return self.thisptr.edgeCount()
+    cpdef int weight(self, int u, int v):
+        return self.thisptr.weight(u, v)
+    cpdef cpp_vector[int] neighbors(self, int u):
+        return self.thisptr.neighbors(u)
+    cpdef void removeNode(self, int u):
+        self.thisptr.removeNode(u)
+    cpdef cpp_vector[int] connectedComponents(self):
+        return self.thisptr.connectedComponents()
+    cpdef int showSize(self):
+        return self.thisptr.showSize()
+
 
 cdef class Py_Int2IntMap:
     """Fast 32bit integer to 32bit integer unordered map using tsl::robin-map"""

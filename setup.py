@@ -77,7 +77,7 @@ for item in ["align_path", "io_funcs", "graph", "coverage", "assembler", "call_c
 print("Found packages", find_packages(where="."))
 setup(
     name="dysgu",
-    version='0.26.0',
+    version='0.27.0',
     python_requires='>=3.7',
     install_requires=[
             'cython',

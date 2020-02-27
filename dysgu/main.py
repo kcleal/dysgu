@@ -41,7 +41,7 @@ defaults = {
             "replace_hardclips": "False",
             "fq1": None,
             "fq2": None,
-            "max_cov": 150,
+            "max_cov": 500,
             "buffer_size": 500000,
             "min_support": 3,
             "I": "210,175",
