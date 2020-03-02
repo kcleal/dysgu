@@ -5,6 +5,8 @@ from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.string cimport string as cpp_string
 
+import cython
+
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
@@ -18,12 +20,36 @@ from libc.stdint cimport uint32_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 
+cdef class Py_DiGraph:
+    """DiGraph, no weights"""
+
+    def __cinit__(self):
+        self.thisptr = new DiGraph()
+    def __dealloc__(self):
+        del self.thisptr
+
+    cdef int addNode(self) nogil:
+        return self.thisptr.addNode()
+    cdef int hasEdge(self, int u, int v) nogil:
+        return self.thisptr.hasEdge(u, v)
+    cdef void addEdge(self, int u, int v) nogil:
+        self.thisptr.addEdge(u, v)
+    cdef int numberOfNodes(self) nogil:
+        return self.thisptr.numberOfNodes()
+    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+        return self.thisptr.forInEdgesOf(u)
+    cdef cpp_vector[int] neighbors(self, int u) nogil:
+        return self.thisptr.neighbors(u)
+
+
+
 cdef class Py_SimpleGraph:
-    """Graph"""
+    """Graph, weighted"""
     def __cinit__(self):
         self.thisptr = new SimpleGraph()
     def __dealloc__(self):
         del self.thisptr
+
     cpdef int addNode(self):
         return self.thisptr.addNode()
     cpdef int hasEdge(self, int u, int v):
@@ -44,50 +70,41 @@ cdef class Py_SimpleGraph:
         return self.thisptr.showSize()
 
 
+
 cdef class Py_Int2IntMap:
     """Fast 32bit integer to 32bit integer unordered map using tsl::robin-map"""
-    # cdef Int2IntMap *thisptr
     def __cinit__(self):
         self.thisptr = new Int2IntMap()
     def __dealloc__(self):
         del self.thisptr
-    cpdef void insert(self, int key, int value):
+    cdef void insert(self, int key, int value) nogil:
         self.thisptr.insert(key, value)
-    cpdef void erase(self, int key):
+    cdef void erase(self, int key) nogil:
         self.thisptr.erase(key)
-    cpdef int has_key(self, int key):
+    cdef int has_key(self, int key) nogil:
         return self.thisptr.has_key(key)
-    cpdef int get(self, int key):
+    cdef int get(self, int key) nogil:
         return self.thisptr.get(key)
-    cpdef get_val_result get_value(self, int key):
+    cdef get_val_result get_value(self, int key) nogil:
         return self.thisptr.get_value(key)
-    cpdef int size(self):
+    cdef int size(self) nogil:
         return self.thisptr.size()
 
 
-# cdef extern from "wrap_map_set2.h":
-#     cdef cppclass IntSet:
-#         IntSet()
-#         void insert(int)
-#         void erase(int)
-#         int has_key(int)
-#         int get(int)
-#         int size()
 
 cdef class Py_IntSet:
     """Fast 32 bit int set using tsl::robin-set"""
-    # cdef IntSet *thisptr
     def __cinit__(self):
         self.thisptr = new IntSet()
     def __dealloc__(self):
         del self.thisptr
-    cpdef void insert(self, int key):
+    cdef void insert(self, int key) nogil:
         self.thisptr.insert(key)
-    cpdef void erase(self, int key):
+    cdef void erase(self, int key) nogil:
         self.thisptr.erase(key)
-    cpdef int has_key(self, int key):
+    cdef int has_key(self, int key) nogil:
         return self.thisptr.has_key(key)
-    cpdef int size(self):
+    cdef int size(self) nogil:
         return self.thisptr.size()
 
 
@@ -97,13 +114,13 @@ cdef class Py_StrSet:
         self.thisptr = new StrSet()
     def __dealloc__(self):
         del self.thisptr
-    cpdef void insert(self, cpp_string key):
+    cdef void insert(self, cpp_string key) nogil:
         self.thisptr.insert(key)
-    cpdef void erase(self, cpp_string key):
+    cdef void erase(self, cpp_string key) nogil:
         self.thisptr.erase(key)
-    cpdef int has_key(self, cpp_string key):
+    cdef int has_key(self, cpp_string key) nogil:
         return self.thisptr.has_key(key)
-    cpdef int size(self):
+    cdef int size(self) nogil:
         return self.thisptr.size()
 
 

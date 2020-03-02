@@ -8,10 +8,93 @@
 #include "robin_hash.h"
 
 
+
+
+
+class DiGraph {
+    // Directed non-weighted
+    public:
+
+        DiGraph() {}  // Construct
+        ~DiGraph() {}
+
+        std::vector<std::vector<int>> inList;
+        std::vector<std::vector<int>> outList;
+
+        int N = 0;
+        int n_edges = 0;
+
+        int addNode() {
+
+            int n = N;
+
+            std::vector<int> node;
+            std::vector<int> in_node;
+
+            outList.push_back(node);  // empty, no edges
+            inList.push_back(in_node);
+            N++;
+            return n;
+        }
+
+        int hasEdge(int u, int v) {
+            if ((u > N ) || (v > N)) { return 0; }
+
+            // Look for v
+            for (const auto& val: outList[u]) {
+                if (val == v) {
+                    return 1;
+                }
+            }
+            return 0;
+
+        }
+
+        void addEdge(int u, int v) {
+            // Assume hasEdge has been call
+            outList[u].push_back(v);
+            inList[v].push_back(u);
+            n_edges += 1;
+        }
+
+
+        int numberOfNodes() { return N; }
+
+
+        std::vector<int> neighbors(int u) {  // Get all out edges
+
+            std::vector<int> neigh;
+
+            for (const auto& val: outList[u]) {
+                neigh.push_back(val);
+            }
+
+            return neigh;
+
+        }
+
+
+        std::vector<int> forInEdgesOf(int u) {
+
+            std::vector<int> inEdges;
+
+            for (const auto& val: inList[u]) {
+                inEdges.push_back(val);
+            }
+
+            return inEdges;
+
+        }
+
+
+};
+
+
 typedef std::pair<int, int> PairW;  // v, weight
 
-class SimpleGraph {
 
+class SimpleGraph {
+    // Undirected, weighted
     public:
 
         SimpleGraph() {}  // Construct
@@ -27,12 +110,13 @@ class SimpleGraph {
         int N = 0;
         int n_edges = 0;
 
+
         int addNode() {
 
             int n = N;
 
             std::vector<PairW> node;
-            node.push_back(std::make_pair(-1, -1));
+//            node.push_back(std::make_pair(-1, -1));
             adjList.push_back(node);
 
             N++;
@@ -56,19 +140,22 @@ class SimpleGraph {
 
             // Assume hasEdge has been call
             // If node has no edge add first in, otherwise push a new node
-            if ((adjList[u].size() == 1) && (adjList[u].front().first == -1)) {
-                adjList[u].front().first = v;
-                adjList[u].front().second = w;
-            } else {
-                adjList[u].push_back(std::make_pair(v, w));
-            };
+//            if ((adjList[u].size() == 1) && (adjList[u].front().first == -1)) {
+//                adjList[u].front().first = v;
+//                adjList[u].front().second = w;
+//            } else {
+//                adjList[u].push_back(std::make_pair(v, w));
+//            };
+//
+//            if ((adjList[v].size() == 1) && (adjList[v].front().first == -1)) {
+//                adjList[v].front().first = u;
+//                adjList[v].front().second = w;
+//            } else {
+//                adjList[v].push_back(std::make_pair(u, w));
+//            };
 
-            if ((adjList[v].size() == 1) && (adjList[v].front().first == -1)) {
-                adjList[v].front().first = u;
-                adjList[v].front().second = w;
-            } else {
-                adjList[v].push_back(std::make_pair(u, w));
-            };
+            adjList[u].push_back(std::make_pair(v, w));
+            adjList[v].push_back(std::make_pair(u, w));
 
             n_edges += 1;
 
@@ -173,6 +260,7 @@ class SimpleGraph {
             return tot;  // bytes
 
         }
+
 
 };
 

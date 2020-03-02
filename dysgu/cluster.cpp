@@ -9233,7 +9233,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_13cluster_reads_pipe1(PyObject *__pyx_
  *         regions_only = False if args["regions_only"] == "False" else True
  * 
  *         genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],             # <<<<<<<<<<<<<<
- *                                                    args["buffer_size"], regions_only,
+ *                                                 args["buffer_size"], regions_only,
  *                                                 kind == "stdin")
  */
   __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_coverage); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 353, __pyx_L1_error)
@@ -9255,7 +9255,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_13cluster_reads_pipe1(PyObject *__pyx_
   /* "dysgu/cluster.pyx":354
  * 
  *         genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
- *                                                    args["buffer_size"], regions_only,             # <<<<<<<<<<<<<<
+ *                                                 args["buffer_size"], regions_only,             # <<<<<<<<<<<<<<
  *                                                 kind == "stdin")
  *         insert_median, insert_stdev, read_len = -1, -1, -1
  */
@@ -9267,7 +9267,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_13cluster_reads_pipe1(PyObject *__pyx_
 
   /* "dysgu/cluster.pyx":355
  *         genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
- *                                                    args["buffer_size"], regions_only,
+ *                                                 args["buffer_size"], regions_only,
  *                                                 kind == "stdin")             # <<<<<<<<<<<<<<
  *         insert_median, insert_stdev, read_len = -1, -1, -1
  *         if args["template_size"] != "":
@@ -9350,7 +9350,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_13cluster_reads_pipe1(PyObject *__pyx_
   __pyx_t_1 = 0;
 
   /* "dysgu/cluster.pyx":356
- *                                                    args["buffer_size"], regions_only,
+ *                                                 args["buffer_size"], regions_only,
  *                                                 kind == "stdin")
  *         insert_median, insert_stdev, read_len = -1, -1, -1             # <<<<<<<<<<<<<<
  *         if args["template_size"] != "":

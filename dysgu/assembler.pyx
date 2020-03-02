@@ -22,6 +22,8 @@ from libcpp.pair cimport pair as cpp_pair
 
 from libc.math cimport exp
 
+from dysgu cimport map_set_utils
+
 
 def echo(*args):
     click.echo(args, err=True)
@@ -36,67 +38,15 @@ ctypedef cpp_pair[int, int] cpp_item
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 
-
-cdef extern from "wrap_map_set2.h":
-    cdef cppclass Int2IntMap:
-        Int2IntMap()
-        void insert(int, int)
-        void erase(int)
-        int has_key(int)
-        int get(int)
-        get_val_result get_value(int key)
-        int size()
+# ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph_t
+ctypedef map_set_utils.Py_DiGraph Py_DiGraph_t
 
 
-cdef class Py_Int2IntMap:
-    """Fast 32bit integer to 32bit integer unordered map using tsl::robin-map"""
-    cdef Int2IntMap *thisptr
-    def __cinit__(self):
-        self.thisptr = new Int2IntMap()
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef void insert(self, int key, int value):
-        self.thisptr.insert(key, value)
-    cpdef void erase(self, int key):
-        self.thisptr.erase(key)
-    cpdef int has_key(self, int key):
-        return self.thisptr.has_key(key)
-    cpdef int get(self, int key):
-        return self.thisptr.get(key)
-    cpdef get_val_result get_value(self, int key):
-        return self.thisptr.get_value(key)
-    cpdef int size(self):
-        return self.thisptr.size()
+ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
+ctypedef map_set_utils.Py_IntSet Py_IntSet
 
 
-cdef extern from "wrap_map_set2.h":
-    cdef cppclass IntSet:
-        IntSet()
-        void insert(int)
-        void erase(int)
-        int has_key(int)
-        int get(int)
-        int size()
-
-
-cdef class Py_IntSet:
-    """Fast 32 bit int set using tsl::robin-set"""
-    cdef IntSet *thisptr
-    def __cinit__(self):
-        self.thisptr = new IntSet()
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef void insert(self, int key):
-        self.thisptr.insert(key)
-    cpdef void erase(self, int key):
-        self.thisptr.erase(key)
-    cpdef int has_key(self, int key):
-        return self.thisptr.has_key(key)
-    cpdef int size(self):
-        return self.thisptr.size()
-
-
-cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
+cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
     cdef int i = 0
     cdef str rseq = r.seq
@@ -130,6 +80,8 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                     else:
                         n = G.addNode()
+                        # n_ = SG.addNode()
+
                         if n >= nweight.size():
                             nweight.push_back(0)
 
@@ -138,7 +90,10 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                     nweight[n] += qual
                     if prev_node != -1:
-                        G.addEdge(prev_node, n)
+                        # G.addEdge(prev_node, n)
+
+                        if not G.hasEdge(prev_node, n):
+                            G.addEdge(prev_node, n)
 
                     prev_node = n
 
@@ -155,6 +110,7 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                     else:
                         n = G.addNode()
+                        # n_ = SG.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
 
@@ -163,7 +119,10 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                     nweight[n] += qual
                     if prev_node != -1:
-                        G.addEdge(prev_node, n)
+                        # G.addEdge(prev_node, n)
+
+                        if not G.hasEdge(prev_node, n):
+                            G.addEdge(prev_node, n)
 
                     prev_node = n
 
@@ -182,6 +141,7 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                 else:
                     n = G.addNode()
+                    # n_ = SG.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
@@ -190,7 +150,11 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                 nweight[n] += qual
                 if prev_node != -1:
-                    G.addEdge(prev_node, n)
+                    # G.addEdge(prev_node, n)
+
+                    if not G.hasEdge(prev_node, n):
+                        G.addEdge(prev_node, n)
+
                 prev_node = n
 
             current_pos += 1  # Reference pos increases only 1
@@ -214,6 +178,7 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                 else:
                     n = G.addNode()
+                    # n_ = SG.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
@@ -223,21 +188,26 @@ cpdef void add_to_graph(G, r, cpp_vector[int]& nweight, ndict_r):
 
                 nweight[n] += qual
                 if prev_node != -1:
-                    G.addEdge(prev_node, n)
+                    # G.addEdge(prev_node, n)
+                    if not G.hasEdge(prev_node, n):
+                        G.addEdge(prev_node, n)
 
                 prev_node = n
 
         start = 0
 
-cdef cpp_deque[int] topo_sort2(G):
+
+cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
 
-    cdef Py_IntSet seen = Py_IntSet()
-    cdef Py_IntSet explored = Py_IntSet()
+    cdef Py_IntSet seen = map_set_utils.Py_IntSet()
+    cdef Py_IntSet explored = map_set_utils.Py_IntSet()
     cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
     cdef cpp_vector[int] new_nodes
+    cdef cpp_vector[int] neighbors
     cdef int v, n, w
+
 
     for v in range(G.numberOfNodes()):#G.nodes():     # process all vertices in G
         if explored.has_key(v) == 1:
@@ -256,7 +226,8 @@ cdef cpp_deque[int] topo_sort2(G):
             if new_nodes.size() > 0:
                 new_nodes.clear()
 
-            for n in G.neighbors(w):
+            neighbors = G.neighbors(w)
+            for n in neighbors:
                 if explored.has_key(n) == 0:
                     if seen.has_key(n) == 1: #CYCLE !!
                         raise ValueError("Graph contains a cycle.")
@@ -274,54 +245,97 @@ cdef cpp_deque[int] topo_sort2(G):
     return order
 
 
-def score_best_path(G, nodes_to_visit, cpp_vector[int]& n_weights):
+cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
 
     # copy
     cdef cpp_vector[int] node_scores = n_weights
-    cdef Py_Int2IntMap pred_trace2 = Py_Int2IntMap()
+    cdef Py_Int2IntMap pred_trace2 = map_set_utils.Py_Int2IntMap()
 
     cdef int best_score = -1
     cdef int best_node = -1
     cdef int i, u, node_weight, maxi, score
 
-    for i in range(0, len(nodes_to_visit)):
+    cdef cpp_vector[int] neighborList
+    cdef int pred, pred_score, local_score, best_local_score, best_local_i
+
+    cdef cpp_deque[int] path
+
+    cdef int len_nodes = nodes_to_visit.size()
+
+    if len_nodes == 0:
+        return path
+
+    for i in range(0, len_nodes):
 
         u = nodes_to_visit[i]
         node_weight = n_weights[u]
 
-        # Find best incoming node scores
-        # Todo find a way to cythonize this lambda - not possible to use with cdef
-        neighborList = []
-        G.forInEdgesOf(u, lambda unode, pred, edgeweight, edgeid: neighborList.append((node_scores[pred], pred,
-                                                                                       n_weights[pred])))
+        # Find best incoming node scores, best inEdge, and also best predecessor node
 
-        if len(neighborList) == 0:
+        neighborList = G.forInEdgesOf(u) # [(node_scores[pred], pred, n_weights[pred]) for pred in G.forInEdgesOf(u)]
+
+        if neighborList.size() == 0:
             node_scores[u] = node_weight
             if node_weight >= best_score:
                 best_score = node_weight
                 best_node = u
             continue
 
-        # Sum of best path in graph
-        maxi = neighborList.index(max(neighborList))
-        score = node_weight + neighborList[maxi][0]
-        node_scores[u] = score
-        if score >= best_score:
-            best_score = score
-            best_node = u
+        best_local_score = -1
+        best_local_i = -1
+        for pred in neighborList:
 
-        # Also track best weighted local node
-        maxi = neighborList.index(max(neighborList, key=lambda x: x[2]))
-        pred_trace2.insert(u, neighborList[maxi][1])
+            pred_score = node_scores[pred]
+            score = node_weight + pred_score
+            node_scores[u] = score
+            if score >= best_score:
+                best_score = score
+                best_node = u
+
+            local_score = n_weights[pred]
+            if local_score > best_local_score:
+                best_local_score = local_score
+                best_local_i = pred
+
+        if best_local_i != -1:
+            pred_trace2.insert(u, best_local_i)
+
+        # neighborList = []
+        #
+        # G.forInEdgesOf(u, lambda unode, pred, edgeweight, edgeid: neighborList.append((node_scores[pred], pred,
+        #                                                                                n_weights[pred])))
+
+        # if len(neighborList) == 0:
+        #     node_scores[u] = node_weight
+        #     if node_weight >= best_score:
+        #         best_score = node_weight
+        #         best_node = u
+        #     continue
+        #
+        # # Sum of best path in graph
+        # maxi = neighborList.index(max(neighborList))
+        # score = node_weight + neighborList[maxi][0]
+        # node_scores[u] = score
+        # if score >= best_score:
+        #     best_score = score
+        #     best_node = u
+        #
+        # # Also track best weighted local node
+        # maxi = neighborList.index(max(neighborList, key=lambda x: x[2]))
+        # pred_trace2.insert(u, neighborList[maxi][1])
+
+
 
     if best_node == -1:
-        return []
+        return path #[]
     # Start traceback from best scoring node, use locally best edge to trace path back
-    path = deque([])
+    # path = deque([])
 
     u = best_node
     while True:
-        path.appendleft(u)
+
+        path.push_front(u)
+        # path.appendleft(u)
         # path2.push_back(u)
         if pred_trace2.has_key(u) == 0:
             break
@@ -331,7 +345,8 @@ def score_best_path(G, nodes_to_visit, cpp_vector[int]& n_weights):
 
 
 cpdef dict base_assemble(rd):
-
+    # import time
+    # t0 = time.time()
     # Note supplementary are included in assembly; helps link regions
     # Get reads of interest
 
@@ -341,8 +356,11 @@ cpdef dict base_assemble(rd):
     cdef int longest_left_sc, longest_right_sc
     cdef int begin = 0
 
-    G = nk.Graph(weighted=False, directed=True)
+    # G = nk.Graph(weighted=False, directed=True)
 
+    cdef Py_DiGraph_t G = map_set_utils.Py_DiGraph()
+
+    # echo(SG.setDirected(), "y")
     node_dict_r = {}
 
     # cdef Py_Int2IntVecMap node_dict2 = Py_Int2IntVecMap()
@@ -393,24 +411,33 @@ cpdef dict base_assemble(rd):
         add_to_graph(G, r, node_weights, node_dict_r)
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
+    cdef cpp_deque[int] path2
 
-    node_list = []
-    cdef int i
-    for i in nodes_to_visit2:
-        node_list.append(i)
+    # cdef cpp_vector[int] node_list #= []
+    # node_list = []
+    # cdef int i
+    # for i in nodes_to_visit2:
+    # #     node_list.push_back(i)
+    #     node_list.append(i)
 
-    path2 = score_best_path(G, node_list, node_weights)
+    path2 = score_best_path(G, nodes_to_visit2, node_weights)
+
+
+
+    if path2.size() == 0:
+    # if len(path2) == 0:
+        return {}
+
+    cdef int front = path2.front()
+    cdef int back = path2.back()
 
     node_dict = list(node_dict_r.keys())
 
+    longest_left_sc = node_dict[front][2]
+    longest_right_sc = node_dict[back][2]
 
-    if len(path2) == 0:
-        return {}
-    longest_left_sc = node_dict[path2[0]][2]
-    longest_right_sc = node_dict[path2[-1]][2]
     if longest_left_sc == 0 and longest_right_sc == 0:
             return {}  # No soft-clips, so not overlapping a break
-
 
     cdef tuple t
     cdef int item
@@ -426,7 +453,10 @@ cpdef dict base_assemble(rd):
             elif t[1] > ref_end:
                 ref_end = t[1]
             seq += t[0]
-
+    # echo(time.time() - t0)
+    # echo(seq)
+    # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
+    # quit()
     return {"contig": seq,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,

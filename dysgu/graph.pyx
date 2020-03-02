@@ -340,49 +340,57 @@ class PairedEndScoper:
 
 cdef class TemplateEdges:
 
-    cdef public dict templates
+    # cdef public dict templates
 
-    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict
+    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
 
     def __init__(self):
-        self.templates = dict()
+        pass
+        # self.templates = dict()
         # self.templates_s = unordered_map[string, vector[int]]
 
-    def add_(self, str template_name, int flag, int node, int query_start):
-        if flag & 64:
-            if template_name not in self.templates:
-                self.templates[template_name] = [[(query_start, node, flag)], []]
-            else:
-                self.templates[template_name][0].append((query_start, node, flag))
-        else:
-            if template_name not in self.templates:
-                self.templates[template_name] = [[], [(query_start, node, flag)]]
-            else:
-                self.templates[template_name][1].append((query_start, node, flag))
-
-    cdef void add2_(self, str template_name, int flag, int node, int query_start):
-        if template_name not in self.templates:
-            self.templates[template_name] = array.array("L", (query_start, node, flag))
-        else:
-            self.templates[template_name].extend((query_start, node, flag))
+    # def add_(self, str template_name, int flag, int node, int query_start):
+    #     if flag & 64:
+    #         if template_name not in self.templates:
+    #             self.templates[template_name] = [[(query_start, node, flag)], []]
+    #         else:
+    #             self.templates[template_name][0].append((query_start, node, flag))
+    #     else:
+    #         if template_name not in self.templates:
+    #             self.templates[template_name] = [[], [(query_start, node, flag)]]
+    #         else:
+    #             self.templates[template_name][1].append((query_start, node, flag))
+    #
+    # cdef void add2_(self, str template_name, int flag, int node, int query_start):
+    #     if template_name not in self.templates:
+    #         self.templates[template_name] = array.array("L", (query_start, node, flag))
+    #     else:
+    #         self.templates[template_name].extend((query_start, node, flag))
 
     cdef inline void add(self, str template_name, int flag, int node, int query_start):
+
         cdef vector[int] val
-        cdef vector[int] val2
+        cdef bytes key = bytes(template_name, encoding="utf8")
+
+        # More efficient way of doing this?
         val.push_back(query_start)
         val.push_back(node)
         val.push_back(flag)
+        self.templates_s[key].insert(self.templates_s[key].end(), val.begin(), val.end())
 
-        cdef bytes key = bytes(template_name, encoding="utf8")
-
-        if self.templates_s.find(key) == self.templates_s.end():
-            self.templates_s[key] = val
-        else:
-            val2 = self.templates_s[key]  # todo avoid reassignment using pointer
-            val2.push_back(query_start)
-            val2.push_back(node)
-            val2.push_back(flag)
-            self.templates_s[key] = val2 #.insert(end, val.begin(), val.end())
+        # if self.templates_s.find(key) == self.templates_s.end():
+        #
+        #     val.push_back(query_start)
+        #     val.push_back(node)
+        #     val.push_back(flag)
+        #     self.templates_s[key] = val
+        # else:
+        #
+        #     val2 = self.templates_s[key]
+        #     val2.push_back(query_start)
+        #     val2.push_back(node)
+        #     val2.push_back(flag)
+        #     self.templates_s[key] = val2 #.insert(end, val.begin(), val.end())
 
     def iterate_map(self):
 
@@ -397,7 +405,7 @@ cdef class TemplateEdges:
 
 
 
-cdef void add_template_edges(G, template_edges): #TemplateEdges template_edges):
+cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges template_edges):
 
     cdef int ii, u_start, v_start, u, v, uflag, vflag
 
@@ -491,12 +499,11 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                     int minimizer_dist=10, debug=None, int min_support=3, procs=1):
 
     t0 = time.time()
-    click.echo("Building graph with clustering distance {}bp".format(max_dist), err=True)
+    click.echo("Building graph with clustering distance {} bp".format(max_dist), err=True)
 
     template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
-    #node_to_name = array.array("l", [])  # Map of useful nodes -> read names
 
-    node_to_name = NodeToName()
+    node_to_name = NodeToName()  # Map of useful nodes -> read names
 
     scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
                        minimizer_support_thresh=minimizer_support_thresh,
@@ -522,7 +529,6 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
 
     # debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
-
 
     debug_nodes = set([])
     for chunk in genome_scanner.iter_genome():
@@ -645,25 +651,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     t2 = time.time()
 
-    # echo("mem", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
-
     add_template_edges(G, template_edges)
-
-    # echo("edges", G.edgeCount(), "size graph Mb", G.showSize() / 1e6, "max mem", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6)
-
-
-    # echo(len(G.edges()), SG.edgeCount())
-    # import networkx as nx
-    # nxg = nk.nxadapter.nk2nx(G)
-    #
-    # nx.write_graphml(nxg, "/Users/kezcleal/Documents/Data/fusion_finder_development/ChineseTrio/calls/testgraph.gml")
-    #
-    # click.echo("size of mm {}".format(sys.getsizeof(scope.minimizer_table) / 1e6), err=True)
-    # click.echo("size of mmt {}".format(sys.getsizeof(scope.read_minimizers) / 1e6), err=True)
-    #
-    # click.echo("size of n2n {}".format(sys.getsizeof(node_to_name) / 1e6), err=True)
-    # click.echo("size of template edges {}".format(sys.getsizeof(template_edges) / 1e6), err=True)
-    # click.echo("size of pescope {}".format(sys.getsizeof(pe_scope) / 1e6), err=True)
 
     # Free mem
     template_edges = None
@@ -688,14 +676,8 @@ def get_block_components(G, node_to_name, infile, dict read_buffer,
     # Then for each component, split into block nodes which are locally interacting nodes (black and grey edges)
     # block nodes edges result from collapsing white edges
 
-
-    # cc = nk.components.ConnectedComponents(G)
-    # cc.run()
-
     cdef dict partitions, support_within, reads
-    cdef int v
-
-    big_components = []
+    cdef int v, item_idx, item
 
     cmp = G.connectedComponents()  # Flat array, components are separated by -1
 
@@ -709,25 +691,14 @@ def get_block_components(G, node_to_name, infile, dict read_buffer,
     t0 = time.time()
 
     cdef int cnt = 0
-    # G = SG
-    # for component in cc:  #.getComponents():
     for start_i, end_i in cc:
-
-
         cnt += 1
         if end_i - start_i >= min_support:
-        #if len(component) >= min_support:
             component = list(cmp[start_i: end_i])
             res = proc_component(node_to_name, component, read_buffer, infile, G, min_support)
-            # if any(itemn in debug_nodes for itemn in component):
-            #     echo("hi len component", len(component))
-            #     echo(res)
-            #     for qname, align in res["reads"].items():
-            #         echo(qname, str(align).replace("\t", " "))
 
             if res:
                 yield res
-
         # Reduce size of graph
         # for v in component:
         #     G.removeNode(v)
