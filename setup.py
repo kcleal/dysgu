@@ -64,7 +64,7 @@ print("Extra compiler args ", extras)
 
 ext_modules = []
 for item in ["align_path", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "find_pairs", "cluster", "samflags", "get_reads", "input_stream_alignments",
+             "map_set_utils", "sv2bam", "cluster", "samflags", "sv2fq", "input_stream_alignments",
              "data_io", "pairing", "view", "samclips"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
@@ -77,7 +77,7 @@ for item in ["align_path", "io_funcs", "graph", "coverage", "assembler", "call_c
 print("Found packages", find_packages(where="."))
 setup(
     name="dysgu",
-    version='0.27.0',
+    version='0.29.0',
     python_requires='>=3.7',
     install_requires=[
             'cython',

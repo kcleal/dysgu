@@ -6,12 +6,14 @@ import os
 import time
 from multiprocessing import cpu_count
 from subprocess import Popen, PIPE, check_call
-from dysgu import find_pairs
-from dysgu import input_stream_alignments, data_io, cluster, get_reads, view
+from dysgu import sv2bam, sv2fq
+from dysgu import input_stream_alignments, data_io, cluster, view
 import pkg_resources
 import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 cpu_range = click.IntRange(min=1, max=cpu_count())
 
@@ -226,52 +228,101 @@ def cli():
 #     pipeline(ctx.obj)
 
 
-@cli.command("reads")
-@click.argument('bam', required=True, type=click.Path(exists=True))
-@click.option('--post-fix', help="Post-fix to use", default='dysgu', type=str, show_default=True)
-@click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
-              type=int, show_default=True)
-@click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
-@click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
-@click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
-              default=None, type=click.Path(exists=True))
-@click.option("--soft-search",  help="Set to True will collect all reads with one or more alignments in\
- --search regions",
-              default=defaults["soft_search"], type=click.Choice(["True", "False"]), show_default=True)
-# @click.option('--bam-only', help="Output bam instead of fastq", default="False", type=click.Choice(["True", "False"]),
-#               show_default=True)
-@click.option('--dest', help="Destination folder to use/create. Defaults to current directory",
-              default=None, type=click.Path())
-@click.pass_context
-def find_reads(ctx, **kwargs):
-    """Finds read templates that are discordant or have an alignment with a soft-clip > '--clip-length'"""
-    # Add arguments to context insert_median, insert_stdev, read_length, out_name
-    ctx = apply_ctx(ctx, kwargs)
-    return find_pairs.process(ctx.obj)
+# @cli.command("sv2bam")
+# @click.argument('bam', required=True, type=click.Path(exists=True))
+# @click.option('--post-fix', help="Post-fix to use", default='dysgu', type=str, show_default=True)
+# @click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
+#               type=int, show_default=True)
+# @click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
+# @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
+# @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
+#               default=None, type=click.Path(exists=True))
+# @click.option("--soft-search",  help="Set to True will collect all reads with one or more alignments in\
+#  --search regions",
+#               default=defaults["soft_search"], type=click.Choice(["True", "False"]), show_default=True)
+# # @click.option('--bam-only', help="Output bam instead of fastq", default="False", type=click.Choice(["True", "False"]),
+# #               show_default=True)
+# @click.option('--dest', help="Destination folder to use/create. Defaults to current directory",
+#               default=None, type=click.Path())
+# @click.pass_context
+# def find_reads(ctx, **kwargs):
+#     """Finds read templates that are discordant or have an alignment with a soft-clip > '--clip-length'"""
+#     # Add arguments to context insert_median, insert_stdev, read_length, out_name
+#     ctx = apply_ctx(ctx, kwargs)
+#     return sv2bam.process(ctx.obj)
+#
+#
+# @cli.command("sv2fq")
+# @click.argument('bam', required=True, type=click.Path(exists=True))
+# @click.option('--post-fix', help="Post fix to tag temp files with", default='dysgu', type=str, show_default=True)
+# @click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
+#               type=int, show_default=True)
+# @click.option("--paired", help="Paired-end reads or single", default=defaults["paired"],
+#               type=click.Choice(["True", "False"]), show_default=True)
+# @click.option("-f", "--out-format", help="Output format", default="fq",
+#               type=click.Choice(["fq", "fasta"]), show_default=True)
+# @click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
+# @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
+# @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
+#               default=None, type=click.Path(exists=True))
+# @click.option('--dest', help="Destination folder to use/create for saving results. Defaults to current directory",
+#               default=None, type=click.Path())
+# @click.pass_context
+# def get_reads(ctx, **kwargs):
+#     """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
+#     writes two .fq files, unless --paired False"""
+#     # Add arguments to context insert_median, insert_stdev, read_length, out_name
+#     ctx = apply_ctx(ctx, kwargs)
+#     return sv2fq.process(ctx.obj)
 
 
-@cli.command("sv2fq")
+@cli.command("fetch")
 @click.argument('bam', required=True, type=click.Path(exists=True))
-@click.option('--post-fix', help="Post fix to tag temp files with", default='dysgu', type=str, show_default=True)
+@click.option("-f", "--out-format", help="Output format. 'bam' output maintains sort order, 'fq' output is collated by name",
+              default="bam", type=click.Choice(["bam", "fq", "fasta"]),
+              show_default=True)
+@click.option("-o", "--output", help="Output file for all input alignments, use '-' or 'stdout' for stdout", default="None",
+              type=str, show_default=True)
+@click.option("-r", "--reads", help="Output reads, discordant, supplementary and soft-clipped reads to file. "
+                                    "If --out-format is fq/fasta and --reads2 is not provided, "
+                                    "output an interleaved fq/fasta", default="stdout", type=str, show_default=True)
+@click.option("-r2", "--reads2", help="Output read2 for fq/fasta output only", default="None", type=str,
+              show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option("--paired", help="Paired end reads (or single)", default=defaults["paired"],
+@click.option('--index', help="Call 'samtools index' of bam if '--reads' argument is provided",
+              default="False", type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--paired", help="Paired-end reads or single", default=defaults["paired"],
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("-f", "--out-format", help="Output format", default="fq",
-              type=click.Choice(["fq", "fasta"]), show_default=True)
-@click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=defaults["procs"], show_default=True)
+@click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1, show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
               default=None, type=click.Path(exists=True))
-@click.option('--dest', help="Destination folder to use/create for saving results. Defaults to current directory",
-              default=None, type=click.Path())
 @click.pass_context
-def sv2fq(ctx, **kwargs):
+def get_reads(ctx, **kwargs):
     """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
-    writes two .fq files, unless --paired False"""
-    # Add arguments to context insert_median, insert_stdev, read_length, out_name
+    writes bam/fq/fasta"""
+    if kwargs["output"] in "-,stdout" and (kwargs["reads"] in "-,stdout" or kwargs["reads2"] in "-,stdout"):
+        raise ValueError("--output and --reads/--reads2 both set to stdout")
+
+    if kwargs["out_format"] in "fq,fasta":
+        if kwargs["reads"] in "-,stdout" and kwargs["reads2"] != "None":
+            raise ValueError("-r is set to stdout but -r2 is set to TEXT")
+        if kwargs["reads2"] in "-,stdout":
+            raise ValueError("-r2 can not be stdout")
+
+    if kwargs["out_format"] == "bam" and kwargs["reads2"] != "None":
+        raise ValueError("--out-format is bam, cannot except -r2")
+
+    if kwargs["out_format"] == "bam" and kwargs["index"] == "True" and kwargs["reads"] in "-,stdout":
+        raise ValueError("Cannot index if --reads is stdout")
+
     ctx = apply_ctx(ctx, kwargs)
-    return get_reads.process(ctx.obj)
+
+    if kwargs["out_format"] == "bam":
+        return sv2bam.process(ctx.obj)
+    else:
+        return sv2fq.process(ctx.obj)
 
 
 @cli.command("choose")
@@ -316,7 +367,7 @@ def dysgu_aligner(ctx, **kwargs):
 
 
 @cli.command("call")
-@click.argument('sv-aligns', required=True, type=click.Path(exists=True))
+@click.argument('sv-aligns', required=True, type=click.Path(exists=False))
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept.", default=defaults["clip_length"],
               type=int, show_default=True)

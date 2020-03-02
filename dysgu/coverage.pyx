@@ -137,7 +137,7 @@ def get_insert_params(L, mads=8):  # default for lumpy is 10
 
 class GenomeScanner:
 
-    def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only):
+    def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin):
 
         self.input_bam = inputbam
         self.max_cov = max_cov
@@ -149,7 +149,7 @@ class GenomeScanner:
         self.procs = read_threads
         self.buff_size = buffer_size
 
-        self.bam_iter = inputbam.fetch(until_eof=True)
+        # self.bam_iter = self.input_bam #inputbam.fetch(until_eof=True)
 
         self.current_bin = []
         self.current_cov = 0
@@ -167,15 +167,21 @@ class GenomeScanner:
 
         self.last_tell = 0
 
+        self.no_tell = True if stdin else False
+
+
     def _get_reads(self):
 
         if not self.include_regions or not self.regions_only:
 
-            tell = self.input_bam.tell()
-            for a in self.bam_iter:
+            while len(self.staged_reads) > 0:
+                yield self.staged_reads.popleft()
+
+            tell = 0 if self.no_tell else self.input_bam.tell()
+            for a in self.input_bam: # self.bam_iter:
 
                 self._add_to_bin_buffer(a, tell)
-                tell = self.input_bam.tell()
+                tell = 0 if self.no_tell else self.input_bam.tell()
 
                 while len(self.staged_reads) > 0:
                     yield self.staged_reads.popleft()
@@ -251,9 +257,12 @@ class GenomeScanner:
         cdef int flag, tlen
         cdef float approx_read_length
 
-        for a in self.bam_iter:
 
-            tell = self.input_bam.tell()
+        for a in self.input_bam: #self.bam_iter:
+
+            tell = 0 if self.no_tell else self.input_bam.tell()
+            if self.no_tell:
+                self._add_to_bin_buffer(a, tell)
             if len(approx_read_length_l) < 100000:
                 flag = a.flag
                 if a.seq is not None:
@@ -281,12 +290,13 @@ class GenomeScanner:
         if insert_median == -1:
             insert_median, insert_stdev = get_insert_params(inserts)
 
-        click.echo(f"Inferred Read length {approx_read_length}, "
-                   f"insert_median {insert_median}, "
+        click.echo(f"Inferred cead length {approx_read_length}, "
+                   f"insert median {insert_median}, "
                    f"insert stdev {insert_stdev}", err=True)
         self.last_tell = tell
 
-        self.input_bam.reset()
+        if not self.no_tell:
+            self.input_bam.reset()
         return insert_median, insert_stdev
 
     def iter_genome(self):
@@ -299,7 +309,7 @@ class GenomeScanner:
 
         # Add last seen coverage bin
         if total_reads == 0:
-            click.echo("No reads, finishing", err=True)
+            click.echo("coverage.pyx No reads, finishing", err=True)
             quit()
 
         click.echo(f"Total input reads {total_reads}", err=True)
@@ -320,6 +330,8 @@ class GenomeScanner:
                 self.read_buffer[n1] = r
             else:
                 self.read_buffer[n1] = r.to_string()
+        elif self.no_tell:
+            raise BufferError("Read buffer has overflowed, increase --buffer-size")
 
 
     def _add_to_bin_buffer(self, a, tell):

@@ -8,12 +8,10 @@ import pysam
 import time
 import datetime
 import numpy as np
-import os
 import click
-from subprocess import call
+import resource
 from dysgu import data_io, io_funcs
-
-# from pysam.libcalignedsegment cimport AlignedSegment
+from dysgu.coverage import get_insert_params
 
 
 def echo(*args):
@@ -38,14 +36,17 @@ def iter_bam(bam, search):
 
 def get_reads_f(args):
 
-    paired = args["paired"] == "True"
+    two_files = True if args["reads2"] != "None" else False
+
     fq_out = args["out_format"] == "fq"
 
     kind = args["bam"].split(".")[-1]
     opts = {"bam": "rb", "cram": "rc", "sam": "r"}
-    click.echo("Input file is {}, (.{} format)".format(args["bam"], kind), err=True)
+    if kind not in opts:
+        raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
+    click.echo("Input file: {}, (.{} format). Reading threads={}".format(args["bam"], kind, args["procs"]), err=True)
 
-    bam = pysam.AlignmentFile(args["bam"], opts[kind])
+    bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
     bam_i = iter_bam(bam, args["search"])
 
     if args["exclude"]:
@@ -53,25 +54,8 @@ def get_reads_f(args):
         exc_tree = data_io.overlap_regions(args["exclude"])
 
 
-    if args["dest"]:
-        if "/" in args["bam"]:
-            out_name = args["dest"] + "/" + args["bam"].rsplit("/", 1)[1].rsplit(".", 1)[0] + "." + args["post_fix"]
-        else:
-            out_name = args["dest"] + "/" + args["bam"].rsplit(".", 1)[0] + "." + args["post_fix"]
-        if not os.path.exists(args["dest"]):
-            os.makedirs(args["dest"])
-    else:
-        if "/" in args["bam"]:
-            out_name = os.getcwd() + "/" + args["bam"].rsplit("/", 1)[1].rsplit(".", 1)[0] + "." + args["post_fix"]
-        else:
-            out_name = os.getcwd() + "/" + args["bam"].rsplit(".", 1)[0] + "." + args["post_fix"]
-
-    if args["mapper"] == "last":
-        call("samtools view -H -o {}.dict {}".format(out_name, args["bam"]), shell=True)
-
-
-    def container(paired):
-        if paired:
+    def container(paired_end):
+        if paired_end:
             # write_me, alignments
             return [0, None, None]
         return [0, None]
@@ -89,14 +73,21 @@ def get_reads_f(args):
     cdef str qname = ""
 
     cdef list d, ct
+    cdef int nn
 
-    if paired:
-        fq1 = open(out_name + f"1.{args['out_format']}", "w")
-        fq2 = open(out_name + f"2.{args['out_format']}", "w")
+    if two_files:
+        assert f"{args['reads']}" != f"{args['reads2']}"
+        fq1 = open(f"{args['reads']}", "w")
+        fq2 = open(f"{args['reads2']}", "w")
     else:
-        fq1 = open(out_name + f".{args['out_format']}", "w")
+        fq1 = open(f"{args['reads']}", "w")  # Write interleaved or single end
 
-    for r in bam_i:
+    # Borrowed from lumpy
+    cdef int required = 97
+    restricted = 3484
+    cdef int flag_mask = required | restricted
+
+    for nn, r in enumerate(bam_i):
 
         if args["exclude"]:  # Skip exclude regions
             pos = r.pos
@@ -105,29 +96,31 @@ def get_reads_f(args):
 
         flag = r.flag
 
-        if flag & 3328 or not r.cigar: #r.cigartuples:
+        paired_end = False
+        if flag & 131:  # read_paired, proper_pair, second in pair
+            paired_end = True
+
+        if flag & 3328 or not r.cigar:
             continue  # Read is duplicate or not primary alignment or supplementary, Cigar is not formatted
 
-        if paired and len(insert_size) < 10000:
-            if flag & 2:
-                tmpl = abs(r.template_length)
-                if tmpl < 1000:
-                    insert_size.append(tmpl)
+        if paired_end and len(insert_size) < 10000:
+            if r.seq is not None:
+                if r.rname == r.rnext and flag & flag_mask == required and r.tlen >= 0:
+                    read_length.append(r.infer_read_length())
+                    insert_size.append(r.tlen)
 
-            read_length.append(r.infer_read_length())
-
-        qname = r.qname + str(pos) + str(flag)
+        qname = r.qname # + str(pos) + str(flag)
 
         if qname not in read_cache:
-            d = container(paired)
+            d = container(paired_end)
 
         else:
             d = read_cache[qname]
 
-        if flag & 64 or not paired:
+        if flag & 64 or not paired_end:
             d[1] = r
 
-        elif paired:
+        elif paired_end:
             d[2] = r
 
         # Check for discordants
@@ -144,8 +137,9 @@ def get_reads_f(args):
             elif r.has_tag("SA"):
                 d[0] = 1
 
-        if (paired and d[1] is not None and d[2] is not None) or (not paired and d[1] is not None):
+        if (paired_end and d[1] is not None and d[2] is not None) or (not paired_end and d[1] is not None):
             if d[0]:
+
                 s1 = d[1].seq
                 q1 = d[1].qual
                 q_exists = True
@@ -158,11 +152,11 @@ def get_reads_f(args):
                         q1 = q1[::-1]
 
                 if fq_out:
-                    fq1.write(f"@{qname}\n{s1}\n+\n{q1}\n")
+                    fq1.write(f"@{qname}/1\n{s1}\n+\n{q1}\n")
                 else:
-                    fq1.write(f">{qname}\n{s1}\n")
+                    fq1.write(f">{qname}/1\n{s1}\n")
 
-                if not paired:
+                if not paired_end:
                     aligns_written += 1
                     continue
 
@@ -178,52 +172,64 @@ def get_reads_f(args):
                         q2 = q2[::-1]
 
                 if fq_out:
-                    fq2.write(f"@{qname}\n{s2}\n+\n{q2}\n")
+                    if two_files:
+                        fq2.write(f"@{qname}/2\n{s2}\n+\n{q2}\n")
+                    else:
+                        fq1.write(f"@{qname}/2\n{s2}\n+\n{q2}\n")
                 else:
-                    fq2.write(f">{qname}\n{s2}\n")
+                    if two_files:
+                        fq2.write(f">{qname}/2\n{s2}\n")
+                    else:
+                        fq1.write(f">{qname}/2\n{s2}\n")
 
                 aligns_written += 2
-            if paired:
+            #if paired_end:
                 del read_cache[qname]
 
-        elif paired:
+        elif paired_end:
             read_cache[qname] = d
+
+    #
 
     if aligns_written == 0:
         click.echo("No reads found, aborting", err=True)
         quit()
-    click.echo("Writen {} alignments".format(aligns_written), err=True)
+    click.echo("Total input reads in bam {}".format(nn), err=True)
 
     fq1.close()
-    if paired:
+    if two_files:
         fq2.close()
     bam.close()
 
-    if paired:
-        if len(insert_size) == 0:
-            insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]
-            click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
-        else:
-            insert_median, insert_stdev = np.median(insert_size), np.std(insert_size)
-            insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
-
-        click.echo("Median insert size: {} (+/- {})".format(insert_median, insert_stdev), err=True)
-
-        return insert_median, insert_stdev, int(np.mean(read_length)), out_name
-
+    if len(insert_size) == 0:
+        insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]
+        click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
     else:
-        return 0, 0, 0, out_name
+        insert_median, insert_stdev = get_insert_params(insert_size)
+        insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
+
+    approx_read_length = int(np.mean(read_length))
+    click.echo("Total input reads in bam {}".format(nn + 1), err=True)
+    click.echo(f"Inferred read length {approx_read_length}, "
+                   f"insert median {insert_median}, "
+                   f"insert stdev {insert_stdev}", err=True)
+
+    return insert_median, insert_stdev, approx_read_length, nn
 
 
 def process(args):
 
     t0 = time.time()
     data_io.mk_dest(args["dest"])
-    insert_median, insert_stdev, read_length, out_name = get_reads_f(args)
-    click.echo("Collected reads in {} h:m:s".format(str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+    click.echo("Output format: {}".format(args["out_format"]), err=True)
+    insert_median, insert_stdev, read_length, count = get_reads_f(args)
+
+    click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
+                                                                    count,
+                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
 
     return {"insert_median": insert_median,
             "insert_stdev": insert_stdev,
             "read_length": read_length,
-            "fastq": out_name,
-            "out_pfix": out_name}
+            }

@@ -15,6 +15,7 @@ import pickle
 import resource
 from dysgu import coverage, graph, call_component, assembler, io_funcs
 
+
 def echo(*args):
     click.echo(args, err=True)
 
@@ -311,16 +312,17 @@ def cluster_reads(args):
         model = None
         click.echo("No model loaded", err=True)
 
-    mk_dest(args["dest"])
-    if args["dest"] is None:
-        args["dest"] = "."
+    # mk_dest(args["dest"])
+    # if args["dest"] is None:
+    #     args["dest"] = "."
 
     kind = args["sv_aligns"].split(".")[-1]
-    opts = {"bam": "rb", "cram": "rc", "sam": "rs"}
+    kind = "stdin" if kind == "-" else kind
+    opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
 
     if args["procs"] > 1:
         raise ValueError("Sorry, only single process is supported currently")
-    click.echo("Input file is {}, (.{} format). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
+    click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
 
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
 
@@ -349,7 +351,8 @@ def cluster_reads(args):
         regions_only = False if args["regions_only"] == "False" else True
 
         genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
-                                                   args["buffer_size"], regions_only)
+                                                args["buffer_size"], regions_only,
+                                                kind == "stdin")
         insert_median, insert_stdev, read_len = -1, -1, -1
         if args["template_size"] != "":
             try:
@@ -473,7 +476,9 @@ def cluster_reads(args):
         classified_events_df = classified_events_df.rename(columns={"contig": "contigA", "contig2": "contigB"})
         classified_events_df[k].to_csv(outfile, index=False)
 
-    click.echo("call-events {} complete, n={}, mem {} Mb, {} h:m:s".format(
+    infile.close()
+
+    click.echo("dysgu call {} complete, n={}, mem={} Mb, time={} h:m:s".format(
         args["sv_aligns"],
         c,
         int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),

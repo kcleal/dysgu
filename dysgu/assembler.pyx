@@ -10,9 +10,12 @@ import numpy as np
 cimport numpy as np
 from collections import deque
 import click
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from skbio.alignment import StripedSmithWaterman
 from libcpp.vector cimport vector as cpp_vector
-# from preshed.maps cimport PreshMap
 
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair

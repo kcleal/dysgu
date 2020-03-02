@@ -5,6 +5,10 @@ from collections import Counter, defaultdict
 import click
 import numpy as np
 from . import data_io, assembler, graph, coverage
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 
 
