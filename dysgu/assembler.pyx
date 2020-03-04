@@ -501,7 +501,8 @@ cdef float compute_rep(str seq):
 
 cdef tuple get_rep(str contig_seq):
 
-    cdef int left_clip_end, right_clip_start
+    cdef int left_clip_end = 0
+    cdef int right_clip_start = 0
     cdef float aligned_portion, clip_rep
     cdef str clip
     # Get left clip

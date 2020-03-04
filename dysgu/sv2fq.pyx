@@ -49,6 +49,7 @@ def get_reads_f(args):
     bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
     bam_i = iter_bam(bam, args["search"])
 
+    exc_tree = None
     if args["exclude"]:
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
         exc_tree = data_io.overlap_regions(args["exclude"])

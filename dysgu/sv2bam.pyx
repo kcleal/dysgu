@@ -65,6 +65,7 @@ def config(args):
     clip_length = args["clip_length"]
 
     send_output = None
+    v = ""
     if args["output"] != "None":
         if args["output"] == "stdout":
             v = "-"
