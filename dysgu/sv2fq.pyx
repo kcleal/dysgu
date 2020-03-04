@@ -12,6 +12,7 @@ import click
 import resource
 from dysgu import data_io, io_funcs
 from dysgu.coverage import get_insert_params
+from sys import stdout
 
 
 def echo(*args):
@@ -81,7 +82,10 @@ def get_reads_f(args):
         fq1 = open(f"{args['reads']}", "w")
         fq2 = open(f"{args['reads2']}", "w")
     else:
-        fq1 = open(f"{args['reads']}", "w")  # Write interleaved or single end
+        if args["reads"] in "-stdout":
+            fq1 = stdout
+        else:
+            fq1 = open(f"{args['reads']}", "w")  # Write interleaved or single end
 
     # Borrowed from lumpy
     cdef int required = 97
@@ -195,7 +199,6 @@ def get_reads_f(args):
     if aligns_written == 0:
         click.echo("No reads found, aborting", err=True)
         quit()
-    click.echo("Total input reads in bam {}".format(nn), err=True)
 
     fq1.close()
     if two_files:
