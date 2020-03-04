@@ -2787,7 +2787,7 @@ static const char __pyx_k_intervals_to_check[] = "intervals_to_check";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
 static const char __pyx_k_unscaled_upper_mad[] = "unscaled_upper_mad";
 static const char __pyx_k_GenomeScanner___init[] = "GenomeScanner.__init__";
-static const char __pyx_k_Inferred_cead_length[] = "Inferred cead length ";
+static const char __pyx_k_Inferred_read_length[] = "Inferred read length ";
 static const char __pyx_k_approx_read_length_l[] = "approx_read_length_l";
 static const char __pyx_k_get_reference_length[] = "get_reference_length";
 static const char __pyx_k_strided_and_indirect[] = "<strided and indirect>";
@@ -2863,7 +2863,7 @@ static PyObject *__pyx_n_s_ImportError;
 static PyObject *__pyx_kp_s_Incompatible_checksums_s_vs_0xb0;
 static PyObject *__pyx_n_s_IndexError;
 static PyObject *__pyx_kp_s_Indirect_dimensions_not_supporte;
-static PyObject *__pyx_kp_u_Inferred_cead_length;
+static PyObject *__pyx_kp_u_Inferred_read_length;
 static PyObject *__pyx_kp_s_Invalid_mode_expected_c_or_fortr;
 static PyObject *__pyx_kp_s_Invalid_shape_in_axis_d_d;
 static PyObject *__pyx_n_s_L;
@@ -8447,7 +8447,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
  *         if insert_median == -1:
  *             insert_median, insert_stdev = get_insert_params(inserts)             # <<<<<<<<<<<<<<
  * 
- *         click.echo(f"Inferred cead length {approx_read_length}, "
+ *         click.echo(f"Inferred read length {approx_read_length}, "
  */
     __Pyx_GetModuleGlobalName(__pyx_t_6, __pyx_n_s_get_insert_params); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 291, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
@@ -8531,7 +8531,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   /* "dysgu/coverage.pyx":293
  *             insert_median, insert_stdev = get_insert_params(inserts)
  * 
- *         click.echo(f"Inferred cead length {approx_read_length}, "             # <<<<<<<<<<<<<<
+ *         click.echo(f"Inferred read length {approx_read_length}, "             # <<<<<<<<<<<<<<
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)
  */
@@ -8544,10 +8544,10 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = 0;
   __pyx_t_5 = 127;
-  __Pyx_INCREF(__pyx_kp_u_Inferred_cead_length);
+  __Pyx_INCREF(__pyx_kp_u_Inferred_read_length);
   __pyx_t_4 += 21;
-  __Pyx_GIVEREF(__pyx_kp_u_Inferred_cead_length);
-  PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_kp_u_Inferred_cead_length);
+  __Pyx_GIVEREF(__pyx_kp_u_Inferred_read_length);
+  PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_kp_u_Inferred_read_length);
   __pyx_t_6 = PyFloat_FromDouble(__pyx_v_approx_read_length); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_2 = __Pyx_PyObject_FormatSimple(__pyx_t_6, __pyx_empty_unicode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 293, __pyx_L1_error)
@@ -8565,7 +8565,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
 
   /* "dysgu/coverage.pyx":294
  * 
- *         click.echo(f"Inferred cead length {approx_read_length}, "
+ *         click.echo(f"Inferred read length {approx_read_length}, "
  *                    f"insert median {insert_median}, "             # <<<<<<<<<<<<<<
  *                    f"insert stdev {insert_stdev}", err=True)
  *         self.last_tell = tell
@@ -8582,7 +8582,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   PyTuple_SET_ITEM(__pyx_t_3, 4, __pyx_kp_u_insert_stdev_2);
 
   /* "dysgu/coverage.pyx":295
- *         click.echo(f"Inferred cead length {approx_read_length}, "
+ *         click.echo(f"Inferred read length {approx_read_length}, "
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)             # <<<<<<<<<<<<<<
  *         self.last_tell = tell
@@ -8598,7 +8598,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   /* "dysgu/coverage.pyx":293
  *             insert_median, insert_stdev = get_insert_params(inserts)
  * 
- *         click.echo(f"Inferred cead length {approx_read_length}, "             # <<<<<<<<<<<<<<
+ *         click.echo(f"Inferred read length {approx_read_length}, "             # <<<<<<<<<<<<<<
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)
  */
@@ -8612,7 +8612,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   __pyx_t_2 = 0;
 
   /* "dysgu/coverage.pyx":295
- *         click.echo(f"Inferred cead length {approx_read_length}, "
+ *         click.echo(f"Inferred read length {approx_read_length}, "
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)             # <<<<<<<<<<<<<<
  *         self.last_tell = tell
@@ -8625,7 +8625,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
   /* "dysgu/coverage.pyx":293
  *             insert_median, insert_stdev = get_insert_params(inserts)
  * 
- *         click.echo(f"Inferred cead length {approx_read_length}, "             # <<<<<<<<<<<<<<
+ *         click.echo(f"Inferred read length {approx_read_length}, "             # <<<<<<<<<<<<<<
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)
  */
@@ -27259,7 +27259,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_Incompatible_checksums_s_vs_0xb0, __pyx_k_Incompatible_checksums_s_vs_0xb0, sizeof(__pyx_k_Incompatible_checksums_s_vs_0xb0), 0, 0, 1, 0},
   {&__pyx_n_s_IndexError, __pyx_k_IndexError, sizeof(__pyx_k_IndexError), 0, 0, 1, 1},
   {&__pyx_kp_s_Indirect_dimensions_not_supporte, __pyx_k_Indirect_dimensions_not_supporte, sizeof(__pyx_k_Indirect_dimensions_not_supporte), 0, 0, 1, 0},
-  {&__pyx_kp_u_Inferred_cead_length, __pyx_k_Inferred_cead_length, sizeof(__pyx_k_Inferred_cead_length), 0, 1, 0, 0},
+  {&__pyx_kp_u_Inferred_read_length, __pyx_k_Inferred_read_length, sizeof(__pyx_k_Inferred_read_length), 0, 1, 0, 0},
   {&__pyx_kp_s_Invalid_mode_expected_c_or_fortr, __pyx_k_Invalid_mode_expected_c_or_fortr, sizeof(__pyx_k_Invalid_mode_expected_c_or_fortr), 0, 0, 1, 0},
   {&__pyx_kp_s_Invalid_shape_in_axis_d_d, __pyx_k_Invalid_shape_in_axis_d_d, sizeof(__pyx_k_Invalid_shape_in_axis_d_d), 0, 0, 1, 0},
   {&__pyx_n_s_L, __pyx_k_L, sizeof(__pyx_k_L), 0, 0, 1, 1},

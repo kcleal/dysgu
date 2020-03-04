@@ -13,6 +13,7 @@ import pysam
 import sys
 import pickle
 import resource
+import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
 
 
@@ -290,31 +291,85 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
     return potential_events
 
 
-def mk_dest(d):
-    if d is not None and not os.path.exists(d):
+def pipe1(args, infile, kind, regions):
+
+    # inputbam, int max_cov, tree, read_threads, buffer_size
+    regions_only = False if args["regions_only"] == "False" else True
+
+    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
+                                            args["buffer_size"], regions_only,
+                                            kind == "stdin")
+    insert_median, insert_stdev, read_len = -1, -1, -1
+    if args["template_size"] != "":
         try:
-            os.mkdir(d)
+            insert_median, insert_stdev, read_len = list(map(int, args["template_size"].split(",")))
         except:
-            raise OSError("Couldn't create directory {}".format(d))
+            raise ValueError("Template-size must be in the format 'INT,INT,INT'")
+
+    insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
+                                                                 read_len)
+
+
+    max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
+
+    if args["merge_dist"] is None:
+        args["merge_dist"] = max_clust_dist
+
+    click.echo(f"Max clustering dist {max_clust_dist}", err=True)
+    event_id = 0
+    block_edge_events = []
+
+    for component in graph.construct_graph(genome_scanner,
+                                              infile,
+                                              max_dist=insert_median + (insert_stdev * 5),
+                                              clustering_dist=max_clust_dist,
+                                              minimizer_dist=8,
+                                              minimizer_support_thresh=args["z_depth"],
+                                              minimizer_breadth=args["z_breadth"],
+                                              k=21,
+                                              m=10,
+                                              clip_l=args["clip_length"],
+                                              min_support=args["min_support"],
+                                              procs=args["procs"],
+                                              debug=None):
+
+        potential_events = component_job(infile, component, regions, event_id, max_clust_dist, args["clip_length"],
+                                                  insert_median,
+                                                  insert_stdev,
+                                                  args["min_support"],
+                                                  args["merge_dist"],
+                                                  regions_only)
+
+        event_id += 1
+        block_edge_events += potential_events
+
+
+    preliminaries = []
+
+    # Merge across calls
+    if args["merge_within"] == "True":
+        merged = merge_events(block_edge_events, args["merge_dist"], regions,
+                                try_rev=False, pick_best=True)
+    merged = block_edge_events
+    if merged:
+        for event in merged:
+            # Collect coverage information
+            event_dict = call_component.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile) # regions_depth)
+
+            if event_dict:
+                preliminaries.append(event_dict)
+
+
+    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    preliminaries = sample_level_density(preliminaries, regions)
+
+    return preliminaries
 
 
 def cluster_reads(args):
     t0 = time.time()
     np.random.seed(1)
     random.seed(1)
-    try:
-        model = pickle.load(open(args["model"], "rb"))
-        click.echo("Model loaded from {}".format(args["model"]), err=True)
-    except UserWarning:
-        model = pickle.load(open(args["model"], "rb"))
-        click.echo("Model loaded, outdated model vs sklearn? {}".format(args["model"]), err=True)
-    except:
-        model = None
-        click.echo("No model loaded", err=True)
-
-    # mk_dest(args["dest"])
-    # if args["dest"] is None:
-    #     args["dest"] = "."
 
     kind = args["sv_aligns"].split(".")[-1]
     kind = "stdin" if kind == "-" else kind
@@ -326,7 +381,18 @@ def cluster_reads(args):
 
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
 
-    sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
+    if "RG" in infile.header:
+        rg = infile.header["RG"]
+        if len(rg) > 1:
+            click.echo("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]),
+                       err=True)
+        sample_name = rg[0]["SM"]
+
+    else:
+        sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
+        click.echo("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name), err=True)
+
+    click.echo("Sample name: {}".format(sample_name), err=True)
 
     if "insert_median" not in args and "I" in args:
         im, istd = map(float, args["I"].split(","))
@@ -344,142 +410,30 @@ def cluster_reads(args):
     _debug_k = []
     regions = io_funcs.overlap_regions(args["include"])
 
-    def pipe1():
+    # Run dysgu here:
+    events = pipe1(args, infile, kind, regions)
+    df = pd.DataFrame.from_records(events).sort_values(["kind", "chrA", "posA"])
 
-        t0 = time.time()
-        # inputbam, int max_cov, tree, read_threads, buffer_size
-        regions_only = False if args["regions_only"] == "False" else True
+    df["sample"] = [sample_name] * len(df)
+    df["id"] = range(len(df))
+    df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
 
-        genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
-                                                args["buffer_size"], regions_only,
-                                                kind == "stdin")
-        insert_median, insert_stdev, read_len = -1, -1, -1
-        if args["template_size"] != "":
-            try:
-                insert_median, insert_stdev, read_len = list(map(int, args["template_size"].split(",")))
-            except:
-                raise ValueError("Template-size must be in the format 'INT,INT,INT'")
+    if args["out_format"] == "csv":
+        df[io_funcs.col_names()].to_csv(outfile, index=False)
+    else:
 
-        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
-                                                                     read_len)
+        contig_header_lines = ""
+        for item in infile.header["SQ"]:
+            contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
 
-
-        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
-
-        if args["merge_dist"] is None:
-            args["merge_dist"] = max_clust_dist
-
-        click.echo(f"Max clustering dist {max_clust_dist}", err=True)
-        event_id = 0
-        block_edge_events = []
-
-        for component in graph.construct_graph(genome_scanner,
-                                                  infile,
-                                                  max_dist=insert_median + (insert_stdev * 5),
-                                                  clustering_dist=max_clust_dist,
-                                                  minimizer_dist=8,
-                                                  minimizer_support_thresh=args["z_depth"],
-                                                  minimizer_breadth=args["z_breadth"],
-                                                  k=21,
-                                                  m=10,
-                                                  clip_l=args["clip_length"],
-                                                  min_support=args["min_support"],
-                                                  procs=args["procs"],
-                                                  debug=None):
-
-            potential_events = component_job(infile, component, regions, event_id, max_clust_dist, args["clip_length"],
-                                                      insert_median,
-                                                      insert_stdev,
-                                                      args["min_support"],
-                                                      args["merge_dist"],
-                                                      regions_only)
-
-            event_id += 1
-            block_edge_events += potential_events
-
-        # Need to parallelize after the reads are collected, otherwise multiple file handles causes problems
-        # else:
-            # fileinfo = (args["sv_aligns"], opts[kind])
-            #
-            # with parallel_backend("multiprocessing"):
-            #
-            #     block_edges = Parallel(n_jobs=args["procs"],
-            #                            )(delayed(component_job)(fileinfo,  #infile,
-            #                                                      component,
-            #                                                      regions,
-            #                                                      event_id,
-            #                                                      max_dist,
-            #                                                      args["clip_length"],
-            #                                                      args["insert_median"],
-            #                                                      args["insert_stdev"],
-            #                                                      args["min_support"])
-            #                               for event_id, component in enumerate(cy_graph.construct_graph(infile,
-            #                                               int(args["insert_median"]),
-            #                                               int(max_dist),
-            #                                               regions,
-            #                                               minimizer_dist=args["read_length"],
-            #                                               k=21,
-            #                                               m=8,
-            #                                               clip_l=args["clip_length"],
-            #                                               input_windows=regions_merged,
-            #                                               buf_size=args["buffer_size"],
-            #                                               min_support=args["min_support"],
-            #                                               procs=args["procs"],
-            #                                               debug=None)))
-            #
-            # block_edge_events = [item for sublist in block_edges for item in sublist]
-
-        click.echo("Processed chunks {}s".format(round(time.time() - t0, 1)), err=True)
-
-        t0 = time.time()
-
-        preliminaries = []
-
-        # Merge across calls
-        if args["merge_within"] == "True":
-            merged = merge_events(block_edge_events, args["merge_dist"], regions,
-                                    try_rev=False, pick_best=True)
-        merged = block_edge_events
-        if merged:
-            for event in merged:
-                # Collect coverage information
-                event_dict = call_component.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile) # regions_depth)
-
-                if event_dict:
-                    preliminaries.append(event_dict)
-
-
-        preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-        preliminaries = sample_level_density(preliminaries, regions)
-
-        return preliminaries
-
-
-    preliminaries = pipe1()
-
-    classified_events_df = call_component.calculate_prob_from_model(preliminaries, model)
-
-    # "mark", "mark_seq", "mark_ed", "templated_ins_info",
-    #          "templated_ins_len",
-    # Out order
-    k = ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
-         "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
-         "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus", "Prob"]
-
-    c = 0
-    if classified_events_df is not None and len(classified_events_df) > 0:
-        c = len(classified_events_df)
-        classified_events_df["sample"] = [sample_name]*len(classified_events_df)
-        classified_events_df["id"] = range(len(classified_events_df))
-        classified_events_df = classified_events_df.rename(columns={"contig": "contigA", "contig2": "contigB"})
-        classified_events_df[k].to_csv(outfile, index=False)
+        args["add_kind"] = "True"
+        args["sample_name"] = sample_name
+        io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines)
 
     infile.close()
 
     click.echo("dysgu call {} complete, n={}, mem={} Mb, time={} h:m:s".format(
         args["sv_aligns"],
-        c,
+        len(df),
         int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
         str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)

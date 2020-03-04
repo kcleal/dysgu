@@ -290,7 +290,7 @@ class GenomeScanner:
         if insert_median == -1:
             insert_median, insert_stdev = get_insert_params(inserts)
 
-        click.echo(f"Inferred cead length {approx_read_length}, "
+        click.echo(f"Inferred read length {approx_read_length}, "
                    f"insert median {insert_median}, "
                    f"insert stdev {insert_stdev}", err=True)
         self.last_tell = tell

@@ -369,6 +369,8 @@ def dysgu_aligner(ctx, **kwargs):
 @cli.command("call")
 @click.argument('sv-aligns', required=True, type=click.Path(exists=False))
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
+@click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
+              show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept.", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
@@ -392,8 +394,6 @@ def dysgu_aligner(ctx, **kwargs):
               default=None, type=click.Path())
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
-@click.option("--model", help="A model trained with dysgu train", default=defaults["model"],
-              type=click.Path(), show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std)",
@@ -409,7 +409,7 @@ def call_events(ctx, **kwargs):
 @cli.command("view")
 @click.argument('input_files', required=True, type=click.Path(), nargs=-1)
 @click.option("-o", "svs_out", help="Output file, [default: stdout]", required=False, type=click.Path())
-@click.option("-f", "--out-format", help="Output format", default="csv", type=click.Choice(["csv", "vcf"]),
+@click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
 @click.option("--merge-across", help="Merge records across input samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)

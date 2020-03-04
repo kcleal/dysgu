@@ -4,12 +4,11 @@ from __future__ import absolute_import
 from collections import Counter, defaultdict
 import click
 import numpy as np
-from . import data_io, assembler, graph, coverage
+from dysgu import data_io, assembler, graph, coverage
 import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
-import pandas as pd
 
 
 def echo(*args):
@@ -1386,7 +1385,7 @@ def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min
         yield single(bam, data, insert_size, insert_stdev, clip_length, min_support, to_assemble=1)
 
 
-def get_raw_coverage_information(r, regions, regions_depth, infile):
+cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
 
     # Check if side A in regions
     ar = False  # c_io_funcs.intersecter_int_chrom
@@ -1484,45 +1483,3 @@ def get_raw_coverage_information(r, regions, regions_depth, infile):
         r["svlen"] = abs(r["posB"] - r["posA"])
     r["su"] = r["pe"] + r["supp"]
     return r
-
-
-def calculate_prob_from_model(all_rows, models):
-
-    if len(all_rows) == 0:
-        return
-
-    df = pd.DataFrame.from_records(all_rows).sort_values(["kind", "chrA", "posA"])
-
-    features = ['cipos95A', 'cipos95B', 'DP', 'DApri', 'DN', 'NMpri', 'NP', 'DAsupp', 'NMsupp', 'maxASsupp',
-                'contig1_exists', 'both_contigs_exist', 'contig2_exists', 'su', 'pe', 'supp', 'sc', 'block_edge', 'MAPQpri',
-                'MAPQsupp', 'raw_reads_10kb', 'gc', 'neigh', 'rep', 'rep_sc', 'ref_bases', 'svlen', 'plus', 'minus']
-    if not models:
-        df["Prob"] = [1] * len(df)  # Nothing to be done
-        return df
-
-    df["contig1_exists"] = [1 if str(c) != "None" else 0 for c in df["contig"]]
-    df["contig2_exists"] = [1 if str(c) != "None" else 0 for c in df["contig2"]]
-    df["both_contigs_exist"] = [1 if i == 1 and j == 1 else 0 for i, j in zip(df["contig1_exists"],
-                                                                              df["contig2_exists"])]
-
-    prob = []
-    for idx, grp in df.groupby("kind"):
-
-        X = grp[features].astype(float)
-        if idx in models:
-            clf = models[idx]
-            probs = clf.predict_proba(X)
-            prob_true = 1 - probs[:, 0]
-            prob += list(prob_true)
-
-        else:
-            # Choose highest probability out of trained models
-            pp = []
-            for k in models.keys():
-                pp.append(1 - models[k].predict_proba(X)[:, 0])
-            a = np.array(pp)
-            max_p = np.max(a, axis=0)
-            prob += list(max_p)
-
-    df["Prob"] = prob
-    return df.sort_values(["kind", "Prob"], ascending=[True, False])

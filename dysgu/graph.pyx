@@ -14,6 +14,7 @@ import pysam
 import sys
 import resource
 cimport numpy as c_np
+from cpython cimport array
 import array
 
 from libcpp.vector cimport vector
@@ -340,32 +341,10 @@ class PairedEndScoper:
 
 cdef class TemplateEdges:
 
-    # cdef public dict templates
-
     cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
 
     def __init__(self):
         pass
-        # self.templates = dict()
-        # self.templates_s = unordered_map[string, vector[int]]
-
-    # def add_(self, str template_name, int flag, int node, int query_start):
-    #     if flag & 64:
-    #         if template_name not in self.templates:
-    #             self.templates[template_name] = [[(query_start, node, flag)], []]
-    #         else:
-    #             self.templates[template_name][0].append((query_start, node, flag))
-    #     else:
-    #         if template_name not in self.templates:
-    #             self.templates[template_name] = [[], [(query_start, node, flag)]]
-    #         else:
-    #             self.templates[template_name][1].append((query_start, node, flag))
-    #
-    # cdef void add2_(self, str template_name, int flag, int node, int query_start):
-    #     if template_name not in self.templates:
-    #         self.templates[template_name] = array.array("L", (query_start, node, flag))
-    #     else:
-    #         self.templates[template_name].extend((query_start, node, flag))
 
     cdef inline void add(self, str template_name, int flag, int node, int query_start):
 
@@ -377,20 +356,6 @@ cdef class TemplateEdges:
         val.push_back(node)
         val.push_back(flag)
         self.templates_s[key].insert(self.templates_s[key].end(), val.begin(), val.end())
-
-        # if self.templates_s.find(key) == self.templates_s.end():
-        #
-        #     val.push_back(query_start)
-        #     val.push_back(node)
-        #     val.push_back(flag)
-        #     self.templates_s[key] = val
-        # else:
-        #
-        #     val2 = self.templates_s[key]
-        #     val2.push_back(query_start)
-        #     val2.push_back(node)
-        #     val2.push_back(flag)
-        #     self.templates_s[key] = val2 #.insert(end, val.begin(), val.end())
 
     def iterate_map(self):
 
@@ -473,7 +438,13 @@ cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges te
                 G.addEdge(primary1, primary2, w=1)
 
 
-class NodeToName:
+cdef class NodeToName:
+
+    cdef array.array h
+    cdef array.array f
+    cdef array.array p
+    cdef array.array c
+    cdef array.array t
 
     def __init__(self):
         # node names have the form (mmh3.hash(qname, 42), flag, pos, chrom, tell)
@@ -483,7 +454,7 @@ class NodeToName:
         self.c = array.array("H", [])
         self.t = array.array("l", [])
 
-    def append(self, n1):
+    cdef inline void append(self, tuple n1):
         self.h.append(n1[0])
         self.f.append(n1[1])
         self.p.append(n1[2])
@@ -523,8 +494,6 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     cdef int loci_dist = int(max_dist * 1.5)
     t0 = time.time()
-
-    # G = nk.graph.Graph(weighted=True)
 
     cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
 
@@ -647,7 +616,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                             #     echo("normal edge", node_name, other_node, current_overlaps_roi, next_overlaps_roi, chrom, pos, rnext, pnext)
                             #     echo(node_name, str(r.qname))
 
-    click.echo(f"Processed minimizers {time.time() - t0}", err=True)
+    # click.echo(f"Processed minimizers {time.time() - t0}", err=True)
 
     t2 = time.time()
 
@@ -657,20 +626,21 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     template_edges = None
     pe_scope = None
 
-    click.echo(f"Paired end info in {time.time() - t2}", err=True)
+    # click.echo(f"Paired end info in {time.time() - t2}", err=True)
 
     cdef dict component
 
     read_buffer = genome_scanner.read_buffer
 
-    click.echo("Constructed graph, processing block model", err=True)
-    for component in get_block_components(G, node_to_name, infile, read_buffer, min_support,
-                                          debug_nodes):
+    click.echo(f"Constructed graph, edges={G.edgeCount()}, {int(time.time() - t0)} s, processing block model", err=True)
+    for component in get_block_components(G, node_to_name, infile, read_buffer, min_support):
+                                          # debug_nodes):
         yield component
 
 
-def get_block_components(G, node_to_name, infile, dict read_buffer,
-                         int min_support, debug_nodes):
+def get_block_components(Py_SimpleGraph G, NodeToName node_to_name, infile, dict read_buffer,
+                         int min_support):
+                         #debug_nodes):
 
     # Turn graph into a block model, first split into connected components,
     # Then for each component, split into block nodes which are locally interacting nodes (black and grey edges)
@@ -679,6 +649,7 @@ def get_block_components(G, node_to_name, infile, dict read_buffer,
     cdef dict partitions, support_within, reads
     cdef int v, item_idx, item
 
+    t0 = time.time()
     cmp = G.connectedComponents()  # Flat array, components are separated by -1
 
     cc = []
@@ -688,7 +659,7 @@ def get_block_components(G, node_to_name, infile, dict read_buffer,
             cc.append((last_i, item_idx))
             last_i = item_idx + 1
 
-    t0 = time.time()
+
 
     cdef int cnt = 0
     for start_i, end_i in cc:
@@ -703,7 +674,7 @@ def get_block_components(G, node_to_name, infile, dict read_buffer,
         # for v in component:
         #     G.removeNode(v)
 
-    click.echo(f"Processed components n={cnt} {time.time() - t0}", err=True)
+    click.echo(f"Processed components n={cnt} {int(time.time() - t0)} s", err=True)
 
 
 cpdef dict get_reads(infile, dict sub_graph_reads):
@@ -736,20 +707,6 @@ cpdef dict get_reads(infile, dict sub_graph_reads):
             rd[int_node] = a
 
     return rd
-
-
-cdef list subgraph_from_nodes(G, list nodes):
-    # Mark all the vertices as not visited
-    edges_found = set([])
-    cdef int u, v
-    e = []
-    for u in nodes:
-        for v in G.neighbors(u):
-            if (u, v) in edges_found or (v, u) in edges_found:
-                continue
-            e.append((u, v, {"w": G.weight(u, v)}))
-            edges_found.add((u, v))
-    return e
 
 
 cdef tuple BFS_local(G, int source):
@@ -886,7 +843,8 @@ cdef tuple count_support_between(G, dict parts, int min_support):  # cpdef
     return counts, self_counts
 
 
-cdef dict proc_component(node_to_name, list component, dict read_buffer, infile, G, int min_support):
+cdef dict proc_component(NodeToName node_to_name, list component, dict read_buffer, infile, Py_SimpleGraph G,
+                         int min_support):
 
     n2n = {}
     reads = {}
@@ -940,6 +898,20 @@ cdef dict proc_component(node_to_name, list component, dict read_buffer, infile,
     # debug_component(component, node_to_name, support_between, support_within, G, partitions, {21},
     #                 subset=False)
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+
+
+cdef list subgraph_from_nodes(G, list nodes):
+    # Mark all the vertices as not visited
+    edges_found = set([])
+    cdef int u, v
+    e = []
+    for u in nodes:
+        for v in G.neighbors(u):
+            if (u, v) in edges_found or (v, u) in edges_found:
+                continue
+            e.append((u, v, {"w": G.weight(u, v)}))
+            edges_found.add((u, v))
+    return e
 
 
 def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets, subset=False):
