@@ -1399,12 +1399,11 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
     if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):
         br = True
 
-    # Put non-region first
-    kind = None
+
+    kind = "extra-regional"
 
     if not ar and not br:
-        kind = "extra-regional"
-        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:
+        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
             switch = True
 
         # Skip if regions have been provided; almost always false positives?

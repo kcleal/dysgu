@@ -1179,8 +1179,8 @@ typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
  * 
  * DTYPE = np.int64
  * ctypedef np.int64_t DTYPE_t             # <<<<<<<<<<<<<<
- * ctypedef cpp_vector[int] int_vec_t
- * ctypedef cpp_pair[int, int] get_val_result
+ * # ctypedef cpp_vector[int] int_vec_t
+ * # ctypedef cpp_pair[int, int] get_val_result
  */
 typedef __pyx_t_5numpy_int64_t __pyx_t_5dysgu_9assembler_DTYPE_t;
 /* Declarations.proto */
@@ -1272,33 +1272,6 @@ typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
  * # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
  */
 typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_get_val_result;
-
-/* "dysgu/assembler.pyx":33
- * DTYPE = np.int64
- * ctypedef np.int64_t DTYPE_t
- * ctypedef cpp_vector[int] int_vec_t             # <<<<<<<<<<<<<<
- * ctypedef cpp_pair[int, int] get_val_result
- * ctypedef cpp_pair[int, int] cpp_item
- */
-typedef std::vector<int>  __pyx_t_5dysgu_9assembler_int_vec_t;
-
-/* "dysgu/assembler.pyx":34
- * ctypedef np.int64_t DTYPE_t
- * ctypedef cpp_vector[int] int_vec_t
- * ctypedef cpp_pair[int, int] get_val_result             # <<<<<<<<<<<<<<
- * ctypedef cpp_pair[int, int] cpp_item
- * 
- */
-typedef std::pair<int,int>  __pyx_t_5dysgu_9assembler_get_val_result;
-
-/* "dysgu/assembler.pyx":35
- * ctypedef cpp_vector[int] int_vec_t
- * ctypedef cpp_pair[int, int] get_val_result
- * ctypedef cpp_pair[int, int] cpp_item             # <<<<<<<<<<<<<<
- * 
- * # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
- */
-typedef std::pair<int,int>  __pyx_t_5dysgu_9assembler_cpp_item;
 
 /* "dysgu/assembler.pyx":42
  * 
@@ -28771,7 +28744,7 @@ if (!__Pyx_RefNanny) {
  * 
  * DTYPE = np.int64             # <<<<<<<<<<<<<<
  * ctypedef np.int64_t DTYPE_t
- * ctypedef cpp_vector[int] int_vec_t
+ * # ctypedef cpp_vector[int] int_vec_t
  */
   __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 31, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);

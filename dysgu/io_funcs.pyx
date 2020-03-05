@@ -33,7 +33,7 @@ cdef char *basemap = [ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0
 np.random.seed(0)
 
 
-def reverse_complement(str seq, int seq_len):
+cpdef str reverse_complement(str seq, int seq_len):
     """https://bioinformatics.stackexchange.com/questions/3583/\
     what-is-the-fastest-way-to-get-the-reverse-complement-of-a-dna-sequence-in-pytho/3595#3595"""
 
@@ -48,7 +48,7 @@ def reverse_complement(str seq, int seq_len):
     return seq_dest[:seq_len].decode('UTF-8')
 
 
-def get_start_end(str cigar):
+cpdef tuple get_start_end(str cigar):
     c = re.split(r'(\d+)', cigar)[1:]  # Drop leading empty string
     cdef int end = 0
     cdef int start = 0
@@ -63,7 +63,7 @@ def get_start_end(str cigar):
     return start, end
 
 
-def get_align_end_offset(str cigar):
+cpdef int get_align_end_offset(str cigar):
     c = re.split(r'(\d+)', cigar)[1:]  # Drop leading empty string
     cdef int end = 0
     cdef int i
@@ -73,47 +73,76 @@ def get_align_end_offset(str cigar):
     return end
 
 
-def check_for_good_pairing(r1, r2, name, max_d):
+cdef tuple check_for_good_pairing(template):
+
     # Check to see if this pair of alignments needs pairing
+    r1 = template["inputdata"][0]
+    r2 = template["inputdata"][1]
+
     cdef int aflag = int(r1[0])
     cdef int bflag = int(r2[0])
 
+    if aflag & 4:
+        template["read1_unmapped"] = 1
+    if bflag & 4:
+        template["read2_unmapped"] = 1
+
     # Check if rnext and pnext set properly
     cdef int p1, p2
-    cdef int proper_pair = 0
+    cdef int proper_pair = 1 if aflag & 2 else 0
     cdef str dn = '250.0'
-    if r1[2] == r2[6] and r2[2] == r1[6]:  # Might not generalize for mappers other than bwa mem
+    # if r1[2] == r2[6] and r2[2] == r1[6]:  # Might not generalize for mappers other than bwa mem
 
-        p1 = int(r1[2])
+    if not proper_pair and not aflag & 12:  # Read unmapped/mate unmapped. Double check in case flag not set properly
+        p1 = int(r1[2])  # Position
         p2 = int(r2[2])
 
         if (aflag & 16 and not bflag & 16) or (not aflag & 16 and bflag & 16):  # Not on same strand
 
-            if abs(p1 - p2) < max_d:
+            if abs(p1 - p2) < template["max_d"]:
                 # Check for FR or RF orientation
                 if (p1 < p2 and (not aflag & 16) and (bflag & 16)) or (p2 <= p1 and (not bflag & 16) and (aflag & 16)):
                     proper_pair = 1
 
-        if proper_pair == 1:
-            dn = '0.0'
-        # Note DP and PS are clipped at 250
-        tags = ["SP:Z:0", "DA:i:100", "DP:Z:250.0", "DN:Z:" + dn, "PS:Z:250.0", "NP:Z:1.0", "DS:i:0"]
-        r1 += tags
-        r2 += tags
+    if proper_pair == 1:
+        dn = '0.0'
+    else:
+        dn = '250.0'
+    # Note DP and PS are clipped at 250
+    # tags = ["SP:Z:0", "DA:i:100", "DP:Z:250.0", "DN:Z:" + dn, "PS:Z:250.0", "NP:Z:1.0", "DS:i:0"]
 
-        return [r1, r2]
+    if aflag & 4 and bflag & 4:  # Read unmapped, mate unmapped
+        r1 += ["SP:Z:0", "DA:i:0", "DP:Z:0", "DN:Z:" + dn, "PS:Z:0", "NP:Z:0", "DS:i:0"]
+        r2 += ["SP:Z:0", "DA:i:0", "DP:Z:0", "DN:Z:" + dn, "PS:Z:0", "NP:Z:0", "DS:i:0"]
 
-    return 0
+    elif aflag & 4:
+        r1 += ["SP:Z:0", "DA:i:0", "DP:Z:0", "DN:Z:" + dn, "PS:Z:0", "NP:Z:0", "DS:i:0"]
+        r2 += ["SP:Z:0", "DA:i:100", "DP:Z:125", "DN:Z:" + dn, "PS:Z:125", "NP:Z:0", "DS:i:0"]
+
+    elif bflag & 4:
+        r1 += ["SP:Z:0", "DA:i:100", "DP:Z:125", "DN:Z:" + dn, "PS:Z:125", "NP:Z:0", "DS:i:0"]
+        r2 += ["SP:Z:0", "DA:i:0", "DP:Z:0", "DN:Z:" + dn, "PS:Z:0", "NP:Z:0", "DS:i:0"]
+
+    else:
+        r1 += ["SP:Z:0", "DA:i:100", "DP:Z:250", "DN:Z:" + dn, "PS:Z:250", "NP:Z:1", "DS:i:0"]
+        r2 += ["SP:Z:0", "DA:i:100", "DP:Z:250", "DN:Z:" + dn, "PS:Z:250", "NP:Z:1", "DS:i:0"]
+
+    # r1 += tags
+    # r2 += tags
+
+    return r1, r2
+
+    # return ()
 
 
-def sam_to_array(template):
+def sam_to_array(dict template):
     # Expect read1 and read2 alignments to be concatenated, not mixed together
     data, overlaps = list(zip(*template["inputdata"]))
     template["inputdata"] = [[i[1], i[2], i[3]] + i[4].strip().split("\t") for i in data]
 
     # If only one alignment for read1 and read2, no need to try pairing, just send sam to output
-    if len(data) == 2:
-        pair_str = check_for_good_pairing(template["inputdata"][0], template["inputdata"][1], template["name"], template["max_d"])
+    if template["paired_end"] and len(data) == 2:
+        pair_str = check_for_good_pairing(template)# template["inputdata"][0], template["inputdata"][1], template["name"], template["max_d"])
 
         if pair_str:
             template["passed"] = 1
@@ -134,14 +163,17 @@ def sam_to_array(template):
     cdef float bias = template["bias"]
 
     cdef int read1_strand_set, read2_strand_set, current_l
-    cdef int first_read2_index = len(template["inputdata"])
-    read1_set = 0  # Occationally multiple primaries, take the longest
+    cdef int first_read2_index = len(template["inputdata"]) + 1
+    read1_set = 0  # Occasionally multiple primaries, take the longest
     read2_set = 0
 
     for idx in range(len(template["inputdata"])):
 
         l = template["inputdata"][idx]
 
+        flag = int(l[0])
+        pos = int(l[2])  # Add hard clips
+        # click.echo((idx, flag, template["paired_end"]), err=True)
         if l[1] != "*":
             chromname = l[1]
             template["last_seen_chrom"] = chromname
@@ -151,13 +183,16 @@ def sam_to_array(template):
         if chromname not in chrom_ids:
             chrom_ids[chromname] = cc
             cc += 1
+
         arr[idx, 0] = chrom_ids[chromname]  # l.rname  # chrom name
 
-        pos = int(l[2])  # Add hard clips
         arr[idx, 1] = pos  # l.pos
         arr[idx, 5] = idx
-        flag = int(l[0])
+
         arr[idx, 6] = -1 if flag & 16 else 1  # Flag
+
+        if idx == 0 and flag & 4:
+            template["read1_unmapped"] = 1
 
         # Sometimes both first and second are not flagged. Assume first
         if not flag & 64 and not flag & 128:
@@ -169,6 +204,8 @@ def sam_to_array(template):
                 arr[idx, 7] = 2
                 if idx < first_read2_index:
                     first_read2_index = idx
+                    if flag & 4:
+                        template["read2_unmapped"] = 1
 
         tags = [i.split(":") for i in l[11:]]
         seq_len = len(l[8])
@@ -186,6 +223,7 @@ def sam_to_array(template):
         current_l = len(l[9])
 
         if template["paired_end"]:
+
             if flag & 64 and read1_set < current_l and len(l[8]) > 1:  # First in pair
                 template["read1_seq"] = l[8]
                 template["read1_q"] = l[9]
@@ -194,7 +232,8 @@ def sam_to_array(template):
                 if not (flag & 256 or flag & 2048):  # Set primary read strand
                     template["read1_reverse"] = 1 if flag & 16 else 0
 
-            elif flag & 128 and read2_set < current_l and len(l[8]) > 1:  # First in pair
+            elif flag & 128 and read2_set < current_l and len(l[8]) > 1:  # Second in pair
+
                 template["read2_seq"] = l[8]
                 template["read2_q"] = l[9]
                 template["read2_length"] = seq_len
@@ -211,47 +250,35 @@ def sam_to_array(template):
 
         cigar = l[4]
         if not cigar:
-            query_start = 0  # Unmapped read, no cigar
+            query_start = 0  # Unmapped read? no cigar
             query_end = 0
         else:
             query_start, query_end = get_start_end(cigar)
 
             # If current alignment it not primary, and on different strand from primary, count from other end
             if template["paired_end"]:
-                # if flag & 256 or flag & 2048:  # Todo is this right? Are primary reads counted from end too?
-                    if flag & 64 and template["read1_reverse"] != bool(flag & 16):
-                        start_temp = template["read1_length"] - query_end
-                        query_end = start_temp + query_end - query_start
-                        query_start = start_temp
-                            # Different strand to primary, count from end
-                            # new_end = template["read1_length"] - query_start
-                            # new_start = template["read1_length"] - query_end
-                            # query_start = new_start
-                            # query_end = new_end
+                if flag & 64 and template["read1_reverse"] != bool(flag & 16):
+                    start_temp = template["read1_length"] - query_end
+                    query_end = start_temp + query_end - query_start
+                    query_start = start_temp
 
-                    elif flag & 128 and (template["read2_reverse"] != bool(flag & 16)):
-                        # new_end = template["read2_length"] - query_start
-                        # new_start = template["read2_length"] - query_end
-                        # query_start = new_start
-                        # query_end = new_end
-                        start_temp = template["read2_length"] - query_end
-                        query_end = start_temp + query_end - query_start
-                        query_start = start_temp
+                elif flag & 128 and (template["read2_reverse"] != bool(flag & 16)):
+                    start_temp = template["read2_length"] - query_end
+                    query_end = start_temp + query_end - query_start
+                    query_start = start_temp
 
             if not template["paired_end"]:
-                # click.echo(("qstart", query_start, query_end, template["read1_length"]), err=True)
                 if flag & 16:  # Single end Reverse strand, count from end
                     start_temp = template["read1_length"] - query_end
                     query_end = start_temp + query_end - query_start
                     query_start = start_temp
 
 
-
-        # if template["name"] == "1-WT-parent_length_367_mean_cov_5.17711171662":
-        #     click.echo((int(query_start), int(query_end), flag, template["paired_end"]), err=True)
         arr[idx, 2] = query_start
         arr[idx, 3] = query_end  # query_start + query_end
 
+    if first_read2_index == len(arr) + 1:
+        template["paired_end"] = 0
 
     # Save any input fastq information
     fq1, fq2 = template["inputfq"]
@@ -274,15 +301,12 @@ def sam_to_array(template):
                 arr[j, 3] += template['read1_length']
 
             if arr[j, 3] > template["read1_length"] + template["read2_length"]:
-                click.echo((template["read1_length"], template["read2_length"]), err=True)
-                click.echo(arr[j, 3], err=True)
+                # click.echo((template["read1_length"], template["read2_length"]), err=True)
+                # click.echo(arr[j, 3], err=True)
                 raise ValueError
     #np.random.shuffle(arr)  # Randomize order of chromosomes
     template["first_read2_index"] = first_read2_index
-    # if template["name"] == "1-WT-parent_length_367_mean_cov_5.17711171662":
-    #     click.echo(template["name"], err=True)
-    #     for roww in arr:
-    #         click.echo(list(roww.astype(int)), err=True)
+
     template['data'] = np.array(sorted(arr, key=lambda x: (x[2], -x[4]))).astype(float)
     template['chrom_ids'] = chrom_ids
     # quit()
@@ -291,12 +315,19 @@ def sam_to_array(template):
     return 0
 
 
-def choose_supplementary(template):
-
+cpdef choose_supplementary(dict template):
+    # Final alignments have been chosen, but need to decide which is supplementary
     cdef int j = 0
     template['ri'] = dict(zip(template['data'][:, 5], range(len(template['data']))))  # Map of row_index and array index
-
-    cdef np.ndarray[long, ndim=1] actual_rows = np.array([template['ri'][j] for j in template['rows']]).astype(int)
+    cdef np.ndarray[long, ndim=1] actual_rows
+    try:
+        actual_rows = np.array([template['ri'][j] for j in template['rows']]).astype(int)
+    except:
+        click.echo(template["ri"], err=True)
+        click.echo(template["rows"], err=True)
+        click.echo(template["inputdata"], err=True)
+        click.echo((template["read1_unmapped"], template["read2_unmapped"]), err=True)
+        quit()
     cdef np.ndarray[double, ndim=2] d = template['data']  #[actual_rows, :]  # np.float_t is double
 
     cdef double read1_max = 0
@@ -336,9 +367,9 @@ def choose_supplementary(template):
     template['locs'] = locs
 
 
-def score_alignments(template, ri, np.ndarray[np.int64_t, ndim=1]  template_rows, np.ndarray[DTYPE_t, ndim=2] template_data):
+cpdef void score_alignments(dict template, ri, np.ndarray[np.int64_t, ndim=1]  template_rows, np.ndarray[DTYPE_t, ndim=2] template_data):
     # Scans all alignments for each query, slow for long reads but ok for short read data
-
+    # Used for DN, similar to XS
     all_xs = []
     cdef int i, actual_row, item, idx
     cdef float xs = -1

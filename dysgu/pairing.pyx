@@ -1,285 +1,417 @@
-#cython: language_level=3
+#cython: language_level=3, boundscheck=False, wraparound=False
+#distutils: language=c++
 
 """
 Find the best path through a collection of alignments
-Works with paried-end reads rather or single contigs. Borrows the pairing heuristic from bwa.
+Works with paried-end reads or single contigs. Borrows the pairing heuristic from bwa.
 """
 from __future__ import absolute_import
-import sys
-import numpy as np
-import os
+
 import click
-from dysgu import align_path
+import array
+from cpython cimport array
+import numpy as np
+cimport numpy as np
+from libc.math cimport exp, log, sqrt, fabs
+from libcpp.vector cimport vector
 
 
-def read_orientations(t, r1_len, r2_len):
+#DTYPE = np.int
+#ctypedef np.int_t DTYPE_t
+DTYPE = np.float
+ctypedef np.float_t DTYPE_t
+
+
+cdef float erfcc(float x) nogil:
+    """Complementary error function."""
+    cdef float z, t, r, p1, p2, p3, p4, p5, p6, p7, p8, p9
+    z = fabs(x)
+    t = (1. / (1. + 0.5*z))
+    p1 = -.82215223+t*.17087277
+    p2 = 1.48851587+t*p1
+    p3 = -1.13520398+t*p2
+    p4 = .27886807+t*p3
+    p5 = -.18628806+t*p4
+    p6 = .09678418+t*p5
+    p7 = .37409196+t*p6
+    p8 = 1.00002368+t*p7
+    p9 = 1.26551223+t*p8
+    r = t * exp(-z*z-p9)
+    if x >= 0.:
+        return r
+    else:
+        return 2. - r
+
+
+cdef float normcdf(float x, float mu, float sigma) nogil:
+    cdef float t, y
+    t = x-mu
+    y = 0.5*erfcc(-t/(sigma*sqrt(2.0)))
+    if y > 1.0:
+        y = 1.0
+    return y
+
+
+cdef int is_proper_pair(float d, float pos1, float pos2, float strand1, float strand2, float mu, float sigma) nogil:
+
+    if d <= (mu + 4*sigma):
+        if pos1 < pos2 and strand1 == 1. and strand2 == -1.:
+            return 1
+        if pos2 < pos1 and strand2 == 1. and strand1 == -1.:
+            return 1
+    return 0
+
+
+cdef float bwa_pair_score(float d, float mu, float sigma, float match_score, float u) nogil:
     """
-    # This code prooves that the orientation of the read dowesnt matter, only the order of the reads:
-    # Permute all orientations, [AB|CD] + AB|DC, BA|DC, BA|CD
-    ab, cd = [t[t[:, 7] == 1], t[t[:, 7] == 2]]
-
-    # Make AB reversed
-    ba = ab.copy()
-    s, e = ba[:, 2].copy(), ba[:, 3].copy()
-    ba[:, 2] = r1_l - e
-    ba[:, 3] = r1_l - s
-    ba = np.flipud(ba)
-
-    # Make CD reversed
-    dc = cd.copy()
-    dc[:, 2:4] -= r1_l
-    s, e = dc[:, 2].copy(), dc[:, 3].copy()
-    dc[:, 2] = r2_l - e
-    dc[:, 3] = r2_l - s
-    dc[:, 2:4] += r1_l
-    dc = np.flipud(dc)
-
-    # Add combos
-    ori.append(np.concatenate([ab, dc]))
-    ori.append(np.concatenate([ba, dc]))
-    ori.append(np.concatenate([ba, cd]))
-
-    These 3 plus the original, produce two sets of identical paths; therefore only the order of reads is important
+    Calculate the bwa pairing cost
+    :param distance: seperation distance
+    :param mu: insert size mean
+    :param sigma: insert size std
+    :param match_score: score gained from a matched base
+    :param u: constant parameter, worst cost possible
+    :return: The bwa pairing cost (float), whether the read is FR (int)
     """
-    yield t
+    cdef float prob, c
+    prob = (1 - normcdf(d, mu, sigma))
+    c = -match_score * (log(prob)/log(4))
+    if c < u:
+        return c
+    else:
+        return u
 
-    read1_arr, read2_arr = [t[t[:, 7] == 1], t[t[:, 7] == 2]]
-    read2_arr[:, 2:4] -= r1_len
-    read1_arr[:, 2:4] += r2_len
 
-    yield np.concatenate([read2_arr, read1_arr])
+cdef tuple optimal_path(
+                 np.ndarray[DTYPE_t, ndim=2] segments,
+                 float contig_length,
+                 float mu,
+                 float sigma,
+                 float max_insertion=100,
+                 float min_aln=20,
+                 float max_homology=100,
+                 float ins_cost=1,
+                 float hom_cost=3,
+                 float inter_cost=2,
+                 float U=9,
+                 float match_score=1,
+                 float clipping_penalty=0):
+    """
+    The scoring has become quite complicated.
+     = Last alignment score - jump cost
+
+    where each jump has a cost:
+    jump cost = S + microhomology_length + insertion_length        # S = 10 for intra, 20 for inter
+
+    The last score takes into account mismatched and gaps
+
+    :param mapped:  The input dataframe with candidate alignments
+    :param contig_length:   Length of the contig
+    :param max_insertion: Arbitrary high number
+    :param min_aln: The minimum sequence which is not part of a microhomology overlap
+    :param max_homology: Arbitrary high number
+    :return: tuple
+    """
+
+    # Start at first node then start another loop running backwards through the preceeding nodes.
+    # Choose the best score out of the in edges.
+    # Use a special start and end node to score the first and last alignments
+
+    cdef np.ndarray[np.int_t, ndim=1] pred = np.zeros(segments.shape[0], dtype=np.int)
+    cdef np.ndarray[np.float_t, ndim=1] node_scores = np.zeros(segments.shape[0], dtype=np.float)
+    # Next best node score, for finding the secondary path
+    cdef np.ndarray[np.float_t, ndim=1] nb_node_scores = np.zeros(segments.shape[0], dtype=np.float)
+
+    normal_jumps = set([])  # Keep track of which alignments form 'normal' pairs between read-pairs. Alas native python
+
+    cdef int i, j, p, normal_end_index, proper_pair # FR,
+    cdef float chr1, pos1, start1, end1, score1, row_index1, strand1, r1,\
+               chr2, pos2, start2, end2, score2, row_index2, strand2, r2, \
+               micro_h, ins, best_score, next_best_score, best_normal_orientation, current_score, total_cost,\
+               S, sc, max_s, path_score, jump_cost, distance
+
+    # Deal with first score
+    for i in range(segments.shape[0]):
+        node_scores[i] = segments[i, 4] - (segments[i, 2] * ins_cost)
+
+    pred.fill(-1)
+    nb_node_scores.fill(-1e6)  # Must set to large negative, otherwise a value of zero can imply a path to that node
+
+    best_score = 0  # Declare here in case only 1 alignment
+    next_best_score = 0
+    best_normal_orientation = 0  # Keep track of the best normal pairing score, F first R second
+    normal_end_index = -1  # Keep track of the last normal-index for updating the normal-score later on
+
+    # start from segment two because the first has been scored
+    for i in range(1, segments.shape[0]):
+        chr1 = segments[i, 0]
+        pos1 = segments[i, 1]
+        start1 = segments[i, 2]
+        end1 = segments[i, 3]
+        score1 = segments[i, 4]
+        row_index1 = segments[i, 5]
+        strand1 = segments[i, 6]
+        r1 = segments[i, 7]
+
+        p = -1  # -1 means there is no presecessor
+        best_score = score1 - (start1 * ins_cost)  # Implies all preceding alignments skipped!
+        next_best_score = - (start1 * ins_cost)  # Worst case
+
+        # Walking backwards mean the search may be terminated at some point
+        for j in range(i-1, -1, -1):
+
+            chr2 = segments[j, 0]
+            pos2 = segments[j, 1]
+            start2 = segments[j, 2]
+            end2 = segments[j, 3]
+            score2 = segments[j, 4]
+            row_index2 = segments[j, 5]
+            strand2 = segments[j, 6]
+            r2 = segments[j, 7]
+
+            # Allow alignments with minimum sequence and max overlap
+            if start1 > end2 - max_homology and end1 > end2 + min_aln and start1 - start2 > min_aln:
+
+                if start1 > end2 and start1 - end2 > max_insertion:
+                    continue
+
+                # Microhomology and insertion lengths between alignments on same read only
+                micro_h = 0
+                ins = 0
+                if r1 == r2:
+                    micro_h = end2 - start1
+                    if micro_h < 0:
+                        ins = fabs(micro_h)
+                        micro_h = 0
+
+                # Define jump cos
+                proper_pair = 0
+                if chr1 == chr2:
+                    if r1 == r2:  # If the jump occurs on the same read, means there is an SV
+                        jump_cost = U
+
+                    else:
+                        distance = fabs(pos1 - pos2)
+                        proper_pair = is_proper_pair(distance, pos1, pos2, strand1, strand2, mu, sigma)
+                        if proper_pair:
+                            jump_cost = bwa_pair_score(distance, mu, sigma, match_score, U)
+
+                            normal_jumps.add((i, j))  # Keep track of normal pairings on the path
+                        else:
+                            jump_cost = U
+
+                else:
+                    jump_cost = inter_cost + U
+
+                # Calculate score, last_score = node_scores[j]
+                total_cost = (micro_h * hom_cost) + (ins * ins_cost) + jump_cost
+                S = score1 - total_cost  # Score 1 is 'ahead' in the sort order from sc2
+
+                current_score = node_scores[j] + S
+
+                # Update best score and next best score
+                if current_score > best_score:
+                    next_best_score = best_score
+                    best_score = current_score
+
+                    p = j
+
+                elif current_score > next_best_score:
+                    next_best_score = current_score
+
+                if proper_pair:
+                    if current_score > best_normal_orientation:
+                        best_normal_orientation = current_score
+                        normal_end_index = i  # index i is towards the right-hand side of the array
+
+        node_scores[i] = best_score
+        pred[i] = p
+        nb_node_scores[i] = next_best_score
+
+    # Update the score for jumping to the end of the sequence
+    # Basically calculates what the best and secondary scores are for the 'virtual' end node
+    cdef float node_to_end_cost
+    cdef float secondary
+    cdef float right_clip = 0
+    cdef float cst = 0
+    path_score = -(contig_length * ins_cost)  # Worst case
+    secondary = float(path_score)
+    end_i = -1
+    for i in range(segments.shape[0]):
+
+        node_to_end_cost = node_scores[i] - (ins_cost * right_clip) # cst
+
+        if node_to_end_cost > path_score:
+            path_score = node_to_end_cost
+            end_i = i
+        elif node_to_end_cost > secondary:
+            secondary = node_to_end_cost
+
+        if i == normal_end_index:  # Update the best normal score, deals with right-hand-side soft-clips
+            best_normal_orientation = node_to_end_cost
+
+    # Need to check if any branches from main path have a higher secondary than the 'virtual' end node
+    # This can happen if the secondary path joins the main path within the graph, rather than at the end node.
+
+    cdef float dis_2_end = 0  # Can be negative if the last node has an insertion before the end (soft-clip)
+    cdef float s, potential_secondary
+
+    # Use STL vector instead of list for possible speedup. Doesnt compile using pyximport in pairing script
+    cdef vector[int] v
+    cdef int normal_pairings = 0
+    cdef int last_i
+    cdef int next_i
+    if end_i != -1:
+
+        v.push_back(end_i)
+        while True:
+            last_i = v.back()
+            next_i = pred[last_i]
+            if next_i == -1:
+                break
+            v.push_back(next_i)
+
+            if (last_i, next_i) in normal_jumps:
+                normal_pairings += 1
+
+            s = nb_node_scores[next_i]
+            dis_2_end = path_score - node_scores[next_i]  # Distance of main path to the end
+            potential_secondary = dis_2_end + s
+
+            if potential_secondary > secondary:
+                secondary = potential_secondary
+
+    cdef np.ndarray[np.int_t, ndim=1] a = np.empty(len(v), dtype=np.int)
+    for i in range(<int>v.size()):
+        a[v.size() - 1 - i] = v[i]  # Virtual reversal of the indexes array
+
+    if secondary < 0:
+        secondary = 0
+    if path_score < 0:
+        path_score = 0
+    if best_normal_orientation < 0:
+        best_normal_orientation = 0
+
+    return segments[a, 5], path_score, secondary, best_normal_orientation, normal_pairings
 
 
-def process(rt):
+cpdef tuple process(dict rt):
     """
     Assumes that the reads are ordered read1 then read2, in the FR direction
     :param rt: Read_template object, contains all parameters within the pairing_params array
+    :returns 5-tuple: list path, float length, float second_best, float dis_to_normal, float norm_pairings
     """
-    # if rt["name"] == "HISEQ2500-10:539:CAV68ANXX:7:2204:21140:9933":
-    #     click.echo(rt, err=True)
-    #     quit()
+
+    pp = [float(i) for i in  rt["pairing_params"]]
 
     r1_len = rt['read1_length']
     r2_len = rt['read2_length']
-    if not rt["paired_end"]:
-        single_end = True
-        contig_l = r1_len
-    else:
-        if r2_len is None and r1_len:
-            single_end = True
-            contig_l = r1_len
-        elif r1_len is None and r2_len:
-            single_end = True
-            contig_l = r2_len
-        elif r1_len is None and r2_len is None:
-            return False
-        else:
-            single_end = False
-            contig_l = r1_len + r2_len
+    cdef int single_end = 0
+    cdef int contig_l = 0
 
+    cdef float max_insertion = pp[0]
+    cdef float min_aln = pp[1]
+    cdef float max_homology = pp[2]
+    cdef float ins_cost = pp[3]
+    cdef float hom_cost = pp[4]
+    cdef float inter_cost = pp[5]
+    cdef float U = pp[6]
+    cdef float match_score = rt["match_score"]
+
+    cdef np.ndarray[DTYPE_t, ndim=2] read1_arr, read2_arr, t, t2
+
+    cdef float mu, sigma
     mu, sigma = rt['isize']
 
-    pp = [float(i) for i in  rt["pairing_params"]]
-    max_insertion = pp[0]
-    min_aln = pp[1]
-    max_homology = pp[2]
-    ins_cost = pp[3]
-    hom_cost = pp[4]  # 2
-    inter_cost = pp[5]  # 10
-    U = pp[6]
-    match_score = rt["match_score"]
+    t = rt['data'][:, 0:8]
 
-    args = [contig_l, mu, sigma, max_insertion, min_aln, max_homology, ins_cost,
-            hom_cost, inter_cost, U, match_score]
+    if not rt["paired_end"]:
 
-    table = rt['data'][:, range(8)]
+        if rt["read1_unmapped"]:
+            return [0], 0, 0, 125, 0
 
-    if not single_end:
-
-        # If it is unclear which read comes first this function can be used to generate both orientations:
-        both_ways = []
-        for r in read_orientations(table, r1_len, r2_len):
-            a_res = align_path.optimal_path(r, *args)
-            if len(a_res) > 0:
-                if a_res[1] == a_res[4] and len(a_res[0]) == 2 and a_res[1] - a_res[2] > U:
-                    # Cant do better. Normal pairing with 2 good alignments
-                    return a_res
-            both_ways.append(a_res)
-
-        if len(both_ways) == 0:
-            return False
-        path, length, second_best, dis_to_normal, norm_pairings = sorted(both_ways, key=lambda x: x[1])[-1]  # Best
+        single_end = 1
+        contig_l = r1_len
+        return optimal_path(t, contig_l, mu, sigma, max_insertion, min_aln, max_homology, ins_cost,
+                            hom_cost, inter_cost, U, match_score)
 
     else:
-        path, length, second_best, dis_to_normal, norm_pairings = align_path.optimal_path(table, *args)
+        if (r1_len is None and r2_len is None) or (rt["read1_unmapped"] and rt["read2_unmapped"]):
+            return [0, rt['first_read2_index']], 0, 0, 250, 0
 
-    if int(length) < int(second_best):
-        sys.stderr.write("WARNING: primary path < secondary path\n")
+        elif rt["read2_unmapped"]:
 
-    # if length < 0:  # Todo make a minimum allowed alignment score
-    #     return False  # Drop template, couldnt align properly
+            single_end = 1
+            contig_l = r1_len
 
-    # Todo second best can be negative?
-    return path, length, second_best, dis_to_normal, norm_pairings
+            read1_arr = t[t[:, 7] == 1]
+
+            path1, length1, second_best1, dis_to_normal1, norm_pairings1 = optimal_path(read1_arr, contig_l, mu, sigma,
+                                                                                          max_insertion, min_aln,
+                                                                                          max_homology, ins_cost,
+                                                                                          hom_cost, inter_cost, U,
+                                                                                          match_score)
+
+            path1 = np.array(list(path1) + [rt['first_read2_index']]).astype(np.float)
+            return path1, length1, second_best1, dis_to_normal1, norm_pairings1
 
 
-if __name__ == "__main__":
-    array = np.array
-    rt = {'paired_end': 1, 'bias': 1.15, 'fq_read2_seq': 0, 'isize': (250.0, 50.0), 'read2_q': 'BBCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGFGCGGGEGGFGGGGGGGGGGCFGE', 'max_d': 450.0, 'read2_seq': 'TCTGTAGATCTTCTTTGGTGAAGTGTCTGTTCAGATCTGTGTGCATTTTTAATTGACAAATGACACAGAAGGTTGATATACACAGAAGAAATGACAATGTGGATTTCTTAATATTTACAGTTTAT', 'chrom_ids': {'chr6': 10, 'chr4': 8, 'chr2': 4, 'chr1': 1, 'chr8': 9, 'chr13': 6, 'chr11': 13, 'chr10': 7, 'chr17': 3, 'chr16': 12, 'chr20': 11, 'chr21': 0, 'chr22': 2, 'chr19': 5}, 'read2_length': 125, 'passed': 0, 'replace_hard': 0, 'read2_reverse': 0, 'inputdata': [['65', 'chr21', '46696680', '0', '125M', 'chr19', '248503', '0', 'GATCTGTATTTTGCAAATATTTTCTTCAATATGTGGCTTGTCTTTTTGTTCTCTTGACAAAGTCTCTTCCAGAGTATAAACTGTAAATATTAAGAAATCCACATTGTCATTTCTTCTGTGTATAT', 'CBCCCGGGGGGGGGGGGGGGGGGGG@GGGGGGGGGGGGGGGGGGGGGGGGGGGGGFEGGGGGGGGGGG1<@FDGGEGGGG>FGGCG>GGGGFF0B>DG>>EDFGGGGD@GGGGGGEFGGGG>GDG', 'NM:i:1', 'MD:Z:60G64', 'AS:i:120', 'XS:i:120'], ['321', 'chr1', '248942783', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:1', 'MD:Z:60G64', 'AS:i:120'], ['321', 'chr22', '50805037', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:1', 'MD:Z:60G64', 'AS:i:120'], ['321', 'chr17', '83246855', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:2', 'MD:Z:41G18G64', 'AS:i:115'], ['321', 'chr2', '242180718', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:2', 'MD:Z:55A4G64', 'AS:i:115'], ['321', 'chr19', '58605076', '0', '125M', '=', '248503', '-58356574', '*', '*', 'NM:i:2', 'MD:Z:55A4G64', 'AS:i:115'], ['321', 'chr13', '114351467', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:2', 'MD:Z:55A4G64', 'AS:i:115'], ['321', 'chr10', '133784627', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:2', 'MD:Z:55A4G64', 'AS:i:115'], ['321', 'chr4', '190201925', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:2', 'MD:Z:55A4G64', 'AS:i:115'], ['337', 'chr19', '248523', '0', '125M', '=', '248503', '-145', '*', '*', 'NM:i:3', 'MD:Z:64C4T8C46', 'AS:i:110'], ['337', 'chr8', '208316', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:3', 'MD:Z:64C4T8C46', 'AS:i:110'], ['321', 'chr6', '170607571', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:3', 'MD:Z:55A4G21T42', 'AS:i:110'], ['337', 'chr2', '113605836', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:3', 'MD:Z:64C4T25G29', 'AS:i:110'], ['321', 'chr20', '64284388', '0', '125M', 'chr19', '248503', '0', '*', '*', 'NM:i:5', 'MD:Z:55A1G2G21T4G37', 'AS:i:100'], ['129', 'chr19', '248503', '0', '55S70M', 'chr21', '46696680', '0', 'TCTGTAGATCTTCTTTGGTGAAGTGTCTGTTCAGATCTGTGTGCATTTTTAATTGACAAATGACACAGAAGGTTGATATACACAGAAGAAATGACAATGTGGATTTCTTAATATTTACAGTTTAT', 'BBCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGFGCGGGEGGFGGGGGGGGGGCFGE', 'NM:i:0', 'MD:Z:70', 'AS:i:70', 'XS:i:70', 'SA:Z:chr21,46696564,+,55M70S,0,0;'], ['401', 'chr1', '248942858', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr22', '50805112', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr2', '242180793', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr21', '46696755', '0', '70M55S', '=', '46696680', '-145', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr4', '190202000', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr13', '114351542', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['385', 'chr2', '113605816', '0', '55S70M', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr17', '83246930', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['385', 'chr8', '208296', '0', '55S70M', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr19', '58605151', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr10', '133784702', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:70', 'AS:i:70'], ['401', 'chr6', '170607646', '0', '70M55S', 'chr21', '46696680', '0', '*', '*', 'NM:i:2', 'MD:Z:7T49T12', 'AS:i:60'], ['2177', 'chr21', '46696564', '0', '55M70S', '=', '46696680', '117', 'TCTGTAGATCTTCTTTGGTGAAGTGTCTGTTCAGATCTGTGTGCATTTTTAATTGACAAATGACACAGAAGGTTGATATACACAGAAGAAATGACAATGTGGATTTCTTAATATTTACAGTTTAT', 'BBCCCGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGFGCGGGEGGFGGGGGGGGGGCFGE', 'NM:i:0', 'MD:Z:55', 'AS:i:55', 'XS:i:55', 'SA:Z:chr19,248503,+,55S70M,0,0;'], ['385', 'chr22', '50804924', '0', '55M70S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:55', 'AS:i:55'], ['385', 'chr1', '248942667', '0', '55M70S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:55', 'AS:i:55'], ['401', 'chr2', '113606022', '0', '70S55M', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:55', 'AS:i:55'], ['385', 'chr17', '83246739', '0', '55M70S', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:55', 'AS:i:55'], ['385', 'chr19', '58604960', '0', '55M70S', 'chr21', '46696680', '0', '*', '*', 'NM:i:1', 'MD:Z:21G33', 'AS:i:50'], ['385', 'chr20', '64284271', '0', '55M70S', 'chr21', '46696680', '0', '*', '*', 'NM:i:1', 'MD:Z:21G33', 'AS:i:50'], ['401', 'chr1', '77234119', '0', '91S34M', 'chr21', '46696680', '0', '*', '*', 'NM:i:0', 'MD:Z:34', 'AS:i:34'], ['401', 'chr16', '1251048', '0', '87S30M2I6M', 'chr21', '46696680', '0', '*', '*', 'NM:i:2', 'MD:Z:36', 'AS:i:31'], ['401', 'chr11', '126671620', '0', '87S38M', 'chr21', '46696680', '0', '*', '*', 'NM:i:2', 'MD:Z:31A0C5', 'AS:i:31'], ['385', 'chr16', '1235361', '0', '38M87S', 'chr21', '46696680', '0', '*', '*', 'NM:i:2', 'MD:Z:3C2T31', 'AS:i:31']], 'fq_read1_q': 0, 'fq_read2_q': 0, 'read1_reverse': 0, 'read1_q': 'CBCCCGGGGGGGGGGGGGGGGGGGG@GGGGGGGGGGGGGGGGGGGGGGGGGGGGGFEGGGGGGGGGGG1<@FDGGEGGGG>FGGCG>GGGGFF0B>DG>>EDFGGGGD@GGGGGGEFGGGG>GDG', 'read1_length': 125, 'data': array([[ 0.00000000e+00,  4.66966800e+07,  0.00000000e+00,
-         1.25000000e+02,  1.37999997e+02,  0.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.20000000e+02],
-       [ 1.00000000e+00,  2.48942783e+08,  0.00000000e+00,
-         1.25000000e+02,  1.20000000e+02,  1.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.20000000e+02],
-       [ 2.00000000e+00,  5.08050370e+07,  0.00000000e+00,
-         1.25000000e+02,  1.20000000e+02,  2.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.20000000e+02],
-       [ 3.00000000e+00,  8.32468550e+07,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  3.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 4.00000000e+00,  2.42180718e+08,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  4.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 5.00000000e+00,  5.86050760e+07,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  5.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 6.00000000e+00,  1.14351467e+08,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  6.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 7.00000000e+00,  1.33784627e+08,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  7.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 8.00000000e+00,  1.90201925e+08,  0.00000000e+00,
-         1.25000000e+02,  1.15000000e+02,  8.00000000e+00,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.15000000e+02],
-       [ 5.00000000e+00,  2.48523000e+05,  0.00000000e+00,
-         1.25000000e+02,  1.10000000e+02,  9.00000000e+00,
-        -1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.10000000e+02],
-       [ 9.00000000e+00,  2.08316000e+05,  0.00000000e+00,
-         1.25000000e+02,  1.10000000e+02,  1.00000000e+01,
-        -1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.10000000e+02],
-       [ 1.00000000e+01,  1.70607571e+08,  0.00000000e+00,
-         1.25000000e+02,  1.10000000e+02,  1.10000000e+01,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.10000000e+02],
-       [ 4.00000000e+00,  1.13605836e+08,  0.00000000e+00,
-         1.25000000e+02,  1.10000000e+02,  1.20000000e+01,
-        -1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.10000000e+02],
-       [ 1.10000000e+01,  6.42843880e+07,  0.00000000e+00,
-         1.25000000e+02,  1.00000000e+02,  1.30000000e+01,
-         1.00000000e+00,  1.00000000e+00,  0.00000000e+00,
-         1.00000000e+02],
-       [ 0.00000000e+00,  4.66965640e+07,  1.25000000e+02,
-         1.80000000e+02,  6.32499987e+01,  2.70000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.50000000e+01],
-       [ 2.00000000e+00,  5.08049240e+07,  1.25000000e+02,
-         1.80000000e+02,  5.50000000e+01,  2.80000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.50000000e+01],
-       [ 1.00000000e+00,  2.48942667e+08,  1.25000000e+02,
-         1.80000000e+02,  5.50000000e+01,  2.90000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.50000000e+01],
-       [ 4.00000000e+00,  1.13606022e+08,  1.25000000e+02,
-         1.80000000e+02,  5.50000000e+01,  3.00000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.50000000e+01],
-       [ 3.00000000e+00,  8.32467390e+07,  1.25000000e+02,
-         1.80000000e+02,  5.50000000e+01,  3.10000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.50000000e+01],
-       [ 5.00000000e+00,  5.86049600e+07,  1.25000000e+02,
-         1.80000000e+02,  5.00000000e+01,  3.20000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.00000000e+01],
-       [ 1.10000000e+01,  6.42842710e+07,  1.25000000e+02,
-         1.80000000e+02,  5.00000000e+01,  3.30000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         5.00000000e+01],
-       [ 1.00000000e+00,  7.72341190e+07,  1.25000000e+02,
-         1.59000000e+02,  3.40000000e+01,  3.40000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         3.40000000e+01],
-       [ 1.20000000e+01,  1.25104800e+06,  1.25000000e+02,
-         1.63000000e+02,  3.10000000e+01,  3.50000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         3.10000000e+01],
-       [ 1.30000000e+01,  1.26671620e+08,  1.25000000e+02,
-         1.63000000e+02,  3.10000000e+01,  3.60000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         3.10000000e+01],
-       [ 1.20000000e+01,  1.23536100e+06,  1.25000000e+02,
-         1.63000000e+02,  3.10000000e+01,  3.70000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         3.10000000e+01],
-       [ 0.00000000e+00,  4.66967550e+07,  1.80000000e+02,
-         2.50000000e+02,  8.04999983e+01,  1.80000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 5.00000000e+00,  2.48503000e+05,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  1.40000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 1.00000000e+00,  2.48942858e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  1.50000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 2.00000000e+00,  5.08051120e+07,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  1.60000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 4.00000000e+00,  2.42180793e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  1.70000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 8.00000000e+00,  1.90202000e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  1.90000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 6.00000000e+00,  1.14351542e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.00000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 4.00000000e+00,  1.13605816e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.10000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 3.00000000e+00,  8.32469300e+07,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.20000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 9.00000000e+00,  2.08296000e+05,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.30000000e+01,
-         1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 5.00000000e+00,  5.86051510e+07,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.40000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 7.00000000e+00,  1.33784702e+08,  1.80000000e+02,
-         2.50000000e+02,  7.00000000e+01,  2.50000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         7.00000000e+01],
-       [ 1.00000000e+01,  1.70607646e+08,  1.80000000e+02,
-         2.50000000e+02,  6.00000000e+01,  2.60000000e+01,
-        -1.00000000e+00,  2.00000000e+00,  0.00000000e+00,
-         6.00000000e+01]]), 'name': 'HISEQ2500-10:539:CAV68ANXX:7:2204:21140:9933', 'fq_read1_seq': 0, 'match_score': 1.0, 'read1_seq': 'GATCTGTATTTTGCAAATATTTTCTTCAATATGTGGCTTGTCTTTTTGTTCTCTTGACAAAGTCTCTTCCAGAGTATAAACTGTAAATATTAAGAAATCCACATTGTCATTTCTTCTGTGTATAT', 'last_seen_chrom': 'chr16', 'score_mat': {}, 'pairing_params': (150.0, 17.0, 150.0, 0.1, 3.0, 2.0, 9.0)}
+        elif rt["read1_unmapped"]:
 
-    print(process(rt))
+            single_end = 1
+            contig_l = r2_len
 
-    for row in rt["data"]:
-        print(list(row.astype(int)))
+            read2_arr = t[t[:, 7] == 2]
+
+            path2, length2, second_best2, dis_to_normal2, norm_pairings2 = optimal_path(read2_arr, contig_l, mu, sigma,
+                                                                                          max_insertion, min_aln,
+                                                                                          max_homology, ins_cost,
+                                                                                          hom_cost, inter_cost, U,
+                                                                                          match_score)
+
+            first_i = rt['first_read2_index']
+            path2 = np.array([0] + list(path2)).astype(np.float)
+            return path2, length2, second_best2, dis_to_normal2, norm_pairings2
+
+        else:
+            single_end = 0
+            contig_l = r1_len + r2_len
+
+
+
+
+
+    # if not single_end:
+
+            path1, length1, second_best1, dis_to_normal1, norm_pairings1 = optimal_path(t, contig_l, mu, sigma,
+                                                                                              max_insertion, min_aln,
+                                                                                              max_homology, ins_cost,
+                                                                                              hom_cost, inter_cost, U,
+                                                                                              match_score)
+
+
+            if length1 == norm_pairings1 and len(path1) == 2 and length1 - second_best1 > U:
+                return path1, length1, second_best1, dis_to_normal1, norm_pairings1
+
+
+            read1_arr, read2_arr = [t[t[:, 7] == 1], t[t[:, 7] == 2]]
+            read2_arr[:, 2:4] -= r1_len
+            read1_arr[:, 2:4] += r2_len
+            t2 = np.concatenate([read2_arr, read1_arr])
+
+            path2, length2, second_best2, dis_to_normal2, norm_pairings2 = optimal_path(t2, contig_l, mu, sigma,
+                                                                                              max_insertion, min_aln,
+                                                                                              max_homology, ins_cost,
+                                                                                              hom_cost, inter_cost, U,
+                                                                                              match_score)
+
+            if length2 > length1:
+                return path2, length2, second_best2, dis_to_normal2, norm_pairings2
+            else:
+                return path1, length1, second_best1, dis_to_normal1, norm_pairings1
+
+
+    #
+    # else:
+    #     return optimal_path(t, contig_l, mu, sigma, max_insertion, min_aln, max_homology, ins_cost,
+    #                                    hom_cost, inter_cost, U, match_score)
 

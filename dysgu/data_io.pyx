@@ -17,7 +17,7 @@ def mk_dest(d):
             raise OSError("Couldn't create directory {}".format(d))
 
 
-def make_template(rows, args, max_d, last_seen_chrom, fq):
+cpdef dict make_template(list rows, dict args, float max_d, str last_seen_chrom, fq):
     # Make a pickle-able data object for multiprocessing
     return {"isize": (args["insert_median"], args["insert_stdev"]),
             "max_d": max_d,
@@ -44,34 +44,21 @@ def make_template(rows, args, max_d, last_seen_chrom, fq):
             "fq_read1_seq": 0,
             "fq_read2_seq": 0,
             "fq_read1_q": 0,
-            "fq_read2_q": 0
+            "fq_read2_q": 0,
+            "read1_unmapped": 0,
+            "read2_unmapped": 0
             }
 
 
-def to_output(template):
+cpdef list to_output(dict template):
 
     if "outstr" in template:
-        return template["outstr"]
+        return list(template["outstr"])
 
-    # Todo make sure all read-pairs have a mapping, otherwise write an unmapped
-    sam = samclips.fixsam(template)
-
-    if len(sam) == 0:  # Todo fix unmapped reads
-        template["passed"] = 0
-        return ""
-
-    # if len(sam) == 1:  # Todo deal with these
-    #     click.echo("Single alignment only", err=True)
-    #    return None
-
-    if any(i[0] == "*" or i[4] == "*" for i in sam):
-        template["passed"] = 0
-        return ""
-
-    return sam
+    return samclips.fixsam(template)
 
 
-def sam_to_str(template_name, sam):
+def sam_to_str(str template_name, list sam):
     return "".join(template_name + "\t" + "\t".join(i) + "\n" for i in sam)
 
 
@@ -234,7 +221,7 @@ def iterate_mappings(args, version):
     name = ""
     rows = []
     header_string = next(inputstream)
-    header_string += "@PG\tID:fnfi\tPN:fnfi align\tVN:{}\tCL:{}\n".format(version, arg_str)
+    header_string += "@PG\tID:DYSGU\tPN:dysgu choose\tVN:{}\tCL:{}\n".format(version, arg_str)
 
     yield header_string
 
@@ -250,9 +237,6 @@ def iterate_mappings(args, version):
             if len(rows) > 0:
                 total += 1
                 fq = fq_getter(fq_iter, name, args, fq_buffer)
-
-                # if name == "HISEQ2500-10:539:CAV68ANXX:7:2211:10642:81376":
-                #     click.echo("io", err=True)
 
                 yield (rows, args, max_d, last_seen_chrom, fq)
 

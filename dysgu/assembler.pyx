@@ -30,9 +30,9 @@ def echo(*args):
 
 DTYPE = np.int64
 ctypedef np.int64_t DTYPE_t
-ctypedef cpp_vector[int] int_vec_t
-ctypedef cpp_pair[int, int] get_val_result
-ctypedef cpp_pair[int, int] cpp_item
+# ctypedef cpp_vector[int] int_vec_t
+# ctypedef cpp_pair[int, int] get_val_result
+# ctypedef cpp_pair[int, int] cpp_item
 
 # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t

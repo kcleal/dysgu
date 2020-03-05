@@ -412,23 +412,25 @@ def cluster_reads(args):
 
     # Run dysgu here:
     events = pipe1(args, infile, kind, regions)
-    df = pd.DataFrame.from_records(events).sort_values(["kind", "chrA", "posA"])
+    df = pd.DataFrame.from_records(events)
+    if len(df) > 0:
+        df = df.sort_values(["kind", "chrA", "posA"])
 
-    df["sample"] = [sample_name] * len(df)
-    df["id"] = range(len(df))
-    df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
+        df["sample"] = [sample_name] * len(df)
+        df["id"] = range(len(df))
+        df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
 
-    if args["out_format"] == "csv":
-        df[io_funcs.col_names()].to_csv(outfile, index=False)
-    else:
+        if args["out_format"] == "csv":
+            df[io_funcs.col_names()].to_csv(outfile, index=False)
+        else:
 
-        contig_header_lines = ""
-        for item in infile.header["SQ"]:
-            contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
+            contig_header_lines = ""
+            for item in infile.header["SQ"]:
+                contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
 
-        args["add_kind"] = "True"
-        args["sample_name"] = sample_name
-        io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines)
+            args["add_kind"] = "True"
+            args["sample_name"] = sample_name
+            io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines)
 
     infile.close()
 
