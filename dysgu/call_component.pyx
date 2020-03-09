@@ -15,7 +15,7 @@ def echo(*args):
     click.echo(args, err=True)
 
 
-cdef dict count_attributes(list reads1, list reads2, int min_support):
+cdef dict count_attributes(reads1, reads2, int min_support):
 
     if len(reads1) == 0:
         raise ValueError("No reads in set")
@@ -90,7 +90,7 @@ cdef dict count_attributes(list reads1, list reads2, int min_support):
     return r
 
 
-cdef dict fetch_reads(dict data, d, bam):
+cdef dict fetch_reads(data, d, bam):
 
     input_reads = data["reads"]
     dta_n2n = data["n2n"]
@@ -106,7 +106,7 @@ cdef dict fetch_reads(dict data, d, bam):
     return input_reads
 
 
-def guess_informative_pair(aligns):
+cdef tuple guess_informative_pair(aligns):
 
     if len(aligns) == 2:
         # Make sure aligns map different break points
@@ -151,7 +151,7 @@ def guess_informative_pair(aligns):
     return b, a
 
 
-cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_length, int min_support,
+cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int to_assemble=1):
     # Make sure at least one read is worth calling
     cdef int min_distance = insert_size + (2*insert_stdev)
@@ -279,7 +279,7 @@ cdef dict single(infile, dict data, int insert_size, int insert_stdev, int clip_
     return info
 
 
-def informative_pair(u, v):
+cdef tuple informative_pair(u, v):
 
     pri_u = None
     pri_v = None
@@ -950,7 +950,7 @@ cdef void classify_d(AlignmentItem v):
                 different_read(v)
 
 
-cdef tuple break_ops(list positions, list precise, int limit, float median_pos):
+cdef tuple break_ops(positions, precise, int limit, float median_pos):
 
     ops = []
     cdef int i
@@ -988,7 +988,7 @@ cdef tuple break_ops(list positions, list precise, int limit, float median_pos):
     return break_point, cipos95
 
 
-cdef dict make_call(list informative, list breakA_precise, list breakB_precise, str svtype, str jointype,
+cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointype,
                     int insert_size, int insert_stdev):
     # Inspired by mosdepth algorithm +1 for start -1 for end using intervals where break site could occur
     # Use insert size to set a limit on where break site could occur
@@ -1040,7 +1040,7 @@ cdef dict make_call(list informative, list breakA_precise, list breakB_precise, 
             "preciseA": True if cipos95A == 0 else False, "preciseB": True if cipos95B == 0 else False}
 
 
-cdef tuple mask_soft_clips(int aflag, int bflag, list a_ct, list b_ct):
+cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
 
     # Find out which soft clip pairs are compatible with the chosen read pair
 
@@ -1232,7 +1232,7 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
     return dc
 
 
-cdef dict one_edge(infile, list u_reads, list v_reads, int clip_length, int insert_size, int insert_stdev,
+cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, int insert_stdev,
                    int min_support, int block_edge=1, assemble=True):
 
     attrs = count_attributes(u_reads, v_reads, min_support)
@@ -1273,7 +1273,7 @@ cdef dict one_edge(infile, list u_reads, list v_reads, int clip_length, int inse
     return info
 
 
-def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, int min_support):
+cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
@@ -1281,15 +1281,12 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
     seen = set(data["parts"].keys())
 
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
+
+    events = []
     for (u, v), d in data["s_between"].items():
 
         input_reads = fetch_reads(data, d, bam)  # {Node: alignment,..}
 
-        #     echo("main edge")
-        #     for nodename in d[u]:
-        #         echo(nodename, str(input_reads[nodename]))
-        #     for nodename in d[v]:
-        #         echo(nodename, str(input_reads[nodename]))
         rd_u = []
         for n in d[u]:
             try:
@@ -1315,11 +1312,8 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             seen.remove(u)
         if v in seen:
             seen.remove(v)
-        # if 5371604 in d[u] or 5371604 in d[v]:
-        #     echo("u, v", u, v)
-        #     echo(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev))
 
-        yield one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support)
+        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support))
 
     # Process any unconnected blocks
     if seen:
@@ -1340,7 +1334,7 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
                 if len(rds) < min_support:
                     continue
 
-                yield single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True)
+                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True))
 
     # Check for events within clustered nodes - happens rarely
     for k, d in data["s_within"].items():
@@ -1362,27 +1356,27 @@ def multi(dict data, bam, int insert_size, int insert_stdev, int clip_length, in
             if len(rds) < min_support:
                 continue
 
-            yield single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True)
+            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True))
+
+    return events
 
 
-def call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support):
+cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support):
 
     n_parts = len(data["parts"])
-    # n_reads = len(data["reads"])
-    # if 279 in data["reads"]:
-    # echo("reads and parts", n_reads, n_parts)
-    # echo(data["reads"])
-    # quit()
+
+    events = []
     if n_parts >= 1:
         # Processed single edges and break apart connected
-        for event in multi(data, bam, insert_size, insert_stdev, clip_length, min_support):
-        # if 279 in data["reads"]:
-        #     echo("called2", event)
-            yield event
+        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support)
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-        yield single(bam, data, insert_size, insert_stdev, clip_length, min_support, to_assemble=1)
+        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support, to_assemble=1)
+        if e:
+            events.append(e)
+
+    return events
 
 
 cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):

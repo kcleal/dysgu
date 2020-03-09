@@ -1,5 +1,5 @@
 #distutils: language = c++
-#cython: language_level = 3
+#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 """
 A basic assembler. Takes an overlap graph and merges reads in-place in a POA style. Different soft-clipped regions
 are then overlapped and 'linked'.
@@ -28,8 +28,8 @@ from dysgu cimport map_set_utils
 def echo(*args):
     click.echo(args, err=True)
 
-DTYPE = np.int64
-ctypedef np.int64_t DTYPE_t
+# DTYPE = np.int64
+# ctypedef np.int64_t DTYPE_t
 # ctypedef cpp_vector[int] int_vec_t
 # ctypedef cpp_pair[int, int] get_val_result
 # ctypedef cpp_pair[int, int] cpp_item
@@ -80,17 +80,14 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
                     else:
                         n = G.addNode()
-                        # n_ = SG.addNode()
 
                         if n >= nweight.size():
                             nweight.push_back(0)
 
-                        # ndict[n] = k  #
                         ndict_r[k] = n  #
 
                     nweight[n] += qual
                     if prev_node != -1:
-                        # G.addEdge(prev_node, n)
 
                         if not G.hasEdge(prev_node, n):
                             G.addEdge(prev_node, n)
@@ -110,16 +107,13 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
                     else:
                         n = G.addNode()
-                        # n_ = SG.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
 
-                        # ndict[n] = k
                         ndict_r[k] = n
 
                     nweight[n] += qual
                     if prev_node != -1:
-                        # G.addEdge(prev_node, n)
 
                         if not G.hasEdge(prev_node, n):
                             G.addEdge(prev_node, n)
@@ -141,16 +135,13 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
                 else:
                     n = G.addNode()
-                    # n_ = SG.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
-                    # ndict[n] = k
                     ndict_r[k] = n
 
                 nweight[n] += qual
                 if prev_node != -1:
-                    # G.addEdge(prev_node, n)
 
                     if not G.hasEdge(prev_node, n):
                         G.addEdge(prev_node, n)
@@ -178,17 +169,13 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
                 else:
                     n = G.addNode()
-                    # n_ = SG.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
-                    # ndict[n] = k
                     ndict_r[k] = n
-                    #
 
                 nweight[n] += qual
                 if prev_node != -1:
-                    # G.addEdge(prev_node, n)
                     if not G.hasEdge(prev_node, n):
                         G.addEdge(prev_node, n)
 
@@ -207,7 +194,6 @@ cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     cdef cpp_vector[int] new_nodes
     cdef cpp_vector[int] neighbors
     cdef int v, n, w
-
 
     for v in range(G.numberOfNodes()):#G.nodes():     # process all vertices in G
         if explored.has_key(v) == 1:
@@ -272,7 +258,7 @@ cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_vis
 
         # Find best incoming node scores, best inEdge, and also best predecessor node
 
-        neighborList = G.forInEdgesOf(u) # [(node_scores[pred], pred, n_weights[pred]) for pred in G.forInEdgesOf(u)]
+        neighborList = G.forInEdgesOf(u)
 
         if neighborList.size() == 0:
             node_scores[u] = node_weight
@@ -299,31 +285,6 @@ cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_vis
 
         if best_local_i != -1:
             pred_trace2.insert(u, best_local_i)
-
-        # neighborList = []
-        #
-        # G.forInEdgesOf(u, lambda unode, pred, edgeweight, edgeid: neighborList.append((node_scores[pred], pred,
-        #                                                                                n_weights[pred])))
-
-        # if len(neighborList) == 0:
-        #     node_scores[u] = node_weight
-        #     if node_weight >= best_score:
-        #         best_score = node_weight
-        #         best_node = u
-        #     continue
-        #
-        # # Sum of best path in graph
-        # maxi = neighborList.index(max(neighborList))
-        # score = node_weight + neighborList[maxi][0]
-        # node_scores[u] = score
-        # if score >= best_score:
-        #     best_score = score
-        #     best_node = u
-        #
-        # # Also track best weighted local node
-        # maxi = neighborList.index(max(neighborList, key=lambda x: x[2]))
-        # pred_trace2.insert(u, neighborList[maxi][1])
-
 
 
     if best_node == -1:
@@ -466,7 +427,7 @@ cpdef dict base_assemble(rd):
             "bamrname": rd[0].rname}
 
 
-cdef float compute_rep(str seq):
+cdef float compute_rep(seq):
 
     last_visited = {}
     tot = []
@@ -499,7 +460,7 @@ cdef float compute_rep(str seq):
     return sum(tot) / len(tot)
 
 
-cdef tuple get_rep(str contig_seq):
+cdef tuple get_rep(contig_seq):
 
     cdef int left_clip_end = 0
     cdef int right_clip_start = 0
@@ -535,7 +496,7 @@ cdef tuple get_rep(str contig_seq):
 
 
 
-cpdef list contig_info(list events):
+cpdef list contig_info(events):
 
     cdef int i, aligned, seen, aligned_bases
     cdef float gc_count, seq_length

@@ -149,7 +149,7 @@ class GenomeScanner:
         self.procs = read_threads
         self.buff_size = buffer_size
 
-        # self.bam_iter = self.input_bam #inputbam.fetch(until_eof=True)
+        self.bam_iter = self.input_bam #inputbam.fetch(until_eof=True)
 
         self.current_bin = []
         self.current_cov = 0
@@ -258,7 +258,7 @@ class GenomeScanner:
         cdef float approx_read_length
 
 
-        for a in self.input_bam: #self.bam_iter:
+        for a in self.bam_iter:
 
             tell = 0 if self.no_tell else self.input_bam.tell()
             if self.no_tell:
@@ -266,10 +266,12 @@ class GenomeScanner:
             if len(approx_read_length_l) < 100000:
                 flag = a.flag
                 if a.seq is not None:
+                    rl = a.infer_read_length()
+                    if rl:
+                        approx_read_length_l.append(rl)
+                        if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
 
-                    if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
-                        approx_read_length_l.append(a.infer_read_length())
-                        inserts.append(a.tlen)
+                            inserts.append(a.tlen)
 
             else:
                 break

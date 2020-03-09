@@ -292,7 +292,7 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
 
 
 def pipe1(args, infile, kind, regions):
-
+    t6 = time.time()
     # inputbam, int max_cov, tree, read_threads, buffer_size
     regions_only = False if args["regions_only"] == "False" else True
 
@@ -319,7 +319,15 @@ def pipe1(args, infile, kind, regions):
     event_id = 0
     block_edge_events = []
 
-    for component in graph.construct_graph(genome_scanner,
+    echo("begin time", time.time() - t6)
+
+    min_support = args["min_support"]
+    read_buffer = genome_scanner.read_buffer
+
+
+
+    t5 = time.time()
+    G, node_to_name = graph.construct_graph(genome_scanner,
                                               infile,
                                               max_dist=insert_median + (insert_stdev * 5),
                                               clustering_dist=max_clust_dist,
@@ -329,21 +337,42 @@ def pipe1(args, infile, kind, regions):
                                               k=21,
                                               m=10,
                                               clip_l=args["clip_length"],
-                                              min_support=args["min_support"],
+                                              min_support=min_support,
                                               procs=args["procs"],
-                                              debug=None):
+                                              debug=None)
+    echo("graph time", time.time() - t5)
 
-        potential_events = component_job(infile, component, regions, event_id, max_clust_dist, args["clip_length"],
-                                                  insert_median,
-                                                  insert_stdev,
-                                                  args["min_support"],
-                                                  args["merge_dist"],
-                                                  regions_only)
+    cdef int cnt = 0
 
-        event_id += 1
-        block_edge_events += potential_events
+    t0 = time.time()
+    cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer, min_support)
 
 
+
+    for start_i, end_i in cc:
+        cnt += 1
+        if end_i - start_i >= min_support:
+            component = list(cmp[start_i: end_i])
+
+
+            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, min_support)
+            # Res is a dict
+            # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+
+            potential_events = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
+                                                      insert_median,
+                                                      insert_stdev,
+                                                      args["min_support"],
+                                                      args["merge_dist"],
+                                                      regions_only)
+
+            if potential_events:
+                event_id += 1
+                block_edge_events += potential_events
+
+    echo("components", time.time() - t0)
+
+    t3 = time.time()
     preliminaries = []
 
     # Merge across calls
@@ -362,7 +391,7 @@ def pipe1(args, infile, kind, regions):
 
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = sample_level_density(preliminaries, regions)
-
+    echo("time3", time.time() - t3)
     return preliminaries
 
 
@@ -411,8 +440,14 @@ def cluster_reads(args):
     regions = io_funcs.overlap_regions(args["include"])
 
     # Run dysgu here:
+
+    t4 = time.time()
     events = pipe1(args, infile, kind, regions)
+    echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
+
+
+
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])
 
@@ -433,7 +468,7 @@ def cluster_reads(args):
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines)
 
     infile.close()
-
+    echo(time.time() - t0)
     click.echo("dysgu call {} complete, n={}, mem={} Mb, time={} h:m:s".format(
         args["sv_aligns"],
         len(df),

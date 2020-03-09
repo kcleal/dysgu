@@ -26,11 +26,11 @@ cdef extern from "wrap_map_set2.h" nogil:
         DiGraph() nogil
 
         int addNode()
-        int hasEdge(int, int) nogil
-        void addEdge(int, int) nogil
-        int numberOfNodes() nogil
-        cpp_vector[int] forInEdgesOf(int) nogil
-        cpp_vector[int] neighbors(int) nogil
+        int hasEdge(int, int)
+        void addEdge(int, int)
+        int numberOfNodes()
+        cpp_vector[int] forInEdgesOf(int)
+        cpp_vector[int] neighbors(int)
 
 
 
@@ -38,12 +38,12 @@ cdef class Py_DiGraph:
     """DiGraph, no weight"""
     cdef DiGraph *thisptr
 
-    cdef int addNode(self) nogil
-    cdef int hasEdge(self, int u, int v) nogil
-    cdef void addEdge(self, int u, int v) nogil
-    cdef int numberOfNodes(self) nogil
-    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil
-    cdef cpp_vector[int] neighbors(self, int u) nogil
+    cdef int addNode(self)
+    cdef int hasEdge(self, int u, int v)
+    cdef void addEdge(self, int u, int v)
+    cdef int numberOfNodes(self)
+    cdef cpp_vector[int] forInEdgesOf(self, int u)
+    cdef cpp_vector[int] neighbors(self, int u)
 
 
 cdef extern from "wrap_map_set2.h":
@@ -145,3 +145,4 @@ cdef tuple clip_sizes(r)
 
 
 cdef int cigar_clip(r, int clip_length)
+

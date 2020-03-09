@@ -28,17 +28,17 @@ cdef class Py_DiGraph:
     def __dealloc__(self):
         del self.thisptr
 
-    cdef int addNode(self) nogil:
+    cdef int addNode(self):
         return self.thisptr.addNode()
-    cdef int hasEdge(self, int u, int v) nogil:
+    cdef int hasEdge(self, int u, int v):
         return self.thisptr.hasEdge(u, v)
-    cdef void addEdge(self, int u, int v) nogil:
+    cdef void addEdge(self, int u, int v):
         self.thisptr.addEdge(u, v)
-    cdef int numberOfNodes(self) nogil:
+    cdef int numberOfNodes(self):
         return self.thisptr.numberOfNodes()
-    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+    cdef cpp_vector[int] forInEdgesOf(self, int u):
         return self.thisptr.forInEdgesOf(u)
-    cdef cpp_vector[int] neighbors(self, int u) nogil:
+    cdef cpp_vector[int] neighbors(self, int u):
         return self.thisptr.neighbors(u)
 
 

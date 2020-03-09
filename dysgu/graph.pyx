@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8
+#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
 from __future__ import absolute_import
 import time
@@ -57,7 +57,7 @@ cdef class Table:
     cdef vector[c_np.int64_t] values
 
     cpdef void add(self, int s, int e, int v):
-        with nogil:
+        # with nogil:
             self.starts.push_back(s)
             self.ends.push_back(e)
             self.values.push_back(v)
@@ -138,7 +138,7 @@ class ClipScoper:
         self.minimizer_support_thresh = minimizer_support_thresh
         self.minimizer_matches = minimizer_breadth
 
-    def _add_m_find_candidates(self, set clip_set, int name, int idx):
+    def _add_m_find_candidates(self, clip_set, int name, int idx):
         # idx 0 is for left clips, 1 is for right clips
         target_counts = defaultdict(int)
         cdef int find_candidate = 1
@@ -346,7 +346,7 @@ cdef class TemplateEdges:
     def __init__(self):
         pass
 
-    cdef inline void add(self, str template_name, int flag, int node, int query_start):
+    cdef void add(self, str template_name, int flag, int node, int query_start):
 
         cdef vector[int] val
         cdef bytes key = bytes(template_name, encoding="utf8")
@@ -446,7 +446,7 @@ cdef class NodeToName:
     cdef array.array c
     cdef array.array t
 
-    def __init__(self):
+    def __cinit__(self):  # Possibly use a vector of structs instead
         # node names have the form (mmh3.hash(qname, 42), flag, pos, chrom, tell)
         self.h = array.array("l", [])  # signed long
         self.f = array.array("H", [])  # unsigned short
@@ -454,7 +454,7 @@ cdef class NodeToName:
         self.c = array.array("H", [])
         self.t = array.array("l", [])
 
-    cdef inline void append(self, tuple n1):
+    cdef void append(self, n1):
         self.h.append(n1[0])
         self.f.append(n1[1])
         self.p.append(n1[2])
@@ -495,7 +495,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     cdef int loci_dist = int(max_dist * 1.5)
     t0 = time.time()
 
-    cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
+    G = map_set_utils.Py_SimpleGraph()
 
     # debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
 
@@ -616,29 +616,35 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                             #     echo("normal edge", node_name, other_node, current_overlaps_roi, next_overlaps_roi, chrom, pos, rnext, pnext)
                             #     echo(node_name, str(r.qname))
 
-    # click.echo(f"Processed minimizers {time.time() - t0}", err=True)
+    click.echo(f"Processed minimizers {time.time() - t0}", err=True)
 
     t2 = time.time()
 
     add_template_edges(G, template_edges)
 
     # Free mem
-    template_edges = None
-    pe_scope = None
+    # template_edges = None
+    # pe_scope = None
+    click.echo(f"Paired end info in {time.time() - t2}", err=True)
 
-    # click.echo(f"Paired end info in {time.time() - t2}", err=True)
-
-    cdef dict component
-
-    read_buffer = genome_scanner.read_buffer
-
-    click.echo(f"Constructed graph, edges={G.edgeCount()}, {int(time.time() - t0)} s, processing block model", err=True)
-    for component in get_block_components(G, node_to_name, infile, read_buffer, min_support):
-                                          # debug_nodes):
-        yield component
+    return G, node_to_name
 
 
-def get_block_components(Py_SimpleGraph G, NodeToName node_to_name, infile, dict read_buffer,
+
+    # cdef dict component
+
+
+
+    # read_buffer = genome_scanner.read_buffer
+    #
+    # click.echo(f"Constructed graph, edges={G.edgeCount()}, {int(time.time() - t0)} s, processing block model", err=True)
+    # for component in get_block_components(G, node_to_name, infile, read_buffer, min_support):
+    #                                       # debug_nodes):
+    #     yield component
+
+
+
+cpdef tuple get_block_components(G, node_to_name, infile, read_buffer,
                          int min_support):
                          #debug_nodes):
 
@@ -650,7 +656,7 @@ def get_block_components(Py_SimpleGraph G, NodeToName node_to_name, infile, dict
     cdef int v, item_idx, item
 
     t0 = time.time()
-    cmp = G.connectedComponents()  # Flat array, components are separated by -1
+    cmp = G.connectedComponents()  # Flat vector, components are separated by -1
 
     cc = []
     last_i = 0
@@ -659,25 +665,28 @@ def get_block_components(Py_SimpleGraph G, NodeToName node_to_name, infile, dict
             cc.append((last_i, item_idx))
             last_i = item_idx + 1
 
+    return cmp, cc
 
 
-    cdef int cnt = 0
-    for start_i, end_i in cc:
-        cnt += 1
-        if end_i - start_i >= min_support:
-            component = list(cmp[start_i: end_i])
-            res = proc_component(node_to_name, component, read_buffer, infile, G, min_support)
+    # cdef int cnt = 0
+    # for start_i, end_i in cc:
+    #     cnt += 1
+    #     if end_i - start_i >= min_support:
+    #         component = list(cmp[start_i: end_i])
+    #
+    #
+    #         res = proc_component(node_to_name, component, read_buffer, infile, G, min_support)
+    #
+    #         if res:
+    #             yield res
+    #     # Reduce size of graph
+    #     # for v in component:
+    #     #     G.removeNode(v)
+    #
+    # click.echo(f"Processed components n={cnt} {int(time.time() - t0)} s", err=True)
 
-            if res:
-                yield res
-        # Reduce size of graph
-        # for v in component:
-        #     G.removeNode(v)
 
-    click.echo(f"Processed components n={cnt} {int(time.time() - t0)} s", err=True)
-
-
-cpdef dict get_reads(infile, dict sub_graph_reads):
+cpdef dict get_reads(infile, sub_graph_reads):
 
     rd = dict()
     # coords = []
@@ -738,7 +747,7 @@ cdef tuple BFS_local(G, int source):
     return nodes_found, visited
 
 
-cdef dict get_partitions(G, list nodes):
+cdef dict get_partitions(G, nodes):
 
     seen = set([])
 
@@ -762,7 +771,7 @@ cdef dict get_partitions(G, list nodes):
     return {i: p for i, p in enumerate(parts)}
 
 
-cdef tuple count_support_between(G, dict parts, int min_support):  # cpdef
+cdef tuple count_support_between(G, parts, int min_support):  # cpdef
 
     cdef int i, j, node, child, any_out_edges
     # cdef set p
@@ -843,7 +852,7 @@ cdef tuple count_support_between(G, dict parts, int min_support):  # cpdef
     return counts, self_counts
 
 
-cdef dict proc_component(NodeToName node_to_name, list component, dict read_buffer, infile, Py_SimpleGraph G,
+cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
                          int min_support):
 
     n2n = {}
@@ -859,14 +868,6 @@ cdef dict proc_component(NodeToName node_to_name, list component, dict read_buff
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
     support_between, support_within = count_support_between(G, partitions, min_support)
-
-    # if (58, 186) in support_between:
-    #     echo("support between", support_between[(58, 186)], support_within[(58, 186)])
-    #     for k in support_between[(58, 186)][58]:
-    #         echo(58, k, reads[k].tostring().replace("\t", " "))
-    #     for k in support_between[(58, 186)][186]:
-    #         echo(186, k, reads[k].tostring().replace("\t", " "))
-    #     quit()
 
     if len(support_between) == 0 and len(support_within) == 0 and len(reads) >= min_support:
         return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}

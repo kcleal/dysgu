@@ -1633,7 +1633,7 @@ static void __pyx_pf_5dysgu_13map_set_utils_10Py_DiGraph_2__dealloc__(struct __p
  *     def __dealloc__(self):
  *         del self.thisptr             # <<<<<<<<<<<<<<
  * 
- *     cdef int addNode(self) nogil:
+ *     cdef int addNode(self):
  */
   delete __pyx_v_self->thisptr;
 
@@ -1652,19 +1652,21 @@ static void __pyx_pf_5dysgu_13map_set_utils_10Py_DiGraph_2__dealloc__(struct __p
 /* "dysgu/map_set_utils.pyx":31
  *         del self.thisptr
  * 
- *     cdef int addNode(self) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int addNode(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.addNode()
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  */
 
 static int __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_addNode(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self) {
   int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("addNode", 0);
 
   /* "dysgu/map_set_utils.pyx":32
  * 
- *     cdef int addNode(self) nogil:
+ *     cdef int addNode(self):
  *         return self.thisptr.addNode()             # <<<<<<<<<<<<<<
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  *         return self.thisptr.hasEdge(u, v)
  */
   __pyx_r = __pyx_v_self->thisptr->addNode();
@@ -1673,162 +1675,177 @@ static int __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_addNode(struct __pyx_obj_
   /* "dysgu/map_set_utils.pyx":31
  *         del self.thisptr
  * 
- *     cdef int addNode(self) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int addNode(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.addNode()
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  */
 
   /* function exit code */
   __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
 /* "dysgu/map_set_utils.pyx":33
- *     cdef int addNode(self) nogil:
+ *     cdef int addNode(self):
  *         return self.thisptr.addNode()
- *     cdef int hasEdge(self, int u, int v) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int hasEdge(self, int u, int v):             # <<<<<<<<<<<<<<
  *         return self.thisptr.hasEdge(u, v)
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  */
 
 static int __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_hasEdge(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self, int __pyx_v_u, int __pyx_v_v) {
   int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("hasEdge", 0);
 
   /* "dysgu/map_set_utils.pyx":34
  *         return self.thisptr.addNode()
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  *         return self.thisptr.hasEdge(u, v)             # <<<<<<<<<<<<<<
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  *         self.thisptr.addEdge(u, v)
  */
   __pyx_r = __pyx_v_self->thisptr->hasEdge(__pyx_v_u, __pyx_v_v);
   goto __pyx_L0;
 
   /* "dysgu/map_set_utils.pyx":33
- *     cdef int addNode(self) nogil:
+ *     cdef int addNode(self):
  *         return self.thisptr.addNode()
- *     cdef int hasEdge(self, int u, int v) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int hasEdge(self, int u, int v):             # <<<<<<<<<<<<<<
  *         return self.thisptr.hasEdge(u, v)
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  */
 
   /* function exit code */
   __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
 /* "dysgu/map_set_utils.pyx":35
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  *         return self.thisptr.hasEdge(u, v)
- *     cdef void addEdge(self, int u, int v) nogil:             # <<<<<<<<<<<<<<
+ *     cdef void addEdge(self, int u, int v):             # <<<<<<<<<<<<<<
  *         self.thisptr.addEdge(u, v)
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  */
 
 static void __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_addEdge(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self, int __pyx_v_u, int __pyx_v_v) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("addEdge", 0);
 
   /* "dysgu/map_set_utils.pyx":36
  *         return self.thisptr.hasEdge(u, v)
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  *         self.thisptr.addEdge(u, v)             # <<<<<<<<<<<<<<
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  *         return self.thisptr.numberOfNodes()
  */
   __pyx_v_self->thisptr->addEdge(__pyx_v_u, __pyx_v_v);
 
   /* "dysgu/map_set_utils.pyx":35
- *     cdef int hasEdge(self, int u, int v) nogil:
+ *     cdef int hasEdge(self, int u, int v):
  *         return self.thisptr.hasEdge(u, v)
- *     cdef void addEdge(self, int u, int v) nogil:             # <<<<<<<<<<<<<<
+ *     cdef void addEdge(self, int u, int v):             # <<<<<<<<<<<<<<
  *         self.thisptr.addEdge(u, v)
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  */
 
   /* function exit code */
+  __Pyx_RefNannyFinishContext();
 }
 
 /* "dysgu/map_set_utils.pyx":37
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  *         self.thisptr.addEdge(u, v)
- *     cdef int numberOfNodes(self) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int numberOfNodes(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.numberOfNodes()
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  */
 
 static int __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_numberOfNodes(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self) {
   int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("numberOfNodes", 0);
 
   /* "dysgu/map_set_utils.pyx":38
  *         self.thisptr.addEdge(u, v)
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  *         return self.thisptr.numberOfNodes()             # <<<<<<<<<<<<<<
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  *         return self.thisptr.forInEdgesOf(u)
  */
   __pyx_r = __pyx_v_self->thisptr->numberOfNodes();
   goto __pyx_L0;
 
   /* "dysgu/map_set_utils.pyx":37
- *     cdef void addEdge(self, int u, int v) nogil:
+ *     cdef void addEdge(self, int u, int v):
  *         self.thisptr.addEdge(u, v)
- *     cdef int numberOfNodes(self) nogil:             # <<<<<<<<<<<<<<
+ *     cdef int numberOfNodes(self):             # <<<<<<<<<<<<<<
  *         return self.thisptr.numberOfNodes()
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  */
 
   /* function exit code */
   __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
 /* "dysgu/map_set_utils.pyx":39
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  *         return self.thisptr.numberOfNodes()
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:             # <<<<<<<<<<<<<<
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):             # <<<<<<<<<<<<<<
  *         return self.thisptr.forInEdgesOf(u)
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:
+ *     cdef cpp_vector[int] neighbors(self, int u):
  */
 
 static std::vector<int>  __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_forInEdgesOf(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self, int __pyx_v_u) {
   std::vector<int>  __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("forInEdgesOf", 0);
 
   /* "dysgu/map_set_utils.pyx":40
  *         return self.thisptr.numberOfNodes()
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  *         return self.thisptr.forInEdgesOf(u)             # <<<<<<<<<<<<<<
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:
+ *     cdef cpp_vector[int] neighbors(self, int u):
  *         return self.thisptr.neighbors(u)
  */
   __pyx_r = __pyx_v_self->thisptr->forInEdgesOf(__pyx_v_u);
   goto __pyx_L0;
 
   /* "dysgu/map_set_utils.pyx":39
- *     cdef int numberOfNodes(self) nogil:
+ *     cdef int numberOfNodes(self):
  *         return self.thisptr.numberOfNodes()
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:             # <<<<<<<<<<<<<<
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):             # <<<<<<<<<<<<<<
  *         return self.thisptr.forInEdgesOf(u)
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:
+ *     cdef cpp_vector[int] neighbors(self, int u):
  */
 
   /* function exit code */
   __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
 /* "dysgu/map_set_utils.pyx":41
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  *         return self.thisptr.forInEdgesOf(u)
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:             # <<<<<<<<<<<<<<
+ *     cdef cpp_vector[int] neighbors(self, int u):             # <<<<<<<<<<<<<<
  *         return self.thisptr.neighbors(u)
  * 
  */
 
 static std::vector<int>  __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_neighbors(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *__pyx_v_self, int __pyx_v_u) {
   std::vector<int>  __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("neighbors", 0);
 
   /* "dysgu/map_set_utils.pyx":42
  *         return self.thisptr.forInEdgesOf(u)
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:
+ *     cdef cpp_vector[int] neighbors(self, int u):
  *         return self.thisptr.neighbors(u)             # <<<<<<<<<<<<<<
  * 
  * 
@@ -1837,15 +1854,16 @@ static std::vector<int>  __pyx_f_5dysgu_13map_set_utils_10Py_DiGraph_neighbors(s
   goto __pyx_L0;
 
   /* "dysgu/map_set_utils.pyx":41
- *     cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+ *     cdef cpp_vector[int] forInEdgesOf(self, int u):
  *         return self.thisptr.forInEdgesOf(u)
- *     cdef cpp_vector[int] neighbors(self, int u) nogil:             # <<<<<<<<<<<<<<
+ *     cdef cpp_vector[int] neighbors(self, int u):             # <<<<<<<<<<<<<<
  *         return self.thisptr.neighbors(u)
  * 
  */
 
   /* function exit code */
   __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
