@@ -4,16 +4,16 @@ from __future__ import absolute_import
 import multiprocessing
 import sys
 import pkg_resources
-from threading import Thread
 import click
-from dysgu import data_io, pairing, io_funcs
 import time
 import datetime
 import pickle
 import numpy as np
 
+from . import data_io, pairing, io_funcs
 
-def process_template(read_template):
+
+cdef void process_template(read_template):
     paired = io_funcs.sam_to_array(read_template)
     if paired:
         return
@@ -24,34 +24,6 @@ def process_template(read_template):
         io_funcs.add_scores(read_template, *res)
         io_funcs.choose_supplementary(read_template)
         io_funcs.score_alignments(read_template, read_template["ri"], read_template['rows'], read_template['data'])
-
-
-def worker(queue, out_queue):
-    while True:
-        job = queue.get(True)
-
-        if job == "Done":
-            queue.task_done()
-            out_queue.put("Done")
-            break
-
-        else:
-            big_string = ""
-            for data_tuple in job:
-                read_template = data_io.make_template(*data_tuple)
-                process_template(read_template)
-                if read_template['passed']:
-                    outstring = data_io.to_output(read_template)
-                    if outstring:
-                        big_string += outstring
-                    else:
-                        pass  # No mappings
-
-            if len(big_string) > 0:
-                out_queue.put(big_string)
-            # else:
-            #     click.echo("WARNING: no output from job.", err=True)
-        queue.task_done()
 
 
 def load_mq_model(pth):
@@ -78,7 +50,7 @@ def predict_mapq(xtest, model):
     return list(map(phred_from_model, model.predict_proba(xtest)[:, 1]))
 
 
-def write_records(sam, mq_model, outsam):
+cdef write_records(sam, mq_model, outsam):
     # Model features are "AS", "DA", "DN", "DP", "NP", "PS", "XS", "kind_key", "mapq", "DS
     if not mq_model:
         for name, record in sam:
@@ -113,6 +85,19 @@ def write_records(sam, mq_model, outsam):
             outsam.write(data_io.sam_to_str(name, alns))
 
 
+cpdef list job(data_tuple):
+
+    temp = data_io.make_template(*data_tuple)
+
+    process_template(temp)
+    sam_temp = []
+    if temp['passed']:
+        sam = data_io.to_output(temp)
+        if sam:
+            sam_temp.append((temp["name"], sam))
+    return sam_temp
+
+
 def process_reads(args):
     t0 = time.time()
 
@@ -130,6 +115,9 @@ def process_reads(args):
         click.echo("Writing alignments to {}".format(args["output"]), err=True)
         outsam = open(args["output"], "w")
 
+    if (args["fq1"] or args["fq2"]) and args["procs"] > 1:
+        raise ValueError("Cant use procs > 1 with fq input")
+
     map_q_recal_model = load_mq_model(args["mq"])
 
     count = 0
@@ -139,53 +127,40 @@ def process_reads(args):
     version = pkg_resources.require("dysgu")[0].version
     itr = data_io.iterate_mappings(args, version)
 
-    # Use multiprocessing:
-    # https://stackoverflow.com/questions/17241663/filling-a-queue-and-managing-multiprocessing-in-python
+    isize = (args["insert_median"], args["insert_stdev"])
+    match_score = args["match_score"]
+    pairing_params = (args["max_insertion"], args["min_aln"], args["max_overlap"], args["ins_cost"],
+                      args["ol_cost"], args["inter_cost"], args["u"])
+    paired_end = int(args["paired"] == "True")
+    bias = args["bias"]
+    replace_hard = int(args["replace_hardclips"] == "True")
+
+    max_d = args["insert_median"] + 4*args["insert_stdev"]  # Separation distance threshold to call a pair discordant
+
     if args["procs"] != 1:
 
-        cpus = args["procs"] if args["procs"] != 0 else multiprocessing.cpu_count()
-        click.echo("dysgu align runnning {} cpus".format(cpus), err=True)
-
-        # Todo joinable queue is not efficient, other options?
-        the_queue = multiprocessing.JoinableQueue(maxsize=100)  #cpus+2)
-        out_queue = multiprocessing.Queue()
-
-        the_pool = multiprocessing.Pool(args["procs"] if args["procs"] != 0 else multiprocessing.cpu_count(),
-                                        worker, (the_queue, out_queue,))
-
-        def writer_thread(q, outsam):
-            while True:
-                aln = q.get()
-                if aln == "Done":
-                    break
-                elif aln == "Job failed":
-                    click.echo("job failed", err=True)
-                elif len(aln) > 1:
-                    outsam.write(aln)
-
-            click.echo("Writing done", err=True)
-
-        writer = Thread(target=writer_thread, args=(out_queue, outsam, ))
-        writer.setDaemon(True)
-        writer.start()
-
-        job = []
         header_string = next(itr)
-        out_queue.put(header_string)
+        outsam.write(header_string)
 
-        for data_tuple in itr:
-            count += 1
+        temp = []
+        for rows, last_seen_chrom, fq in itr:
+            temp.append((rows, max_d, last_seen_chrom, fq, pairing_params, paired_end, isize,
+                                         match_score, bias, replace_hard))
 
-            job.append(data_tuple)
-            if len(job) > 500:
-                the_queue.put(job)
-                job = []
-        if len(job) > 0:
-            the_queue.put(job)
+            if len(temp) > 10000:
+                with multiprocessing.Pool(args["procs"]) as p:
+                    res = p.map(job, temp)
 
-        the_queue.join()  # Wait for jobs to finish
-        the_queue.put("Done")  # Send message to stop workers
-        writer.join()  # Wait for writer to closing
+                res = [item for sublist in res for item in sublist if item]  # Remove [] and flatten list
+                write_records(res, map_q_recal_model, outsam)
+                temp = []
+
+        if len(temp) > 0:
+
+            with multiprocessing.Pool(args["procs"]) as p:
+                res = p.map(job, temp)
+            res = [item for sublist in res for item in sublist if item]
+            write_records(res, map_q_recal_model, outsam)
 
     # Use single process for debugging
     else:
@@ -194,10 +169,13 @@ def process_reads(args):
         outsam.write(header_string)
 
         sam_temp = []
-        for data_tuple in itr:
+        for rows, last_seen_chrom, fq in itr:
 
             count += 1
-            temp = data_io.make_template(*data_tuple)
+
+            # rows, max_d, last_seen_chrom, fq
+            temp = data_io.make_template(rows, max_d, last_seen_chrom, fq, pairing_params, paired_end, isize,
+                                         match_score, bias, replace_hard)
 
             process_template(temp)
 
@@ -213,8 +191,8 @@ def process_reads(args):
         if len(sam_temp) > 0:
             write_records(sam_temp, map_q_recal_model, outsam)
 
-    # if args["output"] != "-" or args["output"] is not None:
-    #     outsam.close()
+    if args["output"] != "-" or args["output"] is not None:
+        outsam.close()
 
     click.echo("dysgu choose {} completed in {} h:m:s".format(args["sam"],
                                                             str(datetime.timedelta(seconds=int(time.time() - t0)))),

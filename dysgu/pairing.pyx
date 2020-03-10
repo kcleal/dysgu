@@ -22,7 +22,7 @@ DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
 
-cdef float erfcc(float x) nogil:
+cdef float erfcc(float x):
     """Complementary error function."""
     cdef float z, t, r, p1, p2, p3, p4, p5, p6, p7, p8, p9
     z = fabs(x)
@@ -43,7 +43,7 @@ cdef float erfcc(float x) nogil:
         return 2. - r
 
 
-cdef float normcdf(float x, float mu, float sigma) nogil:
+cdef float normcdf(float x, float mu, float sigma):
     cdef float t, y
     t = x-mu
     y = 0.5*erfcc(-t/(sigma*sqrt(2.0)))
@@ -52,7 +52,7 @@ cdef float normcdf(float x, float mu, float sigma) nogil:
     return y
 
 
-cdef int is_proper_pair(float d, float pos1, float pos2, float strand1, float strand2, float mu, float sigma) nogil:
+cdef int is_proper_pair(float d, float pos1, float pos2, float strand1, float strand2, float mu, float sigma):
 
     if d <= (mu + 4*sigma):
         if pos1 < pos2 and strand1 == 1. and strand2 == -1.:
@@ -62,10 +62,10 @@ cdef int is_proper_pair(float d, float pos1, float pos2, float strand1, float st
     return 0
 
 
-cdef float bwa_pair_score(float d, float mu, float sigma, float match_score, float u) nogil:
+cdef float bwa_pair_score(float d, float mu, float sigma, float match_score, float u):
     """
     Calculate the bwa pairing cost
-    :param distance: seperation distance
+    :param d: seperation distance
     :param mu: insert size mean
     :param sigma: insert size std
     :param match_score: score gained from a matched base
@@ -80,21 +80,19 @@ cdef float bwa_pair_score(float d, float mu, float sigma, float match_score, flo
     else:
         return u
 
-
-cdef tuple optimal_path(
-                 np.ndarray[DTYPE_t, ndim=2] segments,
-                 float contig_length,
-                 float mu,
-                 float sigma,
-                 float max_insertion=100,
-                 float min_aln=20,
-                 float max_homology=100,
-                 float ins_cost=1,
-                 float hom_cost=3,
-                 float inter_cost=2,
-                 float U=9,
-                 float match_score=1,
-                 float clipping_penalty=0):
+cdef tuple optimal_path(np.ndarray[DTYPE_t, ndim=2] segments,
+                        float contig_length,
+                        float mu,
+                        float sigma,
+                        float max_insertion,
+                        float min_aln,
+                        float max_homology,
+                        float ins_cost,
+                        float hom_cost,
+                        float inter_cost,
+                        float U,
+                        float match_score,
+                        ):
     """
     The scoring has become quite complicated.
      = Last alignment score - jump cost
@@ -152,11 +150,11 @@ cdef tuple optimal_path(
         strand1 = segments[i, 6]
         r1 = segments[i, 7]
 
-        p = -1  # -1 means there is no presecessor
+        p = -1  # -1 means there is no predecessor
         best_score = score1 - (start1 * ins_cost)  # Implies all preceding alignments skipped!
         next_best_score = - (start1 * ins_cost)  # Worst case
 
-        # Walking backwards mean the search may be terminated at some point
+        # Walking backwards
         for j in range(i-1, -1, -1):
 
             chr2 = segments[j, 0]
@@ -177,11 +175,11 @@ cdef tuple optimal_path(
                 # Microhomology and insertion lengths between alignments on same read only
                 micro_h = 0
                 ins = 0
-                if r1 == r2:
-                    micro_h = end2 - start1
-                    if micro_h < 0:
-                        ins = fabs(micro_h)
-                        micro_h = 0
+                #if r1 == r2:
+                micro_h = end2 - start1
+                if micro_h < 0:
+                    ins = fabs(micro_h)
+                    micro_h = 0
 
                 # Define jump cos
                 proper_pair = 0
@@ -238,8 +236,8 @@ cdef tuple optimal_path(
     end_i = -1
     for i in range(segments.shape[0]):
 
-        node_to_end_cost = node_scores[i] - (ins_cost * right_clip) # cst
-
+        node_to_end_cost = node_scores[i] - (ins_cost * (contig_length - segments[i, 3]))
+        node_scores[i] = node_to_end_cost  # Need to know for secondary path
         if node_to_end_cost > path_score:
             path_score = node_to_end_cost
             end_i = i
@@ -255,7 +253,7 @@ cdef tuple optimal_path(
     cdef float dis_2_end = 0  # Can be negative if the last node has an insertion before the end (soft-clip)
     cdef float s, potential_secondary
 
-    # Use STL vector instead of list for possible speedup. Doesnt compile using pyximport in pairing script
+    # Get the path using traceback
     cdef vector[int] v
     cdef int normal_pairings = 0
     cdef int last_i
@@ -290,7 +288,7 @@ cdef tuple optimal_path(
         path_score = 0
     if best_normal_orientation < 0:
         best_normal_orientation = 0
-
+    # Return the index column
     return segments[a, 5], path_score, secondary, best_normal_orientation, normal_pairings
 
 
@@ -376,12 +374,6 @@ cpdef tuple process(dict rt):
             single_end = 0
             contig_l = r1_len + r2_len
 
-
-
-
-
-    # if not single_end:
-
             path1, length1, second_best1, dis_to_normal1, norm_pairings1 = optimal_path(t, contig_l, mu, sigma,
                                                                                               max_insertion, min_aln,
                                                                                               max_homology, ins_cost,
@@ -403,15 +395,20 @@ cpdef tuple process(dict rt):
                                                                                               max_homology, ins_cost,
                                                                                               hom_cost, inter_cost, U,
                                                                                               match_score)
+            # rt['name'] == 'HISEQ1:9:H8962ADXX:1:1203:10253:69287':
+            # if not all([i == j for i, j in zip(sorted(path1), sorted(path2))]) and length1 != length2:
+            #     if rt['name'] not in {'HISEQ1:12:H8GVUADXX:2:2206:1474:88307', 'HISEQ1:9:H8962ADXX:2:2106:20176:15718', 'HWI-D00360:6:H81VLADXX:1:1108:14660:18948', 'HISEQ1:13:H8G92ADXX:2:2101:5194:74723', 'HWI-D00360:8:H88U0ADXX:1:1115:5774:77671', 'HISEQ1:9:H8962ADXX:2:1110:15594:58671', 'HISEQ1:11:H8GV6ADXX:1:2116:9359:2247', 'HWI-D00360:8:H88U0ADXX:2:1104:17651:4926', 'HISEQ1:13:H8G92ADXX:1:1203:9939:95281'}:
+            #         click.echo(rt, err=True)
+            #
+            #         click.echo(t.astype(int)[:, :7], err=True)
+            #         # click.echo(t2.astype(int)[:, :7], err=True)
+            #         click.echo(rt['name'], err=True)
+            #         click.echo((rt["read1_reverse"], rt["read2_reverse"]), err=True)
+            #         click.echo((length1, length2), err=True)
+            #         click.echo((path1, path2), err=True)
+            #         quit()
 
             if length2 > length1:
                 return path2, length2, second_best2, dis_to_normal2, norm_pairings2
             else:
                 return path1, length1, second_best1, dis_to_normal1, norm_pairings1
-
-
-    #
-    # else:
-    #     return optimal_path(t, contig_l, mu, sigma, max_insertion, min_aln, max_homology, ins_cost,
-    #                                    hom_cost, inter_cost, U, match_score)
-

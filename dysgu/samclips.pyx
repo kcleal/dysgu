@@ -495,9 +495,10 @@ cpdef list fixsam(dict template):
     if (primary1 is None or primary2 is None) and template["paired_end"]:
         if primary1 is None:
             primary1 = template['inputdata'][0]
+            primary1[0] = int(primary1[0])
         if primary2 is None:
             primary2 = template['inputdata'][template['first_read2_index']]  # unmapped
-
+            primary2[0] = int(primary2[0])
 
     if paired and template["paired_end"]:
         rev_A, rev_B = set_mate_flag(primary1, primary2, max_d, template["read1_reverse"], template["read2_reverse"])

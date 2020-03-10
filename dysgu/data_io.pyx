@@ -17,16 +17,16 @@ def mk_dest(d):
             raise OSError("Couldn't create directory {}".format(d))
 
 
-cpdef dict make_template(list rows, dict args, float max_d, str last_seen_chrom, fq):
+cpdef dict make_template(rows, max_d, last_seen_chrom, fq, pairing_params, paired_end, isize, match_score, bias,
+                         replace_hard):
     # Make a pickle-able data object for multiprocessing
-    return {"isize": (args["insert_median"], args["insert_stdev"]),
+    return {"isize": isize,
             "max_d": max_d,
-            "match_score": args["match_score"],
-            "pairing_params": (args["max_insertion"], args["min_aln"], args["max_overlap"], args["ins_cost"],
-                               args["ol_cost"], args["inter_cost"], args["u"]),
-            "paired_end": int(args["paired"] == "True"),
+            "match_score": match_score,
+            "pairing_params": pairing_params,
+            "paired_end": paired_end,
             "inputdata": rows,
-            "bias": args["bias"],
+            "bias": bias,
             "read1_length": 0,
             "read2_length": 0,
             "score_mat": {},
@@ -40,7 +40,7 @@ cpdef dict make_template(list rows, dict args, float max_d, str last_seen_chrom,
             "read2_q": 0,
             "read1_reverse": 0,  # Set to true if aligner has reverse complemented the sequence
             "read2_reverse": 0,
-            "replace_hard": int(args["replace_hardclips"] == "True"),
+            "replace_hard": replace_hard,
             "fq_read1_seq": 0,
             "fq_read2_seq": 0,
             "fq_read1_q": 0,
@@ -142,7 +142,7 @@ def sam_itr(args):
 
     ol = intersecter(tree, first_line[2], pos, pos + 250)
 
-    yield (first_line, last_seen_chrom, ol)
+    yield first_line, last_seen_chrom, ol
 
     for t in itr:
         # t = str(t.decode("ascii"))
@@ -154,7 +154,7 @@ def sam_itr(args):
         pos = int(line[3])
         ol = intersecter(tree, line[2], pos, pos + 250)
 
-        yield (line, last_seen_chrom, ol)
+        yield line, last_seen_chrom, ol
 
 
 def fq_reader(args):
@@ -186,7 +186,7 @@ def fq_reader(args):
     if args["fq1"] and args["fq2"] is None:  # Single end
         with open(args["fq1"]) as fq1:
             for item in readfq(fq1):
-                yield (item, None)
+                yield item, None
     else:
         with open(args["fq1"]) as fq1, open(args["fq2"]) as fq2:
             for item1, item2 in zip(readfq(fq1), readfq(fq2)):
@@ -214,7 +214,13 @@ def fq_getter(reader, name, args, fbuffer):
 
 
 def iterate_mappings(args, version):
-    arg_str = ", ".join(["{}={}".format(i, j) for i, j in args.items() if j is not None and "sam" not in i])
+
+    params = {'clip_length', 'search', 'include', 'paired', 'max_insertion', 'min_aln', 'max_overlap',
+    'ins_cost', 'ol_cost', 'inter_cost', 'u', 'match_score', 'bias', 'replace_hardclips', 'fq1', 'fq2',
+     'insert_median', 'insert_stdev', 'mq', 'max_tlen', 'template_size'}
+    cp_args = {k: v for k, v in args.items() if k in params}
+
+    arg_str = ", ".join(["{}={}".format(i, j) for i, j in args.items() if i in params])
     inputstream = sam_itr(args)
 
     total = 0
@@ -228,8 +234,8 @@ def iterate_mappings(args, version):
     fq_buffer = defaultdict(list)
     fq_iter = fq_reader(args)
 
-    max_d = args["insert_median"] + 4*args["insert_stdev"]  # Separation distance threshold to call a pair discordant
     last_seen_chrom = ""
+
     for m, last_seen_chrom, ol in inputstream:  # Alignment
 
         nm = m[0]
@@ -238,7 +244,7 @@ def iterate_mappings(args, version):
                 total += 1
                 fq = fq_getter(fq_iter, name, args, fq_buffer)
 
-                yield (rows, args, max_d, last_seen_chrom, fq)
+                yield rows, last_seen_chrom, fq
 
             rows = []
             name = nm
@@ -249,6 +255,6 @@ def iterate_mappings(args, version):
     if len(rows) > 0:
         total += 1
         fq = fq_getter(fq_iter, name, args, fq_buffer)
-        yield (rows, args, max_d, last_seen_chrom, fq)
+        yield rows, last_seen_chrom, fq
 
     click.echo("Total processed " + str(total), err=True)

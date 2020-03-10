@@ -5,7 +5,6 @@ import pysam
 import time
 import datetime
 import numpy as np
-import os
 import click
 from subprocess import call
 from collections import deque
@@ -13,7 +12,7 @@ import resource
 
 from libc.stdint cimport uint32_t
 
-from dysgu import data_io, io_funcs
+from dysgu import io_funcs
 from dysgu cimport map_set_utils
 from dysgu.coverage import get_insert_params
 

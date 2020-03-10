@@ -132,10 +132,12 @@ cdef tuple check_for_good_pairing(template):
 
     return r1, r2
 
-    # return ()
+
+def sort_func(row):
+    return row[7], row[2], -row[4]
 
 
-def sam_to_array(dict template):
+cpdef sam_to_array(template):
     # Expect read1 and read2 alignments to be concatenated, not mixed together
     data, overlaps = list(zip(*template["inputdata"]))
     template["inputdata"] = [[i[1], i[2], i[3]] + i[4].strip().split("\t") for i in data]
@@ -167,13 +169,16 @@ def sam_to_array(dict template):
     read1_set = 0  # Occasionally multiple primaries, take the longest
     read2_set = 0
 
+    srt_1 = []
+    srt_2 = []
+
     for idx in range(len(template["inputdata"])):
 
         l = template["inputdata"][idx]
 
         flag = int(l[0])
         pos = int(l[2])  # Add hard clips
-        # click.echo((idx, flag, template["paired_end"]), err=True)
+
         if l[1] != "*":
             chromname = l[1]
             template["last_seen_chrom"] = chromname
@@ -185,10 +190,8 @@ def sam_to_array(dict template):
             cc += 1
 
         arr[idx, 0] = chrom_ids[chromname]  # l.rname  # chrom name
-
         arr[idx, 1] = pos  # l.pos
         arr[idx, 5] = idx
-
         arr[idx, 6] = -1 if flag & 16 else 1  # Flag
 
         if idx == 0 and flag & 4:
@@ -219,7 +222,7 @@ def sam_to_array(dict template):
                     arr[idx, 4] = float(v) * bias
                 else:
                     arr[idx, 4] = float(v)
-
+                srt_2.append(-float(v))
         current_l = len(l[9])
 
         if template["paired_end"]:
@@ -252,17 +255,20 @@ def sam_to_array(dict template):
         if not cigar:
             query_start = 0  # Unmapped read? no cigar
             query_end = 0
+            srt_1.append(query_start)
+
         else:
             query_start, query_end = get_start_end(cigar)
+            srt_1.append(query_start)
 
             # If current alignment it not primary, and on different strand from primary, count from other end
             if template["paired_end"]:
-                if flag & 64 and template["read1_reverse"] != bool(flag & 16):
+                if flag & 64 and template["read1_reverse"] != bool(flag & 16):  # First in pair, read1_rev != read_rev
                     start_temp = template["read1_length"] - query_end
                     query_end = start_temp + query_end - query_start
                     query_start = start_temp
 
-                elif flag & 128 and (template["read2_reverse"] != bool(flag & 16)):
+                elif flag & 128 and (template["read2_reverse"] != bool(flag & 16)):  # Second in pair
                     start_temp = template["read2_length"] - query_end
                     query_end = start_temp + query_end - query_start
                     query_start = start_temp
@@ -301,15 +307,14 @@ def sam_to_array(dict template):
                 arr[j, 3] += template['read1_length']
 
             if arr[j, 3] > template["read1_length"] + template["read2_length"]:
-                # click.echo((template["read1_length"], template["read2_length"]), err=True)
-                # click.echo(arr[j, 3], err=True)
                 raise ValueError
-    #np.random.shuffle(arr)  # Randomize order of chromosomes
+
     template["first_read2_index"] = first_read2_index
 
-    template['data'] = np.array(sorted(arr, key=lambda x: (x[2], -x[4]))).astype(float)
+    template['data'] = np.array(sorted(arr, key=sort_func))
+
     template['chrom_ids'] = chrom_ids
-    # quit()
+
     del template["inputfq"]
 
     return 0

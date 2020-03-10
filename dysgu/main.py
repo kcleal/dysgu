@@ -6,10 +6,9 @@ import os
 import time
 from multiprocessing import cpu_count
 from subprocess import Popen, PIPE, check_call
-from dysgu import sv2bam, sv2fq
-from dysgu import input_stream_alignments, data_io, cluster, view
 import pkg_resources
 import warnings
+from . import input_stream_alignments, data_io, cluster, view, sv2bam, sv2fq
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -61,8 +60,6 @@ defaults = {
 align_args = {}
 
 version = pkg_resources.require("dysgu")[0].version
-
-# Todo Make vcf output option
 
 
 def pipeline(kwargs):
@@ -346,7 +343,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--max-overlap", help="Maximum overlap between successive alignments", default=defaults["max_overlap"],
               type=float, show_default=True)
 @click.option("--ins-cost", help="Insertion cost", default=defaults["ins_cost"], type=float, show_default=True)
-@click.option("--ol-cost", help="Overlapping alignment cost", default=defaults["ol_cost"], type=float)
+@click.option("--ol-cost", help="Overlapping alignment cost", default=defaults["ol_cost"], type=float, show_default=True)
 @click.option("--inter-cost", help="Cost of inter-chromosomal jump", default=defaults["inter_cost"], type=float,
               show_default=True)
 @click.option("--u", help="Pairing cost", default=defaults["u"], type=float, show_default=True)
@@ -362,8 +359,11 @@ def dysgu_aligner(ctx, **kwargs):
     """Choose an optimal set of alignments from from a collection of candidate alignments.
     If reads are paired, alignments must be sorted by read-name with the bit flag
     designating read_1 vs read_2."""
+    t0 = time.time()
     ctx = apply_ctx(ctx, kwargs)
     input_stream_alignments.process_reads(ctx.obj)
+
+    click.echo(time.time() - t0, err=True)
 
 
 @cli.command("call")

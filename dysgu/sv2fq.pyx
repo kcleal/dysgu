@@ -3,16 +3,15 @@
 Compiled utils to generate proper sam output and flag information
 """
 from __future__ import absolute_import
-
 import pysam
 import time
 import datetime
 import numpy as np
 import click
 import resource
+from sys import stdout
 from dysgu import data_io, io_funcs
 from dysgu.coverage import get_insert_params
-from sys import stdout
 
 
 def echo(*args):
