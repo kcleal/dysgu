@@ -2,7 +2,6 @@
 #cython: language_level=2, boundscheck=False, wraparound=False
 #distutils: language=c++
 
-
 import numpy as np
 cimport numpy as np
 cimport cython

@@ -102,6 +102,9 @@ def process_reads(args):
     t0 = time.time()
 
     click.echo("dysgu choose reading data from {}".format(args["sam"]), err=True)
+    insert_std = args["template_size"].split(",")
+    args["insert_median"] = float(insert_std[0])
+    args["insert_stdev"] = float(insert_std[1])
 
     if not args["include"]:
         args["bias"] = 1.0

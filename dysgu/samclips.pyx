@@ -13,7 +13,7 @@ def echo(*arg):
     click.echo(arg, err=True)
 
 
-cdef int set_bit(int v, int index, int x) nogil:
+cdef int set_bit(int v, int index, int x):
     """Set the index:th bit of v to 1 if x is truthy, else to 0, and return the new value."""
     cdef int mask
     mask = 1 << index  # Compute mask, an integer with just bit 'index' set.
@@ -23,7 +23,7 @@ cdef int set_bit(int v, int index, int x) nogil:
     return v
 
 
-cdef list set_tlen(list out):
+cdef list set_tlen(out):
 
     pri_1 = out[0][1]
     pri_2 = out[1][1]
@@ -101,7 +101,7 @@ cdef list set_tlen(list out):
     return out2
 
 
-def set_mate_flag(a, b, max_d, read1_rev, read2_rev):
+cdef set_mate_flag(a, b, max_d, read1_rev, read2_rev):
 
     if not a or not b:  # No alignment, mate unmapped?
         return False, False
@@ -135,7 +135,7 @@ def set_mate_flag(a, b, max_d, read1_rev, read2_rev):
             reverse_B = True
 
     # Turn off proper pair flag, might be erroneously set
-    aflag = set_bit(aflag, 1, 0)
+    aflag = set_bit(aflag, 1, 0)  # Bit index from 0
     bflag = set_bit(bflag, 1, 0)
 
     # Turn off supplementary pair flag
@@ -202,7 +202,7 @@ def set_mate_flag(a, b, max_d, read1_rev, read2_rev):
                         bflag = set_bit(bflag, 1, 1)
 
                         # If proper pair, sometimes the mate-reverse-strand flag is set
-                        # this subsequently means the sequence should be reverse complemented!
+                        # this subsequently means the sequence should be reverse complemented
                         if aflag & 16 and not bflag & 32:
                             # Mate-reverse strand not set
                             bflag = set_bit(bflag, 5, 1)
@@ -228,7 +228,7 @@ def set_mate_flag(a, b, max_d, read1_rev, read2_rev):
     return reverse_A, reverse_B
 
 
-def set_supp_flags(sup, pri, ori_primary_reversed, primary_will_be_reversed):
+cdef set_supp_flags(sup, pri, ori_primary_reversed, primary_will_be_reversed):
 
     # Set paired
     supflag = sup[0]
@@ -271,7 +271,7 @@ def set_supp_flags(sup, pri, ori_primary_reversed, primary_will_be_reversed):
     return rev_sup
 
 
-def add_sequence_back(item, reverse_me, template):
+cdef add_sequence_back(item, reverse_me, template):
     # item is the alignment
     flag = item[0]
     c = re.split(r'(\d+)', item[4])[1:]  # Drop leading empty string
@@ -352,14 +352,16 @@ def add_sequence_back(item, reverse_me, template):
             start = new_start
             end = new_end
 
+    f_q_name = f"fq_{name}_q"
     # Try and use the primary sequence to replace hard-clips
     if item[9] == "*" or len(item[9]) < abs(end - start) or len(item[9]) == 0:
         if template["replace_hard"] and template["fq_%s_q" % name]:
             key = "fq_"
         else:
             key = ""
-        s = template["%s%s_seq" % (key, name)][start:end]
-        q = template["%s%s_q" % (key, name)][start:end]
+        key_name = f"{key}{name}_seq"
+        s = template[key_name][start:end]  # "%s%s_seq" % (key, name)
+        q = template[key_name][start:end]  # "%s%s_q" % (key, name)
 
         if len(s) == cigar_length:
             if reverse_me:
@@ -370,15 +372,15 @@ def add_sequence_back(item, reverse_me, template):
                 item[9] = q
 
     # Try and use the supplied fq file to replace the sequence
-    elif template["fq_%s_q" % name] != 0 and len(template["fq_%s_q" % name]) > len(item[9]):
-        if item[9] in template["fq_%s_q" % name]:
-            item[8] = template["fq_%s_seq" % name][start:end]
-            item[9] = template["fq_%s_q" % name][start:end]
+    elif template[f_q_name] != 0 and len(template[f_q_name]) > len(item[9]):  # "fq_%s_q" % name
+        sqn = f"fq_{name}_seq"
+        if item[9] in template[f_q_name]:
+            item[8] = template[sqn][start:end]
+            item[9] = template[f_q_name][start:end]
 
-        elif item[9] in template["fq_%s_q" % name][::-1]:
-            sqn = "fq_%s_seq" % name
+        elif item[9] in template[f_q_name][::-1]:
             s = io_funcs.reverse_complement(template[sqn], len(template[sqn]))[start:end]
-            q = template["fq_%s_q" % name][::-1][start:end]
+            q = template[f_q_name][::-1][start:end]
             if len(s) == cigar_length:
                 item[8] = s
                 item[9] = q
@@ -401,7 +403,7 @@ def add_sequence_back(item, reverse_me, template):
     return item
 
 
-cdef list replace_sa_tags(list alns):
+cdef list replace_sa_tags(alns):
 
     if any([i[0] == "sup" for i in alns]):
         sa_tags = {}  # Read1: tag, might be multiple split alignments
@@ -421,7 +423,8 @@ cdef list replace_sa_tags(list alns):
 
             strand = "-" if flag & 16 else "+"
             cigar = j[4]
-            sa = "%s,%s,%s,%s,%s,%s,%s" % (chrom, pos, strand, cigar, j[0], mapq, nm)
+            sa = f"{chrom},{pos},{strand},{cigar},{j[0]},{mapq},{nm}"
+            #"%s,%s,%s,%s,%s,%s,%s" % (chrom, pos, strand, cigar, j[0], mapq, nm)
             key = (flag & 64, 1 if flag & 2048 else 0)
             if key in sa_tags:
                 sa_tags[key] += ";" + sa
@@ -462,7 +465,7 @@ cpdef list fixsam(dict template):
 
         strand = "-1" if l[0] & 16 else "1"
         rid = str(2 if l[0] & 128 else 1)
-        key = "{}-{}-{}-{}".format(l[1], l[2], strand, rid)
+        key = f"{l[1]}-{l[2]}-{strand}-{rid}"
 
         if len(score_mat[key]) > 2:
             # Prevent bug where two identical alignments possible
@@ -540,8 +543,17 @@ cpdef list fixsam(dict template):
 
     out = replace_sa_tags(out)
 
-    # Convert flag back to string
+    # Set discordant flag on supplementary, convert flags back to string
     for j in range(len(out)):
+        # Set for discordant
+        if out[j][0] == "sup":
+            rec = out[j][1]
+            flag = rec[0]
+            # Outside max dist, same chrom, or same strand
+            if abs(int(rec[7])) >= max_d or rec[1] != rec[5] or bool(flag & 16) == bool(flag & 32):
+                flag = set_bit(flag, 1, 0)
+                out[j][1][0] = flag
+
         out[j][1][0] = str(out[j][1][0])
 
     return [i[1] for i in out if i[1] != 0]
