@@ -219,7 +219,7 @@ def iterate_mappings(args, version):
     'ins_cost', 'ol_cost', 'inter_cost', 'u', 'match_score', 'bias', 'replace_hardclips', 'fq1', 'fq2',
      'insert_median', 'insert_stdev', 'mq', 'max_tlen', 'template_size'}
     cp_args = {k: v for k, v in args.items() if k in params}
-
+    click.echo(f"ins-cost={args['ins_cost']}, ol-cost={args['ol_cost']}, inter-cost={args['inter_cost']}", err=True)
     arg_str = ", ".join(["{}={}".format(i, j) for i, j in args.items() if i in params])
     inputstream = sam_itr(args)
 
