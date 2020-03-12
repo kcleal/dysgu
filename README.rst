@@ -20,8 +20,6 @@ Run tests::
 Requires Python>=3.6, cython and >=c++11 compiler.
 Python packages needed are listed in requirements.txt.
 
-Required external tools on path: `samtools >=1.4 <http://www.htslib.org/>`_
-
 
 Usage
 -----
@@ -29,8 +27,7 @@ Available commands::
 
     $ call
     $ choose
-    $ reads
-    $ sv2fq
+    $ fetch
     $ view
     $ test
 
@@ -57,8 +54,27 @@ Calling structural variants
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Structural variant pipeline basic usage::
 
-    $ dysgu call your.bam > results.csv
-    $ dysgu view -f vcf results.csv > results.vcf
+    $ dysgu fetch your.bam > sv_reads.bam
+    $ dysgu call sv_reads.bam > results.vcf
+
+To save time, `dysgu fetch` can be piped during mapping::
+
+    $ bwa mem -a -t8 ref.fa read1.fq read2.fq | \
+        samtools view -bh - | \
+        dysgu fetch -o all_reads.bam -r sv_reads.bam
+    $ dysgu call sv_reads.bam > results.vcf
+
+Input reads can also be buffered which can lower run time for large memory machines. The `--buffer-size` option sets the number of alignments that will be kept in memory::
+
+    $ dysgu call --buffer-size 10000000 sv_reads.bam > results.vcf
+
+Calling can also be piped which can be useful for calling small regions. For this to work the `--buffer-size` must be set large enough to capture the input::
+
+    $ samtools view -bh your.bam chr1:150000-1501000 > dysgu call - > results.vcf
+
+If `dysgu call --out-format csv` is set, multiple output files can be merged, e.g. tumor.csv and normal.csv::
+
+    $ dysgu view --merged-across True  tumor.csv normal.csv > pair.vcf
 
 For help use::
 
