@@ -72,6 +72,9 @@ Calling can also be piped which can be useful for calling small regions. For thi
 
     $ samtools view -bh your.bam chr1:150000-1501000 > dysgu call - > results.vcf
 
+
+Merging SVs from multiple files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 If `dysgu call --out-format csv` is set, multiple output files can be merged, e.g. tumor.csv and normal.csv::
 
     $ dysgu view --merged-across True  tumor.csv normal.csv > pair.vcf
