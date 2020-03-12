@@ -25,9 +25,9 @@ Usage
 -----
 Available commands::
 
-    $ dysgu call    # SV calling paired-end reads
     $ dysgu choose  # Choose paired-end or single read alignments from sam input
     $ dysgu fetch   # Seperate SV reads from input bam file
+    $ dysgu call    # SV calling paired-end reads
     $ dysgu view    # Merge calls from multiple dysgu call runs
     $ dysgu test    # Run basic tests
 
