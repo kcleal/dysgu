@@ -6135,7 +6135,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)             # <<<<<<<<<<<<<<
  * 
- *     return insert_median, insert_stdev, approx_read_length, nn
+ *     return insert_median, insert_stdev, approx_read_length, aligns_written
  */
   __pyx_t_14 = __Pyx_PyObject_FormatSimple(__pyx_v_insert_stdev, __pyx_empty_unicode); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_14);
@@ -6166,7 +6166,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  *                    f"insert median {insert_median}, "
  *                    f"insert stdev {insert_stdev}", err=True)             # <<<<<<<<<<<<<<
  * 
- *     return insert_median, insert_stdev, approx_read_length, nn
+ *     return insert_median, insert_stdev, approx_read_length, aligns_written
  */
   __pyx_t_14 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_14);
@@ -6189,12 +6189,12 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
   /* "dysgu/sv2fq.pyx":220
  *                    f"insert stdev {insert_stdev}", err=True)
  * 
- *     return insert_median, insert_stdev, approx_read_length, nn             # <<<<<<<<<<<<<<
+ *     return insert_median, insert_stdev, approx_read_length, aligns_written             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_nn); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 220, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_aligns_written); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 220, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_t_14 = PyTuple_New(4); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 220, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_14);

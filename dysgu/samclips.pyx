@@ -289,7 +289,7 @@ cdef add_sequence_back(item, reverse_me, template):
 
     cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "DH"])
 
-    if len(seq) != cigar_length:
+    if seq and len(seq) != cigar_length:
         if template["replace_hard"] and q != "*":
             # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
             cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "D"])

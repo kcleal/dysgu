@@ -9,6 +9,7 @@ import datetime
 import numpy as np
 import click
 import resource
+from subprocess import run
 from sys import stdout
 from dysgu import data_io, io_funcs
 from dysgu.coverage import get_insert_params
@@ -35,7 +36,7 @@ def iter_bam(bam, search):
 
 
 def get_reads_f(args):
-
+    # todo bug sometimes duplicate fq reads occur?
     two_files = True if args["reads2"] != "None" else False
 
     fq_out = args["out_format"] == "fq"
@@ -113,7 +114,7 @@ def get_reads_f(args):
                     read_length.append(r.infer_read_length())
                     insert_size.append(r.tlen)
 
-        qname = r.qname # + str(pos) + str(flag)
+        qname = r.qname
 
         if qname not in read_cache:
             d = container(paired_end)
@@ -142,7 +143,7 @@ def get_reads_f(args):
                 d[0] = 1
 
         if (paired_end and d[1] is not None and d[2] is not None) or (not paired_end and d[1] is not None):
-            if d[0]:
+            if d[0]:  # --> write to output
 
                 s1 = d[1].seq
                 q1 = d[1].qual
@@ -188,7 +189,8 @@ def get_reads_f(args):
 
                 aligns_written += 2
             #if paired_end:
-                del read_cache[qname]
+            if qname in read_cache:  #  drop bad reads or written
+                del read_cache[qname]  # Only cached if paired end
 
         elif paired_end:
             read_cache[qname] = d
@@ -217,7 +219,7 @@ def get_reads_f(args):
                    f"insert median {insert_median}, "
                    f"insert stdev {insert_stdev}", err=True)
 
-    return insert_median, insert_stdev, approx_read_length, nn
+    return insert_median, insert_stdev, approx_read_length, aligns_written
 
 
 def process(args):

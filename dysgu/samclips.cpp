@@ -4895,7 +4895,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  * 
  *     cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "DH"])             # <<<<<<<<<<<<<<
  * 
- *     if len(seq) != cigar_length:
+ *     if seq and len(seq) != cigar_length:
  */
   { /* enter inner scope */
     __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 290, __pyx_L1_error)
@@ -4930,22 +4930,30 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   /* "dysgu/samclips.pyx":292
  *     cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "DH"])
  * 
- *     if len(seq) != cigar_length:             # <<<<<<<<<<<<<<
+ *     if seq and len(seq) != cigar_length:             # <<<<<<<<<<<<<<
  *         if template["replace_hard"] and q != "*":
  *             # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
  */
+  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_v_seq); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 292, __pyx_L1_error)
+  if (__pyx_t_7) {
+  } else {
+    __pyx_t_12 = __pyx_t_7;
+    goto __pyx_L8_bool_binop_done;
+  }
   __pyx_t_8 = PyObject_Length(__pyx_v_seq); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 292, __pyx_L1_error)
   __pyx_t_6 = PyInt_FromSsize_t(__pyx_t_8); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_3 = PyObject_RichCompare(__pyx_t_6, __pyx_v_cigar_length, Py_NE); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 292, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  __pyx_t_12 = __pyx_t_7;
+  __pyx_L8_bool_binop_done:;
   if (__pyx_t_12) {
 
     /* "dysgu/samclips.pyx":293
  * 
- *     if len(seq) != cigar_length:
+ *     if seq and len(seq) != cigar_length:
  *         if template["replace_hard"] and q != "*":             # <<<<<<<<<<<<<<
  *             # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
  *             cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "D"])
@@ -4957,11 +4965,11 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     if (__pyx_t_7) {
     } else {
       __pyx_t_12 = __pyx_t_7;
-      goto __pyx_L9_bool_binop_done;
+      goto __pyx_L11_bool_binop_done;
     }
     __pyx_t_7 = (__Pyx_PyUnicode_Equals(__pyx_v_q, __pyx_kp_u__4, Py_NE)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 293, __pyx_L1_error)
     __pyx_t_12 = __pyx_t_7;
-    __pyx_L9_bool_binop_done:;
+    __pyx_L11_bool_binop_done:;
     if (__pyx_t_12) {
 
       /* "dysgu/samclips.pyx":295
@@ -5058,7 +5066,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
 
       /* "dysgu/samclips.pyx":293
  * 
- *     if len(seq) != cigar_length:
+ *     if seq and len(seq) != cigar_length:
  *         if template["replace_hard"] and q != "*":             # <<<<<<<<<<<<<<
  *             # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
  *             cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "D"])
@@ -5080,7 +5088,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     /* "dysgu/samclips.pyx":292
  *     cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "DH"])
  * 
- *     if len(seq) != cigar_length:             # <<<<<<<<<<<<<<
+ *     if seq and len(seq) != cigar_length:             # <<<<<<<<<<<<<<
  *         if template["replace_hard"] and q != "*":
  *             # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
  */
@@ -5134,7 +5142,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 306, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (!__pyx_t_12) {
-    goto __pyx_L20_next_or;
+    goto __pyx_L22_next_or;
   } else {
   }
   __pyx_t_6 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read1_seq); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 306, __pyx_L1_error)
@@ -5150,9 +5158,9 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (!__pyx_t_12) {
   } else {
     __pyx_t_7 = __pyx_t_12;
-    goto __pyx_L19_bool_binop_done;
+    goto __pyx_L21_bool_binop_done;
   }
-  __pyx_L20_next_or:;
+  __pyx_L22_next_or:;
 
   /* "dysgu/samclips.pyx":307
  *     total_cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1]])
@@ -5168,7 +5176,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (__pyx_t_12) {
   } else {
     __pyx_t_7 = __pyx_t_12;
-    goto __pyx_L19_bool_binop_done;
+    goto __pyx_L21_bool_binop_done;
   }
   __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read2_seq); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
@@ -5181,7 +5189,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 307, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_7 = __pyx_t_12;
-  __pyx_L19_bool_binop_done:;
+  __pyx_L21_bool_binop_done:;
 
   /* "dysgu/samclips.pyx":306
  * 
@@ -5227,14 +5235,14 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (__pyx_t_12) {
   } else {
     __pyx_t_7 = __pyx_t_12;
-    goto __pyx_L24_bool_binop_done;
+    goto __pyx_L26_bool_binop_done;
   }
   __pyx_t_6 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read1_seq); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_7 = __pyx_t_12;
-  __pyx_L24_bool_binop_done:;
+  __pyx_L26_bool_binop_done:;
   if (__pyx_t_7) {
 
     /* "dysgu/samclips.pyx":311
@@ -5286,7 +5294,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             end = len(template["fq_read1_seq"])
  *         else:
  */
-      goto __pyx_L26;
+      goto __pyx_L28;
     }
 
     /* "dysgu/samclips.pyx":315
@@ -5306,7 +5314,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
       __pyx_v_end = __pyx_t_3;
       __pyx_t_3 = 0;
     }
-    __pyx_L26:;
+    __pyx_L28:;
 
     /* "dysgu/samclips.pyx":310
  *         return item
@@ -5315,7 +5323,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *         name = "read1"
  *         if template["fq_read1_seq"] != 0:
  */
-    goto __pyx_L23;
+    goto __pyx_L25;
   }
 
   /* "dysgu/samclips.pyx":317
@@ -5332,14 +5340,14 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (__pyx_t_12) {
   } else {
     __pyx_t_7 = __pyx_t_12;
-    goto __pyx_L27_bool_binop_done;
+    goto __pyx_L29_bool_binop_done;
   }
   __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read2_seq); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 317, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 317, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_7 = __pyx_t_12;
-  __pyx_L27_bool_binop_done:;
+  __pyx_L29_bool_binop_done:;
   if (__pyx_t_7) {
 
     /* "dysgu/samclips.pyx":318
@@ -5391,7 +5399,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             end = len(template["fq_read2_seq"])
  *         else:
  */
-      goto __pyx_L29;
+      goto __pyx_L31;
     }
 
     /* "dysgu/samclips.pyx":322
@@ -5411,7 +5419,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
       __pyx_v_end = __pyx_t_6;
       __pyx_t_6 = 0;
     }
-    __pyx_L29:;
+    __pyx_L31:;
 
     /* "dysgu/samclips.pyx":317
  *             end = len(template["read1_seq"])
@@ -5420,7 +5428,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *         name = "read2"
  *         if template["fq_read2_seq"] != 0:
  */
-    goto __pyx_L23;
+    goto __pyx_L25;
   }
 
   /* "dysgu/samclips.pyx":324
@@ -5436,7 +5444,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     __pyx_r = __pyx_v_item;
     goto __pyx_L0;
   }
-  __pyx_L23:;
+  __pyx_L25:;
 
   /* "dysgu/samclips.pyx":327
  * 
@@ -5452,14 +5460,14 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (!__pyx_t_12) {
   } else {
     __pyx_t_7 = __pyx_t_12;
-    goto __pyx_L31_bool_binop_done;
+    goto __pyx_L33_bool_binop_done;
   }
   __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_c, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 327, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_12 = (__Pyx_PyUnicode_Equals(__pyx_t_6, __pyx_n_u_H, Py_EQ)); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 327, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_7 = __pyx_t_12;
-  __pyx_L31_bool_binop_done:;
+  __pyx_L33_bool_binop_done:;
   if (__pyx_t_7) {
 
     /* "dysgu/samclips.pyx":329
@@ -5512,14 +5520,14 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     if (__pyx_t_7) {
     } else {
       __pyx_t_12 = __pyx_t_7;
-      goto __pyx_L37_bool_binop_done;
+      goto __pyx_L39_bool_binop_done;
     }
     __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_replace_hard); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 330, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 330, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_12 = __pyx_t_7;
-    __pyx_L37_bool_binop_done:;
+    __pyx_L39_bool_binop_done:;
     if (__pyx_t_12) {
 
       /* "dysgu/samclips.pyx":331
@@ -5557,7 +5565,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             item[4] = item[4].replace("H", "S")
  *             cigar_length = non_hardclipped_length
  */
-      goto __pyx_L36;
+      goto __pyx_L38;
     }
 
     /* "dysgu/samclips.pyx":335
@@ -5641,7 +5649,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  */
       }
     }
-    __pyx_L36:;
+    __pyx_L38:;
 
     /* "dysgu/samclips.pyx":327
  * 
@@ -5666,14 +5674,14 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (!__pyx_t_7) {
   } else {
     __pyx_t_12 = __pyx_t_7;
-    goto __pyx_L42_bool_binop_done;
+    goto __pyx_L44_bool_binop_done;
   }
   __pyx_t_1 = __Pyx_PyInt_AndObjC(__pyx_v_flag, __pyx_int_2048, 0x800, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 341, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 341, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_12 = __pyx_t_7;
-  __pyx_L42_bool_binop_done:;
+  __pyx_L44_bool_binop_done:;
   if (__pyx_t_12) {
 
     /* "dysgu/samclips.pyx":342
@@ -5690,7 +5698,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     if (__pyx_t_7) {
     } else {
       __pyx_t_12 = __pyx_t_7;
-      goto __pyx_L45_bool_binop_done;
+      goto __pyx_L47_bool_binop_done;
     }
     __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read1_reverse); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 342, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
@@ -5706,7 +5714,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 342, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_12 = __pyx_t_7;
-    __pyx_L45_bool_binop_done:;
+    __pyx_L47_bool_binop_done:;
     if (__pyx_t_12) {
 
       /* "dysgu/samclips.pyx":344
@@ -5766,7 +5774,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             # Different strand to primary, count from end
  *             new_end = template["read1_length"] - start
  */
-      goto __pyx_L44;
+      goto __pyx_L46;
     }
 
     /* "dysgu/samclips.pyx":349
@@ -5783,7 +5791,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     if (__pyx_t_7) {
     } else {
       __pyx_t_12 = __pyx_t_7;
-      goto __pyx_L47_bool_binop_done;
+      goto __pyx_L49_bool_binop_done;
     }
     __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_n_u_read2_reverse); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 349, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
@@ -5799,7 +5807,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 349, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_12 = __pyx_t_7;
-    __pyx_L47_bool_binop_done:;
+    __pyx_L49_bool_binop_done:;
     if (__pyx_t_12) {
 
       /* "dysgu/samclips.pyx":350
@@ -5860,7 +5868,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             new_start = template["read2_length"] - end
  */
     }
-    __pyx_L44:;
+    __pyx_L46:;
 
     /* "dysgu/samclips.pyx":341
  * 
@@ -5915,7 +5923,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (!__pyx_t_7) {
   } else {
     __pyx_t_12 = __pyx_t_7;
-    goto __pyx_L50_bool_binop_done;
+    goto __pyx_L52_bool_binop_done;
   }
   __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_item, 9, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 357, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
@@ -5936,7 +5944,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (!__pyx_t_7) {
   } else {
     __pyx_t_12 = __pyx_t_7;
-    goto __pyx_L50_bool_binop_done;
+    goto __pyx_L52_bool_binop_done;
   }
   __pyx_t_1 = __Pyx_GetItemInt(__pyx_v_item, 9, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 357, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -5944,7 +5952,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_7 = ((__pyx_t_8 == 0) != 0);
   __pyx_t_12 = __pyx_t_7;
-  __pyx_L50_bool_binop_done:;
+  __pyx_L52_bool_binop_done:;
   if (__pyx_t_12) {
 
     /* "dysgu/samclips.pyx":358
@@ -5961,7 +5969,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     if (__pyx_t_7) {
     } else {
       __pyx_t_12 = __pyx_t_7;
-      goto __pyx_L54_bool_binop_done;
+      goto __pyx_L56_bool_binop_done;
     }
     __pyx_t_1 = PyUnicode_Format(__pyx_kp_u_fq__s_q, __pyx_v_name); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 358, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
@@ -5971,7 +5979,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
     __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 358, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_t_12 = __pyx_t_7;
-    __pyx_L54_bool_binop_done:;
+    __pyx_L56_bool_binop_done:;
     if (__pyx_t_12) {
 
       /* "dysgu/samclips.pyx":359
@@ -5991,7 +5999,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             key = "fq_"
  *         else:
  */
-      goto __pyx_L53;
+      goto __pyx_L55;
     }
 
     /* "dysgu/samclips.pyx":361
@@ -6005,7 +6013,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
       __Pyx_INCREF(__pyx_kp_u__6);
       __pyx_v_key = __pyx_kp_u__6;
     }
-    __pyx_L53:;
+    __pyx_L55:;
 
     /* "dysgu/samclips.pyx":362
  *         else:
@@ -6178,7 +6186,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *                 item[8] = io_funcs.reverse_complement(s, len(s))
  *                 item[9] = q[::-1]
  */
-        goto __pyx_L57;
+        goto __pyx_L59;
       }
 
       /* "dysgu/samclips.pyx":371
@@ -6200,7 +6208,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  */
         if (unlikely(__Pyx_SetItemInt(__pyx_v_item, 9, __pyx_v_q, long, 1, __Pyx_PyInt_From_long, 0, 0, 1) < 0)) __PYX_ERR(0, 372, __pyx_L1_error)
       }
-      __pyx_L57:;
+      __pyx_L59:;
 
       /* "dysgu/samclips.pyx":366
  *         q = template[key_name][start:end]  # "%s%s_q" % (key, name)
@@ -6218,7 +6226,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *         if template["replace_hard"] and template["fq_%s_q" % name]:
  *             key = "fq_"
  */
-    goto __pyx_L49;
+    goto __pyx_L51;
   }
 
   /* "dysgu/samclips.pyx":375
@@ -6238,7 +6246,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   if (__pyx_t_7) {
   } else {
     __pyx_t_12 = __pyx_t_7;
-    goto __pyx_L58_bool_binop_done;
+    goto __pyx_L60_bool_binop_done;
   }
   __pyx_t_6 = __Pyx_PyObject_Dict_GetItem(__pyx_v_template, __pyx_v_f_q_name); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 375, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
@@ -6250,7 +6258,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_t_7 = ((__pyx_t_8 > __pyx_t_9) != 0);
   __pyx_t_12 = __pyx_t_7;
-  __pyx_L58_bool_binop_done:;
+  __pyx_L60_bool_binop_done:;
   if (__pyx_t_12) {
 
     /* "dysgu/samclips.pyx":376
@@ -6337,7 +6345,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             item[8] = template[sqn][start:end]
  *             item[9] = template[f_q_name][start:end]
  */
-      goto __pyx_L60;
+      goto __pyx_L62;
     }
 
     /* "dysgu/samclips.pyx":381
@@ -6503,7 +6511,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *             s = io_funcs.reverse_complement(template[sqn], len(template[sqn]))[start:end]
  *             q = template[f_q_name][::-1][start:end]
  */
-      goto __pyx_L60;
+      goto __pyx_L62;
     }
 
     /* "dysgu/samclips.pyx":389
@@ -6713,7 +6721,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
       __Pyx_Raise(__pyx_builtin_ValueError, 0, 0, 0);
       __PYX_ERR(0, 395, __pyx_L1_error)
     }
-    __pyx_L60:;
+    __pyx_L62:;
 
     /* "dysgu/samclips.pyx":375
  * 
@@ -6723,7 +6731,7 @@ static PyObject *__pyx_f_5dysgu_8samclips_add_sequence_back(PyObject *__pyx_v_it
  *         if item[9] in template[f_q_name]:
  */
   }
-  __pyx_L49:;
+  __pyx_L51:;
 
   /* "dysgu/samclips.pyx":397
  *             raise ValueError
