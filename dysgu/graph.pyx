@@ -9,7 +9,7 @@ import mmh3
 import sortedcontainers
 import operator
 import ncls
-import networkit as nk
+
 import pysam
 import sys
 import resource
@@ -39,7 +39,6 @@ from cython.operator import dereference, postincrement
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
 
-nk.setSeed(100, True)
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef map_set_utils.Py_IntSet Py_IntSet
@@ -921,28 +920,28 @@ def debug_component(component, node_to_name, support_between, support_within, G,
         if cmp in targets:
             if not subset:
                 echo("Supportbetween", support_between, "Support within", support_within)
-            import networkx as nx
-            nxG = nx.Graph()
 
-            nxG.add_edges_from(subgraph_from_nodes(G, component))
-            if subset:
-                # Keep only nodes that share an edge with targets, useful for large components
-                bad_nodes = set([])
-                for u, v in nxG.edges():
-                    if u not in targets and v not in targets:
-                        # Also check neighbors
-                        if not any(k in targets for k in nxG.neighbors(u)) and not any(k in targets for k in nxG.neighbors(v)):
-                            bad_nodes.add(u)
-                            bad_nodes.add(v)
-                nxG.remove_nodes_from(bad_nodes)
-            echo("Nodes", len(G.nodes()), "nxG nodes", len(nxG.nodes()), "nxG edges", len(nxG.edges()))
-            nx.write_gml(nxG, "/Volumes/Kez6T/For_kate/Fibroblast_Fusions_P170078/Fusions/dysgu/set1/test/component.gml")
-            if not subset:
-                echo("Partitons")
-                for pp1, ppv in partitions.items():
-                    echo(pp1, ppv)
-                echo()
-                for cmp2 in sorted(component):
-                    echo(cmp2, node_to_name[cmp2])
-            quit()
-            break
+            #nxG = nx.Graph()
+
+            #nxG.add_edges_from(subgraph_from_nodes(G, component))
+            #if subset:
+            #    # Keep only nodes that share an edge with targets, useful for large components
+            #    bad_nodes = set([])
+            #    for u, v in nxG.edges():
+            #        if u not in targets and v not in targets:
+            #            # Also check neighbors
+            #            if not any(k in targets for k in nxG.neighbors(u)) and not any(k in targets for k in nxG.neighbors(v)):
+            #                bad_nodes.add(u)
+            #                bad_nodes.add(v)
+            #    nxG.remove_nodes_from(bad_nodes)
+            #echo("Nodes", len(G.nodes()), "nxG nodes", len(nxG.nodes()), "nxG edges", len(nxG.edges()))
+            #nx.write_gml(nxG, "/Volumes/Kez6T/For_kate/Fibroblast_Fusions_P170078/Fusions/dysgu/set1/test/component.gml")
+            #if not subset:
+            #    echo("Partitons")
+            #    for pp1, ppv in partitions.items():
+            #        echo(pp1, ppv)
+            #    echo()
+            #    for cmp2 in sorted(component):
+            #        echo(cmp2, node_to_name[cmp2])
+            #quit()
+            #break

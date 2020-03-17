@@ -4,7 +4,6 @@
 A basic assembler. Takes an overlap graph and merges reads in-place in a POA style. Different soft-clipped regions
 are then overlapped and 'linked'.
 """
-import networkit as nk
 
 import numpy as np
 cimport numpy as np
