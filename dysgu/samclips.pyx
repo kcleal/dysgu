@@ -453,8 +453,7 @@ cdef list replace_sa_tags(alns):
 
 
 cpdef list fixsam(dict template):
-    # if template["name"] == "HISEQ1:11:H8GV6ADXX:2:1215:16761:63541":
-    #     echo("Hi")
+
     sam = [template['inputdata'][i] for i in template['rows']]  # Get chosen rows
     max_d = template['max_d']
 

@@ -26,6 +26,7 @@ cpdef dict make_template(rows, max_d, last_seen_chrom, fq, pairing_params, paire
             "pairing_params": pairing_params,
             "paired_end": paired_end,
             "inputdata": rows,
+            "rows": [],
             "bias": bias,
             "read1_length": 0,
             "read2_length": 0,

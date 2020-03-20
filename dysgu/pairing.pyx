@@ -325,7 +325,7 @@ cpdef tuple process(dict rt):
     if not rt["paired_end"]:
 
         if rt["read1_unmapped"]:
-            return [0], 0, 0, 125, 0
+            return np.array([0]).astype(np.float), 0, 0, 125, 0
 
         single_end = 1
         contig_l = r1_len
@@ -334,7 +334,7 @@ cpdef tuple process(dict rt):
 
     else:
         if (r1_len is None and r2_len is None) or (rt["read1_unmapped"] and rt["read2_unmapped"]):
-            return [0, rt['first_read2_index']], 0, 0, 250, 0
+            return np.array([0, rt['first_read2_index']]).astype(np.float), 0, 0, 250, 0
 
         elif rt["read2_unmapped"]:
 
@@ -395,18 +395,6 @@ cpdef tuple process(dict rt):
                                                                                               max_homology, ins_cost,
                                                                                               hom_cost, inter_cost, U,
                                                                                               match_score)
-            # rt['name'] == 'HISEQ1:9:H8962ADXX:1:1203:10253:69287':
-            # if not all([i == j for i, j in zip(sorted(path1), sorted(path2))]) and length1 != length2:
-            #     if rt['name'] not in {'HISEQ1:12:H8GVUADXX:2:2206:1474:88307', 'HISEQ1:9:H8962ADXX:2:2106:20176:15718', 'HWI-D00360:6:H81VLADXX:1:1108:14660:18948', 'HISEQ1:13:H8G92ADXX:2:2101:5194:74723', 'HWI-D00360:8:H88U0ADXX:1:1115:5774:77671', 'HISEQ1:9:H8962ADXX:2:1110:15594:58671', 'HISEQ1:11:H8GV6ADXX:1:2116:9359:2247', 'HWI-D00360:8:H88U0ADXX:2:1104:17651:4926', 'HISEQ1:13:H8G92ADXX:1:1203:9939:95281'}:
-            #         click.echo(rt, err=True)
-            #
-            #         click.echo(t.astype(int)[:, :7], err=True)
-            #         # click.echo(t2.astype(int)[:, :7], err=True)
-            #         click.echo(rt['name'], err=True)
-            #         click.echo((rt["read1_reverse"], rt["read2_reverse"]), err=True)
-            #         click.echo((length1, length2), err=True)
-            #         click.echo((path1, path2), err=True)
-            #         quit()
 
             if length2 > length1:
                 return path2, length2, second_best2, dis_to_normal2, norm_pairings2
