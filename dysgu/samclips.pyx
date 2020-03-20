@@ -303,9 +303,15 @@ cdef add_sequence_back(item, reverse_me, template):
     # Occasionally the H is missing, means its impossible to add sequence back in
 
     total_cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1]])
-    if (flag & 64 and len(template["read1_seq"]) > total_cigar_length) or \
-            (flag & 128 and len(template["read2_seq"]) > total_cigar_length):
-        return item
+    try:
+        if (flag & 64 and len(template["read1_seq"]) > total_cigar_length) or \
+                (flag & 128 and len(template["read2_seq"]) > total_cigar_length):
+            return item
+    except:
+        echo(template["read1_seq"])
+        echo(template["read2_seq"])
+        echo(template)
+        quit()
 
     if flag & 64 and template["read1_seq"]:
         name = "read1"
@@ -447,7 +453,8 @@ cdef list replace_sa_tags(alns):
 
 
 cpdef list fixsam(dict template):
-
+    # if template["name"] == "HISEQ1:11:H8GV6ADXX:2:1215:16761:63541":
+    #     echo("Hi")
     sam = [template['inputdata'][i] for i in template['rows']]  # Get chosen rows
     max_d = template['max_d']
 

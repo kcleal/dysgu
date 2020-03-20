@@ -34,10 +34,10 @@ cpdef dict make_template(rows, max_d, last_seen_chrom, fq, pairing_params, paire
             "name": rows[0][0][0],
             "last_seen_chrom": last_seen_chrom,
             "inputfq": fq,
-            "read1_seq": 0,  # Some sam records may have seq == '*' , need a record of full seq for adding back in
-            "read2_seq": 0,
-            "read1_q": 0,
-            "read2_q": 0,
+            "read1_seq": "",  # Some sam records may have seq == '*' , need a record of full seq for adding back in
+            "read2_seq": "",
+            "read1_q": "",
+            "read2_q": "",
             "read1_reverse": 0,  # Set to true if aligner has reverse complemented the sequence
             "read2_reverse": 0,
             "replace_hard": replace_hard,
@@ -239,7 +239,9 @@ def iterate_mappings(args, version):
     for m, last_seen_chrom, ol in inputstream:  # Alignment
 
         nm = m[0]
+
         if name != nm:
+
             if len(rows) > 0:
                 total += 1
                 fq = fq_getter(fq_iter, name, args, fq_buffer)

@@ -15,10 +15,12 @@ from . import data_io, pairing, io_funcs
 
 cdef void process_template(read_template):
     paired = io_funcs.sam_to_array(read_template)
+
     if paired:
         return
 
     res = pairing.process(read_template)
+
     if res:
         read_template["passed"] = True
         io_funcs.add_scores(read_template, *res)
