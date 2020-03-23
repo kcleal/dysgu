@@ -319,7 +319,7 @@ cdef add_sequence_back(item, reverse_me, template):
                     item[9] = q
                 return item
             else:
-                return None  # todo try something here
+                return item  # todo try something here
 
         elif template["replace_hard"] and q != "*":
             # Sometimes current read had a hard-clip in cigar, but the primary read was not trimmed
@@ -335,7 +335,6 @@ cdef add_sequence_back(item, reverse_me, template):
         return item
 
     # Occasionally the H is missing, means its impossible to add sequence back in
-
 
     if (flag & 64 and len(template["read1_seq"]) > cigar_length) or \
             (flag & 128 and len(template["read2_seq"]) > cigar_length):
