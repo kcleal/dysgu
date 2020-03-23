@@ -466,7 +466,7 @@ cdef class NodeToName:
 
 def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                     int minimizer_support_thresh=2, int minimizer_breadth=3,
-                    int minimizer_dist=10, debug=None, int min_support=3, procs=1):
+                    int minimizer_dist=10, int mapq_thresh=10, debug=None, int min_support=3, procs=1):
 
     t0 = time.time()
     click.echo("Building graph with clustering distance {} bp".format(max_dist), err=True)
@@ -503,7 +503,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
         for r, tell in chunk:
 
-            if r.mapq < 10:
+            if r.mapq < mapq_thresh:
                 continue
             seq = r.seq
 

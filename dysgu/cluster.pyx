@@ -339,6 +339,7 @@ def pipe1(args, infile, kind, regions):
                                               clip_l=args["clip_length"],
                                               min_support=min_support,
                                               procs=args["procs"],
+                                              mapq_thresh=args["mq"],
                                               debug=None)
     echo("graph time", time.time() - t5)
 
