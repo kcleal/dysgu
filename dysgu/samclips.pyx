@@ -28,34 +28,38 @@ cdef list set_tlen(out):
     pri_1 = out[0][1]
     pri_2 = out[1][1]
 
-    p1_pos = int(pri_1[2])
-    p2_pos = int(pri_2[2])
-
     flg1 = pri_1[0]
     flg2 = pri_2[0]
 
-    assert flg1 & 64
-    assert flg2 & 128
+    if flg1 & 12 or flg2 & 12 or pri_1[1] != pri_2[1]:  # Read or mate unmapped, translocation
+        tlen1 = 0
+        tlen2 = 0
+        t1 = 0
+        t2 = 0
 
-    # Use the end position of the alignment if read is on the reverse strand, or start pos if on the forward
-    if flg1 & 16:
-        aln_end1 = io_funcs.get_align_end_offset(pri_1[4])
-        t1 = p1_pos + aln_end1
     else:
-        t1 = p1_pos
+        p1_pos = int(pri_1[2])
+        p2_pos = int(pri_2[2])
 
-    if flg2 & 16:
-        aln_end2 = io_funcs.get_align_end_offset(pri_2[4])
-        t2 = p2_pos + aln_end2
-    else:
-        t2 = p2_pos
+        # Use the end position of the alignment if read is on the reverse strand, or start pos if on the forward
+        if flg1 & 16:  # Read rev strand
+            aln_end1 = io_funcs.get_align_end_offset(pri_1[4])
+            t1 = p1_pos + aln_end1
+        else:
+            t1 = p1_pos
 
-    if t1 <= t2:
-        tlen1 = t2 - t1  # Positive
-        tlen2 = t1 - t2  # Negative
-    else:
-        tlen1 = t2 - t1  # Negative
-        tlen2 = t1 - t2  # Positive
+        if flg2 & 16:
+            aln_end2 = io_funcs.get_align_end_offset(pri_2[4])
+            t2 = p2_pos + aln_end2
+        else:
+            t2 = p2_pos
+
+        if t1 <= t2:
+            tlen1 = t2 - t1  # Positive
+            tlen2 = t1 - t2  # Negative
+        else:
+            tlen1 = t2 - t1  # Negative
+            tlen2 = t1 - t2  # Positive
 
     pri_1[7] = str(tlen1)
     pri_2[7] = str(tlen2)
@@ -225,7 +229,8 @@ cdef set_mate_flag(a, b, max_d, read1_rev, read2_rev):
 
     a[0] = aflag
     b[0] = bflag
-    return reverse_A, reverse_B
+
+    return reverse_A, reverse_B, a, b
 
 
 cdef set_supp_flags(sup, pri, ori_primary_reversed, primary_will_be_reversed):
@@ -273,46 +278,71 @@ cdef set_supp_flags(sup, pri, ori_primary_reversed, primary_will_be_reversed):
 
 cdef add_sequence_back(item, reverse_me, template):
     # item is the alignment
-    flag = item[0]
+    cdef int flag = item[0]
     c = re.split(r'(\d+)', item[4])[1:]  # Drop leading empty string
-    start = 0
+
+    cdef int i, l
+    cdef str opp
+    cdef int string_length = 0
+    cdef int hard_clip_length = 0
+    for i in range(0, len(c), 2):
+        l = int(c[i])
+        opp = c[i + 1]
+        if opp != "D":
+            if opp == "H":
+                hard_clip_length += l
+            else:
+                string_length += l
+    cdef int cigar_length = string_length + hard_clip_length
 
     if flag & 64:  # Read1
         seq = template["read1_seq"]
         q = template["read1_q"]
+
     elif flag & 128:
         seq = template["read2_seq"]
         q = template["read2_q"]
+
     else:
         seq = template["read1_seq"]  # Unpaired
         q = template["read1_q"]
 
-    cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "DH"])
+    if not seq:
+        return item
 
-    if seq and len(seq) != cigar_length:
-        if template["replace_hard"] and q != "*":
-            # Sometimes current read had a hard-clip in cigar, but the primary read was not soft clipped
-            cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "D"])
-            # echo(c, cigar_length, len(seq), len(template["read1_q"]), template['name'], template["read1_q"])
+    if len(seq) != string_length:
+        if not flag & 2048:  # Always replace primary seq
+            if cigar_length == len(seq):
+                item[4] = item[4].replace("H", "S")
+                item[8] = seq
+                if q:
+                    item[9] = q
+                return item
+            else:
+                return None  # todo try something here
+
+        elif template["replace_hard"] and q != "*":
+            # Sometimes current read had a hard-clip in cigar, but the primary read was not trimmed
             if len(seq) != cigar_length:
                 return item  # Cigar length is not set properly by mapper
             # If this is true, reset the Hard-clips with Soft-clips
             item[4] = item[4].replace("H", "S")
+            item[8] = seq
+            if q:
+                item[9] = q
+            return item
+
         return item
 
     # Occasionally the H is missing, means its impossible to add sequence back in
 
-    total_cigar_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1]])
-    try:
-        if (flag & 64 and len(template["read1_seq"]) > total_cigar_length) or \
-                (flag & 128 and len(template["read2_seq"]) > total_cigar_length):
-            return item
-    except:
-        echo(template["read1_seq"])
-        echo(template["read2_seq"])
-        echo(template)
-        quit()
 
+    if (flag & 64 and len(template["read1_seq"]) > cigar_length) or \
+            (flag & 128 and len(template["read2_seq"]) > cigar_length):
+        return item
+
+    cdef int start = 0
+    cdef int end = 0
     if flag & 64 and template["read1_seq"]:
         name = "read1"
         if template["fq_read1_seq"] != 0:
@@ -330,12 +360,12 @@ cdef add_sequence_back(item, reverse_me, template):
         return item  # read sequence is None or bad flag
 
     # Try and replace H with S
+
     if c[1] == "H" or c[-1] == "H":
         # Replace hard with soft-clips
-        non_hardclipped_length = sum([int(c[i]) for i in range(0, len(c), 2) if c[i + 1] not in "D"])
-        if non_hardclipped_length == end and template["replace_hard"]:
+        if cigar_length == end and template["replace_hard"]:
             item[4] = item[4].replace("H", "S")
-            cigar_length = non_hardclipped_length
+
         else:
             # Remove seq
             if c[1] == "H":
@@ -430,7 +460,7 @@ cdef list replace_sa_tags(alns):
             strand = "-" if flag & 16 else "+"
             cigar = j[4]
             sa = f"{chrom},{pos},{strand},{cigar},{j[0]},{mapq},{nm}"
-            #"%s,%s,%s,%s,%s,%s,%s" % (chrom, pos, strand, cigar, j[0], mapq, nm)
+
             key = (flag & 64, 1 if flag & 2048 else 0)
             if key in sa_tags:
                 sa_tags[key] += ";" + sa
@@ -450,6 +480,31 @@ cdef list replace_sa_tags(alns):
     else:
         # Might need to remove SA tags
         return [(i, [item for idx, item in enumerate(j) if idx <= 9 or (idx > 9 and item[:2] != "SA")], ii) for i, j, ii in alns]
+
+
+cdef list replace_mc_tags(alns):
+
+    # Replace MC mate cigar tag if set
+    cdef int i
+
+    a = alns[0][1]
+    if alns[1][0] != "sup":
+        b = alns[1][1]
+    else:
+        return alns
+
+    read1_cigar = a[4] if a[0] & 64 else b[4]
+    read2_cigar = b[4] if b[0] & 128 else a[4]
+
+    for count, (ps, a, _) in enumerate(alns):
+        for i in range(10, len(a)):
+            if a[i][0:2] == "MC":
+                if a[0] & 64:
+                    a[i] = f"MC:Z:{read2_cigar}"
+                else:
+                    a[i] = f"MC:Z:{read1_cigar}"
+                break
+    return alns
 
 
 cpdef list fixsam(dict template):
@@ -480,16 +535,17 @@ cpdef list fixsam(dict template):
             aln_info_0, aln_info_1 = score_mat[key]
 
         xs = int(aln_info_1)
+
         if l[0] & 2048:
-            os = "DS:i:1"  # refers to "originally supplementary"
+            os = "ZO:i:1"  # refers to "originally supplementary"
         else:
-            os = "DS:i:0"
+            os = "ZO:i:0"
         l += [
-              "DA:i:" + str(xs),
-              "DP:Z:" + str(round(score_mat["dis_to_next_path"], 0)),
-              "DN:Z:" + str(round(score_mat["dis_to_normal"], 2)),
-              "PS:Z:" + str(round(score_mat["path_score"], 2)),
-              "NP:Z:" + str(round(score_mat["normal_pairings"], 1)),
+              "ZA:i:" + str(xs),
+              "ZP:Z:" + str(round(score_mat["dis_to_next_path"], 0)),
+              "ZN:Z:" + str(round(score_mat["dis_to_normal"], 2)),
+              "ZS:Z:" + str(round(score_mat["path_score"], 2)),
+              "ZM:Z:" + str(round(score_mat["normal_pairings"], 1)),
               os
               ]
 
@@ -509,8 +565,10 @@ cpdef list fixsam(dict template):
             primary2 = template['inputdata'][template['first_read2_index']]  # unmapped
             primary2[0] = int(primary2[0])
 
+
     if paired and template["paired_end"]:
-        rev_A, rev_B = set_mate_flag(primary1, primary2, max_d, template["read1_reverse"], template["read2_reverse"])
+
+        rev_A, rev_B, primary1, primary2 = set_mate_flag(primary1, primary2, max_d, template["read1_reverse"], template["read2_reverse"])
 
         # Check if supplementary needs reverse complementing
         for i in range(len(out)):
@@ -536,7 +594,7 @@ cpdef list fixsam(dict template):
         if aln:  # None here means no alignment for primary2
 
             # Do for all supplementary
-            if len(aln[8]) <= 1 or "H" in aln[4] or aln[0] & 2048:  # Sequence is set as "*", needs adding back in
+            if aln[8] == "*" or "H" in aln[4]:  # or aln[0] & 2048:  # Sequence might be "*", needs adding back in
 
                 aln = add_sequence_back(aln, reverse_me, template)
 
@@ -548,6 +606,7 @@ cpdef list fixsam(dict template):
             aln[0] = set_bit(aln[0], 8, 0)
 
     out = replace_sa_tags(out)
+    out = replace_mc_tags(out)
 
     # Set discordant flag on supplementary, convert flags back to string
     for j in range(len(out)):

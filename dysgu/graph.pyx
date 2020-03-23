@@ -503,6 +503,8 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
         for r, tell in chunk:
 
+            if r.mapq < 10:
+                continue
             seq = r.seq
 
             clip_left, clip_right = map_set_utils.clip_sizes(r)

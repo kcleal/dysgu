@@ -9,8 +9,11 @@ Installation
 ------------
 Install using::
 
+    $ git clone https://github.com/kcleal/dysgu.git; cd dysgu
     $ python setup.py install
-    # Or
+
+To satisfy requirements::
+
     $ pip install -r requirements.txt; pip install .
 
 Run tests::
