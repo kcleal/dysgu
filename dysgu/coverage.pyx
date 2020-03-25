@@ -320,18 +320,18 @@ class GenomeScanner:
 
         if self.first == 1:
             # Not possible to get tell position from first read in region, so put into buffer instead
-            if self.procs == 1:
-                self.read_buffer[n1] = r
-            else:
-                self.read_buffer[n1] = r.to_string()
+            # if self.procs == 1:
+            self.read_buffer[n1] = r
+            # else:
+            #     self.read_buffer[n1] = r.to_string()
 
             self.first = 0
 
         elif len(self.read_buffer) < self.buff_size:
-            if self.procs == 1:
-                self.read_buffer[n1] = r
-            else:
-                self.read_buffer[n1] = r.to_string()
+            # if self.procs == 1:
+            self.read_buffer[n1] = r
+            # else:
+            #     self.read_buffer[n1] = r.to_string()
         elif self.no_tell:
             raise BufferError("Read buffer has overflowed, increase --buffer-size")
 

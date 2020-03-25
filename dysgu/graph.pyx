@@ -902,26 +902,26 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
 
-cdef list subgraph_from_nodes(G, list nodes):
-    # Mark all the vertices as not visited
-    edges_found = set([])
-    cdef int u, v
-    e = []
-    for u in nodes:
-        for v in G.neighbors(u):
-            if (u, v) in edges_found or (v, u) in edges_found:
-                continue
-            e.append((u, v, {"w": G.weight(u, v)}))
-            edges_found.add((u, v))
-    return e
-
-
-def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets, subset=False):
-
-    for cmp in component:
-        if cmp in targets:
-            if not subset:
-                echo("Supportbetween", support_between, "Support within", support_within)
+# cdef list subgraph_from_nodes(G, list nodes):
+#     # Mark all the vertices as not visited
+#     edges_found = set([])
+#     cdef int u, v
+#     e = []
+#     for u in nodes:
+#         for v in G.neighbors(u):
+#             if (u, v) in edges_found or (v, u) in edges_found:
+#                 continue
+#             e.append((u, v, {"w": G.weight(u, v)}))
+#             edges_found.add((u, v))
+#     return e
+#
+#
+# def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets, subset=False):
+#
+#     for cmp in component:
+#         if cmp in targets:
+#             if not subset:
+#                 echo("Supportbetween", support_between, "Support within", support_within)
 
             #nxG = nx.Graph()
 

@@ -97,9 +97,11 @@ cdef dict fetch_reads(data, d, bam):
     if len(dta_n2n) > 0:  # Might need to collect reads from file
         n2n = {}  # Subset
         for block in d.values():
-            for v in block:
-                if v in dta_n2n:
-                    n2n[v] = dta_n2n[v]  # Needs collecting
+
+            n2n.update({v: dta_n2n[v] for v in block if v in dta_n2n})
+            # for v in block:
+            #     if v in dta_n2n:
+            #         n2n[v] = dta_n2n[v]  # Needs collecting
 
         input_reads.update(graph.get_reads(bam, n2n))
 
