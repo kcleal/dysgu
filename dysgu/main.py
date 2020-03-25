@@ -183,7 +183,7 @@ def dysgu_aligner(ctx, **kwargs):
               default=defaults["max_tlen"], type=int, show_default=True)
 @click.option('--min-support', help="Minimum number of reads per SV",
               default=defaults["min_support"], type=int, show_default=True)
-@click.option('--mq', help="Minimum map quality < threshold are discarded", default=10,
+@click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
 @click.option('--z-depth', help="Minimum minimizer depth across alignments",
               default=defaults["z_depth"], type=int, show_default=True)

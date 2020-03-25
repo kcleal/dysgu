@@ -405,8 +405,8 @@ def cluster_reads(args):
     kind = "stdin" if kind == "-" else kind
     opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
 
-    if args["procs"] > 1:
-        raise ValueError("Sorry, only single process is supported currently")
+    # if args["procs"] > 1:
+    #     raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
 
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
