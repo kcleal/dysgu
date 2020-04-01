@@ -86,7 +86,7 @@ cdef tuple get_reads(args):
 
     cdef uint32_t clip_length
 
-    cdef int flag, tmpl, ct2, good_clip, nn
+    cdef int flag, tmpl, ct2, good_clip
     cdef str qname
     cdef list cigartuples
 
@@ -105,6 +105,8 @@ cdef tuple get_reads(args):
 
     cdef int count = 0
     bad = []
+
+    cdef nn = 0
     for nn, r in enumerate(bam_i):
 
         if send_output:

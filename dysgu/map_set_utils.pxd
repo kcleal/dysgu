@@ -138,6 +138,18 @@ cdef class Py_StrSet:
     cdef int size(self) nogil
 
 
+cdef extern from "wrap_map_set2.h" nogil:
+    cdef cppclass PairScope:
+        PairScope() nogil
+        void add_params(int, int)
+        cpp_vector[int] update(int, int, int, int, int)
+
+cdef class Py_PairScope:
+    cpdef PairScope * thisptr
+    cpdef void add_params(self, int, int)
+    cpdef cpp_vector[int] update(self, int, int, int, int, int)
+
+
 cdef int cigar_exists(r)
 
 

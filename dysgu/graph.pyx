@@ -6,6 +6,7 @@ import numpy as np
 import click
 from collections import defaultdict, deque
 import mmh3
+
 import sortedcontainers
 import operator
 import ncls
@@ -13,15 +14,19 @@ import ncls
 import pysam
 import sys
 import resource
-cimport numpy as c_np
+import numpy as np
+cimport numpy as np
 from cpython cimport array
 import array
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
+from libcpp.map cimport map as cpp_map
 from libcpp.unordered_map cimport unordered_map
 from libcpp.string cimport string
+from libcpp.algorithm cimport lower_bound
+
 from cython.operator import dereference, postincrement
 
 # from libcpp.set cimport set as cpp_set
@@ -45,15 +50,19 @@ ctypedef map_set_utils.Py_IntSet Py_IntSet
 
 ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph
 
+ctypedef cpp_map[int, cpp_item] ScopeItem_t
+ctypedef vector[ScopeItem_t] ForwardScope_t
+
+
 
 def echo(*args):
     click.echo(args, err=True)
 
 
 cdef class Table:
-    cdef vector[c_np.int64_t] starts
-    cdef vector[c_np.int64_t] ends
-    cdef vector[c_np.int64_t] values
+    cdef vector[np.int64_t] starts
+    cdef vector[np.int64_t] ends
+    cdef vector[np.int64_t] values
 
     cpdef void add(self, int s, int e, int v):
         # with nogil:
@@ -62,8 +71,8 @@ cdef class Table:
             self.values.push_back(v)
 
     def get_val(self, v):
-        cdef vector[c_np.int64_t] values = v
-        cdef c_np.ndarray[c_np.int64_t] a = np.empty(values.size(), dtype=np.int)
+        cdef vector[np.int64_t] values = v
+        cdef np.ndarray[np.int64_t] a = np.empty(values.size(), dtype=np.int)
         cdef int i
         with nogil:
             for i in range(a.shape[0]):
@@ -84,16 +93,18 @@ cdef set sliding_window_minimum(int k, int m, str s):
 
     # Cpp version
     cdef int i = 0
+    cdef int end = len(s) - m + 1
     cdef cpp_deque[cpp_item] window2
-    cdef int hx2
+    cdef long int hx2
+
     # cdef cpp_set[int] seen2  # Using
     # cdef cpp_u_set[int] seen2
     seen2 = set([])
 
     # cdef cpp_item last
-    for i in range(0, len(s) - m + 1):
+    for i in range(end):
 
-        hx2 = int(mmh3.hash(s[i:i+m], 42))
+        hx2 = mmh3.hash(s[i:i+m], 42)
 
         while window2.size() != 0 and window2.back().first >= hx2:
             window2.pop_back()
@@ -240,101 +251,158 @@ class ClipScoper:
             return d  # max(d, key=d.get)  # Best candidate with most overlapping minimizers
 
 
-class ForwardScope:
-
-    def __init__(self):
-        self.inscope = 0
-        self.data = sortedcontainers.SortedKeyList(key=operator.itemgetter(0))
-    def add(self, v):
-        self.data.add(v)
-        self.inscope += 1
-    def drop_one(self):
-        # Keep a reference count of number in local scope, means multiple values can be deleted by reinitializing list
-        self.inscope -= 1
-        if self.inscope == 0:
-            self.data = sortedcontainers.SortedKeyList(key=operator.itemgetter(0))
-        elif self.inscope < 0:
-            raise ValueError
-    def empty(self):
-        self.inscope = 0
-        self.data = sortedcontainers.SortedKeyList(key=operator.itemgetter(0))
-
-
-class PairedEndScoper:
-
-    def __init__(self, max_dist):
-        self.clst_dist = max_dist  # 1.5  # Keep reads within this distance in scope
-        self.max_dist = max_dist  # 1.5
-        self.local_chrom = None
-        self.local_scope = deque([])
-        self.forward_scope = defaultdict(lambda: ForwardScope())
+# class ForwardScope:
+#
+#     def __init__(self):
+#         # self.inscope = 0
+#         self.data = sortedcontainers.SortedList() #key=operator.itemgetter(0))
+#     def addone(self, v):
+#         # echo(v)
+#         self.data.add(v)
+#         # self.inscope += 1
+#     def drop_one(self, v):
+#         # Keep a reference count of number in local scope, means multiple values can be deleted by reinitializing list
+#         self.data.remove(v)
+#         # self.inscope -= 1
+#         # if self.inscope == 0:
+#         #     self.data = sortedcontainers.SortedKeyList(key=operator.itemgetter(0))
+#         # elif self.inscope < 0:
+#         #     raise ValueError
+#     def empty(self):
+#         if len(self.data) > 0:
+#             self.data = sortedcontainers.SortedList()  #key=operator.itemgetter(0))
 
 
-    def update(self, node_name, current_chrom, current_pos, chrom2, pos2):
+cdef struct LocalItem:
+    int pos
+    int chrom2
+    int pos2
+    int node_name
+
+
+cdef LocalItem make_local_item(int pos, int chrom2, int pos2, int node_name):
+    cdef LocalItem item
+    item.pos = pos
+    item.chrom2 = chrom2
+    item.pos2 = pos2
+    item.node_name = node_name
+    return item
+
+
+cdef class SortItem:
+    cdef readonly int pos2, node_name, current_pos
+    def __cinit__(self, pos2, node_name, current_pos):
+        self.pos2 = pos2
+        self.node_name = node_name
+        self.current_pos = current_pos
+    def __lt__(self, other):
+        return self.pos2 < other
+    def __gt__(self, other):
+        return other <= self.pos2
+    def __eq__(self, other):
+        return self.pos2 == other
+    def __repr__(self):
+        return f"({self.pos2}, {self.node_name}, {self.current_pos})"
+
+
+cdef int check_distance(SortItem v, int current_pos, int pos2, int max_dist):
+    if abs(v.current_pos - current_pos) < max_dist and abs(v.pos2 - pos2) < max_dist:
+        return 1
+    return 0
+
+
+cdef class PairedEndScoper:
+
+    cdef float clst_dist
+    cdef int max_dist
+    cdef int local_chrom
+    cdef list forward_scope
+
+    cdef cpp_deque[LocalItem] local_scope  # in current region (pos, chrom2)
+
+    def __init__(self, max_dist, n_references):
+        # Keep reads within this distance in scope, *5 seems to work well but not sure why
+        self.clst_dist = max_dist * 5
+        self.max_dist = max_dist
+        self.local_chrom = -1
+
+        self.forward_scope = [sortedcontainers.SortedList() for i in range(n_references)]
+
+
+    cdef update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2):
 
         if current_chrom != self.local_chrom:
 
             self.local_chrom = current_chrom
-            self.local_scope = deque([(current_pos, chrom2)])
 
-            self.forward_scope = defaultdict(lambda: ForwardScope())
-            self.forward_scope[chrom2].add((pos2, node_name, current_pos))
+            self.local_scope.clear()
+            self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
 
-            return None
+            for idx in range(len(self.forward_scope)):
+                if len(self.forward_scope[idx]) > 0:
+                    self.forward_scope[idx] = sortedcontainers.SortedList()
 
-        while len(self.local_scope) > 0:
-            if abs(self.local_scope[0][0] - current_pos) > self.clst_dist:
-                local_p, f_chrom = self.local_scope.popleft()
-                # echo("here")
-                self.forward_scope[f_chrom].drop_one()
+            self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
+            return
 
+        cdef LocalItem item
+        while self.local_scope.size() > 0:
+
+            item = self.local_scope[0]
+            if abs(item.pos - current_pos) > self.clst_dist * 5:
+                self.forward_scope[item.chrom2].remove(item.pos2)
+                self.local_scope.pop_front()
             else:
                 break
 
+        # Could use a more exact approach below, but this doesnt seem to work so well
+        # found = []
+        # t = self.forward_scope[chrom2]
+        # cdef int i
+        # if len(t) > 0:
+        #     lb = t.bisect_left(pos2 - self.max_dist)
+        #     if lb != len(t):
+        #         for i in range(lb, len(t)):
+        #             if check_distance(t[i], current_pos, pos2, self.max_dist):
+        #                 found.append(t[i].node_name)
+        #                 if len(found) > 3:
+        #                     break
+
+
         # Find other nodes in forward_scope
-        t = self.forward_scope[chrom2].data
+        t = self.forward_scope[chrom2]
         len_t = len(t)
         if len_t == 0:
-            t.add((pos2, node_name, current_pos))
-            return None
+            t.add(SortItem(pos2, node_name, current_pos))
+            return
 
-        idx = t.bisect_left((pos2, None))
+        idx = t.bisect_left(pos2)
         found = []
         if idx == 0:
+            if check_distance(t[idx], current_pos, pos2, self.max_dist):
+                found.append(t[idx].node_name)
+            if len(t) > 1:
+                if check_distance(t[1], current_pos, pos2, self.max_dist):
+                    found.append(t[1].node_name)
 
-            item_forward_pos, item_node, item_local_pos = t[idx]
 
-            if abs(item_local_pos - current_pos) < self.max_dist and \
-               abs(item_forward_pos - pos2) < self.max_dist:
-                    found.append(item_node)
-
-        if idx == len_t:
-            item_forward_pos, item_node, item_local_pos = t[idx - 1]
-
-            if abs(item_local_pos - current_pos) < self.max_dist and \
-               abs(item_forward_pos - pos2) < self.max_dist:
-                    found.append(item_node)
+        elif idx == len_t:
+            if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
+                found.append(t[idx - 1].node_name)
+            if len(t) > 1:
+                if check_distance(t[idx - 2], current_pos, pos2, self.max_dist):
+                    found.append(t[idx - 2].node_name)
 
         else:  # Add upstream and downstream
-            item_forward_pos, item_node, item_local_pos = t[idx]
+            if check_distance(t[idx], current_pos, pos2, self.max_dist):
+                found.append(t[idx].node_name)
 
-            if abs(item_local_pos - current_pos) < self.max_dist and \
-               abs(item_forward_pos - pos2) < self.max_dist:
-                    found.append(item_node)
+            if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
+                found.append(t[idx - 1].node_name)
 
-            item_forward_pos, item_node, item_local_pos = t[idx - 1]
+        self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
+        self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
 
-            if abs(item_local_pos - current_pos) < self.max_dist and \
-               abs(item_forward_pos - pos2) < self.max_dist:
-                    found.append(item_node)
-
-        # Add to scopes
-        self.local_scope.append((current_pos, chrom2))
-        self.forward_scope[chrom2].add((pos2, node_name, current_pos))
-
-        # if node_name == 70:
-        #     echo(self.local_scope)
-        #     echo(self.forward_scope[chrom2])
         return found
 
 
@@ -445,7 +513,7 @@ cdef class NodeToName:
     cdef array.array c
     cdef array.array t
 
-    def __cinit__(self):  # Possibly use a vector of structs instead
+    def __cinit__(self):  # Possibly use a vector of structs instead. Reason for doing this way was to save mem
         # node names have the form (mmh3.hash(qname, 42), flag, pos, chrom, tell)
         self.h = array.array("l", [])  # signed long
         self.f = array.array("H", [])  # unsigned short
@@ -479,14 +547,18 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth)
 
-    pe_scope = PairedEndScoper(max_dist)  # Infers long-range connections, outside local scope using pe information
+
+    pe_scope = PairedEndScoper(max_dist, infile.header.nreferences)  # Infers long-range connections, outside local scope using pe information
+
+    pe_scope2 = map_set_utils.Py_PairScope()
+    # pe_scope2.add_params(max_dist, infile.header.nreferences)
 
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
 
     gettid = infile.gettid
 
     cdef int flag, pos, rname, pnext, rnext, node_name, node_name2, chrom, chrom2, clip_left, clip_right
-    cdef str qname, seq
+    cdef str qname
 
     cdef int ol_include, add_primary_link
     cdef int current_overlaps_roi, next_overlaps_roi
@@ -505,44 +577,19 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
             if r.mapq < mapq_thresh:
                 continue
-            seq = r.seq
-
-            clip_left, clip_right = map_set_utils.clip_sizes(r)
 
             chrom = r.rname
             pos = r.pos
             flag = r.flag
             qname = r.qname
 
-            n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)  # Hash qname so save mem
+            n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)  # Hash qname to save mem
             node_name = G.addNode()
-
-            # node_name = SG.addNode()
-
             node_to_name.append(n1)  # Index this list to get the template_name
-            # node_to_name.extend(n1)
 
             genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
-
             template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
-            # if qname == debug:
-            #     echo(qname, n1, "NODE NAME", node_name, clip_left, clip_right, f"{r.rname}:{r.pos}", r.query_alignment_start)
-            #     debug_nodes.add(node_name)
-
-            # Cluster soft-clips
-            if clip_left > clip_l or clip_right > clip_l:
-                best_candidates = scope.update(node_name, seq, clip_left, clip_right, chrom, pos)
-
-                if best_candidates is not None:
-                    for node_name2 in best_candidates:
-                        if not G.hasEdge(node_name, node_name2):
-                            G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
-
-
-                            # if node_name in debug_nodes or node_name2 in debug_nodes:
-                            #     echo("black edge", node_name, node_name2)
-                            #     echo(node_name, str(r.qname))
 
             # Cluster paired-end mates
             pnext = r.pnext
@@ -554,8 +601,17 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
             add_primark_link = 1
 
             current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, pos, pos+1)
-            # if node_name in debug_nodes:
-            #     echo("current overlaps roi", node_name, current_overlaps_roi)
+
+            if current_overlaps_roi:
+                # Cluster soft-clips
+                clip_left, clip_right = map_set_utils.clip_sizes(r)
+                if clip_left > clip_l or clip_right > clip_l:
+                    best_candidates = scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos)
+
+                    if best_candidates is not None:
+                        for node_name2 in best_candidates:
+                            if not G.hasEdge(node_name, node_name2):
+                                G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
 
             if chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
 
@@ -563,34 +619,20 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                     sa = r.get_tag("SA").split(",", 2)
                     chrom2 = gettid(sa[0])
                     pos2 = int(sa[1])
-                    # if chrom2 != chrom or abs(pos2 - pos) > loci_dist:  # Chaned in 0.23
 
                     add_primark_link = 0
                     next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
 
-                    # if not next_overlaps_roi:
                     if current_overlaps_roi and next_overlaps_roi:
                         continue
                     else:
-                        # other_nodes = []
                         other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
-
-                        # if qname == debug:
-                        #     echo("same loci?", node_name, other_nodes)
-
                         if other_nodes:
                             for other_node in other_nodes:
-
                                 if not G.hasEdge(node_name, other_node):
-                                    # pass
                                     G.addEdge(node_name, other_node, 2)
 
 
-
-                                    # if qname == debug:
-                                    #     echo(node_name, other_node, "SA")
-
-            #
             if add_primark_link == 1:
                 next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, rnext, pnext, pnext+1)
 
@@ -601,21 +643,15 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                 if flag & 2 and not flag & 2048:  # Skip non-discordant that are same loci
                     if abs(r.tlen) < clustering_dist:
                        continue
-                # other_nodes = []
+
                 other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext)
+
                 if other_nodes:
                     for other_node in other_nodes:
-
                         # if node_to_name[other_node] not in templates_connected and \
                         if not G.hasEdge(node_name, other_node):
-                            # pass
                             G.addEdge(node_name, other_node, 2)
 
-
-
-                            # if node_name in debug_nodes:
-                            #     echo("normal edge", node_name, other_node, current_overlaps_roi, next_overlaps_roi, chrom, pos, rnext, pnext)
-                            #     echo(node_name, str(r.qname))
 
     click.echo(f"Processed minimizers {time.time() - t0}", err=True)
 

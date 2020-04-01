@@ -75,7 +75,7 @@ def get_reads_f(args):
     cdef str qname = ""
 
     cdef list d, ct
-    cdef int nn
+    cdef int nn = 0
 
     if two_files:
         assert f"{args['reads']}" != f"{args['reads2']}"
