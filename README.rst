@@ -2,7 +2,7 @@
 dysgu-SV
 ========
 
-dysgu (pronounced *duss-key*) is a collection of tools for mapping and calling structural variants.
+dysgu (pronounced *duss-key*) is a collection of tools for calling structural variants.
 
 
 Installation
@@ -28,29 +28,10 @@ Usage
 -----
 Available commands::
 
-    $ dysgu choose  # Choose paired-end or single read alignments from sam input
     $ dysgu fetch   # Seperate SV reads from input bam file
     $ dysgu call    # SV calling paired-end reads
     $ dysgu view    # Merge calls from multiple dysgu call runs
     $ dysgu test    # Run basic tests
-
-
-Choosing alignments from a list
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Given a list of candidate alignments for paired-end reads, `dysgu choose` will perform split read-pairing, or for single
-end reads will selects an optimal spanning set of alignments.
-
-For pairing using paired-end alignments from a candidate list::
-
-    $ dysgu choose all_alignments.sam > output_alignments.sam
-
-Or can be run in a stream using bwa mem in all-mapping mode (use of -a option in bwa)::
-
-    $ bwa mem -a -t8 ref.fa read1.fq read2.fq | dysgu choose - > output_alignments.sam
-
-Or run in single end mode::
-
-    $ bwa mem -a -t8 ref.fa contigs.fa | dysgu choose --paired False - > output_alignments.sam
 
 
 Calling structural variants

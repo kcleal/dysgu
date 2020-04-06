@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from collections import Counter, defaultdict
 import click
 import numpy as np
-from dysgu import data_io, assembler, graph, coverage
+from dysgu import io_funcs, assembler, graph, coverage
 import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -1385,14 +1385,14 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
 
     # Check if side A in regions
     ar = False  # c_io_funcs.intersecter_int_chrom
-    if data_io.intersecter(regions, r["chrA"], r["posA"], r["posA"] + 1):
+    if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
         ar = True
 
     if "chrB" not in r:  # Todo Does this happen?
         return None
 
     br = False
-    if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):
+    if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
         br = True
 
 

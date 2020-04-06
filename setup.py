@@ -64,8 +64,7 @@ print("Extra compiler args ", extras)
 
 ext_modules = []
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "sv2bam", "cluster", "sv2fq", "input_stream_alignments",
-             "data_io", "pairing", "view", "samclips"]:
+             "map_set_utils", "sv2bam", "cluster", "sv2fq", "view"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -91,7 +90,7 @@ setup(
             'scikit-bio',
             'sortedcontainers',
             'mmh3',
-            'joblib'
+
         ],
     packages=find_packages(where="."),
     ext_modules=cythonize(ext_modules),

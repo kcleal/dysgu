@@ -11,7 +11,7 @@ import click
 import resource
 from subprocess import run
 from sys import stdout
-from dysgu import data_io, io_funcs
+from dysgu import io_funcs
 from dysgu.coverage import get_insert_params
 
 
@@ -53,7 +53,7 @@ def get_reads_f(args):
     exc_tree = None
     if args["exclude"]:
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
-        exc_tree = data_io.overlap_regions(args["exclude"])
+        exc_tree = io_funcs.overlap_regionspy(args["exclude"])
 
 
     def container(paired_end):
@@ -96,7 +96,7 @@ def get_reads_f(args):
 
         if args["exclude"]:  # Skip exclude regions
             pos = r.pos
-            if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
+            if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
                 continue
 
         flag = r.flag
@@ -225,7 +225,7 @@ def get_reads_f(args):
 def process(args):
 
     t0 = time.time()
-    data_io.mk_dest(args["dest"])
+    io_funcs.mk_dest(args["dest"])
     click.echo("Output format: {}".format(args["out_format"]), err=True)
     insert_median, insert_stdev, read_length, count = get_reads_f(args)
 

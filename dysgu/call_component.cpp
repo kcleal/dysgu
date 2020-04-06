@@ -1768,7 +1768,6 @@ static const char __pyx_k_Counter[] = "Counter";
 static const char __pyx_k_INV_DUP[] = "INV:DUP";
 static const char __pyx_k_MAPQpri[] = "MAPQpri";
 static const char __pyx_k_contig2[] = "contig2";
-static const char __pyx_k_data_io[] = "data_io";
 static const char __pyx_k_genexpr[] = "genexpr";
 static const char __pyx_k_get_tag[] = "get_tag";
 static const char __pyx_k_get_tid[] = "get_tid";
@@ -1784,6 +1783,7 @@ static const char __pyx_k_cipos95A[] = "cipos95A";
 static const char __pyx_k_cipos95B[] = "cipos95B";
 static const char __pyx_k_coverage[] = "coverage";
 static const char __pyx_k_getstate[] = "__getstate__";
+static const char __pyx_k_io_funcs[] = "io_funcs";
 static const char __pyx_k_preciseA[] = "preciseA";
 static const char __pyx_k_preciseB[] = "preciseB";
 static const char __pyx_k_s_within[] = "s_within";
@@ -1808,7 +1808,6 @@ static const char __pyx_k_clip_length[] = "clip_length";
 static const char __pyx_k_collections[] = "collections";
 static const char __pyx_k_defaultdict[] = "defaultdict";
 static const char __pyx_k_insert_size[] = "insert_size";
-static const char __pyx_k_intersecter[] = "intersecter";
 static const char __pyx_k_min_support[] = "min_support";
 static const char __pyx_k_most_common[] = "most_common";
 static const char __pyx_k_right_clipA[] = "right_clipA";
@@ -1820,6 +1819,7 @@ static const char __pyx_k_AlignmentItem[] = "AlignmentItem";
 static const char __pyx_k_FutureWarning[] = "FutureWarning";
 static const char __pyx_k_base_assemble[] = "base_assemble";
 static const char __pyx_k_hemi_regional[] = "hemi-regional";
+static const char __pyx_k_intersecterpy[] = "intersecterpy";
 static const char __pyx_k_reduce_cython[] = "__reduce_cython__";
 static const char __pyx_k_reference_end[] = "reference_end";
 static const char __pyx_k_regions_depth[] = "regions_depth";
@@ -1901,7 +1901,6 @@ static PyObject *__pyx_n_u_contig;
 static PyObject *__pyx_n_u_contig2;
 static PyObject *__pyx_n_s_coverage;
 static PyObject *__pyx_n_s_data;
-static PyObject *__pyx_n_s_data_io;
 static PyObject *__pyx_n_s_defaultdict;
 static PyObject *__pyx_n_s_dysgu;
 static PyObject *__pyx_n_s_dysgu_call_component;
@@ -1929,8 +1928,9 @@ static PyObject *__pyx_n_s_infile;
 static PyObject *__pyx_n_s_insert_size;
 static PyObject *__pyx_n_s_insert_stdev;
 static PyObject *__pyx_kp_u_inter_regional;
-static PyObject *__pyx_n_s_intersecter;
+static PyObject *__pyx_n_s_intersecterpy;
 static PyObject *__pyx_n_u_intra_regional;
+static PyObject *__pyx_n_s_io_funcs;
 static PyObject *__pyx_n_s_items;
 static PyObject *__pyx_n_u_join_type;
 static PyObject *__pyx_n_s_keys;
@@ -23123,7 +23123,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
  * 
  *     # Check if side A in regions
  *     ar = False  # c_io_funcs.intersecter_int_chrom             # <<<<<<<<<<<<<<
- *     if data_io.intersecter(regions, r["chrA"], r["posA"], r["posA"] + 1):
+ *     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
  *         ar = True
  */
   __pyx_v_ar = 0;
@@ -23131,13 +23131,13 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
   /* "dysgu/call_component.pyx":1388
  *     # Check if side A in regions
  *     ar = False  # c_io_funcs.intersecter_int_chrom
- *     if data_io.intersecter(regions, r["chrA"], r["posA"], r["posA"] + 1):             # <<<<<<<<<<<<<<
+ *     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):             # <<<<<<<<<<<<<<
  *         ar = True
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_data_io); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1388, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1388, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_intersecter); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1388, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_intersecterpy); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1388, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_r, __pyx_n_u_chrA); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1388, __pyx_L1_error)
@@ -23212,7 +23212,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
 
     /* "dysgu/call_component.pyx":1389
  *     ar = False  # c_io_funcs.intersecter_int_chrom
- *     if data_io.intersecter(regions, r["chrA"], r["posA"], r["posA"] + 1):
+ *     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
  *         ar = True             # <<<<<<<<<<<<<<
  * 
  *     if "chrB" not in r:  # Todo Does this happen?
@@ -23222,7 +23222,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
     /* "dysgu/call_component.pyx":1388
  *     # Check if side A in regions
  *     ar = False  # c_io_funcs.intersecter_int_chrom
- *     if data_io.intersecter(regions, r["chrA"], r["posA"], r["posA"] + 1):             # <<<<<<<<<<<<<<
+ *     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):             # <<<<<<<<<<<<<<
  *         ar = True
  * 
  */
@@ -23263,7 +23263,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
  *         return None
  * 
  *     br = False             # <<<<<<<<<<<<<<
- *     if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):
+ *     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
  *         br = True
  */
   __pyx_v_br = 0;
@@ -23271,13 +23271,13 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
   /* "dysgu/call_component.pyx":1395
  * 
  *     br = False
- *     if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):             # <<<<<<<<<<<<<<
+ *     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):             # <<<<<<<<<<<<<<
  *         br = True
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_data_io); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1395, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1395, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_intersecter); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 1395, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_intersecterpy); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 1395, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_t_3 = __Pyx_PyObject_Dict_GetItem(__pyx_v_r, __pyx_n_u_chrB); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 1395, __pyx_L1_error)
@@ -23352,7 +23352,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
 
     /* "dysgu/call_component.pyx":1396
  *     br = False
- *     if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):
+ *     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
  *         br = True             # <<<<<<<<<<<<<<
  * 
  * 
@@ -23362,7 +23362,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_raw_coverage_information(Py
     /* "dysgu/call_component.pyx":1395
  * 
  *     br = False
- *     if data_io.intersecter(regions, r["chrB"], r["posB"], r["posB"] + 1):             # <<<<<<<<<<<<<<
+ *     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):             # <<<<<<<<<<<<<<
  *         br = True
  * 
  */
@@ -25879,7 +25879,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_contig2, __pyx_k_contig2, sizeof(__pyx_k_contig2), 0, 1, 0, 1},
   {&__pyx_n_s_coverage, __pyx_k_coverage, sizeof(__pyx_k_coverage), 0, 0, 1, 1},
   {&__pyx_n_s_data, __pyx_k_data, sizeof(__pyx_k_data), 0, 0, 1, 1},
-  {&__pyx_n_s_data_io, __pyx_k_data_io, sizeof(__pyx_k_data_io), 0, 0, 1, 1},
   {&__pyx_n_s_defaultdict, __pyx_k_defaultdict, sizeof(__pyx_k_defaultdict), 0, 0, 1, 1},
   {&__pyx_n_s_dysgu, __pyx_k_dysgu, sizeof(__pyx_k_dysgu), 0, 0, 1, 1},
   {&__pyx_n_s_dysgu_call_component, __pyx_k_dysgu_call_component, sizeof(__pyx_k_dysgu_call_component), 0, 0, 1, 1},
@@ -25907,8 +25906,9 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_insert_size, __pyx_k_insert_size, sizeof(__pyx_k_insert_size), 0, 0, 1, 1},
   {&__pyx_n_s_insert_stdev, __pyx_k_insert_stdev, sizeof(__pyx_k_insert_stdev), 0, 0, 1, 1},
   {&__pyx_kp_u_inter_regional, __pyx_k_inter_regional, sizeof(__pyx_k_inter_regional), 0, 1, 0, 0},
-  {&__pyx_n_s_intersecter, __pyx_k_intersecter, sizeof(__pyx_k_intersecter), 0, 0, 1, 1},
+  {&__pyx_n_s_intersecterpy, __pyx_k_intersecterpy, sizeof(__pyx_k_intersecterpy), 0, 0, 1, 1},
   {&__pyx_n_u_intra_regional, __pyx_k_intra_regional, sizeof(__pyx_k_intra_regional), 0, 1, 0, 1},
+  {&__pyx_n_s_io_funcs, __pyx_k_io_funcs, sizeof(__pyx_k_io_funcs), 0, 0, 1, 1},
   {&__pyx_n_s_items, __pyx_k_items, sizeof(__pyx_k_items), 0, 0, 1, 1},
   {&__pyx_n_u_join_type, __pyx_k_join_type, sizeof(__pyx_k_join_type), 0, 1, 0, 1},
   {&__pyx_n_s_keys, __pyx_k_keys, sizeof(__pyx_k_keys), 0, 0, 1, 1},
@@ -26440,7 +26440,7 @@ if (!__Pyx_RefNanny) {
  * from collections import Counter, defaultdict
  * import click             # <<<<<<<<<<<<<<
  * import numpy as np
- * from dysgu import data_io, assembler, graph, coverage
+ * from dysgu import io_funcs, assembler, graph, coverage
  */
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_click, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -26451,7 +26451,7 @@ if (!__Pyx_RefNanny) {
  * from collections import Counter, defaultdict
  * import click
  * import numpy as np             # <<<<<<<<<<<<<<
- * from dysgu import data_io, assembler, graph, coverage
+ * from dysgu import io_funcs, assembler, graph, coverage
  * import warnings
  */
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_numpy, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 6, __pyx_L1_error)
@@ -26462,15 +26462,15 @@ if (!__Pyx_RefNanny) {
   /* "dysgu/call_component.pyx":7
  * import click
  * import numpy as np
- * from dysgu import data_io, assembler, graph, coverage             # <<<<<<<<<<<<<<
+ * from dysgu import io_funcs, assembler, graph, coverage             # <<<<<<<<<<<<<<
  * import warnings
  * 
  */
   __pyx_t_2 = PyList_New(4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_INCREF(__pyx_n_s_data_io);
-  __Pyx_GIVEREF(__pyx_n_s_data_io);
-  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_data_io);
+  __Pyx_INCREF(__pyx_n_s_io_funcs);
+  __Pyx_GIVEREF(__pyx_n_s_io_funcs);
+  PyList_SET_ITEM(__pyx_t_2, 0, __pyx_n_s_io_funcs);
   __Pyx_INCREF(__pyx_n_s_assembler);
   __Pyx_GIVEREF(__pyx_n_s_assembler);
   PyList_SET_ITEM(__pyx_t_2, 1, __pyx_n_s_assembler);
@@ -26483,9 +26483,9 @@ if (!__Pyx_RefNanny) {
   __pyx_t_1 = __Pyx_Import(__pyx_n_s_dysgu, __pyx_t_2, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_data_io); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_data_io, __pyx_t_2) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_io_funcs, __pyx_t_2) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = __Pyx_ImportFrom(__pyx_t_1, __pyx_n_s_assembler); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -26503,7 +26503,7 @@ if (!__Pyx_RefNanny) {
 
   /* "dysgu/call_component.pyx":8
  * import numpy as np
- * from dysgu import data_io, assembler, graph, coverage
+ * from dysgu import io_funcs, assembler, graph, coverage
  * import warnings             # <<<<<<<<<<<<<<
  * 
  * warnings.filterwarnings("ignore", category=DeprecationWarning)

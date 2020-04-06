@@ -1622,7 +1622,6 @@ static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_reads2[] = "reads2";
 static const char __pyx_k_search[] = "search";
 static const char __pyx_k_stdout[] = "-stdout";
-static const char __pyx_k_data_io[] = "data_io";
 static const char __pyx_k_exclude[] = "exclude";
 static const char __pyx_k_has_tag[] = "has_tag";
 static const char __pyx_k_mk_dest[] = "mk_dest";
@@ -1660,20 +1659,20 @@ static const char __pyx_k_clip_length[] = "clip_length";
 static const char __pyx_k_dysgu_sv2fq[] = "dysgu.sv2fq";
 static const char __pyx_k_get_reads_f[] = "get_reads_f";
 static const char __pyx_k_insert_size[] = "insert_size";
-static const char __pyx_k_intersecter[] = "intersecter";
 static const char __pyx_k_read_length[] = "read_length";
 static const char __pyx_k_insert_stdev[] = "insert_stdev";
 static const char __pyx_k_AlignmentFile[] = "AlignmentFile";
 static const char __pyx_k_Output_format[] = "Output format: {}";
 static const char __pyx_k_insert_median[] = "insert_median";
+static const char __pyx_k_intersecterpy[] = "intersecterpy";
 static const char __pyx_k_aligns_written[] = "aligns_written";
 static const char __pyx_k_dysgu_coverage[] = "dysgu.coverage";
 static const char __pyx_k_insert_stdev_2[] = ", insert stdev ";
 static const char __pyx_k_dysgu_sv2fq_pyx[] = "dysgu/sv2fq.pyx";
 static const char __pyx_k_insert_median_2[] = ", insert median ";
-static const char __pyx_k_overlap_regions[] = "overlap_regions";
 static const char __pyx_k_get_insert_params[] = "get_insert_params";
 static const char __pyx_k_infer_read_length[] = "infer_read_length";
+static const char __pyx_k_overlap_regionspy[] = "overlap_regionspy";
 static const char __pyx_k_Limiting_search_to[] = "Limiting search to {}";
 static const char __pyx_k_approx_read_length[] = "approx_read_length";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
@@ -1738,7 +1737,6 @@ static PyObject *__pyx_n_s_count;
 static PyObject *__pyx_n_u_cram;
 static PyObject *__pyx_n_s_ct;
 static PyObject *__pyx_n_s_d;
-static PyObject *__pyx_n_s_data_io;
 static PyObject *__pyx_n_s_datetime;
 static PyObject *__pyx_n_u_dest;
 static PyObject *__pyx_n_s_dysgu;
@@ -1777,7 +1775,7 @@ static PyObject *__pyx_n_s_insert_size;
 static PyObject *__pyx_n_s_insert_stdev;
 static PyObject *__pyx_n_u_insert_stdev;
 static PyObject *__pyx_kp_u_insert_stdev_2;
-static PyObject *__pyx_n_s_intersecter;
+static PyObject *__pyx_n_s_intersecterpy;
 static PyObject *__pyx_n_s_io_funcs;
 static PyObject *__pyx_n_s_iter_bam;
 static PyObject *__pyx_n_s_kind;
@@ -1792,7 +1790,7 @@ static PyObject *__pyx_n_s_numpy;
 static PyObject *__pyx_n_s_open;
 static PyObject *__pyx_n_s_opts;
 static PyObject *__pyx_n_u_out_format;
-static PyObject *__pyx_n_s_overlap_regions;
+static PyObject *__pyx_n_s_overlap_regionspy;
 static PyObject *__pyx_n_s_paired_end;
 static PyObject *__pyx_n_s_pos;
 static PyObject *__pyx_n_s_process;
@@ -3298,7 +3296,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  *     exc_tree = None
  *     if args["exclude"]:             # <<<<<<<<<<<<<<
  *         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
- *         exc_tree = data_io.overlap_regions(args["exclude"])
+ *         exc_tree = io_funcs.overlap_regionspy(args["exclude"])
  */
   __pyx_t_10 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_exclude); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 54, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_10);
@@ -3310,7 +3308,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  *     exc_tree = None
  *     if args["exclude"]:
  *         click.echo("Excluding {} from search".format(args["exclude"]), err=True)             # <<<<<<<<<<<<<<
- *         exc_tree = data_io.overlap_regions(args["exclude"])
+ *         exc_tree = io_funcs.overlap_regionspy(args["exclude"])
  * 
  */
     __Pyx_GetModuleGlobalName(__pyx_t_10, __pyx_n_s_click); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 55, __pyx_L1_error)
@@ -3356,13 +3354,13 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
     /* "dysgu/sv2fq.pyx":56
  *     if args["exclude"]:
  *         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
- *         exc_tree = data_io.overlap_regions(args["exclude"])             # <<<<<<<<<<<<<<
+ *         exc_tree = io_funcs.overlap_regionspy(args["exclude"])             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_10, __pyx_n_s_data_io); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 56, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_10, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 56, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_10);
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_10, __pyx_n_s_overlap_regions); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 56, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_10, __pyx_n_s_overlap_regionspy); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 56, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
     __pyx_t_10 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_exclude); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 56, __pyx_L1_error)
@@ -3391,7 +3389,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  *     exc_tree = None
  *     if args["exclude"]:             # <<<<<<<<<<<<<<
  *         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
- *         exc_tree = data_io.overlap_regions(args["exclude"])
+ *         exc_tree = io_funcs.overlap_regionspy(args["exclude"])
  */
   }
 
@@ -3746,7 +3744,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  * 
  *         if args["exclude"]:  # Skip exclude regions             # <<<<<<<<<<<<<<
  *             pos = r.pos
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
  */
     __pyx_t_10 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_exclude); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 97, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_10);
@@ -3758,7 +3756,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  * 
  *         if args["exclude"]:  # Skip exclude regions
  *             pos = r.pos             # <<<<<<<<<<<<<<
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
  *                 continue
  */
       __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_v_r, __pyx_n_s_pos); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 98, __pyx_L1_error)
@@ -3770,13 +3768,13 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
       /* "dysgu/sv2fq.pyx":99
  *         if args["exclude"]:  # Skip exclude regions
  *             pos = r.pos
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):             # <<<<<<<<<<<<<<
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
-      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_data_io); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 99, __pyx_L1_error)
+      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 99, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_intersecter); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 99, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_intersecterpy); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 99, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_bam, __pyx_n_s_get_reference_name); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 99, __pyx_L1_error)
@@ -3866,7 +3864,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
 
         /* "dysgu/sv2fq.pyx":100
  *             pos = r.pos
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
  *                 continue             # <<<<<<<<<<<<<<
  * 
  *         flag = r.flag
@@ -3876,7 +3874,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
         /* "dysgu/sv2fq.pyx":99
  *         if args["exclude"]:  # Skip exclude regions
  *             pos = r.pos
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):             # <<<<<<<<<<<<<<
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
@@ -3887,7 +3885,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_5get_reads_f(CYTHON_UNUSED PyObject *__p
  * 
  *         if args["exclude"]:  # Skip exclude regions             # <<<<<<<<<<<<<<
  *             pos = r.pos
- *             if data_io.intersecter(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
+ *             if io_funcs.intersecterpy(exc_tree, bam.get_reference_name(r.rname), pos, pos + 1):
  */
     }
 
@@ -6344,7 +6342,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_7process(CYTHON_UNUSED PyObject *__pyx_s
  * def process(args):
  * 
  *     t0 = time.time()             # <<<<<<<<<<<<<<
- *     data_io.mk_dest(args["dest"])
+ *     io_funcs.mk_dest(args["dest"])
  *     click.echo("Output format: {}".format(args["out_format"]), err=True)
  */
   __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 227, __pyx_L1_error)
@@ -6373,11 +6371,11 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_7process(CYTHON_UNUSED PyObject *__pyx_s
   /* "dysgu/sv2fq.pyx":228
  * 
  *     t0 = time.time()
- *     data_io.mk_dest(args["dest"])             # <<<<<<<<<<<<<<
+ *     io_funcs.mk_dest(args["dest"])             # <<<<<<<<<<<<<<
  *     click.echo("Output format: {}".format(args["out_format"]), err=True)
  *     insert_median, insert_stdev, read_length, count = get_reads_f(args)
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_data_io); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 228, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 228, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_mk_dest); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 228, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -6404,7 +6402,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_7process(CYTHON_UNUSED PyObject *__pyx_s
 
   /* "dysgu/sv2fq.pyx":229
  *     t0 = time.time()
- *     data_io.mk_dest(args["dest"])
+ *     io_funcs.mk_dest(args["dest"])
  *     click.echo("Output format: {}".format(args["out_format"]), err=True)             # <<<<<<<<<<<<<<
  *     insert_median, insert_stdev, read_length, count = get_reads_f(args)
  * 
@@ -6450,7 +6448,7 @@ static PyObject *__pyx_pf_5dysgu_5sv2fq_7process(CYTHON_UNUSED PyObject *__pyx_s
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
   /* "dysgu/sv2fq.pyx":230
- *     data_io.mk_dest(args["dest"])
+ *     io_funcs.mk_dest(args["dest"])
  *     click.echo("Output format: {}".format(args["out_format"]), err=True)
  *     insert_median, insert_stdev, read_length, count = get_reads_f(args)             # <<<<<<<<<<<<<<
  * 
@@ -7063,7 +7061,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_cram, __pyx_k_cram, sizeof(__pyx_k_cram), 0, 1, 0, 1},
   {&__pyx_n_s_ct, __pyx_k_ct, sizeof(__pyx_k_ct), 0, 0, 1, 1},
   {&__pyx_n_s_d, __pyx_k_d, sizeof(__pyx_k_d), 0, 0, 1, 1},
-  {&__pyx_n_s_data_io, __pyx_k_data_io, sizeof(__pyx_k_data_io), 0, 0, 1, 1},
   {&__pyx_n_s_datetime, __pyx_k_datetime, sizeof(__pyx_k_datetime), 0, 0, 1, 1},
   {&__pyx_n_u_dest, __pyx_k_dest, sizeof(__pyx_k_dest), 0, 1, 0, 1},
   {&__pyx_n_s_dysgu, __pyx_k_dysgu, sizeof(__pyx_k_dysgu), 0, 0, 1, 1},
@@ -7102,7 +7099,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_insert_stdev, __pyx_k_insert_stdev, sizeof(__pyx_k_insert_stdev), 0, 0, 1, 1},
   {&__pyx_n_u_insert_stdev, __pyx_k_insert_stdev, sizeof(__pyx_k_insert_stdev), 0, 1, 0, 1},
   {&__pyx_kp_u_insert_stdev_2, __pyx_k_insert_stdev_2, sizeof(__pyx_k_insert_stdev_2), 0, 1, 0, 0},
-  {&__pyx_n_s_intersecter, __pyx_k_intersecter, sizeof(__pyx_k_intersecter), 0, 0, 1, 1},
+  {&__pyx_n_s_intersecterpy, __pyx_k_intersecterpy, sizeof(__pyx_k_intersecterpy), 0, 0, 1, 1},
   {&__pyx_n_s_io_funcs, __pyx_k_io_funcs, sizeof(__pyx_k_io_funcs), 0, 0, 1, 1},
   {&__pyx_n_s_iter_bam, __pyx_k_iter_bam, sizeof(__pyx_k_iter_bam), 0, 0, 1, 1},
   {&__pyx_n_s_kind, __pyx_k_kind, sizeof(__pyx_k_kind), 0, 0, 1, 1},
@@ -7117,7 +7114,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_open, __pyx_k_open, sizeof(__pyx_k_open), 0, 0, 1, 1},
   {&__pyx_n_s_opts, __pyx_k_opts, sizeof(__pyx_k_opts), 0, 0, 1, 1},
   {&__pyx_n_u_out_format, __pyx_k_out_format, sizeof(__pyx_k_out_format), 0, 1, 0, 1},
-  {&__pyx_n_s_overlap_regions, __pyx_k_overlap_regions, sizeof(__pyx_k_overlap_regions), 0, 0, 1, 1},
+  {&__pyx_n_s_overlap_regionspy, __pyx_k_overlap_regionspy, sizeof(__pyx_k_overlap_regionspy), 0, 0, 1, 1},
   {&__pyx_n_s_paired_end, __pyx_k_paired_end, sizeof(__pyx_k_paired_end), 0, 0, 1, 1},
   {&__pyx_n_s_pos, __pyx_k_pos, sizeof(__pyx_k_pos), 0, 0, 1, 1},
   {&__pyx_n_s_process, __pyx_k_process, sizeof(__pyx_k_process), 0, 0, 1, 1},
@@ -7699,7 +7696,7 @@ if (!__Pyx_RefNanny) {
  * import resource
  * from subprocess import run             # <<<<<<<<<<<<<<
  * from sys import stdout
- * from dysgu import data_io, io_funcs
+ * from dysgu import io_funcs
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -7719,7 +7716,7 @@ if (!__Pyx_RefNanny) {
  * import resource
  * from subprocess import run
  * from sys import stdout             # <<<<<<<<<<<<<<
- * from dysgu import data_io, io_funcs
+ * from dysgu import io_funcs
  * from dysgu.coverage import get_insert_params
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
@@ -7739,24 +7736,17 @@ if (!__Pyx_RefNanny) {
   /* "dysgu/sv2fq.pyx":14
  * from subprocess import run
  * from sys import stdout
- * from dysgu import data_io, io_funcs             # <<<<<<<<<<<<<<
+ * from dysgu import io_funcs             # <<<<<<<<<<<<<<
  * from dysgu.coverage import get_insert_params
  * 
  */
-  __pyx_t_1 = PyList_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_INCREF(__pyx_n_s_data_io);
-  __Pyx_GIVEREF(__pyx_n_s_data_io);
-  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_data_io);
   __Pyx_INCREF(__pyx_n_s_io_funcs);
   __Pyx_GIVEREF(__pyx_n_s_io_funcs);
-  PyList_SET_ITEM(__pyx_t_1, 1, __pyx_n_s_io_funcs);
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_io_funcs);
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_dysgu, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_data_io); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_data_io, __pyx_t_1) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_io_funcs); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -7766,7 +7756,7 @@ if (!__Pyx_RefNanny) {
 
   /* "dysgu/sv2fq.pyx":15
  * from sys import stdout
- * from dysgu import data_io, io_funcs
+ * from dysgu import io_funcs
  * from dysgu.coverage import get_insert_params             # <<<<<<<<<<<<<<
  * 
  * 
