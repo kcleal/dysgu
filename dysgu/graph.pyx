@@ -2,22 +2,21 @@
 
 from __future__ import absolute_import
 import time
-import numpy as np
 import click
 from collections import defaultdict, deque
 import mmh3
 
 import sortedcontainers
-import operator
 import ncls
 
 import pysam
-import sys
-import resource
 import numpy as np
 cimport numpy as np
 from cpython cimport array
 import array
+
+from redblackpy.series.tree_series import Series
+from redblackpy.series.tree_series cimport Series
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
@@ -25,7 +24,8 @@ from libcpp.pair cimport pair as cpp_pair
 from libcpp.map cimport map as cpp_map
 from libcpp.unordered_map cimport unordered_map
 from libcpp.string cimport string
-from libcpp.algorithm cimport lower_bound
+
+from libc.stdint cimport uint32_t
 
 from cython.operator import dereference, postincrement
 
@@ -44,15 +44,17 @@ from cython.operator import dereference, postincrement
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
 
+from dysgu.map_set_utils cimport robin_set
+
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef map_set_utils.Py_IntSet Py_IntSet
+ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
 
 ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph
 
 ctypedef cpp_map[int, cpp_item] ScopeItem_t
 ctypedef vector[ScopeItem_t] ForwardScope_t
-
 
 
 def echo(*args):
@@ -251,28 +253,6 @@ class ClipScoper:
             return d  # max(d, key=d.get)  # Best candidate with most overlapping minimizers
 
 
-# class ForwardScope:
-#
-#     def __init__(self):
-#         # self.inscope = 0
-#         self.data = sortedcontainers.SortedList() #key=operator.itemgetter(0))
-#     def addone(self, v):
-#         # echo(v)
-#         self.data.add(v)
-#         # self.inscope += 1
-#     def drop_one(self, v):
-#         # Keep a reference count of number in local scope, means multiple values can be deleted by reinitializing list
-#         self.data.remove(v)
-#         # self.inscope -= 1
-#         # if self.inscope == 0:
-#         #     self.data = sortedcontainers.SortedKeyList(key=operator.itemgetter(0))
-#         # elif self.inscope < 0:
-#         #     raise ValueError
-#     def empty(self):
-#         if len(self.data) > 0:
-#             self.data = sortedcontainers.SortedList()  #key=operator.itemgetter(0))
-
-
 cdef struct LocalItem:
     int pos
     int chrom2
@@ -289,26 +269,27 @@ cdef LocalItem make_local_item(int pos, int chrom2, int pos2, int node_name):
     return item
 
 
-cdef class SortItem:
-    cdef readonly int pos2, node_name, current_pos
-    def __cinit__(self, pos2, node_name, current_pos):
-        self.pos2 = pos2
-        self.node_name = node_name
-        self.current_pos = current_pos
-    def __lt__(self, other):
-        return self.pos2 < other
-    def __gt__(self, other):
-        return other <= self.pos2
-    def __eq__(self, other):
-        return self.pos2 == other
-    def __repr__(self):
-        return f"({self.pos2}, {self.node_name}, {self.current_pos})"
+# cdef class SortItem:
+#     cdef readonly int pos2, node_name, current_pos
+#     def __cinit__(self, pos2, node_name, current_pos):
+#         self.pos2 = pos2
+#         self.node_name = node_name
+#         self.current_pos = current_pos
+#     def __lt__(self, other):
+#         return self.pos2 < other
+#     def __gt__(self, other):
+#         return other <= self.pos2
+#     def __eq__(self, other):
+#         return self.pos2 == other
+#     def __repr__(self):
+#         return f"({self.pos2}, {self.node_name}, {self.current_pos})"
+#
+#
+# cdef int check_distance(SortItem v, int current_pos, int pos2, int max_dist):
+#     if abs(v.current_pos - current_pos) < max_dist and abs(v.pos2 - pos2) < max_dist:
+#         return 1
+#     return 0
 
-
-cdef int check_distance(SortItem v, int current_pos, int pos2, int max_dist):
-    if abs(v.current_pos - current_pos) < max_dist and abs(v.pos2 - pos2) < max_dist:
-        return 1
-    return 0
 
 
 cdef class PairedEndScoper:
@@ -316,7 +297,8 @@ cdef class PairedEndScoper:
     cdef float clst_dist
     cdef int max_dist
     cdef int local_chrom
-    cdef list forward_scope
+    # cdef list forward_scope
+    cdef list forward_scope2
 
     cdef cpp_deque[LocalItem] local_scope  # in current region (pos, chrom2)
 
@@ -326,10 +308,20 @@ cdef class PairedEndScoper:
         self.max_dist = max_dist
         self.local_chrom = -1
 
-        self.forward_scope = [sortedcontainers.SortedList() for i in range(n_references)]
+        # self.forward_scope = [sortedcontainers.SortedList() for i in range(n_references)]
+        self.forward_scope2 = [Series(dtype="object") for i in range(n_references)]
 
+    cdef int check_far(self, int v_current, int v_pos2, int current_pos, int pos2):
+        if abs(v_current - current_pos) < self.max_dist and abs(v_pos2 - pos2) < self.max_dist:
+            return 1
+        return 0
 
-    cdef update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2):
+    cdef int check_close(self, int v_current, int current_pos):
+        if abs(v_current - current_pos) < self.max_dist:
+            return 1
+        return 0
+
+    cdef list update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2):
 
         if current_chrom != self.local_chrom:
 
@@ -338,72 +330,135 @@ cdef class PairedEndScoper:
             self.local_scope.clear()
             self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
 
-            for idx in range(len(self.forward_scope)):
-                if len(self.forward_scope[idx]) > 0:
-                    self.forward_scope[idx] = sortedcontainers.SortedList()
+            # for idx in range(len(self.forward_scope)):
+            #     if len(self.forward_scope[idx]) > 0:
+            #         self.forward_scope[idx] = sortedcontainers.SortedList()
+            # self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
 
-            self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
-            return
+            for idx in range(len(self.forward_scope2)):
+                if len(self.forward_scope2[idx]) > 0:
+                    self.forward_scope2[idx] = Series(dtype="object")
+            self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
+            return []
 
         cdef LocalItem item
         while self.local_scope.size() > 0:
 
             item = self.local_scope[0]
             if abs(item.pos - current_pos) > self.clst_dist * 5:
-                self.forward_scope[item.chrom2].remove(item.pos2)
+
+                # self.forward_scope[item.chrom2].remove(item.pos2)
+
+                self.forward_scope2[item.chrom2].erase(item.pos2)
+
                 self.local_scope.pop_front()
             else:
                 break
 
-        # Could use a more exact approach below, but this doesnt seem to work so well
-        # found = []
-        # t = self.forward_scope[chrom2]
-        # cdef int i
-        # if len(t) > 0:
-        #     lb = t.bisect_left(pos2 - self.max_dist)
-        #     if lb != len(t):
-        #         for i in range(lb, len(t)):
-        #             if check_distance(t[i], current_pos, pos2, self.max_dist):
-        #                 found.append(t[i].node_name)
-        #                 if len(found) > 3:
-        #                     break
-
-
-        # Find other nodes in forward_scope
-        t = self.forward_scope[chrom2]
+        # TODO, use multiple values at each pos; use list instead
+        #
+        found2 = []
+        t = self.forward_scope2[chrom2]
         len_t = len(t)
         if len_t == 0:
-            t.add(SortItem(pos2, node_name, current_pos))
-            return
-
-        idx = t.bisect_left(pos2)
-        found = []
-        if idx == 0:
-            if check_distance(t[idx], current_pos, pos2, self.max_dist):
-                found.append(t[idx].node_name)
-            if len(t) > 1:
-                if check_distance(t[1], current_pos, pos2, self.max_dist):
-                    found.append(t[1].node_name)
+            t.insert(pos2, (node_name, current_pos))
+            return []
 
 
-        elif idx == len_t:
-            if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
-                found.append(t[idx - 1].node_name)
-            if len(t) > 1:
-                if check_distance(t[idx - 2], current_pos, pos2, self.max_dist):
-                    found.append(t[idx - 2].node_name)
+        elif len_t == 1:
+            v = t.ceil(pos2)
 
-        else:  # Add upstream and downstream
-            if check_distance(t[idx], current_pos, pos2, self.max_dist):
-                found.append(t[idx].node_name)
+            if v[0] == pos2:
+                self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
+                if self.check_close(v[1][1], current_pos):
+                    found2.append(v[1][0])
 
-            if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
-                found.append(t[idx - 1].node_name)
+            else:
+                if v[0] is None:
+                    v = t.floor(pos2 - 1)
+
+                if self.check_far(v[1][1], v[0], current_pos, pos2):
+                    found2.append(v[1][0])
+                self.forward_scope2[chrom2].insert(pos2, (node_name, current_pos))
+
+        else:
+            lower = t.floor(pos2 - 1)
+            upper = t.ceil(pos2)
+
+            if upper[0] == pos2:
+
+                if self.check_far(upper[1][1], upper[0], current_pos, pos2):
+                    found2.append(upper[1][0])
+
+                # Key exists, test upper and lower again
+                upper2 = t.ceil(pos2 + 1)
+
+                if upper2[0] is not None and self.check_close(upper2[1][1], current_pos):
+                    found2.append(upper2[1][0])
+                if lower[0] is not None and self.check_close(lower[1][1], current_pos):
+                    found2.append(lower[1][0])
+                # update existing key
+                self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
+
+            else:
+                if upper[0] is None:  # look for next closest
+                    upper = t.floor(lower[0] - 1)
+
+                elif lower[0] is None:
+                    lower = t.ceil(upper[0] + 1)
+
+                if self.check_far(lower[1][1], lower[0], current_pos, pos2):
+                    found2.append(lower[1][0])
+                if self.check_far(upper[1][1], upper[0], current_pos, pos2):
+                    found2.append(upper[1][0])
+
+                self.forward_scope2[chrom2].insert(pos2, (node_name, current_pos))
+
+        # Find other nodes in forward_scope
+        # t = self.forward_scope[chrom2]
+        # len_t = len(t)
+        # if len_t == 0:
+        #     t.add(SortItem(pos2, node_name, current_pos))
+        #     return []
+        #
+        # idx = t.bisect_left(pos2)
+        # found = []
+        # if idx == 0:
+        #     if check_distance(t[idx], current_pos, pos2, self.max_dist):
+        #         found.append(t[idx].node_name)
+        #     if len(t) > 1:
+        #         if check_distance(t[1], current_pos, pos2, self.max_dist):
+        #             found.append(t[1].node_name)
+        #
+        #
+        # elif idx == len_t:
+        #     if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
+        #         found.append(t[idx - 1].node_name)
+        #     if len(t) > 1:
+        #         if check_distance(t[idx - 2], current_pos, pos2, self.max_dist):
+        #             found.append(t[idx - 2].node_name)
+        #
+        # else:  # Add upstream and downstream
+        #     if check_distance(t[idx], current_pos, pos2, self.max_dist):
+        #         found.append(t[idx].node_name)
+        #
+        #     if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
+        #         found.append(t[idx - 1].node_name)
+        #
+        # self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
+
 
         self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
-        self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
 
-        return found
+
+        # echo(found, found2)
+        # echo("pos2", pos2, "current_pos", current_pos)
+        # echo("ori", self.forward_scope[chrom2])
+        # echo("new", "len", len(self.forward_scope2[chrom2]), self.forward_scope2[chrom2])
+        #
+        # if len(found2) == 2 and found2[0] == found2[1]:
+        #     quit()
+        return found2
 
 
 cdef class TemplateEdges:
@@ -549,9 +604,6 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
 
     pe_scope = PairedEndScoper(max_dist, infile.header.nreferences)  # Infers long-range connections, outside local scope using pe information
-
-    pe_scope2 = map_set_utils.Py_PairScope()
-    # pe_scope2.add_params(max_dist, infile.header.nreferences)
 
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
 
@@ -755,10 +807,10 @@ cpdef dict get_reads(infile, sub_graph_reads):
     return rd
 
 
-cdef tuple BFS_local(G, int source):
+cdef set BFS_local(G, int source, robin_set[int]& visited ):
 
     # Mark all the vertices as not visited
-    visited = set([])
+    # visited = set([])
 
     # Create a queue for BFS
     queue = array.array("L", [source])  # [source]  # consider vector
@@ -767,10 +819,9 @@ cdef tuple BFS_local(G, int source):
 
     while queue:
         u = queue.pop(0)
-
         for v in G.neighbors(u):
 
-            if v not in visited:
+            if visited.find(v) == visited.end(): #v not in visited:
                 if G.weight(u, v) > 1:
 
                     if u not in nodes_found:
@@ -779,59 +830,62 @@ cdef tuple BFS_local(G, int source):
                         nodes_found.add(v)
                         queue.append(v)
 
-        visited.add(u)
+        # visited.add(u)
+        visited.insert(u)
 
-    return nodes_found, visited
+    return nodes_found #, visited
 
 
 cdef dict get_partitions(G, nodes):
 
-    seen = set([])
+    cdef robin_set[int] seen
 
     cdef int u, v, i
     parts = []
     for u in nodes:
-        if u in seen:
+        if seen.find(u) != seen.end(): #u in seen:
             continue
 
         for v in G.neighbors(u):
-            if v in seen:
+            if seen.find(v) != seen.end(): #v in seen:
                 continue
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
-                found, visited_local = BFS_local(G, u)
-                seen |= visited_local
+                found = BFS_local(G, u, seen)
+
                 if found:
-                    # parts.append(found)
                     parts.append(array.array("L", found))
-        seen.add(u)
+
+        seen.insert(u)
     return {i: p for i, p in enumerate(parts)}
 
 
-cdef tuple count_support_between(G, parts, int min_support):  # cpdef
+cdef tuple count_support_between(G, parts, int min_support):
 
     cdef int i, j, node, child, any_out_edges
-    # cdef set p
     cdef tuple t
 
     if len(parts) == 0:
         return {}, {}
     elif len(parts) == 1:
-        return {}, {list(parts.keys())[0]: list(parts.values())[0]}
+        return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
 
-    # Make a table to count from
-    p2i = dict()
+    # Make a table to count from, int-int
+    # p2i = dict()
+    cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
     for i, p in parts.items():
-        p2i.update({node: i for node in p})
+        for node in p:
+            p2i.insert(node, i)
 
-    # Count the links between partitions. Split reads into sets ready for assembly
+        # p2i.update({node: i for node in p})
+
+    # Count the links between partitions. Split reads into sets ready for calling
     # No counting of read-pairs templates or 'support', just a count of linking alignments
-    # counts (part_a, part_b): {part_a: [node 1, node 2 ..], part_b: [node4, ..] }
+    # counts (part_a, part_b): {part_a: {node 1, node 2 ..}, part_b: {node4, ..} }
     counts = {}
 
     self_counts = defaultdict(lambda: array.array("L", []))
 
-    # seen = set([])
     cdef Py_IntSet seen_nodes = map_set_utils.Py_IntSet()
 
     seen_t = set([])
@@ -841,16 +895,15 @@ cdef tuple count_support_between(G, parts, int min_support):  # cpdef
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
 
-            # if node in seen:
+            # if seen_nodes.has_key(node):
             #     continue
-            if seen_nodes.has_key(node):
-                continue
 
-            for child in G.neighbors(node):  # w=1, 2, 3; all neighbors
-                if not child in p2i or seen_nodes.has_key(child):
+            for child in G.neighbors(node):
+                if not p2i.has_key(child) or seen_nodes.has_key(child):  # child in p2i
                     continue  # Exterior child, not in any partition
 
-                j = p2i[child]  # Partition of neighbor node
+                # j = p2i[child]  # Partition of neighbor node
+                j = p2i.get(child)
                 if j != i:
                     any_out_edges = 1
                     if j < i:
@@ -862,23 +915,32 @@ cdef tuple count_support_between(G, parts, int min_support):  # cpdef
                         continue
 
                     if t not in counts:
-                        counts[t] = defaultdict(set)
+                        # counts[t] = defaultdict(set)
+                        counts[t] = [set([]), set([])]
 
-                    counts[t][i].add(node)
-                    counts[t][j].add(child)
+                    if j < i:
+                        counts[t][0].add(child)
+                        counts[t][1].add(node)
+                    else:
+                        counts[t][1].add(child)
+                        counts[t][0].add(node)
+
+                    # counts[t][i].add(node)
+                    # counts[t][j].add(child)
 
                     current_t.add(t)
 
-            # seen.add(node)
             seen_nodes.insert(node)
+
             # Count self links, important for resolving small SVs
             if any_out_edges == 0:
                 self_counts[i].append(node)
 
+
         seen_t.update(current_t)  # Only count edge once
 
         for t in current_t:
-            if sum(len(item) for item in counts[t].values()) < min_support:
+            if sum(len(item) for item in counts[t]) < min_support:  # .values()
                 del counts[t]
 
                 if len(self_counts[t[0]]) < min_support:
@@ -914,7 +976,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     deleted = set([])
     for edge, vd in support_between.items():
 
-        sup = sum([len(vv) for vv in vd.values()])
+        sup = sum([len(vv) for vv in vd])  # .values()
         if sup >= min_support:
             sb[edge] = vd
             kept.add(edge[0])

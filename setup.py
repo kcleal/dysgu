@@ -3,6 +3,7 @@ import setuptools
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
+import redblackpy as rb
 from distutils import ccompiler
 
 
@@ -68,7 +69,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include()],
+                                 library_dirs=[numpy.get_include(), rb.get_include()],
                                  extra_compile_args=extras,
                                  language="c++"))
 
@@ -76,7 +77,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 print("Found packages", find_packages(where="."))
 setup(
     name="dysgu",
-    version='0.35.0',
+    version='0.36.0',
     python_requires='>=3.7',
     install_requires=[
             'cython',
@@ -89,12 +90,13 @@ setup(
             'ncls',
             'scikit-bio',
             'sortedcontainers',
+            'redblackpy',
             'mmh3',
 
         ],
     packages=find_packages(where="."),
     ext_modules=cythonize(ext_modules),
-    include_dirs=[numpy.get_include()],
+    include_dirs=[numpy.get_include(), rb.get_include()],
     include_package_data=True,
     entry_points='''
         [console_scripts]

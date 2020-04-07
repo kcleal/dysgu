@@ -19,9 +19,11 @@ from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
+cimport cython
 from libc.math cimport exp
 
 from dysgu cimport map_set_utils
+from dysgu.map_set_utils cimport robin_set
 
 
 def echo(*args):
@@ -186,53 +188,61 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
 
-    cdef Py_IntSet seen = map_set_utils.Py_IntSet()
-    cdef Py_IntSet explored = map_set_utils.Py_IntSet()
+    # cdef Py_IntSet seen = map_set_utils.Py_IntSet()
+    # cdef Py_IntSet explored = map_set_utils.Py_IntSet()
+    cdef robin_set[int] seen
+    cdef robin_set[int] explored
+
     cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
     cdef cpp_vector[int] new_nodes
     cdef cpp_vector[int] neighbors
     cdef int v, n, w
 
-    for v in range(G.numberOfNodes()):#G.nodes():     # process all vertices in G
-        if explored.has_key(v) == 1:
-            continue
-        fringe.clear()
-        fringe.push_back(v)   # nodes yet to look at
-        while fringe.size() != 0:
+    with nogil:
 
-            w = fringe.back()  # depth first search
-            if explored.has_key(w) == 1: # already looked down this branch
-                fringe.pop_back()
+        for v in range(G.numberOfNodes()):  # process all vertices in G
+            if explored.find(v) != explored.end(): #explored.has_key(v) == 1:
                 continue
-            seen.insert(w)     # mark as seen
 
-            # Check successors for cycles and for new nodes
-            if new_nodes.size() > 0:
-                new_nodes.clear()
+            fringe.clear()
+            fringe.push_back(v)   # nodes yet to look at
 
-            neighbors = G.neighbors(w)
-            for n in neighbors:
-                if explored.has_key(n) == 0:
-                    if seen.has_key(n) == 1: #CYCLE !!
-                        raise ValueError("Graph contains a cycle.")
-                    new_nodes.push_back(n)
+            while fringe.size() != 0:
 
-            if new_nodes.size() > 0:   # Add new_nodes to fringe
-                fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
+                w = fringe.back()  # depth first search
+                if explored.find(w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
+                    fringe.pop_back()
+                    continue
 
-            else:           # No new nodes so w is fully explored
-                explored.insert(w)
+                seen.insert(w)     # mark as seen
 
-                order.push_front(w)
-                fringe.pop_back()    # done considering this node
+                # Check successors for cycles and for new nodes
+                if new_nodes.size() > 0:
+                    new_nodes.clear()
+
+                neighbors = G.neighbors(w)
+                for n in neighbors:
+                    if explored.find(n) == explored.end(): #explored.has_key(n) == 0:
+
+                        if seen.find(n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
+                            raise ValueError("Graph contains a cycle.")
+                        new_nodes.push_back(n)
+
+                if new_nodes.size() > 0:   # Add new_nodes to fringe
+                    fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
+
+                else:           # No new nodes so w is fully explored
+                    explored.insert(w)
+
+                    order.push_front(w)
+                    fringe.pop_back()    # done considering this node
 
     return order
 
 
 cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
 
-    # copy
     cdef cpp_vector[int] node_scores = n_weights
     cdef Py_Int2IntMap pred_trace2 = map_set_utils.Py_Int2IntMap()
 
@@ -250,40 +260,42 @@ cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_vis
     if len_nodes == 0:
         return path
 
-    for i in range(0, len_nodes):
+    with nogil:
 
-        u = nodes_to_visit[i]
-        node_weight = n_weights[u]
+        for i in range(0, len_nodes):
 
-        # Find best incoming node scores, best inEdge, and also best predecessor node
+            u = nodes_to_visit[i]
+            node_weight = n_weights[u]
 
-        neighborList = G.forInEdgesOf(u)
+            # Find best incoming node scores, best inEdge, and also best predecessor node
 
-        if neighborList.size() == 0:
-            node_scores[u] = node_weight
-            if node_weight >= best_score:
-                best_score = node_weight
-                best_node = u
-            continue
+            neighborList = G.forInEdgesOf(u)
 
-        best_local_score = -1
-        best_local_i = -1
-        for pred in neighborList:
+            if neighborList.size() == 0:
+                node_scores[u] = node_weight
+                if node_weight >= best_score:
+                    best_score = node_weight
+                    best_node = u
+                continue
 
-            pred_score = node_scores[pred]
-            score = node_weight + pred_score
-            node_scores[u] = score
-            if score >= best_score:
-                best_score = score
-                best_node = u
+            best_local_score = -1
+            best_local_i = -1
+            for pred in neighborList:
 
-            local_score = n_weights[pred]
-            if local_score > best_local_score:
-                best_local_score = local_score
-                best_local_i = pred
+                pred_score = node_scores[pred]
+                score = node_weight + pred_score
+                node_scores[u] = score
+                if score >= best_score:
+                    best_score = score
+                    best_node = u
 
-        if best_local_i != -1:
-            pred_trace2.insert(u, best_local_i)
+                local_score = n_weights[pred]
+                if local_score > best_local_score:
+                    best_local_score = local_score
+                    best_local_i = pred
+
+            if best_local_i != -1:
+                pred_trace2.insert(u, best_local_i)
 
 
     if best_node == -1:

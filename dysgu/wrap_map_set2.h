@@ -350,213 +350,152 @@ class StrSet
 };
 
 
-//class Int2IntVecMap
-//{
+
+
+//class PairScope {
+//
 //    public:
 //
-//        Int2IntVecMap() {}
-//        ~Int2IntVecMap() {}
+//        int max_dist;
+//        int n_references;
+//        int local_chrom = -1;
 //
-//        int size() { return map.size(); }
+//        std::vector<std::map<int, std::pair<int, int>>> forward_scope;
+//        std::vector<int> in_scope;
+//        std::deque<std::pair<int, int>> local_scope;
 //
-//        void insert(int key, std::vector<int> value) { map[key] = value; }
-//        void erase(int key) { map.erase(key); }
+//        PairScope() {}
+//        ~PairScope() {}
 //
-//        std::vector<int> get(int key) { return map.at(key); }
-//
-//        int has_key(int key) {
-//            if (map.find(key) == map.end()) { return 0; }
-//            else { return 1; }
+//        void add_params(int m, int n) {
+//            max_dist = m;
+//            n_references = n;
+//            for (int i = 0; i < n_references + 1; i++) {
+//                std::map<int, std::pair<int, int>> scope_item;
+//                forward_scope.push_back(scope_item);
+//                in_scope.push_back(0);
+//            }
 //        }
 //
-//    private:
-//        tsl::robin_map<int, std::vector<int>> map;
+//        void add_item(int c, int p, int node_name, int c_pos) {
 //
-//};
-
-// https://stackoverflow.com/questions/10405030/c-unordered-map-fail-when-used-with-a-vector-as-key
-// https://stackoverflow.com/questions/20511347/a-good-hash-function-for-a-vector
-//struct VectorHasher {
-//    std::size_t operator()(std::vector<int> const& vec) const {
-//      std::size_t seed = vec.size();
-//      for(auto& i : vec) {
-//        seed ^= i + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-//      }
-//      return seed;
-//    }
-//};
-//
-//
-//class IntVec2IntMap
-//{
-//    public:
-//
-//        IntVec2IntMap() {}
-//        ~IntVec2IntMap() {}
-//
-//        int size() { return map.size(); }
-//
-//        void insert(std::vector<int> key, int value) { map[key] = value; }
-//        void erase(std::vector<int> key) { map.erase(key); }
-//
-//        int get(std::vector<int> key) { return map.at(key); }
-//
-//        int has_key(std::vector<int> key) {
-//            if (map.find(key) == map.end()) { return 0; }
-//            else { return 1; }
+//            forward_scope.at(c)[p] = std::make_pair(node_name, c_pos);
 //        }
 //
-//    private:
-//        tsl::robin_map<std::vector<int>, int, VectorHasher> map;
+//        void drop_one(int c) {
+//            in_scope[c] -= 1;
+//            if (in_scope[c] == 0) {
+//                forward_scope[c].clear();
+//            }
+//        }
 //
-//};
-
-
-
-class PairScope {
-
-    public:
-
-        int max_dist;
-        int n_references;
-        int local_chrom = -1;
-
-        std::vector<std::map<int, std::pair<int, int>>> forward_scope;
-        std::vector<int> in_scope;
-        std::deque<std::pair<int, int>> local_scope;
-
-        PairScope() {}
-        ~PairScope() {}
-
-        void add_params(int m, int n) {
-            max_dist = m;
-            n_references = n;
-            for (int i = 0; i < n_references + 1; i++) {
-                std::map<int, std::pair<int, int>> scope_item;
-                forward_scope.push_back(scope_item);
-                in_scope.push_back(0);
-            }
-        }
-
-        void add_item(int c, int p, int node_name, int c_pos) {
-
-            forward_scope.at(c)[p] = std::make_pair(node_name, c_pos);
-        }
-
-        void drop_one(int c) {
-            in_scope[c] -= 1;
-            if (in_scope[c] == 0) {
-                forward_scope[c].clear();
-            }
-        }
-
-        std::vector<int> update(int node_name, int c_chrom, int c_pos, int chrom2, int pos2) {
-
-            std::vector<int> out_v;
-            std::pair<int, int> int_pair;
-
-            if (c_chrom != local_chrom) {
-                local_chrom = c_chrom;
-                local_scope.clear();
-
-                local_scope.push_back(std::make_pair(c_pos, chrom2));
-                add_item(chrom2, pos2, node_name, c_pos);
-
-                return out_v;
-            }
-
-            // Clear out of scope items
-            while (local_scope.size() > 0) {
-                int_pair = local_scope[0];
-
-                if (std::abs(int_pair.first - c_pos) > max_dist) {
-                    local_scope.pop_front();
-                    drop_one(int_pair.second);
-                } else {
-                    break;
-                }
-
-            }
-
-            if (forward_scope.at(chrom2).size() == 0) {
-                forward_scope.at(chrom2)[pos2] = std::make_pair(node_name, c_pos);
-                return out_v;
-            }
-
-            // Find closest one or two keys in map
-            // https://stackoverflow.com/questions/28404971/finding-the-closest-or-exact-key-in-a-stdmap
-
-            std::map<int, std::pair<int, int>> map;
-            map = forward_scope.at(chrom2);
-            std::map<int, std::pair<int, int>>::iterator low, prev;
-
-            low = map.lower_bound(pos2);
-
-            int item_forward_pos;
-            int item_node;
-            int item_local_pos;
-
-
-            if (low == map.end()) {
-
-                prev = std::prev(low);
-                item_forward_pos = prev->first;
-                item_node = prev->second.first;
-                item_local_pos = prev->second.second;
-//                std::cerr << "here" << item_node << std::endl;
-//                std::cerr <<  pos2 << " " << node_name << std::endl;
-//                std::cerr <<  item_forward_pos << " " << item_node << std::endl;
-
-//                for(std::map<int, std::pair<int, int>>::iterator it = map.begin(); it != map.end(); ++it) {
+//        std::vector<int> update(int node_name, int c_chrom, int c_pos, int chrom2, int pos2) {
 //
-//                    std::cerr << it->first << "\n";
+//            std::vector<int> out_v;
+//            std::pair<int, int> int_pair;
+//
+//            if (c_chrom != local_chrom) {
+//                local_chrom = c_chrom;
+//                local_scope.clear();
+//
+//                local_scope.push_back(std::make_pair(c_pos, chrom2));
+//                add_item(chrom2, pos2, node_name, c_pos);
+//
+//                return out_v;
+//            }
+//
+//            // Clear out of scope items
+//            while (local_scope.size() > 0) {
+//                int_pair = local_scope[0];
+//
+//                if (std::abs(int_pair.first - c_pos) > max_dist) {
+//                    local_scope.pop_front();
+//                    drop_one(int_pair.second);
+//                } else {
+//                    break;
 //                }
-
-                if ((std::abs(item_local_pos - c_pos) < max_dist) and (std::abs(item_forward_pos - pos2) < max_dist)) {
-                    out_v.push_back(item_node);
-
-                }
-
-            } else if (low == map.begin()) {
-                // First element
-                item_forward_pos = low->first;
-                item_node = low->second.first;
-                item_local_pos = low->second.second;
-
-                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
-                    out_v.push_back(item_node);
-                }
-
-            } else {
-                // In middle of map, add lower and higher elements
-
-                prev = std::prev(low);
-                item_forward_pos = prev->first;
-                item_node = prev->second.first;
-                item_local_pos = prev->second.second;
-
-                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
-                    out_v.push_back(item_node);
-                }
-
-                item_forward_pos = low->first;
-                item_node = low->second.first;
-                item_local_pos = low->second.second;
-
-                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
-                    out_v.push_back(item_node);
-                }
-
-            }
-
-            local_scope.push_back(std::make_pair(c_pos, chrom2));
-            forward_scope.at(chrom2)[pos2] = std::make_pair(node_name, c_pos);
-
-            return out_v;
-         }
-
-
-};
+//
+//            }
+//
+//            if (forward_scope.at(chrom2).size() == 0) {
+//                forward_scope.at(chrom2)[pos2] = std::make_pair(node_name, c_pos);
+//                return out_v;
+//            }
+//
+//            // Find closest one or two keys in map
+//            // https://stackoverflow.com/questions/28404971/finding-the-closest-or-exact-key-in-a-stdmap
+//
+//            std::map<int, std::pair<int, int>> map;
+//            map = forward_scope.at(chrom2);
+//            std::map<int, std::pair<int, int>>::iterator low, prev;
+//
+//            low = map.lower_bound(pos2);
+//
+//            int item_forward_pos;
+//            int item_node;
+//            int item_local_pos;
+//
+//
+//            if (low == map.end()) {
+//
+//                prev = std::prev(low);
+//                item_forward_pos = prev->first;
+//                item_node = prev->second.first;
+//                item_local_pos = prev->second.second;
+////                std::cerr << "here" << item_node << std::endl;
+////                std::cerr <<  pos2 << " " << node_name << std::endl;
+////                std::cerr <<  item_forward_pos << " " << item_node << std::endl;
+//
+////                for(std::map<int, std::pair<int, int>>::iterator it = map.begin(); it != map.end(); ++it) {
+////
+////                    std::cerr << it->first << "\n";
+////                }
+//
+//                if ((std::abs(item_local_pos - c_pos) < max_dist) and (std::abs(item_forward_pos - pos2) < max_dist)) {
+//                    out_v.push_back(item_node);
+//
+//                }
+//
+//            } else if (low == map.begin()) {
+//                // First element
+//                item_forward_pos = low->first;
+//                item_node = low->second.first;
+//                item_local_pos = low->second.second;
+//
+//                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
+//                    out_v.push_back(item_node);
+//                }
+//
+//            } else {
+//                // In middle of map, add lower and higher elements
+//
+//                prev = std::prev(low);
+//                item_forward_pos = prev->first;
+//                item_node = prev->second.first;
+//                item_local_pos = prev->second.second;
+//
+//                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
+//                    out_v.push_back(item_node);
+//                }
+//
+//                item_forward_pos = low->first;
+//                item_node = low->second.first;
+//                item_local_pos = low->second.second;
+//
+//                if (std::abs(item_local_pos - c_pos) < max_dist && std::abs(item_forward_pos - pos2) < max_dist) {
+//                    out_v.push_back(item_node);
+//                }
+//
+//            }
+//
+//            local_scope.push_back(std::make_pair(c_pos, chrom2));
+//            forward_scope.at(chrom2)[pos2] = std::make_pair(node_name, c_pos);
+//
+//            return out_v;
+//         }
+//
+//
+//};
 
 
 

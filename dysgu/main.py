@@ -14,16 +14,14 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 cpu_range = click.IntRange(min=1, max=cpu_count())
 
 defaults = {
-            "clip_length": 21,
+            "clip_length": 30,
             "output": "-",
             "svs_out": "-",
             "max_cov": 500,
-            "buffer_size": 500000,
+            "buffer_size": 0,
             "min_support": 3,
             "template_size": "210,175,125",
-            "mark_dups": "True",
             "model": None,
-            "mq": None,
             "max_tlen": 800,
             "z_depth": 2,
             "z_breadth": 3,

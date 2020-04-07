@@ -34,11 +34,11 @@ cdef class Py_DiGraph:
         return self.thisptr.hasEdge(u, v)
     cdef void addEdge(self, int u, int v):
         self.thisptr.addEdge(u, v)
-    cdef int numberOfNodes(self):
+    cdef int numberOfNodes(self) nogil:
         return self.thisptr.numberOfNodes()
-    cdef cpp_vector[int] forInEdgesOf(self, int u):
+    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
         return self.thisptr.forInEdgesOf(u)
-    cdef cpp_vector[int] neighbors(self, int u):
+    cdef cpp_vector[int] neighbors(self, int u) nogil:
         return self.thisptr.neighbors(u)
 
 
@@ -124,16 +124,16 @@ cdef class Py_StrSet:
         return self.thisptr.size()
 
 
-cdef class Py_PairScope:
-    """Cluster reads by their mate position"""
-    def __cinit__(self):
-        self.thisptr = new PairScope()
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef void add_params(self, int m, int n):
-        self.thisptr.add_params(m, n)
-    cpdef cpp_vector[int] update(self, int node_name, int c_chrom, int c_pos, int chrom2, int pos2):
-        return self.thisptr.update(node_name, c_chrom, c_pos, chrom2, pos2)
+# cdef class Py_PairScope:
+#     """Cluster reads by their mate position"""
+#     def __cinit__(self):
+#         self.thisptr = new PairScope()
+#     def __dealloc__(self):
+#         del self.thisptr
+#     cpdef void add_params(self, int m, int n):
+#         self.thisptr.add_params(m, n)
+#     cpdef cpp_vector[int] update(self, int node_name, int c_chrom, int c_pos, int chrom2, int pos2):
+#         return self.thisptr.update(node_name, c_chrom, c_pos, chrom2, pos2)
 
 
 

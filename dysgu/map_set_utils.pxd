@@ -20,6 +20,28 @@ ctypedef cpp_pair[int, int] get_val_result
 # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
+from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
+
+
+cdef extern from "robin_set.h" namespace "tsl" nogil:
+    cdef cppclass robin_set[T]:
+        cppclass iterator:
+            T operator*()
+            iterator operator++()
+            bint operator==(iterator)
+            bint operator!=(iterator)
+        vector()
+        void insert(T&)
+        void erase(T&)
+        int size()
+        iterator find(const T&)
+        # T& operator[](int)
+        # T& at(int)
+        iterator begin()
+        iterator end()
+        void clear()
+        bint empty()
+
 
 cdef extern from "wrap_map_set2.h" nogil:
     cdef cppclass DiGraph:
@@ -28,9 +50,9 @@ cdef extern from "wrap_map_set2.h" nogil:
         int addNode()
         int hasEdge(int, int)
         void addEdge(int, int)
-        int numberOfNodes()
-        cpp_vector[int] forInEdgesOf(int)
-        cpp_vector[int] neighbors(int)
+        int numberOfNodes() nogil
+        cpp_vector[int] forInEdgesOf(int) nogil
+        cpp_vector[int] neighbors(int) nogil
 
 
 
@@ -41,9 +63,9 @@ cdef class Py_DiGraph:
     cdef int addNode(self)
     cdef int hasEdge(self, int u, int v)
     cdef void addEdge(self, int u, int v)
-    cdef int numberOfNodes(self)
-    cdef cpp_vector[int] forInEdgesOf(self, int u)
-    cdef cpp_vector[int] neighbors(self, int u)
+    cdef int numberOfNodes(self) nogil
+    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil
+    cdef cpp_vector[int] neighbors(self, int u) nogil
 
 
 cdef extern from "wrap_map_set2.h":
@@ -138,16 +160,16 @@ cdef class Py_StrSet:
     cdef int size(self) nogil
 
 
-cdef extern from "wrap_map_set2.h" nogil:
-    cdef cppclass PairScope:
-        PairScope() nogil
-        void add_params(int, int)
-        cpp_vector[int] update(int, int, int, int, int)
-
-cdef class Py_PairScope:
-    cpdef PairScope * thisptr
-    cpdef void add_params(self, int, int)
-    cpdef cpp_vector[int] update(self, int, int, int, int, int)
+# cdef extern from "wrap_map_set2.h" nogil:
+#     cdef cppclass PairScope:
+#         PairScope() nogil
+#         void add_params(int, int)
+#         cpp_vector[int] update(int, int, int, int, int)
+#
+# cdef class Py_PairScope:
+#     cpdef PairScope * thisptr
+#     cpdef void add_params(self, int, int)
+#     cpdef cpp_vector[int] update(self, int, int, int, int, int)
 
 
 cdef int cigar_exists(r)
@@ -157,4 +179,8 @@ cdef tuple clip_sizes(r)
 
 
 cdef int cigar_clip(r, int clip_length)
+
+
+
+
 

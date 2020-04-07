@@ -34,21 +34,34 @@ Available commands::
     $ dysgu test    # Run basic tests
 
 
-Calling structural variants
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Structural variant pipeline basic usage::
 
     $ dysgu fetch your.bam > sv_reads.bam
     $ dysgu call sv_reads.bam > results.vcf
 
-To save time, `dysgu fetch` can be piped during mapping::
+
+Fetching SV reads
+~~~~~~~~~~~~~~~~~
+To save time, `dysgu fetch` can be run in a stream during mapping, although here `sv_reads.bam` would
+still need to be sorted prior to running `dysgu call`::
 
     $ bwa mem -a -t8 ref.fa read1.fq read2.fq | \
         samtools view -bh - | \
-        dysgu fetch -o all_reads.bam -r sv_reads.bam
-    $ dysgu call sv_reads.bam > results.vcf
+        dysgu fetch -o all_reads.bam -r sv_reads.bam  -  #  <- needs sorting
 
-Input reads can also be buffered which can lower run time for large memory machines. The `--buffer-size` option sets the number of alignments that will be kept in memory::
+`fetch` can be run downstream of sorting which preserves sort order::
+
+    $ samtools sort - | \
+        dysgu fetch -o all_reads.bam -r sv_reads.bam  -
+
+Alternatively, run `fetch` on an existing .bam file::
+
+    $ dysgu fetch all_reads.bam > sv_reads.bam
+
+
+Calling SVs
+~~~~~~~~~~~
+Input reads can be buffered which can lower run time for large memory machines. The `--buffer-size` option sets the number of alignments that will be kept in memory::
 
     $ dysgu call --buffer-size 10000000 sv_reads.bam > results.vcf
 

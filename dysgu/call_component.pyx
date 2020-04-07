@@ -96,7 +96,7 @@ cdef dict fetch_reads(data, d, bam):
     dta_n2n = data["n2n"]
     if len(dta_n2n) > 0:  # Might need to collect reads from file
         n2n = {}  # Subset
-        for block in d.values():
+        for block in d:  # .values()
 
             n2n.update({v: dta_n2n[v] for v in block if v in dta_n2n})
             # for v in block:
@@ -1290,7 +1290,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         input_reads = fetch_reads(data, d, bam)  # {Node: alignment,..}
 
         rd_u = []
-        for n in d[u]:
+        for n in d[0]:  #[u]:
             try:
                 rd_u.append(input_reads[n])
             except KeyError:
@@ -1299,7 +1299,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         out_counts[u] += len(rd_u)
 
         rd_v = []
-        for n in d[v]:
+        for n in d[1]:  #[v]:
             try:
                 rd_v.append(input_reads[n])
             except KeyError:
