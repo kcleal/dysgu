@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <functional>
 #include <string>
 #include <utility>
 #include <queue>
@@ -269,6 +270,7 @@ class SimpleGraph {
 
 typedef std::pair<int, int> lookup_result;
 
+
 class Int2IntMap
 {
     public:
@@ -290,7 +292,7 @@ class Int2IntMap
 
         lookup_result get_value(int key) {
 
-            if(map.find(key) != map.end()) {
+            if (map.find(key) != map.end()) {
                 return std::make_pair(1, map[key]);
             }
             else {

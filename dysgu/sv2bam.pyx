@@ -85,10 +85,10 @@ def config(args):
 cdef tuple get_reads(args):
 
     cdef uint32_t clip_length
-
-    cdef int flag, tmpl, ct2, good_clip
+    cdef int flag
     cdef str qname
     cdef list cigartuples
+    cdef int paired_end = int(args["paired"] == "True")
 
     # Borrowed from lumpy
     cdef int required = 97
@@ -101,24 +101,21 @@ cdef tuple get_reads(args):
     read_names = set([])
     insert_size = []
     read_length = []
+
     cdef int max_scope = 100000
-
     cdef int count = 0
-    bad = []
-
-    cdef nn = 0
+    cdef int nn = 0
     for nn, r in enumerate(bam_i):
 
         if send_output:
             send_output.write(r)
 
+        # for query in bam_filter:
         while len(scope) > max_scope:
             query = scope.popleft()
             if query.qname in read_names:
                 outbam.write(query)
                 count += 1
-
-        scope.append(r)
 
         if exc_tree:  # Skip exclude regions
             if io_funcs.intersecter_int_chrom(exc_tree, r.rname, r.pos, r.pos + 1):
@@ -128,30 +125,32 @@ cdef tuple get_reads(args):
         if flag & 1280:
             continue  # Read is duplicate or not primary alignment
 
-        if len(insert_size) < 100000:
+        if paired_end and len(insert_size) < 100000:
 
             if r.seq is not None:
-                if r.rname == r.rnext and flag & flag_mask == required and r.tlen >= 0:
+                if r.rname == r.rnext and r.flag & flag_mask == required and r.tlen >= 0:
                     read_length.append(r.infer_read_length())
                     insert_size.append(r.tlen)
 
+        scope.append(r)
         qname = r.qname
 
-        # if qname not in read_names:
-        if not flag & 2 or flag & 2048:  # Save if read is discordant or supplementary
-            read_names.add(qname)
+        if qname not in read_names:
+            if paired_end and (not flag & 2 or flag & 2048):  # Save if read is discordant or supplementary
+                read_names.add(qname)
 
-        elif map_set_utils.cigar_clip(r, clip_length):
-            read_names.add(qname)
+            elif map_set_utils.cigar_clip(r, clip_length):
+                read_names.add(qname)
 
-        elif r.has_tag("SA"):
-            read_names.add(qname)
+            elif r.has_tag("SA"):
+                read_names.add(qname)
 
     while len(scope) > 0:
         query = scope.popleft()
         if query.qname in read_names:
             outbam.write(query)
             count += 1
+
 
     outbam.close()
     if send_output:
@@ -165,10 +164,13 @@ cdef tuple get_reads(args):
         insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
 
     approx_read_length = int(np.mean(read_length))
+
     click.echo("Total input reads in bam {}".format(nn + 1), err=True)
-    click.echo(f"Inferred read length {approx_read_length}, "
-                   f"insert median {insert_median}, "
-                   f"insert stdev {insert_stdev}", err=True)
+
+    if paired_end:
+        click.echo(f"Inferred read length {approx_read_length}, "
+                       f"insert median {insert_median}, "
+                       f"insert stdev {insert_stdev}", err=True)
 
     return count, insert_median, insert_stdev, approx_read_length
 
@@ -184,7 +186,7 @@ def process(args):
                                                                     count,
                                                                    int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
                                                                    str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-
+    click.echo(time.time() - t0, err=True)
     return {"insert_median": insert_median,
             "insert_stdev": insert_stdev,
             "read_length": read_length,

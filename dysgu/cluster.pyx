@@ -264,7 +264,7 @@ def sample_level_density(potential, regions, max_dist=50):
 
 
 def component_job(infile, component, regions, event_id, max_dist, clip_length, insert_med, insert_stdev, min_supp,
-                  merge_dist, regions_only):
+                  merge_dist, regions_only, extended_tags):
 
     potential_events = []
 
@@ -273,7 +273,8 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                                                       clip_length,
                                                       insert_med,
                                                       insert_stdev,
-                                                      min_supp):
+                                                      min_supp,
+                                                      extended_tags):
         if event:
             event["event_id"] = event_id
             if event["chrA"] is not None:
@@ -348,7 +349,7 @@ def pipe1(args, infile, kind, regions):
     t0 = time.time()
     cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer, min_support)
 
-
+    extended_tags = genome_scanner.extended_tags
 
     for start_i, end_i in cc:
         cnt += 1
@@ -361,11 +362,12 @@ def pipe1(args, infile, kind, regions):
             # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
             potential_events = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
-                                                      insert_median,
-                                                      insert_stdev,
-                                                      args["min_support"],
-                                                      args["merge_dist"],
-                                                      regions_only)
+                                             insert_median,
+                                             insert_stdev,
+                                             args["min_support"],
+                                             args["merge_dist"],
+                                             regions_only,
+                                             extended_tags)
 
             if potential_events:
                 event_id += 1
@@ -393,7 +395,7 @@ def pipe1(args, infile, kind, regions):
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = sample_level_density(preliminaries, regions)
     echo("time3", time.time() - t3)
-    return preliminaries
+    return preliminaries, extended_tags
 
 
 def cluster_reads(args):
@@ -443,7 +445,7 @@ def cluster_reads(args):
     # Run dysgu here:
 
     t4 = time.time()
-    events = pipe1(args, infile, kind, regions)
+    events, extended_tags = pipe1(args, infile, kind, regions)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
@@ -466,7 +468,8 @@ def cluster_reads(args):
 
             args["add_kind"] = "True"
             args["sample_name"] = sample_name
-            io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines)
+            io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
+                            extended_tags=extended_tags)
 
     infile.close()
     echo(time.time() - t0)

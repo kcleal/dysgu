@@ -7,6 +7,7 @@ from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
 import mmh3
+from dysgu cimport map_set_utils
 
 import pysam
 # from pysam.libcalignmentfile cimport AlignmentFile
@@ -149,8 +150,6 @@ class GenomeScanner:
         self.procs = read_threads
         self.buff_size = buffer_size
 
-        self.bam_iter = self.input_bam #inputbam.fetch(until_eof=True)
-
         self.current_bin = []
         self.current_cov = 0
         self.current_chrom = 0
@@ -158,27 +157,25 @@ class GenomeScanner:
         self.current_cov_array = None
 
         self.reads_dropped = 0
-        self.depth_d = {} # Use array for fast lookup # defaultdict(lambda: defaultdict(int))
+        self.depth_d = {}
 
         self.first = 1  # Not possible to get first position in a target fetch region, so buffer first read instead
         self.read_buffer = dict()
 
         self.approx_read_length = -1
-
         self.last_tell = 0
-
         self.no_tell = True if stdin else False
-
+        self.extended_tags = False
 
     def _get_reads(self):
-
+        # Two options, reads are collected from whole genome, or from target regions only
         if not self.include_regions or not self.regions_only:
 
-            while len(self.staged_reads) > 0:
+            while len(self.staged_reads) > 0:  # Some reads may have been staged from getting read_length
                 yield self.staged_reads.popleft()
 
             tell = 0 if self.no_tell else self.input_bam.tell()
-            for a in self.input_bam: # self.bam_iter:
+            for a in self.input_bam:
 
                 self._add_to_bin_buffer(a, tell)
                 tell = 0 if self.no_tell else self.input_bam.tell()
@@ -215,7 +212,7 @@ class GenomeScanner:
 
             itv = merge_intervals(intervals_to_check)
 
-            seen_reads = set([])  # Avoid reading same alignment twice
+            seen_reads = set([])  # Avoid reading same alignment twice, shouldn't happen anyway
             click.echo("Collecting mate-pairs +/- 1kb", err=True)
             for c, s, e in itv:
 
@@ -236,7 +233,7 @@ class GenomeScanner:
                     yield self.current_bin
 
     def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len):
-
+        # This is invoked first to scan the first part of the file for the insert size metrics
         if read_len != -1:
             click.echo(f"Read length {read_len}, "
                    f"insert_median {insert_median}, "
@@ -257,12 +254,15 @@ class GenomeScanner:
         cdef int flag, tlen
         cdef float approx_read_length
 
+        # Check if tags from dodi have been added to input reads --> add to vcf output if True
+        tags_checked = False
 
-        for a in self.bam_iter:
+        for a in self.input_bam:
 
             tell = 0 if self.no_tell else self.input_bam.tell()
             if self.no_tell:
                 self._add_to_bin_buffer(a, tell)
+
             if len(approx_read_length_l) < 100000:
                 flag = a.flag
                 if a.seq is not None:
@@ -270,8 +270,12 @@ class GenomeScanner:
                     if rl:
                         approx_read_length_l.append(rl)
                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
-
                             inserts.append(a.tlen)
+
+                            if not tags_checked:
+                                if a.has_tag("DP"):
+                                    self.extended_tags = True
+                                tags_checked = True
 
             else:
                 break
@@ -285,7 +289,7 @@ class GenomeScanner:
 
         approx_read_length = int(np.median(approx_read_length_l))
         self.approx_read_length = approx_read_length
-        if len(inserts) <= 1000 and insert_median == -1:
+        if len(inserts) <= 100 and insert_median == -1:
             insert_median = 300
             insert_stdev = 150
 
@@ -302,7 +306,7 @@ class GenomeScanner:
         return insert_median, insert_stdev
 
     def iter_genome(self):
-        # Send any staged reads
+        # Read the rest of the genome, reads are sent in blocks
         cdef int total_reads = 0
 
         for staged in self._get_reads():
@@ -311,7 +315,7 @@ class GenomeScanner:
 
         # Add last seen coverage bin
         if total_reads == 0:
-            click.echo("coverage.pyx No reads, finishing", err=True)
+            click.echo("coverage.pyx found no reads, finishing", err=True)
             quit()
 
         click.echo(f"Total input reads {total_reads}", err=True)
@@ -320,11 +324,7 @@ class GenomeScanner:
 
         if self.first == 1:
             # Not possible to get tell position from first read in region, so put into buffer instead
-            # if self.procs == 1:
             self.read_buffer[n1] = r
-            # else:
-            #     self.read_buffer[n1] = r.to_string()
-
             self.first = 0
 
         elif len(self.read_buffer) < self.buff_size:
@@ -337,7 +337,7 @@ class GenomeScanner:
 
 
     def _add_to_bin_buffer(self, a, tell):
-
+        # Calculates coverage information on fly, drops high coverage regions, buffers reads
         cdef int flag = a.flag
 
         # PCR duplicate, fails quality check, not primary alignment, read unmapped
@@ -357,8 +357,6 @@ class GenomeScanner:
             # Get the chromosome size from infile
             ref_length = int(self.input_bam.get_reference_length(
                 self.input_bam.get_reference_name(rname)) / 100)
-
-            # click.echo(f"{self.input_bam.get_reference_name(rname)}, coverage bins={ref_length}", err=True)
 
             # Define a big numpy array to hold count information
             self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)

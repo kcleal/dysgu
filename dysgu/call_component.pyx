@@ -1,4 +1,4 @@
-# cython: language_level=3
+#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
@@ -15,11 +15,7 @@ def echo(*args):
     click.echo(args, err=True)
 
 
-cdef dict count_attributes(reads1, reads2, int min_support):
-
-    if len(reads1) == 0:
-        raise ValueError("No reads in set")
-
+cdef dict extended_attrs(reads1, reads2, min_support):
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0}
     paired_end = set([])
@@ -36,12 +32,15 @@ cdef dict count_attributes(reads1, reads2, int min_support):
                     r["DP"].append(float(a.get_tag("DP")))
                 if a.has_tag("DN"):
                     r["DN"].append(float(a.get_tag("DN")))
-                if a.has_tag("NP"):
-                    if float(a.get_tag("NP")) == 1:
-                        r["NP"] += 1
+                # if a.has_tag("NP"):
+                #     if float(a.get_tag("NP")) == 1:
+                #         r["NP"] += 1
                 seen.add(qname)
 
             flag = a.flag
+            if flag & 2:
+                r["NP"] += 1
+
             if flag & 2048:  # Supplementary
                 r["supp"] += 1
                 r["MAPQsupp"].append(a.mapq)
@@ -88,6 +87,81 @@ cdef dict count_attributes(reads1, reads2, int min_support):
         r["maxASsupp"] = 0
 
     return r
+
+
+cdef dict normal_attrs(reads1, reads2, min_support):
+
+    r = {"pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
+         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0}
+
+    paired_end = set([])
+    seen = set([])
+
+    cdef int flag
+    cdef list reads
+    for reads in (reads1, reads2):
+        for a in reads:
+
+            qname = a.qname
+
+            flag = a.flag
+            if flag & 2:
+                r["NP"] += 1
+
+            if flag & 2048:  # Supplementary
+                r["supp"] += 1
+                r["MAPQsupp"].append(a.mapq)
+                if a.has_tag("NM"):
+                    r["NMsupp"].append(float(a.get_tag("NM")))
+                if a.has_tag("AS"):
+                    r["maxASsupp"].append(float(a.get_tag("AS")))
+
+            elif not flag & 256:  # Primary reads
+                r["MAPQpri"].append(a.mapq)
+                if qname in paired_end:  # If two primary reads from same pair
+                    r["pe"] += 1
+                else:
+                    paired_end.add(qname)
+                if a.has_tag("NM"):
+                    r["NMpri"].append(float(a.get_tag("NM")))
+
+            if flag & 16:
+                r["minus"] += 1
+            else:
+                r["plus"] += 1
+
+            ct = a.cigartuples
+            if ct[0][0] == 4 or ct[-1][0] == 4:
+                r["sc"] += 1
+
+    if r["pe"] + r["supp"] < min_support:
+        return {}
+
+    cdef str k
+    for k in ("NMpri", "NMsupp", "MAPQpri", "MAPQsupp"):
+        if len(r[k]) > 0:
+            r[k] = np.mean(r[k])
+        else:
+            r[k] = 0
+
+    if len(r["maxASsupp"]) > 0:
+        r["maxASsupp"] = int(max(r["maxASsupp"]))
+    else:
+        r["maxASsupp"] = 0
+
+    return r
+
+
+cdef dict count_attributes(reads1, reads2, int min_support, int extended_tags):
+
+    if len(reads1) == 0:
+        raise ValueError("No reads in set")
+
+    if extended_tags:
+        return extended_attrs(reads1, reads2, min_support)
+
+    else:
+        return normal_attrs(reads1, reads2, min_support)
 
 
 cdef dict fetch_reads(data, d, bam):
@@ -154,7 +228,7 @@ cdef tuple guess_informative_pair(aligns):
 
 
 cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_length, int min_support,
-                 int to_assemble=1):
+                 int to_assemble, int extended_tags):
     # Make sure at least one read is worth calling
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for i in data["reads"].values()]))
@@ -238,7 +312,7 @@ cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_lengt
     if not informative:
         return {}
 
-    attrs = count_attributes(u_reads, v_reads, min_support)
+    attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
 
     if not attrs:
         return {}
@@ -1235,9 +1309,9 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
 
 
 cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, int insert_stdev,
-                   int min_support, int block_edge=1, assemble=True):
+                   int min_support, int block_edge, int assemble, int extended_tags):
 
-    attrs = count_attributes(u_reads, v_reads, min_support)
+    attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
     if not attrs:
         return {}
 
@@ -1275,7 +1349,7 @@ cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, i
     return info
 
 
-cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support):
+cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support, int extended_tags):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
@@ -1315,7 +1389,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         if v in seen:
             seen.remove(v)
 
-        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support))
+        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, 1, extended_tags))
 
     # Process any unconnected blocks
     if seen:
@@ -1336,7 +1410,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
                 if len(rds) < min_support:
                     continue
 
-                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True))
+                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags))
 
     # Check for events within clustered nodes - happens rarely
     for k, d in data["s_within"].items():
@@ -1358,23 +1432,23 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
             if len(rds) < min_support:
                 continue
 
-            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, to_assemble=True))
+            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags))
 
     return events
 
 
-cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support):
+cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags):
 
     n_parts = len(data["parts"])
 
     events = []
     if n_parts >= 1:
         # Processed single edges and break apart connected
-        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support)
+        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support, extended_tags)
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support, to_assemble=1)
+        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags)
         if e:
             events.append(e)
 

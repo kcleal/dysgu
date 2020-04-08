@@ -108,12 +108,12 @@ def mk_dest(d):
 
 
 
-def get_bed_regions(bed):
-    b = [tuple([int(j) if j.isdigit() else j for j in i.strip().split("\t")[:3]]) for i in open(bed, "r")
-         if i[0] != "#" and len(i) > 0 and "\t" in i]
-    if len(b) == 0:
-        raise ValueError("Bed regions not formatted correctly")
-    return b
+# def get_bed_regions(bed):
+#     b = [tuple([int(j) if j.isdigit() else j for j in i.strip().split("\t")[:3]]) for i in open(bed, "r")
+#          if i[0] != "#" and len(i) > 0 and "\t" in i]
+#     if len(b) == 0:
+#         raise ValueError("Bed regions not formatted correctly")
+#     return b
 
 
 def overlap_regionspy(bed):
@@ -158,16 +158,24 @@ def get_include_reads(include_regions, bam):
             yield r
 
 
-cpdef list col_names():
-    return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
+cpdef list col_names(extended):
+    if extended:
+        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
           "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus",
-            ]  # "Prob"
+            ]
+    else:
+        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
+          "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
+          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
+         "raw_reads_10kb",
+          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus",
+            ]
 
 
-def make_main_record(r, version, index, format_f, df_rows, add_kind):
+def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 
     # Pick best row (best support, or highest prob if available
     if len(format_f) > 1:
@@ -232,6 +240,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind):
                     f"SC={sc}",]
                     #f"MPROB={probs}"]
 
+    if extended:
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+    else:
+        fmt_keys = "GT:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+
     rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", ".",
            # INFO line
            ";".join([f"SVMETHOD=DYSGUv{version}",
@@ -243,7 +256,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind):
                    f"CIEND95={r['cipos95B']}",
 
                    ] + info_extras),
-           "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"  # :PROB
+           fmt_keys  # :PROB
            ]
     # FORMAT line(s)
     for item in format_f.values():
@@ -252,10 +265,17 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind):
     return rec
 
 
-def gen_format_fields(r, df, names):
+def gen_format_fields(r, df, names, extended):
 
     if len(names) == 1:
-        return {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        if extended:
+
+            return {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+                                  r['ref_bases'], r["plus"], r["minus"]])}, {}
+        else:
+            return {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                   r['ref_bases'], r["plus"], r["minus"]])}, {}
@@ -280,20 +300,32 @@ def gen_format_fields(r, df, names):
     for name in names:
 
         if name in cols:
-            format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                  r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
+            if extended:
+
+                format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+                                      r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
+            else:
+                format_fields[name] = (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+                                      r['ref_bases'], r["plus"], r["minus"]])
+
         else:
-            format_fields[name] = [0] * 20
+            if extended:
+                format_fields[name] = [0] * 23
+            else:
+                format_fields[name] = [0] * 19
 
     return format_fields, cols
 
 
 
-def to_vcf(df, args, names, outfile, show_names=True,  contig_names=""):
+def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False):
 
-    HEADER = """##fileformat=VCFv4.2
+    if extended_tags:
+        HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
@@ -341,6 +373,51 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names=""):
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
+    else:
+        HEADER = """##fileformat=VCFv4.2
+##source=DYSGU
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=CT,Number=1,Type=String,Description="Paired-end signature induced connection type">
+##INFO=<ID=CIPOS95,Number=1,Type=Integer,Description="Confidence interval size (95%) around POS for imprecise variants">
+##INFO=<ID=CIEND95,Number=1,Type=Integer,Description="Confidence interval size (95%) around END for imprecise variants">
+##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">
+##INFO=<ID=KIND,Number=1,Type=String,Description="Kind of join with respect to input regions">
+##INFO=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant across all samples">
+##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
+##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
+##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
+##INFO=<ID=CONTIGA,Number=1,Type=String,Description="Contig from CHROM POS">
+##INFO=<ID=CONTIGB,Number=1,Type=String,Description="Contig from CHR2 END">
+##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
+##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
+##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=TRA,Description="Translocation">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
+##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
+##FORMAT=<ID=MAPQP,Number=1,Type=Float,Description="Mean MAPQ for primary reads supporting the variant">
+##FORMAT=<ID=MAPQS,Number=1,Type=Float,Description="Mean MAPQ for supplementary reads supporting the variant">
+##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
+##FORMAT=<ID=MAS,Number=1,Type=Integer,Description="Maximum alignment score of supplementary reads supporting the variant">
+##FORMAT=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant">
+##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
+##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
+##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
+##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
+##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
+##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
+##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other beak points within 100 bp or break sites">
+##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
+##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
+##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">{}
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
+
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
 # ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 
@@ -358,7 +435,12 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names=""):
 
     seen_idx = set([])
 
-    for col in ['raw_reads_10kb', 'DP', 'DN', 'DApri', 'DAsupp', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']:
+    if extended_tags:
+        cnames = ['raw_reads_10kb', 'DP', 'DN', 'DApri', 'DAsupp', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
+    else:
+        cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
+
+    for col in cnames:
         dm[col] = dm[col].round(2)
 
     for col in ['maxASsupp', 'neigh']:
@@ -374,12 +456,12 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names=""):
         if idx in seen_idx:
             continue
 
-        format_f, df_rows = gen_format_fields(r, df, names)
+        format_f, df_rows = gen_format_fields(r, df, names, extended_tags)
 
         if "partners" in r:
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind)
+        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags)
         recs.append(r_main)
         count += 1
 
