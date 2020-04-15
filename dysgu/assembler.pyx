@@ -10,6 +10,7 @@ cimport numpy as np
 from collections import deque
 import click
 import warnings
+import array
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -65,8 +66,11 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
 
-    for opp, length in cigar:
+    # rep_nodes = 0
 
+    # echo(cigar)
+    for opp, length in cigar:
+        # echo("opp", opp, "length", length)
         if opp == 4:
             if start:
                 for o in range(length, 0, -1):
@@ -74,11 +78,11 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                     qual = quals[i]
                     i += 1
 
-                    k = (seq, current_pos, o, 0)
+                    k = (seq, current_pos, o, 0)  # 0 = left soft clip
 
                     if k in ndict_r:  #
                         n = ndict_r[k]  #
-
+                        # rep_nodes += 1
                     else:
                         n = G.addNode()
 
@@ -86,12 +90,14 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                             nweight.push_back(0)
 
                         ndict_r[k] = n  #
+                        # ndict[n] = k
 
                     nweight[n] += qual
                     if prev_node != -1:
-
+                        # added_edges.append((prev_node, n))
                         if not G.hasEdge(prev_node, n):
                             G.addEdge(prev_node, n)
+
 
                     prev_node = n
 
@@ -101,23 +107,25 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                     qual = quals[i]
                     i += 1
 
-                    k = (seq, current_pos, o, 1)
+                    k = (seq, current_pos, o, 1)  # 1 = right soft clip
 
                     if k in ndict_r:
                         n = ndict_r[k]
-
+                        # rep_nodes += 1
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
 
                         ndict_r[k] = n
+                        # ndict[n] = k
 
                     nweight[n] += qual
                     if prev_node != -1:
-
+                        # added_edges.append((prev_node, n))
                         if not G.hasEdge(prev_node, n):
                             G.addEdge(prev_node, n)
+
 
                     prev_node = n
 
@@ -129,61 +137,75 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                 qual = quals[i]
                 i += 1
 
-                k = (seq, current_pos, o, 2)
+                k = (seq, current_pos, o, 2)  # 2 = insertion
 
                 if k in ndict_r:
                     n = ndict_r[k]
-
+                    # rep_nodes += 1
                 else:
                     n = G.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
                     ndict_r[k] = n
+                    # ndict[n] = k
 
                 nweight[n] += qual
                 if prev_node != -1:
-
+                    # added_edges.append((prev_node, n))
                     if not G.hasEdge(prev_node, n):
                         G.addEdge(prev_node, n)
+
 
                 prev_node = n
 
             current_pos += 1  # Reference pos increases only 1
 
         elif opp == 2 or opp == 5:  # Hard clip or deletion
-            current_pos += length
+            current_pos += length + 1
 
         elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
 
             for p in range(current_pos, current_pos + length):
 
-                current_pos = p
+                current_pos = p  #### + 1??
                 seq = rseq[i]
                 qual = quals[i]
                 i += 1
 
-                k = (seq, current_pos, 0, 4)
+                k = (seq, current_pos, 0, 4)  # 4 = matched base
 
                 if k in ndict_r:
                     n = ndict_r[k]
+                    # echo("here")
+                    # echo(k, n, prev_node)
+                    # if prev_node != -1:
+                    #     quit()
+                    # rep_nodes += 1
 
                 else:
+                    # echo(k, "not in")
                     n = G.addNode()
                     if n >= nweight.size():
                         nweight.push_back(0)
 
                     ndict_r[k] = n
+                    # ndict[n] = k
 
                 nweight[n] += qual
                 if prev_node != -1:
+                    # added_edges.append((prev_node, n))
                     if not G.hasEdge(prev_node, n):
                         G.addEdge(prev_node, n)
 
+                        # if prev_node == 76 and n == 77:
+                        #     echo("hi")
                 prev_node = n
+
 
         start = 0
 
+    # echo("rep nodes", rep_nodes, len(r.seq))
 
 cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
@@ -370,6 +392,7 @@ cpdef dict base_assemble(rd):
                 "ref_end": r.reference_end,
                 "bamrname": r.rname}
 
+    # count
     for r in rd:
         try:
             r.seq
@@ -377,10 +400,33 @@ cpdef dict base_assemble(rd):
             continue
         if r.seq is None:
             continue
-        if len(r.seq) != len(r.query_qualities):
-            continue
+
+        if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
+            r.query_qualities = array.array("B", [1] * len(r.seq))
 
         add_to_graph(G, r, node_weights, node_dict_r)
+        # echo(len(r.seq))
+        # count += 1
+        # if count == 3:
+        #     break
+
+    # import networkx as nx
+    # import matplotlib.pyplot as plt
+    # from collections import Counter
+    #
+    # ecounts = Counter(added_edges)
+    # echo(Counter(ecounts.values()))
+    # Gx = nx.DiGraph()
+    # for u, v in added_edges: #[:6633]:
+    #     Gx.add_edge(u, v, w=ecounts[(u, v)])
+    #
+    # nx.write_gml(Gx, "/Users/kateliddiard/Desktop/test.gml")
+    # nx.draw_circular(Gx)
+    # plt.show()
+    # echo(Gx.edges())
+
+    # quit()
+
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
     cdef cpp_deque[int] path2
@@ -416,7 +462,7 @@ cpdef dict base_assemble(rd):
     for item in path2:
 
         t = node_dict[item]
-
+        # echo(t)
         if t[3] != 4:
             seq += t[0].lower()
         else:
@@ -426,7 +472,7 @@ cpdef dict base_assemble(rd):
                 ref_end = t[1]
             seq += t[0]
     # echo(time.time() - t0)
-    # echo(seq)
+
     # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
     # quit()
     return {"contig": seq,
@@ -561,7 +607,7 @@ cpdef list contig_info(events):
     return events
 
 
-def check_contig_match(a, b, diffs=8, ol_length=21, supress_seq=True, return_int=False):
+def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
 
     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
     alignment = query(str(b))
@@ -578,8 +624,11 @@ def check_contig_match(a, b, diffs=8, ol_length=21, supress_seq=True, return_int
 
     if expected < 2 * ol_length:  # Match score * Minimum clip length
         return 0
-    diff = expected - aln_s + total_overhangs  # old diff thresh = 8
-    # diff = (expected - aln_s - total_overhangs) / expected
+
+    if not rel_diffs:
+        diff = expected - aln_s + total_overhangs  # old diff thresh = 8
+    else:
+        diff = (expected - aln_s - total_overhangs) / expected
     if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits
         return 0
     else:

@@ -151,23 +151,22 @@ cdef tuple get_reads(args):
             outbam.write(query)
             count += 1
 
-
     outbam.close()
     if send_output:
         send_output.close()
 
-    if len(insert_size) == 0:
-        insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]
-        click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
-    else:
-        insert_median, insert_stdev = get_insert_params(insert_size)
-        insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
-
-    approx_read_length = int(np.mean(read_length))
-
     click.echo("Total input reads in bam {}".format(nn + 1), err=True)
+    insert_median, insert_stdev, approx_read_length = 0, 0, 0
 
     if paired_end:
+        approx_read_length = int(np.mean(read_length))
+        if len(insert_size) == 0:
+            insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]
+            click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
+        else:
+            insert_median, insert_stdev = get_insert_params(insert_size)
+            insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
+
         click.echo(f"Inferred read length {approx_read_length}, "
                        f"insert median {insert_median}, "
                        f"insert stdev {insert_stdev}", err=True)

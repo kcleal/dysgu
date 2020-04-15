@@ -576,12 +576,12 @@ cdef class NodeToName:
         self.c = array.array("H", [])
         self.t = array.array("l", [])
 
-    cdef void append(self, n1):
-        self.h.append(n1[0])
-        self.f.append(n1[1])
-        self.p.append(n1[2])
-        self.c.append(n1[3])
-        self.t.append(n1[4])
+    cdef void append(self, a, b, c, d, e):
+        self.h.append(a)
+        self.f.append(b)
+        self.p.append(c)
+        self.c.append(d)
+        self.t.append(e)
 
     def __getitem__(self, idx):
         return self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx]
@@ -589,7 +589,8 @@ cdef class NodeToName:
 
 def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                     int minimizer_support_thresh=2, int minimizer_breadth=3,
-                    int minimizer_dist=10, int mapq_thresh=10, debug=None, int min_support=3, procs=1):
+                    int minimizer_dist=10, int mapq_thresh=10, debug=None, int min_support=3, procs=1,
+                    int paired_end=1):
 
     t0 = time.time()
     click.echo("Building graph with clustering distance {} bp".format(max_dist), err=True)
@@ -598,7 +599,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
 
     node_to_name = NodeToName()  # Map of useful nodes -> read names
 
-    scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
+    clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth)
 
@@ -618,7 +619,7 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
     cdef int loci_dist = int(max_dist * 1.5)
     t0 = time.time()
 
-    G = map_set_utils.Py_SimpleGraph()
+    cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
 
     # debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
 
@@ -635,74 +636,107 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
             flag = r.flag
             qname = r.qname
 
-            n1 = (mmh3.hash(qname, 42), flag, pos, chrom, tell)  # Hash qname to save mem
+            # Hash qname to save mem
             node_name = G.addNode()
-            node_to_name.append(n1)  # Index this list to get the template_name
+            node_to_name.append(mmh3.hash(qname, 42), flag, pos, chrom, tell)  # Index this list to get the template_name
 
             genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
             template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
+            if paired_end:
 
-            # Cluster paired-end mates
-            pnext = r.pnext
-            rnext = r.rnext
+                # Cluster paired-end mates
+                pnext = r.pnext
+                rnext = r.rnext
 
-            # Special treatment of supplementary and local reads; need to decide where the partner is
-            # Either use the rnext:pnext or a site(s) listed in the SA tag: The rnext:pext can often be at the
-            # same loci as the read which leads to problems when linking no.2 edges
-            add_primark_link = 1
+                # Special treatment of supplementary and local reads; need to decide where the partner is
+                # Either use the rnext:pnext or a site(s) listed in the SA tag: The rnext:pext can often be at the
+                # same loci as the read which leads to problems when linking no.2 edges
 
-            current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, pos, pos+1)
+                add_primark_link = 1
 
-            if current_overlaps_roi:
-                # Cluster soft-clips
-                clip_left, clip_right = map_set_utils.clip_sizes(r)
-                if clip_left > clip_l or clip_right > clip_l:
-                    best_candidates = scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos)
+                current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, pos, pos+1)
 
-                    if best_candidates is not None:
-                        for node_name2 in best_candidates:
-                            if not G.hasEdge(node_name, node_name2):
-                                G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
+                if current_overlaps_roi:
+                    # Cluster soft-clips
+                    clip_left, clip_right = map_set_utils.clip_sizes(r)
+                    if clip_left > clip_l or clip_right > clip_l:
+                        best_candidates = clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos)
 
-            if chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
+                        if best_candidates is not None:
+                            for node_name2 in best_candidates:
+                                if not G.hasEdge(node_name, node_name2):
+                                    G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
 
-                if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
-                    sa = r.get_tag("SA").split(",", 2)
-                    chrom2 = gettid(sa[0])
-                    pos2 = int(sa[1])
+                if chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
+                    # Use SA tag to generate cluster
+                    if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
+                        sa = r.get_tag("SA").split(",", 2)
+                        chrom2 = gettid(sa[0])
+                        pos2 = int(sa[1])
 
-                    add_primark_link = 0
-                    next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
+                        add_primark_link = 0
+                        next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
 
-                    if current_overlaps_roi and next_overlaps_roi:
-                        continue
-                    else:
-                        other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2)
-                        if other_nodes:
-                            for other_node in other_nodes:
+                        if current_overlaps_roi and next_overlaps_roi:
+                            continue
+                        else:
+                            for other_node in pe_scope.update(node_name, chrom, pos, chrom2, pos2):
                                 if not G.hasEdge(node_name, other_node):
                                     G.addEdge(node_name, other_node, 2)
 
 
-            if add_primark_link == 1:
-                next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, rnext, pnext, pnext+1)
+                if add_primark_link == 1: # and paired_end:
+                    # Use mate information to generate cluster
+                    next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, rnext, pnext, pnext+1)
 
-                if current_overlaps_roi and next_overlaps_roi:
-                    # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
-                    continue
+                    if current_overlaps_roi and next_overlaps_roi:
+                        # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
+                        continue
 
-                if flag & 2 and not flag & 2048:  # Skip non-discordant that are same loci
-                    if abs(r.tlen) < clustering_dist:
-                       continue
+                    if flag & 2 and not flag & 2048:  # Skip non-discordant that are same loci
+                        if abs(r.tlen) < clustering_dist:
+                           continue
 
-                other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext)
+                    other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext)
 
-                if other_nodes:
-                    for other_node in other_nodes:
-                        # if node_to_name[other_node] not in templates_connected and \
+                    if other_nodes:
+                        for other_node in other_nodes:
+                            # if node_to_name[other_node] not in templates_connected and \
+                            if not G.hasEdge(node_name, other_node):
+                                G.addEdge(node_name, other_node, 2)
+
+            else:  # Single end
+                # Use SA tag to generate cluster
+                if r.has_tag("SA"):  # Parse SA, first alignment is the primary?
+                    sa = r.get_tag("SA").split(",", 2)
+                    chrom2 = gettid(sa[0])
+                    pos2 = int(sa[1])
+
+                    for other_node in pe_scope.update(node_name, chrom, pos, chrom2, pos2):
                         if not G.hasEdge(node_name, other_node):
+
                             G.addEdge(node_name, other_node, 2)
+
+                else:
+                    # Check for SVs within reads from cigar
+                    current_pos = r.pos
+                    for opp, length in r.cigartuples:
+                        if (opp == 2 or opp == 1) and length > 50:
+                            if opp == 2:
+                                pos2 = current_pos + length + 1
+                                for other_node in pe_scope.update(node_name, chrom, pos, chrom2, pos2):
+                                    if not G.hasEdge(node_name, other_node):
+                                        G.addEdge(node_name, other_node, 2)
+
+                                current_pos += pos2
+
+                        if opp == 1:
+                            current_pos += 1
+
+                        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+                            current_pos += length
+
 
 
     click.echo(f"Processed minimizers {time.time() - t0}", err=True)
@@ -884,9 +918,9 @@ cdef tuple count_support_between(G, parts, int min_support):
     # counts (part_a, part_b): {part_a: {node 1, node 2 ..}, part_b: {node4, ..} }
     counts = {}
 
-    self_counts = defaultdict(lambda: array.array("L", []))
+    self_counts = {}  # defaultdict(empty_long_array)
 
-    cdef Py_IntSet seen_nodes = map_set_utils.Py_IntSet()
+    # cdef Py_IntSet seen_nodes = map_set_utils.Py_IntSet()
 
     seen_t = set([])
     for i, p in parts.items():
@@ -899,7 +933,7 @@ cdef tuple count_support_between(G, parts, int min_support):
             #     continue
 
             for child in G.neighbors(node):
-                if not p2i.has_key(child) or seen_nodes.has_key(child):  # child in p2i
+                if not p2i.has_key(child): # or seen_nodes.has_key(child):  # child in p2i
                     continue  # Exterior child, not in any partition
 
                 # j = p2i[child]  # Partition of neighbor node
@@ -915,7 +949,6 @@ cdef tuple count_support_between(G, parts, int min_support):
                         continue
 
                     if t not in counts:
-                        # counts[t] = defaultdict(set)
                         counts[t] = [set([]), set([])]
 
                     if j < i:
@@ -930,11 +963,14 @@ cdef tuple count_support_between(G, parts, int min_support):
 
                     current_t.add(t)
 
-            seen_nodes.insert(node)
+            # seen_nodes.insert(node)
 
             # Count self links, important for resolving small SVs
             if any_out_edges == 0:
-                self_counts[i].append(node)
+                if i not in self_counts:
+                    self_counts[i] = array.array("L", [node])
+                else:
+                    self_counts[i].append(node)
 
 
         seen_t.update(current_t)  # Only count edge once
@@ -947,7 +983,7 @@ cdef tuple count_support_between(G, parts, int min_support):
                     del self_counts[t[0]]
                 if len(self_counts[t[1]]) < min_support:
                     del self_counts[t[1]]
-
+    echo(counts, self_counts)
     return counts, self_counts
 
 

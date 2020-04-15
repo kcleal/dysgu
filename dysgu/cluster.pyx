@@ -15,6 +15,7 @@ import pickle
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
+from dysgu cimport map_set_utils
 
 
 def echo(*args):
@@ -55,6 +56,7 @@ def compare_subset(potential, max_dist):
     # Make a nested containment list for lookups
     for idx in range(len(potential)):
         ei = potential[idx]
+
         interval_table[ei["chrA"]].add(ei["posA"] - max_dist, ei["posA"] + max_dist, idx)
         interval_table[ei["chrB"]].add(ei["posB"] - max_dist, ei["posB"] + max_dist, idx)
 
@@ -77,14 +79,14 @@ def compare_all(potential):
         ei = potential[idx]
 
         for jdx in range(len(potential)):
-            ej = potential[jdx]
+            if idx != jdx:
+                ej = potential[jdx]
 
-            yield ei, ej, idx, jdx
+                yield ei, ej, idx, jdx
 
 
-def enumerate_events(potential, max_dist, try_rev, tree):
+def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15):
 
-    G = nx.Graph()
 
     if len(potential) < 3:
         event_iter = compare_all(potential)
@@ -92,7 +94,9 @@ def enumerate_events(potential, max_dist, try_rev, tree):
         event_iter = compare_subset(potential, max_dist)
 
     seen = set([])
+
     for ei, ej, idx, jdx in event_iter:
+
         i_id = ei["event_id"]
         j_id = ej["event_id"]
 
@@ -135,24 +139,23 @@ def enumerate_events(potential, max_dist, try_rev, tree):
         cj = "" if ej["contig"] is None else ej["contig"]
         cj2 = "" if ej["contig2"] is None else ej["contig2"]
 
-        any_ci = ei["contig"] or ei["contig2"]
-        any_cj = ej["contig"] or ej["contig2"]
-
+        any_ci = bool(ei["contig"] or ei["contig2"])
+        any_cj = bool(ej["contig"] or ej["contig2"])
 
         if loci_similar:
 
             if any_ci and any_cj and loci_same:  # Try and match contigs
 
                 # Each breakpoint can have a different assembly, only check for match if contigs overlap
-                if assembler.check_contig_match(ci, cj, diffs=15, return_int=True) == 1:
+                if assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True) == 1:
                     G.add_edge(idx, jdx)
                     continue
 
-                if assembler.check_contig_match(ci2, cj2, diffs=15, return_int=True) == 1:
+                if assembler.check_contig_match(ci2, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
                     G.add_edge(idx, jdx)
                     continue
 
-                if assembler.check_contig_match(ci, cj2, diffs=15, return_int=True) == 1:
+                if assembler.check_contig_match(ci, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
                     G.add_edge(idx, jdx)
                     continue
 
@@ -167,14 +170,17 @@ def enumerate_events(potential, max_dist, try_rev, tree):
     return G
 
 
-def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False):
+def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
+                 rel_diffs=False, diffs=15):
     """Try and merge similar events, use overlap of both breaks points
     """
 
     if len(potential) <= 1:
-        return potential  #, seen
+        echo("small", potential)
+        return potential
 
-    G = enumerate_events(potential, max_dist, try_rev, tree)
+    G = nx.Graph()
+    enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs)
 
     found = []
     for item in potential:  # Add singletons, non-merged
@@ -182,13 +188,8 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
             found.append(item)
 
     for grp in nx.algorithms.components.connected_components(G):
-        try:
-            c = [potential[n] for n in grp]
-        except:
-            echo("WARN", len(grp), len(potential))
-            continue
-            # echo(grp.nodes())
-            # quit()
+
+        c = [potential[n] for n in grp]
 
         best = sorted(c, key=lambda x: sum([x["pe"], x["supp"]]), reverse=True)
         w0 = best[0]["pe"] + best[0]["supp"]  # Weighting for base result
@@ -264,7 +265,7 @@ def sample_level_density(potential, regions, max_dist=50):
 
 
 def component_job(infile, component, regions, event_id, max_dist, clip_length, insert_med, insert_stdev, min_supp,
-                  merge_dist, regions_only, extended_tags):
+                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs):
 
     potential_events = []
 
@@ -274,7 +275,8 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                                                       insert_med,
                                                       insert_stdev,
                                                       min_supp,
-                                                      extended_tags):
+                                                      extended_tags,
+                                                      assemble_contigs):
         if event:
             event["event_id"] = event_id
             if event["chrA"] is not None:
@@ -283,19 +285,25 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                 event["chrB"] = infile.get_reference_name(event["chrB"])
 
             potential_events.append(event)
+            event_id += 1
+    if not potential_events:
+        return potential_events, event_id
 
     potential_events = filter_potential(potential_events, regions, regions_only)
 
-    potential_events = merge_events(potential_events, merge_dist , regions,
-                                    try_rev=False, pick_best=True)
-
-    return potential_events
+    potential_events = merge_events(potential_events, merge_dist, regions,
+                                    try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
+    # echo("final potential events", potential_events)
+    return potential_events, event_id
 
 
 def pipe1(args, infile, kind, regions):
     t6 = time.time()
     # inputbam, int max_cov, tree, read_threads, buffer_size
     regions_only = False if args["regions_only"] == "False" else True
+
+    paired_end = int(args["paired"] == "True")
+    assemble_contigs = int(args["contigs"] == "True")
 
     genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
                                             args["buffer_size"], regions_only,
@@ -307,16 +315,24 @@ def pipe1(args, infile, kind, regions):
         except:
             raise ValueError("Template-size must be in the format 'INT,INT,INT'")
 
-    insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
-                                                                 read_len)
+    if paired_end:
+        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
+                                                                     read_len)
+
+        max_dist = insert_median + (insert_stdev * 5)
+        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
+
+        if args["merge_dist"] is None:
+            args["merge_dist"] = max_clust_dist
+
+        click.echo(f"Max clustering dist {max_clust_dist}", err=True)
+
+    else:
+        max_dist, max_clust_dist = 10000, 10000
+        if args["merge_dist"] is None:
+            args["merge_dist"] = 500
 
 
-    max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
-
-    if args["merge_dist"] is None:
-        args["merge_dist"] = max_clust_dist
-
-    click.echo(f"Max clustering dist {max_clust_dist}", err=True)
     event_id = 0
     block_edge_events = []
 
@@ -329,19 +345,21 @@ def pipe1(args, infile, kind, regions):
 
     t5 = time.time()
     G, node_to_name = graph.construct_graph(genome_scanner,
-                                              infile,
-                                              max_dist=insert_median + (insert_stdev * 5),
-                                              clustering_dist=max_clust_dist,
-                                              minimizer_dist=8,
-                                              minimizer_support_thresh=args["z_depth"],
-                                              minimizer_breadth=args["z_breadth"],
-                                              k=21,
-                                              m=10,
-                                              clip_l=args["clip_length"],
-                                              min_support=min_support,
-                                              procs=args["procs"],
-                                              mapq_thresh=args["mq"],
-                                              debug=None)
+                                            infile,
+                                            max_dist=max_clust_dist,
+                                            clustering_dist=max_clust_dist,
+                                            minimizer_dist=8,
+                                            minimizer_support_thresh=args["z_depth"],
+                                            minimizer_breadth=args["z_breadth"],
+                                            k=21,
+                                            m=10,
+                                            clip_l=args["clip_length"],
+                                            min_support=min_support,
+                                            procs=args["procs"],
+                                            mapq_thresh=args["mq"],
+                                            debug=None,
+                                            paired_end=paired_end
+                                            )
     echo("graph time", time.time() - t5)
 
     cdef int cnt = 0
@@ -361,16 +379,17 @@ def pipe1(args, infile, kind, regions):
             # Res is a dict
             # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
-            potential_events = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
+            potential_events, event_id = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
                                              insert_median,
                                              insert_stdev,
                                              args["min_support"],
                                              args["merge_dist"],
                                              regions_only,
-                                             extended_tags)
+                                             extended_tags,
+                                             assemble_contigs,
+                                             rel_diffs=True, diffs=0.15)
 
             if potential_events:
-                event_id += 1
                 block_edge_events += potential_events
 
     echo("components", time.time() - t0)
@@ -379,10 +398,11 @@ def pipe1(args, infile, kind, regions):
     preliminaries = []
 
     # Merge across calls
+    # echo("-----------")
     if args["merge_within"] == "True":
         merged = merge_events(block_edge_events, args["merge_dist"], regions,
                                 try_rev=False, pick_best=True)
-    merged = block_edge_events
+    # merged = block_edge_events
     if merged:
         for event in merged:
             # Collect coverage information

@@ -51,12 +51,12 @@ still need to be sorted prior to running `dysgu call`::
 
 `fetch` can be run downstream of sorting which preserves sort order::
 
-    $ samtools sort - | \
-        dysgu fetch -o all_reads.bam -r sv_reads.bam  -
+    $ samtools sort your.bam | \
+        dysgu fetch -o your.bam -r sv_reads.bam  -
 
 Alternatively, run `fetch` on an existing .bam file::
 
-    $ dysgu fetch all_reads.bam > sv_reads.bam
+    $ dysgu fetch your.bam > sv_reads.bam
 
 
 Calling SVs

@@ -133,8 +133,13 @@ def get_reads(ctx, **kwargs):
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std)",
+@click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std) for paired"
+                                   "reads, or 1000bp for single-end reads",
               default=None, type=int, show_default=False)
+@click.option("--paired", help="Paired-end reads or single", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural vaiants"""

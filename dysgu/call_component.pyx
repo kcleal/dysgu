@@ -1349,7 +1349,9 @@ cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, i
     return info
 
 
-cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support, int extended_tags):
+cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support,
+                 int assemble_contigs, int extended_tags
+                 ):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
@@ -1389,7 +1391,8 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         if v in seen:
             seen.remove(v)
 
-        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, 1, extended_tags))
+        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, assemble_contigs,
+                               extended_tags))
 
     # Process any unconnected blocks
     if seen:
@@ -1410,7 +1413,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
                 if len(rds) < min_support:
                     continue
 
-                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags))
+                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags))
 
     # Check for events within clustered nodes - happens rarely
     for k, d in data["s_within"].items():
@@ -1432,23 +1435,27 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
             if len(rds) < min_support:
                 continue
 
-            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags))
+            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags))
 
     return events
 
 
-cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags):
+cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags,
+                                 assemble_contigs):
+
 
     n_parts = len(data["parts"])
 
     events = []
     if n_parts >= 1:
         # Processed single edges and break apart connected
-        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support, extended_tags)
+        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support,
+                        assemble_contigs, extended_tags)
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support, 1, extended_tags)
+        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support,
+                   assemble_contigs, extended_tags)
         if e:
             events.append(e)
 
