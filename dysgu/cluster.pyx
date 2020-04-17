@@ -368,6 +368,13 @@ def pipe1(args, infile, kind, regions):
 
     extended_tags = genome_scanner.extended_tags
 
+    if paired_end:
+        rel_diffs = False
+        diffs = 15
+    else:
+        rel_diffs = True
+        diffs = 0.15
+
     for start_i, end_i in cc:
         cnt += 1
         if end_i - start_i >= min_support:
@@ -386,7 +393,7 @@ def pipe1(args, infile, kind, regions):
                                              regions_only,
                                              extended_tags,
                                              assemble_contigs,
-                                             rel_diffs=True, diffs=0.15)
+                                             rel_diffs=rel_diffs, diffs=diffs)
 
             if potential_events:
                 block_edge_events += potential_events
@@ -398,10 +405,10 @@ def pipe1(args, infile, kind, regions):
 
     # Merge across calls
     # echo("-----------")
-    if args["merge_within"] == "True":
-        merged = merge_events(block_edge_events, args["merge_dist"], regions,
-                                try_rev=False, pick_best=True)
-    # merged = block_edge_events
+    # if args["merge_within"] == "True":
+    #     merged = merge_events(block_edge_events, args["merge_dist"], regions,
+    #                             try_rev=False, pick_best=True)
+    merged = block_edge_events
     if merged:
         for event in merged:
             # Collect coverage information

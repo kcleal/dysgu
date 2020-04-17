@@ -131,8 +131,8 @@ def get_reads(ctx, **kwargs):
               default=None, type=click.Path())
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
-@click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
-              default="True", type=click.Choice(["True", "False"]), show_default=True)
+# @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
+#               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std) for paired"
                                    "reads, or 1000bp for single-end reads",
               default=None, type=int, show_default=False)
