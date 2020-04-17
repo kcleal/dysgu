@@ -332,11 +332,12 @@ cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_lengt
     as1 = None
     as2 = None
 
-    if info["preciseA"]:
-        as1 = assembler.base_assemble(u_reads)
+    if to_assemble:
+        if info["preciseA"]:
+            as1 = assembler.base_assemble(u_reads)
 
-    if info["preciseB"]:
-        as2 = assembler.base_assemble(v_reads)
+        if info["preciseB"]:
+            as2 = assembler.base_assemble(v_reads)
 
     info["linked"] = 0
     info["block_edge"] = 0

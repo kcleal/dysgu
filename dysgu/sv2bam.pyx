@@ -159,6 +159,8 @@ cdef tuple get_reads(args):
     insert_median, insert_stdev, approx_read_length = 0, 0, 0
 
     if paired_end:
+        if len(read_length) == 0:
+            raise ValueError("No paired end reads")
         approx_read_length = int(np.mean(read_length))
         if len(insert_size) == 0:
             insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]

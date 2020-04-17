@@ -719,23 +719,25 @@ def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, i
                             G.addEdge(node_name, other_node, 2)
 
                 else:
+                    pass
                     # Check for SVs within reads from cigar
-                    current_pos = r.pos
-                    for opp, length in r.cigartuples:
-                        if (opp == 2 or opp == 1) and length > 50:
-                            if opp == 2:
-                                pos2 = current_pos + length + 1
-                                for other_node in pe_scope.update(node_name, chrom, pos, chrom2, pos2):
-                                    if not G.hasEdge(node_name, other_node):
-                                        G.addEdge(node_name, other_node, 2)
-
-                                current_pos += pos2
-
-                        if opp == 1:
-                            current_pos += 1
-
-                        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
-                            current_pos += length
+                    # current_pos = r.pos
+                    # for opp, length in r.cigartuples:
+                    #     if (opp == 2 or opp == 1) and length > 50:
+                    #         if opp == 2:
+                    #             pos2 = current_pos + length + 1
+                    #
+                    #             for other_node in pe_scope.update(node_name, chrom, pos, chrom2, pos2):
+                    #                 if not G.hasEdge(node_name, other_node):
+                    #                     G.addEdge(node_name, other_node, 2)
+                    #
+                    #             current_pos = pos2
+                    #
+                    #     if opp == 1:
+                    #         current_pos += 1
+                    #
+                    #     elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+                    #         current_pos += length
 
 
 
@@ -975,15 +977,17 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         seen_t.update(current_t)  # Only count edge once
 
-        for t in current_t:
-            if sum(len(item) for item in counts[t]) < min_support:  # .values()
-                del counts[t]
+    cdef first, second
+    for t in seen_t:
+        if sum(len(item) for item in counts[t]) < min_support:  # .values()
+            del counts[t]
+            first = t[0]
+            second = t[1]
+            if first in self_counts and len(self_counts[first]) < min_support:
+                del self_counts[first]
+            if second in self_counts and len(self_counts[second]) < min_support:
+                del self_counts[second]
 
-                if len(self_counts[t[0]]) < min_support:
-                    del self_counts[t[0]]
-                if len(self_counts[t[1]]) < min_support:
-                    del self_counts[t[1]]
-    echo(counts, self_counts)
     return counts, self_counts
 
 
@@ -1031,53 +1035,5 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
         else:
             del partitions[block_node]
 
-    # debug_component(component, node_to_name, support_between, support_within, G, partitions, {21},
-    #                 subset=False)
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
-
-# cdef list subgraph_from_nodes(G, list nodes):
-#     # Mark all the vertices as not visited
-#     edges_found = set([])
-#     cdef int u, v
-#     e = []
-#     for u in nodes:
-#         for v in G.neighbors(u):
-#             if (u, v) in edges_found or (v, u) in edges_found:
-#                 continue
-#             e.append((u, v, {"w": G.weight(u, v)}))
-#             edges_found.add((u, v))
-#     return e
-#
-#
-# def debug_component(component, node_to_name, support_between, support_within, G, partitions, targets, subset=False):
-#
-#     for cmp in component:
-#         if cmp in targets:
-#             if not subset:
-#                 echo("Supportbetween", support_between, "Support within", support_within)
-
-            #nxG = nx.Graph()
-
-            #nxG.add_edges_from(subgraph_from_nodes(G, component))
-            #if subset:
-            #    # Keep only nodes that share an edge with targets, useful for large components
-            #    bad_nodes = set([])
-            #    for u, v in nxG.edges():
-            #        if u not in targets and v not in targets:
-            #            # Also check neighbors
-            #            if not any(k in targets for k in nxG.neighbors(u)) and not any(k in targets for k in nxG.neighbors(v)):
-            #                bad_nodes.add(u)
-            #                bad_nodes.add(v)
-            #    nxG.remove_nodes_from(bad_nodes)
-            #echo("Nodes", len(G.nodes()), "nxG nodes", len(nxG.nodes()), "nxG edges", len(nxG.edges()))
-            #nx.write_gml(nxG, "/Volumes/Kez6T/For_kate/Fibroblast_Fusions_P170078/Fusions/dysgu/set1/test/component.gml")
-            #if not subset:
-            #    echo("Partitons")
-            #    for pp1, ppv in partitions.items():
-            #        echo(pp1, ppv)
-            #    echo()
-            #    for cmp2 in sorted(component):
-            #        echo(cmp2, node_to_name[cmp2])
-            #quit()
-            #break

@@ -176,7 +176,6 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
     """
 
     if len(potential) <= 1:
-        echo("small", potential)
         return potential
 
     G = nx.Graph()
