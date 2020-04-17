@@ -4,6 +4,8 @@ from __future__ import absolute_import
 import time
 import click
 from collections import defaultdict, deque
+import itertools
+
 import mmh3
 
 import sortedcontainers
@@ -269,35 +271,11 @@ cdef LocalItem make_local_item(int pos, int chrom2, int pos2, int node_name):
     return item
 
 
-# cdef class SortItem:
-#     cdef readonly int pos2, node_name, current_pos
-#     def __cinit__(self, pos2, node_name, current_pos):
-#         self.pos2 = pos2
-#         self.node_name = node_name
-#         self.current_pos = current_pos
-#     def __lt__(self, other):
-#         return self.pos2 < other
-#     def __gt__(self, other):
-#         return other <= self.pos2
-#     def __eq__(self, other):
-#         return self.pos2 == other
-#     def __repr__(self):
-#         return f"({self.pos2}, {self.node_name}, {self.current_pos})"
-#
-#
-# cdef int check_distance(SortItem v, int current_pos, int pos2, int max_dist):
-#     if abs(v.current_pos - current_pos) < max_dist and abs(v.pos2 - pos2) < max_dist:
-#         return 1
-#     return 0
-
-
-
 cdef class PairedEndScoper:
 
     cdef float clst_dist
     cdef int max_dist
     cdef int local_chrom
-    # cdef list forward_scope
     cdef list forward_scope2
 
     cdef cpp_deque[LocalItem] local_scope  # in current region (pos, chrom2)
@@ -323,17 +301,12 @@ cdef class PairedEndScoper:
 
     cdef list update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2):
 
+        # Re-initialize empty
         if current_chrom != self.local_chrom:
 
             self.local_chrom = current_chrom
-
             self.local_scope.clear()
             self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
-
-            # for idx in range(len(self.forward_scope)):
-            #     if len(self.forward_scope[idx]) > 0:
-            #         self.forward_scope[idx] = sortedcontainers.SortedList()
-            # self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
 
             for idx in range(len(self.forward_scope2)):
                 if len(self.forward_scope2[idx]) > 0:
@@ -341,30 +314,34 @@ cdef class PairedEndScoper:
             self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
             return []
 
+        # remove out of local scope
         cdef LocalItem item
         while self.local_scope.size() > 0:
-
             item = self.local_scope[0]
             if abs(item.pos - current_pos) > self.clst_dist * 5:
-
-                # self.forward_scope[item.chrom2].remove(item.pos2)
-
                 self.forward_scope2[item.chrom2].erase(item.pos2)
-
                 self.local_scope.pop_front()
             else:
                 break
 
+        # Add to local scope
+
+        # targets = {259, 263, 265, 244, 247, 248, 250, 251, 264, 266}
+
         # TODO, use multiple values at each pos; use list instead
         #
+        # Add to empty forward scope
         found2 = []
         t = self.forward_scope2[chrom2]
         len_t = len(t)
+        # cdef cpp_deque[LocalItem].iterator it = self.local_scope.begin()
+        cdef int i, count_back, sep
+
         if len_t == 0:
             t.insert(pos2, (node_name, current_pos))
             return []
 
-
+        # Add to forward scope with one entry
         elif len_t == 1:
             v = t.ceil(pos2)
 
@@ -381,10 +358,35 @@ cdef class PairedEndScoper:
                     found2.append(v[1][0])
                 self.forward_scope2[chrom2].insert(pos2, (node_name, current_pos))
 
+        # Add to forward scope with multiple entries
         else:
+            # First, its economical to search backwards through local scope
+            for count_back, i in enumerate(range(self.local_scope.size()-1, -1, -1)):
+                item = self.local_scope[i]
+                sep = abs(item.pos - current_pos)
+                if sep >= self.max_dist:
+                    self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
+                    self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
+
+                    return found2  # No more to find
+
+                elif sep < self.max_dist and item.chrom2 == chrom2 and abs(item.pos2 - pos2) < self.max_dist:
+                    found2.append(item.node_name)
+
+                if count_back > 2:
+                    break
+
+            if len(found2) > 0:
+                self.forward_scope2[chrom2][pos2] = (node_name, current_pos)
+                self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
+
+                return found2
+
+            # None were found, so look through forward scope (useful for high depth areas)
             lower = t.floor(pos2 - 1)
             upper = t.ceil(pos2)
-
+            # if node_name in targets:
+            #     echo(node_name, current_pos, pos2,  "lower", lower, "upper", upper)
             if upper[0] == pos2:
 
                 if self.check_far(upper[1][1], upper[0], current_pos, pos2):
@@ -414,50 +416,12 @@ cdef class PairedEndScoper:
 
                 self.forward_scope2[chrom2].insert(pos2, (node_name, current_pos))
 
-        # Find other nodes in forward_scope
-        # t = self.forward_scope[chrom2]
-        # len_t = len(t)
-        # if len_t == 0:
-        #     t.add(SortItem(pos2, node_name, current_pos))
-        #     return []
-        #
-        # idx = t.bisect_left(pos2)
-        # found = []
-        # if idx == 0:
-        #     if check_distance(t[idx], current_pos, pos2, self.max_dist):
-        #         found.append(t[idx].node_name)
-        #     if len(t) > 1:
-        #         if check_distance(t[1], current_pos, pos2, self.max_dist):
-        #             found.append(t[1].node_name)
-        #
-        #
-        # elif idx == len_t:
-        #     if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
-        #         found.append(t[idx - 1].node_name)
-        #     if len(t) > 1:
-        #         if check_distance(t[idx - 2], current_pos, pos2, self.max_dist):
-        #             found.append(t[idx - 2].node_name)
-        #
-        # else:  # Add upstream and downstream
-        #     if check_distance(t[idx], current_pos, pos2, self.max_dist):
-        #         found.append(t[idx].node_name)
-        #
-        #     if check_distance(t[idx - 1], current_pos, pos2, self.max_dist):
-        #         found.append(t[idx - 1].node_name)
-        #
-        # self.forward_scope[chrom2].add(SortItem(pos2, node_name, current_pos))
-
+        # if node_name in targets:
+            # echo(current_pos, pos2, self.forward_scope2[chrom2].items(),)
+            # echo(node_name, current_pos, pos2, found2)
 
         self.local_scope.push_back(make_local_item(current_pos, chrom2, pos2, node_name))
 
-
-        # echo(found, found2)
-        # echo("pos2", pos2, "current_pos", current_pos)
-        # echo("ori", self.forward_scope[chrom2])
-        # echo("new", "len", len(self.forward_scope2[chrom2]), self.forward_scope2[chrom2])
-        #
-        # if len(found2) == 2 and found2[0] == found2[1]:
-        #     quit()
         return found2
 
 
@@ -589,7 +553,7 @@ cdef class NodeToName:
 
 def construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                     int minimizer_support_thresh=2, int minimizer_breadth=3,
-                    int minimizer_dist=10, int mapq_thresh=10, debug=None, int min_support=3, procs=1,
+                    int minimizer_dist=10, int mapq_thresh=1, debug=None, int min_support=3, procs=1,
                     int paired_end=1):
 
     t0 = time.time()
@@ -1035,5 +999,12 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
         else:
             del partitions[block_node]
 
+    # if len(n2n) > 30:
+    #     echo(partitions)
+    #     for kk, rr in partitions.items():
+    #         echo(kk)
+    #         for rrr in rr:
+    #             echo(rrr, n2n[rrr])
+    #     echo("------")
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
