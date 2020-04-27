@@ -318,8 +318,10 @@ def pipe1(args, infile, kind, regions):
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
                                                                      read_len)
 
-        max_dist = insert_median + (insert_stdev * 5)
-        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
+        max_dist = int(insert_median + (insert_stdev * 5))
+        max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
+
+        # clustering_dist = max_clust_dist * 5
 
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
@@ -327,9 +329,9 @@ def pipe1(args, infile, kind, regions):
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
 
     else:
-        max_dist, max_clust_dist = 10000, 10000
+        max_dist, max_clust_dist = 25, 500000
         if args["merge_dist"] is None:
-            args["merge_dist"] = 500
+            args["merge_dist"] = 50
 
 
     event_id = 0
@@ -345,7 +347,7 @@ def pipe1(args, infile, kind, regions):
     t5 = time.time()
     G, node_to_name = graph.construct_graph(genome_scanner,
                                             infile,
-                                            max_dist=max_clust_dist,
+                                            max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
                                             minimizer_dist=8,
                                             minimizer_support_thresh=args["z_depth"],
@@ -360,6 +362,9 @@ def pipe1(args, infile, kind, regions):
                                             paired_end=paired_end
                                             )
     echo("graph time", time.time() - t5)
+    click.echo("graph time, mem={} Mb, time={} h:m:s".format(
+        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+        time.time() - t5), err=True)
 
     cdef int cnt = 0
 
@@ -405,9 +410,9 @@ def pipe1(args, infile, kind, regions):
 
     # Merge across calls
     # echo("-----------")
-    # if args["merge_within"] == "True":
-    #     merged = merge_events(block_edge_events, args["merge_dist"], regions,
-    #                             try_rev=False, pick_best=True)
+    if args["merge_within"] == "True":
+        merged = merge_events(block_edge_events, args["merge_dist"], regions,
+                                try_rev=False, pick_best=True)
     merged = block_edge_events
     if merged:
         for event in merged:

@@ -122,7 +122,7 @@ cdef tuple get_reads(args):
                 continue
 
         flag = r.flag
-        if flag & 1280:
+        if flag & 1280 or r.cigartuples is None:
             continue  # Read is duplicate or not primary alignment
 
         if paired_end and len(insert_size) < 100000:
@@ -136,14 +136,18 @@ cdef tuple get_reads(args):
         qname = r.qname
 
         if qname not in read_names:
-            if paired_end and (not flag & 2 or flag & 2048):  # Save if read is discordant or supplementary
+            if paired_end and (~ flag & 2 | flag & 2048):  # Save if read is discordant or supplementary
+                read_names.add(qname)
+
+            elif r.has_tag("SA"):
                 read_names.add(qname)
 
             elif map_set_utils.cigar_clip(r, clip_length):
                 read_names.add(qname)
 
-            elif r.has_tag("SA"):
+            elif any(j & 1 | j & 2 and k > 30 for j, k in r.cigartuples):
                 read_names.add(qname)
+
 
     while len(scope) > 0:
         query = scope.popleft()

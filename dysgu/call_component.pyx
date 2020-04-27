@@ -4,7 +4,10 @@ from __future__ import absolute_import
 from collections import Counter, defaultdict
 import click
 import numpy as np
+import itertools
+import mmh3
 from dysgu import io_funcs, assembler, graph, coverage
+
 import warnings
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -15,67 +18,120 @@ def echo(*args):
     click.echo(args, err=True)
 
 
-cdef dict extended_attrs(reads1, reads2, min_support):
+cdef float n_aligned_bases(ct):
+    cdef int opp, l
+    return float(sum(l for opp, l in ct if opp == 0))
+
+
+cdef dict extended_attrs(reads1, reads2, spanning, min_support):
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0}
+         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning)}
     paired_end = set([])
     seen = set([])
 
     cdef int flag
-    cdef list reads
-    for reads in (reads1, reads2):
-        for a in reads:
+    cdef float a_bases
+    # cdef list reads
+    # for reads in (reads1, reads2):
+    for a in itertools.chain(reads1, reads2):
 
-            qname = a.qname
-            if qname not in seen:  # Add these once for each pair, its common across all alignments of template
-                if a.has_tag("DP"):
-                    r["DP"].append(float(a.get_tag("DP")))
-                if a.has_tag("DN"):
-                    r["DN"].append(float(a.get_tag("DN")))
-                # if a.has_tag("NP"):
-                #     if float(a.get_tag("NP")) == 1:
-                #         r["NP"] += 1
-                seen.add(qname)
+        qname = a.qname
+        if qname not in seen:  # Add these once for each pair, its common across all alignments of template
+            if a.has_tag("DP"):
+                r["DP"].append(float(a.get_tag("DP")))
+            if a.has_tag("DN"):
+                r["DN"].append(float(a.get_tag("DN")))
+            seen.add(qname)
 
-            flag = a.flag
-            if flag & 2:
-                r["NP"] += 1
+        flag = a.flag
+        if flag & 2:
+            r["NP"] += 1
 
-            if flag & 2048:  # Supplementary
-                r["supp"] += 1
-                r["MAPQsupp"].append(a.mapq)
-                if a.has_tag("DA"):
-                    r["DAsupp"].append(float(a.get_tag("DA")))
-                if a.has_tag("NM"):
-                    r["NMsupp"].append(float(a.get_tag("NM")))
-                if a.has_tag("AS"):
-                    r["maxASsupp"].append(float(a.get_tag("AS")))
+        a_bases = n_aligned_bases(a.cigartuples)
 
-            elif not flag & 256:  # Primary reads
-                r["MAPQpri"].append(a.mapq)
-                if qname in paired_end:  # If two primary reads from same pair
-                    r["pe"] += 1
-                else:
-                    paired_end.add(qname)
-                if a.has_tag("DA"):
-                    r["DApri"].append(float(a.get_tag("DA")))
-                if a.has_tag("NM"):
-                    r["NMpri"].append(float(a.get_tag("NM")))
+        if flag & 2048:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("DA"):
+                r["DAsupp"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
 
-            if flag & 16:
-                r["minus"] += 1
+        elif not flag & 256:  # Primary reads
+            r["MAPQpri"].append(a.mapq)
+            if qname in paired_end:  # If two primary reads from same pair
+                r["pe"] += 1
             else:
-                r["plus"] += 1
+                paired_end.add(qname)
+            if a.has_tag("DA"):
+                r["DApri"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
 
-            ct = a.cigartuples
-            if ct[0][0] == 4 or ct[-1][0] == 4:
-                r["sc"] += 1
+        if flag & 16:
+            r["minus"] += 1
+        else:
+            r["plus"] += 1
+
+        ct = a.cigartuples
+        if ct[0][0] == 4 or ct[-1][0] == 4:
+            r["sc"] += 1
+
+    for a in spanning:
+
+        qname = a.qname
+        if qname not in seen:  # Add these once for each pair, its common across all alignments of template
+            if a.has_tag("DP"):
+                r["DP"].append(float(a.get_tag("DP")))
+            if a.has_tag("DN"):
+                r["DN"].append(float(a.get_tag("DN")))
+            seen.add(qname)
+
+        flag = a.flag
+        if flag & 2:
+            r["NP"] += 1
+
+        a_bases = n_aligned_bases(a.cigartuples)
+
+        if flag & 2048:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("DA"):
+                r["DAsupp"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
+
+        elif not flag & 256:  # Primary reads
+            r["MAPQpri"].append(a.mapq)
+            if qname in paired_end:  # If two primary reads from same pair
+                r["pe"] += 1
+            else:
+                paired_end.add(qname)
+            if a.has_tag("DA"):
+                r["DApri"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+
+        if flag & 16:
+            r["minus"] += 1
+        else:
+            r["plus"] += 1
+
 
     if r["pe"] + r["supp"] < min_support:
         return {}
 
     cdef str k
-    for k in ("DP", "DApri", "DN", "NMpri", "DAsupp", "NMsupp", "MAPQpri", "MAPQsupp"):
+    for k in ("NMpri", "NMsupp"):
+        if len(r[k]) > 0:
+            r[k] = np.mean(r[k]) * 100
+        else:
+            r[k] = 0
+    for k in ("DP", "DApri", "DN", "DAsupp", "MAPQpri", "MAPQsupp"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k])
         else:
@@ -89,61 +145,92 @@ cdef dict extended_attrs(reads1, reads2, min_support):
     return r
 
 
-cdef dict normal_attrs(reads1, reads2, min_support):
+cdef dict normal_attrs(reads1, reads2, spanning, min_support):
 
     r = {"pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0}
+         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
+         "spanning": len(spanning)}
 
     paired_end = set([])
     seen = set([])
 
     cdef int flag
-    cdef list reads
-    for reads in (reads1, reads2):
-        for a in reads:
+    cdef float a_bases
 
-            qname = a.qname
+    for a in itertools.chain(reads1, reads2):
+        qname = a.qname
+        flag = a.flag
+        a_bases = n_aligned_bases(a.cigartuples)
+        if flag & 2:
+            r["NP"] += 1
 
-            flag = a.flag
-            if flag & 2:
-                r["NP"] += 1
+        if flag & 2048:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("NM"):
+                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
 
-            if flag & 2048:  # Supplementary
-                r["supp"] += 1
-                r["MAPQsupp"].append(a.mapq)
-                if a.has_tag("NM"):
-                    r["NMsupp"].append(float(a.get_tag("NM")))
-                if a.has_tag("AS"):
-                    r["maxASsupp"].append(float(a.get_tag("AS")))
-
-            elif not flag & 256:  # Primary reads
-                r["MAPQpri"].append(a.mapq)
-                if qname in paired_end:  # If two primary reads from same pair
-                    r["pe"] += 1
-                else:
-                    paired_end.add(qname)
-                if a.has_tag("NM"):
-                    r["NMpri"].append(float(a.get_tag("NM")))
-
-            if flag & 16:
-                r["minus"] += 1
+        elif not flag & 256:  # Primary reads
+            r["MAPQpri"].append(a.mapq)
+            if qname in paired_end:  # If two primary reads from same pair
+                r["pe"] += 1
             else:
-                r["plus"] += 1
+                paired_end.add(qname)
+            if a.has_tag("NM"):
+                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
 
-            ct = a.cigartuples
-            if ct[0][0] == 4 or ct[-1][0] == 4:
-                r["sc"] += 1
+        if flag & 16:
+            r["minus"] += 1
+        else:
+            r["plus"] += 1
 
-    if r["pe"] + r["supp"] < min_support:
-        return {}
+        ct = a.cigartuples
+        if ct[0][0] == 4 or ct[-1][0] == 4:
+            r["sc"] += 1
+
+    for a in spanning:  # Same but dont count softclip
+        qname = a.qname
+        flag = a.flag
+        a_bases = n_aligned_bases(a.cigartuples)
+        if flag & 2:
+            r["NP"] += 1
+
+        if flag & 2048:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("NM"):
+                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
+
+        elif not flag & 256:  # Primary reads
+            r["MAPQpri"].append(a.mapq)
+            if qname in paired_end:  # If two primary reads from same pair
+                r["pe"] += 1
+            else:
+                paired_end.add(qname)
+            if a.has_tag("NM"):
+                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+
+        if flag & 16:
+            r["minus"] += 1
+        else:
+            r["plus"] += 1
+
 
     cdef str k
-    for k in ("NMpri", "NMsupp", "MAPQpri", "MAPQsupp"):
+    for k in ("NMpri", "NMsupp"):
+        if len(r[k]) > 0:
+            r[k] = np.mean(r[k]) * 100
+        else:
+            r[k] = 0
+    for k in ("MAPQpri", "MAPQsupp"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k])
         else:
             r[k] = 0
-
     if len(r["maxASsupp"]) > 0:
         r["maxASsupp"] = int(max(r["maxASsupp"]))
     else:
@@ -152,42 +239,21 @@ cdef dict normal_attrs(reads1, reads2, min_support):
     return r
 
 
-cdef dict count_attributes(reads1, reads2, int min_support, int extended_tags):
-
-    if len(reads1) == 0:
-        raise ValueError("No reads in set")
+cdef dict count_attributes(reads1, reads2, spanning, int min_support, int extended_tags):
 
     if extended_tags:
-        return extended_attrs(reads1, reads2, min_support)
+        return extended_attrs(reads1, reads2, spanning, min_support)
 
     else:
-        return normal_attrs(reads1, reads2, min_support)
-
-
-cdef dict fetch_reads(data, d, bam):
-
-    input_reads = data["reads"]
-    dta_n2n = data["n2n"]
-    if len(dta_n2n) > 0:  # Might need to collect reads from file
-        n2n = {}  # Subset
-        for block in d:  # .values()
-
-            n2n.update({v: dta_n2n[v] for v in block if v in dta_n2n})
-            # for v in block:
-            #     if v in dta_n2n:
-            #         n2n[v] = dta_n2n[v]  # Needs collecting
-
-        input_reads.update(graph.get_reads(bam, n2n))
-
-    return input_reads
+        return normal_attrs(reads1, reads2, spanning, min_support)
 
 
 cdef tuple guess_informative_pair(aligns):
 
     if len(aligns) == 2:
         # Make sure aligns map different break points
-        a = aligns[0]
-        b = aligns[1]
+        a = aligns[0][1]
+        b = aligns[1][1]
         if abs(a.pos - b.pos) < 25 or abs(a.reference_end - b.reference_end) < 25:
             return
         if a.pos < b.pos:  # a and b will be same on same chrom
@@ -198,7 +264,7 @@ cdef tuple guess_informative_pair(aligns):
     sup_first = None
     pri_second = None
     sup_second = None
-    for i in aligns:
+    for _, i in aligns:
         if not i.flag & 2304:  # Not pri, supplementary --> is primary
             if i.flag & 64:
                 pri_first = i
@@ -227,32 +293,35 @@ cdef tuple guess_informative_pair(aligns):
     return b, a
 
 
-cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_length, int min_support,
+cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
     # Make sure at least one read is worth calling
     cdef int min_distance = insert_size + (2*insert_stdev)
-    cdef int n_templates = len(set([i.qname for i in data["reads"].values()]))
+    cdef int n_templates = len(set([i.qname for _, i in rds]))
     # if n_templates < min_support:
     #     return {}
 
     if n_templates == 1:
+        # Filter for paired ends, will also remove single end reads though
         if not any((not i.flag & 2) or (i.rname != i.rnext) or
-                   (abs(i.tlen) > min_distance) for i in data["reads"].values()):
+                   (i.flag & 1 and abs(i.tlen) > min_distance)
+                   for _, i in rds):
             return {}
 
     # Single's can sometimes be seperated into two groups --> send one_edge
     # Otherwise, infer the other breakpoint from a single group
 
-    # Groupby template name
+    # Groupby template name to check for split reads
     precise_a = []
     precise_b = []
     informative = []
     u_reads = []
     v_reads = []
-    tmp = defaultdict(list)
-    for align in data["reads"].values():
-        tmp[align.qname].append(align)
-
+    spanning_alignments = []
+    tmp = defaultdict(list)  # group by template name
+    for cigar_info, align in rds:
+        tmp[align.qname].append((cigar_info, align))
+    # echo([(k, len(v)) for k, v in tmp.items()])
     cdef AlignmentItem v_item, itm
     cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
 
@@ -260,6 +329,7 @@ cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_lengt
         l_align = list(alignments)
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
+
             if pair:
                 u_reads.append(pair[0])
                 v_reads.append(pair[1])
@@ -309,23 +379,68 @@ cdef dict single(infile, data, int insert_size, int insert_stdev, int clip_lengt
 
                 informative.append(v_item)
 
-    if not informative:
+        else:  # Single alignment, check spanning
+            cigar_info, a = alignments[0]
+            cigar_index = cigar_info[5]
+
+            if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
+                # echo(a.cigartuples)
+                # echo(cigar_index)
+                event_pos = cigar_info[6]
+                ci = a.cigartuples[cigar_index]
+                spanning_alignments.append((ci[0],
+                                            a.rname,
+                                            event_pos,
+                                            event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
+                                            a.cigartuples[cigar_index][1] + 1,
+                                            a))
+    # echo(len(informative), len(spanning_alignments))
+    if len(informative) == 0 and len(spanning_alignments) == 0:
         return {}
 
-    attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
-
-    if not attrs:
-        return {}
-
-    call_informative = Counter([(itm.svtype, itm.join_type) for itm in informative]).most_common()
-
+    info = {}
     cdef str svtype, jointype
 
-    svtype, jointype = call_informative[0][0]
-    info = make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
+    if len(spanning_alignments) > 0:
+        svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
+        spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
+        # u_reads += [i[5] for i in spanning_alignments]
 
-    if not info:
+    # count read attributes
+    attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], min_support, extended_tags)
+
+    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
         return {}
+
+
+    # make call from spanning alignments if possible
+    if len(spanning_alignments) > 0:
+        # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
+        # info.update(attrs)
+
+        posA_arr = [i[2] for i in spanning_alignments]
+        posA = int(np.median(posA_arr))
+        posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
+        posB_arr = [i[3] for i in spanning_alignments]
+        posB = int(np.median(posB_arr))
+        posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
+        chrom = spanning_alignments[0][1]
+        svlen = int(np.mean([i[4] for i in spanning_alignments]))
+
+        info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
+                     "join_type": "3to5",
+                     "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
+                     "preciseA": True, "preciseB": True, "svlen": svlen,
+                     })
+
+    else:
+
+        call_informative = Counter([(itm.svtype, itm.join_type) for itm in informative]).most_common()
+        svtype, jointype = call_informative[0][0]
+        info.update(make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
+
+        if len(info) < 2:
+            return {}
 
     info.update(attrs)
 
@@ -1112,9 +1227,14 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         main_A_break, cipos95A = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B = break_ops(positionsB, breakB_precise, limit, median_B)
 
+    if informative[0].chrA == informative[0].chrB:
+        svlen = abs(main_B_break - main_A_break)
+    else:
+        svlen = 0
     return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
-            "preciseA": True if cipos95A == 0 else False, "preciseB": True if cipos95B == 0 else False}
+            "preciseA": True if cipos95A == 0 else False, "preciseB": True if cipos95B == 0 else False,
+            "svlen": svlen}
 
 
 cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
@@ -1304,22 +1424,102 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
 
     cdef str svtype, jointype
     svtype, jointype = call_informative[0][0]
-    dc = make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
-    return dc
+    return make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
 
-cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, int insert_stdev,
+cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev,
                    int min_support, int block_edge, int assemble, int extended_tags):
 
-    attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
-    if not attrs:
+    spanning_alignments = []
+    u_reads = []
+    v_reads = []
+    # echo("hi")
+    cdef int cigar_index, event_pos
+
+    for cigar_info, a in u_reads_info:
+
+        u_reads.append(a)
+
+        cigar_index = cigar_info[5]
+
+        if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
+            event_pos = cigar_info[6]
+            ci = a.cigartuples[cigar_index]
+            spanning_alignments.append((ci[0],
+                                        a.rname,
+                                        event_pos,
+                                        event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
+                                        event_pos + a.cigartuples[cigar_index][1] + 1,
+                                        a))
+
+    for cigar_info, a in v_reads_info:
+        v_reads.append(a)
+
+        cigar_index = cigar_info[5]
+        if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
+            event_pos = cigar_info[6]
+            ci = a.cigartuples[cigar_index]
+            spanning_alignments.append((ci[0],
+                                        a.rname,
+                                        event_pos,
+                                        event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
+                                        event_pos + a.cigartuples[cigar_index][1] + 1,
+                                        a))
+
+    info = {}
+    cdef str svtype, jointype
+
+    if len(spanning_alignments) > 0:
+        svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
+        spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
+
+    # echo(len(spanning_alignments), len(u_reads), len(v_reads))
+    # count read attributes
+    attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], min_support, extended_tags)
+    # echo("attrs", attrs)
+    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
         return {}
 
-    info = call_from_reads(u_reads, v_reads, insert_size, insert_stdev)
+    # make call from spanning alignments if possible
+    if len(spanning_alignments) > 0:
+        # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
+        # info.update(attrs)
 
-    if not info:
-        return {}
+        posA_arr = [i[2] for i in spanning_alignments]
+        posA = int(np.median(posA_arr))
+        posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
+        posB_arr = [i[3] for i in spanning_alignments]
+        posB = int(np.median(posB_arr))
+        posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
+        chrom = spanning_alignments[0][1]
+        svlen = int(np.mean([i[4] for i in spanning_alignments]))
+
+        info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
+                     "join_type": "3to5",
+                     "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
+                     "preciseA": True, "preciseB": True, "svlen": svlen,
+                     })
+
+
+    else:
+
+        info.update(call_from_reads(u_reads, v_reads, insert_size, insert_stdev))
+
+        if len(info) < 2:
+            return {}
+
+        ####
+
+
+    # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
+    # if attrs["pe"] + attrs["supp"] < min_support:
+    #     return {}
+    #
+    # info = call_from_reads(u_reads, v_reads, insert_size, insert_stdev)
+    #
+    # if not info:
+    #     return {}
 
     info.update(attrs)
 
@@ -1350,40 +1550,87 @@ cdef dict one_edge(infile, u_reads, v_reads, int clip_length, int insert_size, i
     return info
 
 
+cdef dict fetch_reads(data, d, bam):
+
+    input_reads = data["reads"]
+    dta_n2n = data["n2n"]
+    if len(dta_n2n) > 0:  # Might need to collect reads from file
+        n2n = {}  # Subset  # todo data["reads"] might have some of the reads
+        for block in d:  # .values()
+
+            n2n.update({v: dta_n2n[v] for v in block if v in dta_n2n})
+            # for v in block:
+            #     if v in dta_n2n:
+            #         n2n[v] = dta_n2n[v]  # Needs collecting
+
+        input_reads.update(graph.get_reads(bam, n2n))
+
+    return input_reads
+
+
+cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
+
+    cdef int j, int_node
+    cdef long int p
+    aligns = []
+    for int_node in nodes_info:
+
+        n = n2n[int_node]
+        if int_node in buffered_reads:
+            aligns.append((n, buffered_reads[int_node]))
+            continue
+
+        p = n[4]
+        node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
+        infile.seek(p)
+        a = next(infile)
+        if (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p) == node:
+            aligns.append((n, a))
+            if add_to_buffer:
+                buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
+            continue
+        else:
+            # Try next few reads, not sure why this occurs
+            steps = 0
+            while steps < 5:  # todo check/optimise this
+                # echo("hi")
+                a = next(infile)
+                steps += 1
+                if (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p) == node:
+                    aligns.append((n, a))
+                    if add_to_buffer:
+                        buffered_reads[int_node] = a
+                    break
+
+    return aligns
+
+
 cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int assemble_contigs, int extended_tags
                  ):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
-
+    n2n = data["n2n"]
     seen = set(data["parts"].keys())
 
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
-
+    cdef buffered_reads = 0  # Only buffer reads for smallish components, otherwise memory issues
+    cdef bint add_to_buffer = 1
     events = []
     for (u, v), d in data["s_between"].items():
 
-        input_reads = fetch_reads(data, d, bam)  # {Node: alignment,..}
+        rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer)   # [(Nodeinfo, alignment)..]
+        rd_v = get_reads(bam, d[1], data["reads"], data["n2n"], add_to_buffer)
 
-        rd_u = []
-        for n in d[0]:  #[u]:
-            try:
-                rd_u.append(input_reads[n])
-            except KeyError:
-                echo("Warning missing u read", n)
+        buffered_reads += len(rd_u) + len(rd_v)
+        if add_to_buffer and buffered_reads > 1e6:
+            add_to_buffer = 0
+        # input_reads = fetch_reads(data, d, bam)
 
         out_counts[u] += len(rd_u)
-
-        rd_v = []
-        for n in d[1]:  #[v]:
-            try:
-                rd_v.append(input_reads[n])
-            except KeyError:
-                echo("Warning missing v read", n)
-
         out_counts[v] += len(rd_v)
-
+        # echo("u, v", u, v, len(rd_u), len(rd_v))
         if len(rd_u) == 0 or len(rd_v) == 0:
             continue
 
@@ -1391,9 +1638,10 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
             seen.remove(u)
         if v in seen:
             seen.remove(v)
-
+        # echo(data["n2n"])
         events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, assemble_contigs,
                                extended_tags))
+        # echo(events[-1])
 
     # Process any unconnected blocks
     if seen:
@@ -1401,42 +1649,37 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
             d = data["parts"][part_key]
             if len(d) >= min_support:
                 # Call single block, only collect local reads to the block
-                rds = {}
-                to_collect = {}
-                for v in d:
-                    try:
-                        rds[v] = data["reads"][v]  # May have been collected already
-                    except KeyError:
-                        to_collect[v] = data["n2n"][v]
-
-                rds.update(graph.get_reads(bam, to_collect))
+                rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
 
                 if len(rds) < min_support:
                     continue
 
-                events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags))
+                events.append(single(bam, rds, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags))
 
-    # Check for events within clustered nodes - happens rarely
+
+    # Check for events within clustered nodes - happens rarely for paired-end
     for k, d in data["s_within"].items():
 
         o_count = out_counts[k]
         i_counts = len(d)
+
         if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
-
-            rds = {}
-            to_collect = {}
-            for v in d:
-                try:
-                    rds[v] = data["reads"][v]  # May have been collected already
-                except KeyError:
-                    to_collect[v] = data["n2n"][v]
-
-            rds.update(graph.get_reads(bam, to_collect))
-
+        # if  i_counts > min_support and i_counts > 2*o_count:
+        #     rds = {}
+        #     to_collect = {}
+        #     for v in d:
+        #         try:
+        #             rds[v] = data["reads"][v]  # May have been collected already
+        #         except KeyError:
+        #             to_collect[v] = data["n2n"][v]
+        #
+        #     rds.update(graph.get_reads(bam, to_collect))
+            rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
             if len(rds) < min_support:
                 continue
 
-            events.append(single(bam, {"reads": rds}, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags))
+            events.append(single(bam, rds, insert_size, insert_stdev, clip_length, min_support,
+                                 assemble_contigs, extended_tags))
 
     return events
 
@@ -1455,7 +1698,27 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-        e = single(bam, data, insert_size, insert_stdev, clip_length, min_support,
+        # echo("call from block model")
+        # echo(data)
+
+        rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
+        if len(rds) < min_support:
+            return []
+        # quit()
+        # rds = {}
+        # to_collect = {}
+        # for v in data["reads"]:
+        #     try:
+        #         rds[v] = data["reads"][v]  # May have been collected already
+        #     except KeyError:
+        #         to_collect[v] = data["n2n"][v]
+        #
+        # rds.update(graph.get_reads(bam, to_collect))
+        #
+        # if len(rds) < min_support:
+        #     return []
+
+        e = single(bam, rds, insert_size, insert_stdev, clip_length, min_support,
                    assemble_contigs, extended_tags)
         if e:
             events.append(e)
@@ -1471,6 +1734,7 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
         ar = True
 
     if "chrB" not in r:  # Todo Does this happen?
+        raise ValueError
         return None
 
     br = False
@@ -1556,7 +1820,6 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
     r["raw_reads_10kb"] = reads_10kb
     if r["chrA"] != r["chrB"]:
         r["svlen"] = 1000000
-    else:
-        r["svlen"] = abs(r["posB"] - r["posA"])
-    r["su"] = r["pe"] + r["supp"]
+
+    r["su"] = r["pe"] + r["supp"] + r["spanning"]
     return r

@@ -185,13 +185,14 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         gc = r["gc"]
         rep = r["rep"]
         repsc = r["rep_sc"]
-        su, pe, sr, sc = 0, 0, 0, 0
+        su, pe, sr, sc, wr = 0, 0, 0, 0, 0
         # probs = []
         for row in df_rows.values():
             pe += row["pe"]
             sr += row["supp"]
             sc += row["sc"]
-            su += (row["pe"] + row["supp"])
+            su += row["su"]
+            wr += row["spanning"]
             # probs.append(row["Prob"])
         # probs = round(np.median(probs), 3)
 
@@ -199,7 +200,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         pe = r["pe"]
         sr = r["supp"]
         sc = r["sc"]
-        su = (r["pe"] + r["supp"])
+        su = r["su"]
+        wr = r["spanning"]
         # probs = r["Prob"]
         gc = r["gc"]
         rep = r["rep"]
@@ -220,8 +222,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 
     info_extras = []
     if r["chrA"] == r["chrB"]:
-        svlen = abs(r["posA"] - r["posB"])
-        info_extras.append(f"SVLEN={svlen}")
+        # svlen = abs(r["posA"] - r["posB"])
+        if 'svlen' in r:
+            info_extras.append(f"SVLEN={r['svlen']}")
+        else:
+            info_extras.append(f"SVLEN=NA")
 
     if r["contigA"]:
         info_extras.append(f"CONTIGA={r['contigA']}")
@@ -235,15 +240,16 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"REP={'%.3f' % rep}",
                     f"REPSC={'%.3f' % repsc}",
                     f"SU={su}",
+                    f"WR={wr}",
                     f"PE={pe}",
                     f"SR={sr}",
                     f"SC={sc}",]
                     #f"MPROB={probs}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
     else:
-        fmt_keys = "GT:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        fmt_keys = "GT:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
 
     rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", ".",
            # INFO line
@@ -271,12 +277,12 @@ def gen_format_fields(r, df, names, extended):
         if extended:
 
             return {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                   r['ref_bases'], r["plus"], r["minus"]])}, {}
         else:
             return {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                   r['ref_bases'], r["plus"], r["minus"]])}, {}
 
@@ -303,20 +309,20 @@ def gen_format_fields(r, df, names, extended):
             if extended:
 
                 format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                       r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                       r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
             else:
                 format_fields[name] = (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['pe'] + r['supp'], r['pe'], r['supp'],
+                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                       r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
                                       r['ref_bases'], r["plus"], r["minus"]])
 
         else:
             if extended:
-                format_fields[name] = [0] * 23
+                format_fields[name] = [0] * 24
             else:
-                format_fields[name] = [0] * 19
+                format_fields[name] = [0] * 20
 
     return format_fields, cols
 
@@ -337,6 +343,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">
 ##INFO=<ID=KIND,Number=1,Type=String,Description="Kind of join with respect to input regions">
 ##INFO=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant across all samples">
+##INFO=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
 ##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
 ##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
 ##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
@@ -361,6 +368,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
 ##FORMAT=<ID=MAS,Number=1,Type=Integer,Description="Maximum alignment score of supplementary reads supporting the variant">
 ##FORMAT=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant">
+##FORMAT=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
@@ -386,6 +394,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">
 ##INFO=<ID=KIND,Number=1,Type=String,Description="Kind of join with respect to input regions">
 ##INFO=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant across all samples">
+##INFO=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
 ##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
 ##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
 ##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
@@ -406,6 +415,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
 ##FORMAT=<ID=MAS,Number=1,Type=Integer,Description="Maximum alignment score of supplementary reads supporting the variant">
 ##FORMAT=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant">
+##FORMAT=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
