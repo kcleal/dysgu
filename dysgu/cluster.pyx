@@ -318,7 +318,7 @@ def pipe1(args, infile, kind, regions):
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
                                                                      read_len)
 
-        max_dist = int(insert_median + (insert_stdev * 5))
+        max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
 
         # clustering_dist = max_clust_dist * 5
@@ -387,21 +387,22 @@ def pipe1(args, infile, kind, regions):
 
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, min_support)
-            # Res is a dict
-            # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+            if res:
+                # Res is a dict
+                # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 
-            potential_events, event_id = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
-                                             insert_median,
-                                             insert_stdev,
-                                             args["min_support"],
-                                             args["merge_dist"],
-                                             regions_only,
-                                             extended_tags,
-                                             assemble_contigs,
-                                             rel_diffs=rel_diffs, diffs=diffs)
+                potential_events, event_id = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
+                                                 insert_median,
+                                                 insert_stdev,
+                                                 args["min_support"],
+                                                 args["merge_dist"],
+                                                 regions_only,
+                                                 extended_tags,
+                                                 assemble_contigs,
+                                                 rel_diffs=rel_diffs, diffs=diffs)
 
-            if potential_events:
-                block_edge_events += potential_events
+                if potential_events:
+                    block_edge_events += potential_events
 
     echo("components", time.time() - t0)
 

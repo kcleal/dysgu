@@ -34,7 +34,7 @@ cdef extern from "robin_set.h" namespace "tsl" nogil:
         void insert(T&)
         void erase(T&)
         int size()
-        iterator find(const T&)
+        iterator find(const T&, size_t precalculated_hash)
         # T& operator[](int)
         # T& at(int)
         iterator begin()

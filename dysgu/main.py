@@ -19,7 +19,7 @@ defaults = {
             "svs_out": "-",
             "max_cov": 500,
             "buffer_size": 0,
-            "min_support": 3,
+            "min_support": 4,
             "template_size": "210,175,125",
             "model": None,
             "max_tlen": 800,

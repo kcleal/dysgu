@@ -5,6 +5,10 @@ from Cython.Build import cythonize
 import numpy
 import redblackpy as rb
 from distutils import ccompiler
+from subprocess import run
+import os
+import sys
+import pysam
 
 
 # This was stolen from pybind11
@@ -59,6 +63,17 @@ def get_extra_args():
     return extra_compile_args
 
 
+def build_htslib():
+    setup_dir = os.path.dirname(os.path.realpath(__file__))
+    print(f"Building samtools using ./configure; make; in {setup_dir}")
+    run(f"cd {setup_dir}/dysgu/htslib-1.9/; ./configure; make", shell=True)
+
+
+if "--no-hts" not in sys.argv[1:]:
+    build_htslib()
+if "--no-hts" in sys.argv[1:]:
+    sys.argv.remove("--no-hts")
+
 extras = get_extra_args()
 print("Extra compiler args ", extras)
 
@@ -69,7 +84,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), rb.get_include()],
+                                 library_dirs=[numpy.get_include()], #+ pysam.get_include(),  # rb.get_include()
                                  extra_compile_args=extras,
                                  language="c++"))
 
@@ -77,7 +92,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 print("Found packages", find_packages(where="."))
 setup(
     name="dysgu",
-    version='0.4.0',
+    version='0.4.1',
     python_requires='>=3.7',
     install_requires=[
             'cython',
@@ -90,7 +105,7 @@ setup(
             'ncls',
             'scikit-bio',
             'sortedcontainers',
-            'redblackpy',
+            # 'redblackpy',
             'mmh3',
 
         ],

@@ -281,6 +281,36 @@ cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, uint8_t clip_o
     return item
 
 
+# cdef bint is_overlapping(int x1, int x2, int y1, int y2) nogil:
+#     return max(x1, y1) <= min(x2, y2)
+
+
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
+    # Insertions have same x1/y1 position
+    if x1 == x2:  # This might confuse insertions with deletions, but links soft-clipped reads with indels
+        if x1 == y1 or x1 == y2:
+            return True
+    if y1 == y2:
+        if y1 == x1 or y1 == x2:
+            return True
+
+    cdef int temp_v
+    if x2 < x1:
+        temp_v = x2
+        x2 = x1
+        x1 = temp_v
+    if y2 < y1:
+        temp_v = y2
+        y2 = y1
+        y1 = temp_v
+    cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
+
+    if overlap == 0:
+        return False
+    if (overlap / float(c_abs(x2 - x1))) > 0.3 and (overlap / float(c_abs(y2 - y1))) > 0.3:
+        return True
+
+
 cdef class PairedEndScoper:
 
     cdef int clst_dist
@@ -305,16 +335,18 @@ cdef class PairedEndScoper:
         self.loci.clear()
 
     cdef vector[int] update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                            uint8_t clip_or_wr) nogil:
+                            int clip_or_wr) nogil:
 
-        cdef int idx, i, count_back, sep, sep2, steps, node_name2
+        cdef int idx, i, count_back, steps, node_name2 #, lowest_pos
+        cdef int sep = 0
+        cdef int sep2 = 0
         cdef vector[int] found2
         cdef vector[int] found_exact
         cdef cpp_map[int, LocalVal]* forward_scope = &self.chrom_scope[chrom2]
         cdef cpp_map[int, LocalVal].iterator itr
         cdef cpp_pair[int, LocalVal] vitem
 
-
+        # echo("current node", node_name, current_chrom, current_pos, chrom2, pos2, forward_scope.size(), clip_or_wr)
         # Re-initialize empty
         if current_chrom != self.local_chrom:
             self.local_chrom = current_chrom
@@ -322,9 +354,20 @@ cdef class PairedEndScoper:
 
         if not self.loci.empty():
 
+            # local_it = forward_scope.begin()
+            # while local_it != forward_scope.end():
+            #     vitem = dereference(local_it)
+            #     echo("before", vitem.first, vitem.second)
+            #     preincrement(local_it)
+
             # Erase items out of range in local scope
+            # lowest_pos = current_pos
+            # if current_chrom == chrom2 and pos2 < current_pos:  # Make sure only clear up to lowest position
+            #     lowest_pos = pos2
+
             local_it = self.loci.lower_bound(current_pos - self.clst_dist)
             if local_it != self.loci.begin():
+                # echo("dropping up to", dereference(local_it).first)
                 self.loci.erase(self.loci.begin(), local_it)
 
             if current_chrom != chrom2:  # and forward scope
@@ -333,7 +376,6 @@ cdef class PairedEndScoper:
                     dereference(forward_scope).erase(dereference(forward_scope).begin(), local_it)
 
             # Debug
-            # echo("current node", node_name, current_pos, pos2, forward_scope.size(), clip_or_wr)
             # local_it = forward_scope.begin()
             # while local_it != forward_scope.end():
             #     vitem = dereference(local_it)
@@ -349,19 +391,20 @@ cdef class PairedEndScoper:
 
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # sep = c_abs(vitem.first - current_pos)
-                        # sep2 = c_abs()
-                        sep = c_abs(vitem.first - pos2)
-                        sep2 = c_abs(vitem.second.pos2 - current_pos)
-                        # echo(vitem.second, sep, sep2, clip_or_wr > 0 or vitem.second.clip_or_wr)
-                        # echo("node2", node_name2, sep)
-                        if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
-                                sep2 < self.max_dist:
 
-                            if sep < 25 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
-                                found_exact.push_back(node_name2)
-                            else:
-                                found2.push_back(node_name2)
+                        if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
+                            # echo(node_name2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2))
+
+                            sep = c_abs(vitem.first - pos2)
+                            sep2 = c_abs(vitem.second.pos2 - current_pos)
+
+                            if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
+                                    sep2 < self.max_dist:
+
+                                if sep < 25 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
+                                    found_exact.push_back(node_name2)
+                                else:
+                                    found2.push_back(node_name2)
 
                     if sep >= self.max_dist:
                         break  # No more to find
@@ -382,23 +425,28 @@ cdef class PairedEndScoper:
                         vitem = dereference(local_it)
                         node_name2 = vitem.second.node_name
                         if node_name2 != node_name:
+                            if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2): # is_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
-                            sep = c_abs(vitem.first - pos2)
-                            sep2 = c_abs(vitem.second.pos2 - current_pos)
-                            # echo("2node2", node_name2, sep, sep < self.max_dist, vitem.second.chrom2 == chrom2,
-                            #         c_abs(vitem.second.pos2 - current_pos), self.max_dist, )
+                                # echo(node_name2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2))
 
-                            if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
-                                    sep2 < self.max_dist:
-                                if sep < 25 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
-                                    found_exact.push_back(node_name2)
-                                else:
-                                    found2.push_back(node_name2)
+                                sep = c_abs(vitem.first - pos2)
+                                sep2 = c_abs(vitem.second.pos2 - current_pos)
+                                # if node_name == 55:
+                                #     echo(sep, sep2, current_pos, pos2, vitem.second)
+                                # echo("2node2", node_name2, sep, sep < self.max_dist, vitem.second.chrom2 == chrom2,
+                                #         c_abs(vitem.second.pos2 - current_pos), self.max_dist, )
 
-                            if local_it == forward_scope.begin() or sep >= self.max_dist:
-                                break
-                            predecrement(local_it)
-                            steps += 1
+                                if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
+                                        sep2 < self.max_dist:
+                                    if sep < 25 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
+                                        found_exact.push_back(node_name2)
+                                    else:
+                                        found2.push_back(node_name2)
+
+                        if local_it == forward_scope.begin() or sep >= self.max_dist:
+                            break
+                        predecrement(local_it)
+                        steps += 1
 
         # Add tto scope
         if current_pos == pos2 and current_chrom == chrom2:  # Update same position for insertion
@@ -434,7 +482,8 @@ cdef class PairedEndScoper:
                     dereference(local_it).second = make_local_val(chrom2, pos2, node_name, clip_or_wr)
 
         # echo(found_exact, found2)
-
+        # if node_name == 96:
+        #     quit()
         if not found_exact.empty():
             return found_exact
         else:
@@ -573,7 +622,7 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
                        int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                        TemplateEdges_t template_edges, NodeToName node_to_name):
                        # unordered_map[int, vector[long_int]]& node_to_name):
-    # tt = "D00360:18:H8VC6ADXX:1:2108:4358:43686"
+    # tt = "HWI-D00360:7:H88WKADXX:1:1106:8344:86803"
     cdef int other_node, clip_left, clip_right
     cdef int current_overlaps_roi, next_overlaps_roi
     cdef bint add_primark_link
@@ -586,7 +635,7 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
     cdef str qname = r.qname
     # if qname == tt:
     #     echo(qname, r.pos, flag, cigar_index, r.cigartuples)
-    cdef uint8_t clip_or_wr = 0
+    cdef uint16_t clip_or_wr = 0
     if cigar_index == 0 or cigar_index == len(r.cigartuples) - 1:
         clip_or_wr = 1
     elif 0 < cigar_index < len(r.cigartuples) - 1:
@@ -597,7 +646,7 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
     # Hash qname to save mem
     cdef int node_name = G.addNode()
     ####
-    # echo(node_name, flag, pos, chrom, cigar_index, event_pos, qname, r.has_tag("SA"))
+    # echo(node_name, flag, pos, chrom, cigar_index, event_pos, qname, clip_or_wr)
     node_to_name.append(mmh3.hash(qname, 42), flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
 
     genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
@@ -628,40 +677,72 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
         if current_overlaps_roi:
             # Cluster soft-clips
             clip_left, clip_right = map_set_utils.clip_sizes(r)
-            if clip_left > clip_l or clip_right > clip_l:
+            if clip_left > clip_l:
                 best_candidates = clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos)
-
+                if best_candidates is not None:
+                    for node_name2 in best_candidates:
+                        if not G.hasEdge(node_name, node_name2):
+                            G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
+            if clip_right > clip_l:
+                best_candidates = clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, r.reference_end)
                 if best_candidates is not None:
                     for node_name2 in best_candidates:
                         if not G.hasEdge(node_name, node_name2):
                             G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
 
-        if clip_or_wr < 2 and chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
+        if clip_or_wr == 1 and chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
             # Use SA tag to generate cluster
+
             if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
-                sa = r.get_tag("SA").split(",", 2)
-                chrom2 = gettid(sa[0])
-                pos2 = int(sa[1])
 
-                add_primark_link = 0
-                next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
+                query_length = r.infer_query_length()  # har clips not counted
 
-                if current_overlaps_roi and next_overlaps_roi:
-                    return
-                else:
+                for sa_block in r.get_tag("SA").split(";"):  #.split(",", 4)
+                    if sa_block == "":
+                        break  # End
+                    sa = sa_block.split(",", 4)
+                    chrom2 = gettid(sa[0])
+                    start_pos2 = int(sa[1])
+                    # strand = sa[2] == "-"
+                    cigar = sa[3]
+                    matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
 
-                    other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
+                    # Match the current alignment to the SA soft/hard clip
+                    diff_left = 10000000000
+                    if matches[0][1] in "SH":
+                        diff_left = abs(query_length - matches[0][0] - 1)
+                    diff_right = 10000000000
+                    if matches[len(matches)-1][1] in "SH":
+                        diff_right = abs(query_length - matches[len(matches)-1][0] - 1)
 
-                    # if tt == r.qname:
-                    # echo("-----", qname, node_name, flag, "a",  clip_or_wr, other_nodes)
-                    if not other_nodes.empty():
-                        for other_node in other_nodes:
-                            if not G.hasEdge(node_name, other_node):
-                                G.addEdge(node_name, other_node, 2)
-                        other_nodes.clear()
+                    if diff_left < diff_right:
+                        # Use left hand side of SA cigar as break point
+                        # if (strand == "-" and flag & 16) or (strand == "+" and not flag & 16):
+                        pos2 = start_pos2
+                    else:
+                        pos2 = start_pos2 + sum(slen for slen, opp in matches if opp == "M" or opp == "D") # todo check inversions
+
+                    add_primark_link = 0
+                    next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
+
+                    if current_overlaps_roi and next_overlaps_roi:
+                        continue
+                    else:
+
+                        other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
+
+                        # if tt == r.qname:
+                        #     echo("-----", qname, node_name, flag, "a",  pos, pos2, clip_or_wr, other_nodes, cigar_index, r.cigartuples)
+                        #     echo(sa)
+                        if not other_nodes.empty():
+                            for other_node in other_nodes:
+                                if not G.hasEdge(node_name, other_node):
+                                    G.addEdge(node_name, other_node, 2)
+                            other_nodes.clear()
 
 
         if add_primark_link: # and paired_end:
+
             # Use mate information to generate cluster
             if clip_or_wr == 2:  # within read
                 chrom2 = chrom
@@ -669,6 +750,10 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
                     pos2 = event_pos + r.cigartuples[cigar_index][1]
                 else:
                     pos2 = event_pos
+
+            elif not clip_or_wr and not flag & 16 and (r.cigartuples[0][0] != 4 or r.cigartuples[0][0] != 5):  # Read on forward strand
+                # Use end of read alignment if event likely to be at right side
+                pos = r.reference_end
 
             if current_overlaps_roi and io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1):
                 # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
@@ -679,9 +764,15 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
                     return
 
 
-            other_nodes = pe_scope.update(node_name, chrom, pos, rnext, pnext, clip_or_wr)
+            other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
+
+            # if node_name == 96:
+            #     echo("OTHER NODES", other_nodes)
+            # if r.cigartuples[cigar_index][0] == 1:
+            #     echo("-----", qname, node_name, flag, "b", clip_or_wr,  pos, pos2, other_nodes, cigar_index, r.cigartuples)
+            #     quit()
             # if tt == r.qname:
-            # echo("-----", qname, node_name, flag, "b", clip_or_wr,  pos, pnext, other_nodes, cigar_index)
+            #     echo("-----", qname, node_name, flag, "b", clip_or_wr,  pos, pos2, other_nodes, cigar_index, r.cigartuples)
                 # if r.flag & 64:
                 #     quit()
             if not other_nodes.empty():
@@ -712,8 +803,8 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
                 if matches[0][1] in "SH":
                     diff_left = abs(query_length - matches[0][0] - 1)
                 diff_right = 10000000000
-                if matches[-1][1] in "SH":
-                    diff_right = abs(query_length - matches[-1][0] - 1)
+                if matches[len(matches)-1][1] in "SH":
+                    diff_right = abs(query_length - matches[len(matches)-1][0] - 1)
 
                 if diff_left < diff_right:
                     # Use left hand side of SA cigar as break point
@@ -767,7 +858,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences)
-    cdef int loci_dist = int(max_dist * 1.5)
+    cdef int loci_dist = max_dist #int(max_dist * 1.5)
     cdef long tell
     # cdef Py_SimpleGraph_t G = map_set_utils.Py_SimpleGraph()
     G = map_set_utils.Py_SimpleGraph()
@@ -775,7 +866,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
     gettid = infile.gettid
 
-    # debug = "HWI-D00360:5:H814YADXX:2:1110:10283:75050"
+    # debug = "HISEQ1:12:H8GVUADXX:2:2109:12037:62696"
 
     debug_nodes = set([])
 
@@ -791,21 +882,21 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             added = 0
             if len(r.cigartuples) > 1:
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
-                    if opp & 4 | opp & 5 and length > 30:
+                    if (opp == 4 or opp == 5) and (length > 30 or r.has_tag("SA")):  #length > 30:
                         update_graph(G, r, clip_l, loci_dist, gettid,
                            overlap_regions, clustering_dist, clip_scope, pe_scope,
                            cigar_index, event_pos, paired_end, tell, genome_scanner,
                            template_edges, node_to_name)
                         added += 1
 
-                    elif opp & 1 and length > 30:
+                    elif opp == 1 and length > 30:
                         update_graph(G, r, clip_l, loci_dist, gettid,
                            overlap_regions, clustering_dist, clip_scope, pe_scope,
                            cigar_index, event_pos, paired_end, tell, genome_scanner,
                            template_edges, node_to_name)
                         added += 1
 
-                    elif opp & 2:
+                    elif opp == 2:
                         if length > 30:
                             update_graph(G, r, clip_l, loci_dist, gettid,
                                overlap_regions, clustering_dist, clip_scope, pe_scope,
@@ -904,7 +995,7 @@ cdef set BFS_local(G, int source, robin_set[int]& visited ):
         u = queue.pop(0)
         for v in G.neighbors(u):
 
-            if visited.find(v) == visited.end(): #v not in visited:
+            if visited.find(v, v) == visited.end(): #v not in visited:
                 if G.weight(u, v) > 1:
 
                     if u not in nodes_found:
@@ -926,11 +1017,11 @@ cdef dict get_partitions(G, nodes):
     cdef int u, v, i
     parts = []
     for u in nodes:
-        if seen.find(u) != seen.end(): #u in seen:
+        if seen.find(u, u) != seen.end(): #u in seen:
             continue
 
         for v in G.neighbors(u):
-            if seen.find(v) != seen.end(): #v in seen:
+            if seen.find(v, v) != seen.end(): #v in seen:
                 continue
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
@@ -951,6 +1042,12 @@ cdef tuple count_support_between(G, parts, int min_support):
     if len(parts) == 0:
         return {}, {}
     elif len(parts) == 1:
+        # for v in parts[0]:
+        #     echo(f"--->node={v}", len(list(G.neighbors(int(v)))))
+        #     for v2 in G.neighbors(int(v)):
+        #
+        #         echo(f"node={v}", f"node2={v2}", f"w={G.weight(int(v), int(v2))}")
+
         return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
 
     # Make a table to count from, int-int
@@ -1041,8 +1138,15 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     partitions = get_partitions(G, component)
     support_between, support_within = count_support_between(G, partitions, min_support)
 
-    if len(support_between) == 0 and len(support_within) == 0 and len(reads) >= min_support:
-        return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+    if len(support_between) == 0 and len(support_within) == 0:
+        if len(reads) >= min_support:
+            # echo("1parts", partitions)
+            # echo("1s_between", support_between)
+            # echo("1s_within", support_within)
+            # echo("1n2n", n2n.keys())
+            return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+        else:
+            return {}
 
     sb = {}
     kept = set([])
@@ -1071,6 +1175,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     # echo("parts", partitions)
     # echo("s_between", sb)
     # echo("s_within", support_within)
+    # echo("n2n", n2n.keys())
 
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
 

@@ -224,7 +224,7 @@ cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     with nogil:
 
         for v in range(G.numberOfNodes()):  # process all vertices in G
-            if explored.find(v) != explored.end(): #explored.has_key(v) == 1:
+            if explored.find(v, v) != explored.end(): #explored.has_key(v) == 1:
                 continue
 
             fringe.clear()
@@ -233,7 +233,7 @@ cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
             while fringe.size() != 0:
 
                 w = fringe.back()  # depth first search
-                if explored.find(w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
+                if explored.find(w, w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
                     fringe.pop_back()
                     continue
 
@@ -245,9 +245,9 @@ cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
 
                 neighbors = G.neighbors(w)
                 for n in neighbors:
-                    if explored.find(n) == explored.end(): #explored.has_key(n) == 0:
+                    if explored.find(n, n) == explored.end(): #explored.has_key(n) == 0:
 
-                        if seen.find(n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
+                        if seen.find(n, n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
                             raise ValueError("Graph contains a cycle.")
                         new_nodes.push_back(n)
 
@@ -353,8 +353,6 @@ cpdef dict base_assemble(rd):
     # G = nk.Graph(weighted=False, directed=True)
 
     cdef Py_DiGraph_t G = map_set_utils.Py_DiGraph()
-
-    # echo(SG.setDirected(), "y")
     node_dict_r = {}
 
     # cdef Py_Int2IntVecMap node_dict2 = Py_Int2IntVecMap()
@@ -366,23 +364,25 @@ cpdef dict base_assemble(rd):
         r = rd[0]
         rseq = r.seq
         ct = r.cigartuples
-
+        if rseq is None or ct is None:
+            return {}
         longest_left_sc = 0
         longest_right_sc = 0
-        if ct[0][0] != 4 and ct[-1][0] != 4:
-            return {}
-        if ct[0][0] == 4:
-            begin = ct[0][1]
-            seq += rseq[:begin].lower()
-            longest_left_sc = ct[0][1]
+        seq = ""
+        begin = 0
+        for opp, length in ct:
+            if opp == 4 or opp == 1:
+                seq += rseq[begin:begin + length].lower()
+                begin += length
+                if opp == 4:
+                    if begin == 0:
+                        longest_left_sc = length
+                    else:
+                        longest_right_sc = length
 
-        if ct[-1][0] == 4:
-            end = len(rseq) - ct[-1][-1]
-            seq += rseq[begin:end]
-            seq += rseq[end:].lower()
-            longest_right_sc = ct[-1][1]
-        else:
-            seq += rseq[begin:len(rseq)]
+            elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+                seq += rseq[begin:begin + length]
+                begin += length
 
         return {"contig": seq,
                 "left_clips": longest_left_sc,
@@ -394,10 +394,7 @@ cpdef dict base_assemble(rd):
 
     # count
     for r in rd:
-        try:
-            r.seq
-        except:
-            continue
+
         if r.seq is None:
             continue
 
@@ -405,7 +402,6 @@ cpdef dict base_assemble(rd):
             r.query_qualities = array.array("B", [1] * len(r.seq))
 
         add_to_graph(G, r, node_weights, node_dict_r)
-        # echo(len(r.seq))
         # count += 1
         # if count == 3:
         #     break
@@ -440,7 +436,7 @@ cpdef dict base_assemble(rd):
 
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
 
-
+    # echo(path2.size())
 
     if path2.size() == 0:
     # if len(path2) == 0:
@@ -454,8 +450,8 @@ cpdef dict base_assemble(rd):
     longest_left_sc = node_dict[front][2]
     longest_right_sc = node_dict[back][2]
 
-    if longest_left_sc == 0 and longest_right_sc == 0:
-            return {}  # No soft-clips, so not overlapping a break
+    # if longest_left_sc == 0 and longest_right_sc == 0:
+    #         return {}  # No soft-clips, so not overlapping a break
 
     cdef tuple t
     cdef int item
@@ -475,6 +471,7 @@ cpdef dict base_assemble(rd):
 
     # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
     # quit()
+    # echo(seq)
     return {"contig": seq,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,
@@ -521,7 +518,7 @@ cdef tuple get_rep(contig_seq):
 
     cdef int left_clip_end = 0
     cdef int right_clip_start = 0
-    cdef float aligned_portion, clip_rep
+    cdef float aligned_portion, clip_rep, clip_seen
     cdef str clip
     # Get left clip
     for left_clip_end in range(len(contig_seq)):
@@ -548,7 +545,8 @@ cdef tuple get_rep(contig_seq):
         clip_rep += compute_rep(clip)
         clip_seen += 1
 
-    clip_rep = clip_rep / clip_seen
+    if clip_seen != 0:
+        clip_rep = clip_rep / clip_seen
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
 

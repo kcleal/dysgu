@@ -7,14 +7,21 @@ import datetime
 import numpy as np
 import click
 from subprocess import call
-from collections import deque
+from collections import deque, defaultdict
 import resource
 
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, uint8_t, uint16_t
+from libc.string cimport strcpy, strlen
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
+from dysgu.map_set_utils cimport robin_set
 from dysgu.coverage import get_insert_params
+
+
+cdef extern from "find_reads.h" nogil:
+
+    int search_hts_file(char* infile, char* outfile, int min_within_size, int clip_length, int threads)
 
 
 def echo(*args):
@@ -43,7 +50,7 @@ def iter_bam(bam, search, show=True):
 def config(args):
 
     kind = args["bam"].split(".")[-1]
-    opts = {"bam": "rb", "cram": "rc", "sam": "rs"}
+    opts = {"bam": "rb", "cram": "rc", "sam": "r"}
     if kind not in opts:
         raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
 
@@ -52,7 +59,7 @@ def config(args):
     try:
         bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
     except:
-        raise RuntimeError("Problem opening bam/sam/cram, check file has .bam/.sam/.cram in file name")
+        raise RuntimeError("Problem opening bam/sam/cram, check file has .bam/.sam/.cram in file name, and file has a header")
 
     bam_i = iter_bam(bam, args["search"])
 
@@ -74,6 +81,20 @@ def config(args):
 
     out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
 
+    cdef bytes infile_string = args["bam"].encode("ascii")
+    cdef bytes outfile_string = out_name.encode("ascii")
+
+
+    #
+    if exc_tree is None and send_output is None:
+        t0 = time.time()
+        count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+        echo(time.time() - t0)
+        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
+                                                                    count,
+                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+        quit()
 
     reads_out = pysam.AlignmentFile(out_name, "wbu", template=bam)
 
@@ -86,7 +107,8 @@ cdef tuple get_reads(args):
 
     cdef uint32_t clip_length
     cdef int flag
-    cdef str qname
+    # cdef str qname
+    cdef long qname
     cdef list cigartuples
     cdef int paired_end = int(args["paired"] == "True")
 
@@ -98,32 +120,39 @@ cdef tuple get_reads(args):
     bam, bam_i, exc_tree, clip_length, send_output, outbam = config(args)
 
     scope = deque([])
-    read_names = set([])
+
+    # read_names = set([])
+    cdef robin_set[long] read_names
+
     insert_size = []
     read_length = []
 
     cdef int max_scope = 100000
     cdef int count = 0
     cdef int nn = 0
+
     for nn, r in enumerate(bam_i):
 
         if send_output:
             send_output.write(r)
 
-        # for query in bam_filter:
         while len(scope) > max_scope:
-            query = scope.popleft()
-            if query.qname in read_names:
+            qname, query = scope.popleft()
+
+            if read_names.find(qname, qname) != read_names.end():
+
+            # if query.qname.__hash__() in read_names:
                 outbam.write(query)
                 count += 1
+
 
         if exc_tree:  # Skip exclude regions
             if io_funcs.intersecter_int_chrom(exc_tree, r.rname, r.pos, r.pos + 1):
                 continue
 
         flag = r.flag
-        if flag & 1280 or r.cigartuples is None:
-            continue  # Read is duplicate or not primary alignment
+        if flag & 1284 or r.cigartuples is None:
+            continue  # Read is duplicate or not primary alignment, or unmapped
 
         if paired_end and len(insert_size) < 100000:
 
@@ -132,26 +161,29 @@ cdef tuple get_reads(args):
                     read_length.append(r.infer_read_length())
                     insert_size.append(r.tlen)
 
-        scope.append(r)
-        qname = r.qname
 
-        if qname not in read_names:
-            if paired_end and (~ flag & 2 | flag & 2048):  # Save if read is discordant or supplementary
-                read_names.add(qname)
+        qname = r.qname.__hash__()
+        scope.append((qname, r))
 
+        # if qname not in read_names:
+        if read_names.find(qname, qname) == read_names.end():
+            if map_set_utils.cigar_clip(r, clip_length):
+                # read_names.add(qname)
+                read_names.insert(qname)
+            elif paired_end and (~ flag & 2 or flag & 2048):  # Save if read is discordant or supplementary
+                # read_names.add(qname)
+                read_names.insert(qname)
             elif r.has_tag("SA"):
-                read_names.add(qname)
-
-            elif map_set_utils.cigar_clip(r, clip_length):
-                read_names.add(qname)
-
-            elif any(j & 1 | j & 2 and k > 30 for j, k in r.cigartuples):
-                read_names.add(qname)
-
+                # read_names.add(qname)
+                read_names.insert(qname)
+            elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):
+                # read_names.add(qname)
+                read_names.insert(qname)
 
     while len(scope) > 0:
-        query = scope.popleft()
-        if query.qname in read_names:
+        qname, query = scope.popleft()
+        if read_names.find(qname, qname) != read_names.end():
+        # if query.qname.__hash__() in read_names:
             outbam.write(query)
             count += 1
 
