@@ -8,7 +8,7 @@ from distutils import ccompiler
 from subprocess import run
 import os
 import sys
-import pysam
+import glob
 
 
 # This was stolen from pybind11
@@ -66,7 +66,7 @@ def get_extra_args():
 def build_htslib():
     setup_dir = os.path.dirname(os.path.realpath(__file__))
     print(f"Building samtools using ./configure; make; in {setup_dir}")
-    run(f"cd {setup_dir}/dysgu/htslib-1.9/; ./configure; make", shell=True)
+    run(f"cd {setup_dir}/dysgu; tar -xvf htslib-1.9.tar; cd htslib-1.9/; ./configure; make", shell=True)
 
 
 if "--no-hts" not in sys.argv[1:]:
@@ -87,7 +87,6 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
                                  library_dirs=[numpy.get_include()], #+ pysam.get_include(),  # rb.get_include()
                                  extra_compile_args=extras,
                                  language="c++"))
-
 
 print("Found packages", find_packages(where="."))
 setup(

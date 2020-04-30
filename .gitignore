@@ -1,4 +1,4 @@
-*.so
+./*.so
 build
-*.c
+./*.c
 var
