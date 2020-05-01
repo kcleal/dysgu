@@ -4,7 +4,8 @@ build
 var
 *.pyc
 dysgu.egg-info/
-
+old
+old/*
 dist
 *.so
 htslib/config.h.in~
@@ -22,3 +23,5 @@ _templates
 setup-requires/*
 .cache/v/cache/lastfailed
 .idea
+.DS_Store
+dysgu/.DS_Store

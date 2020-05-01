@@ -9,7 +9,6 @@ cimport numpy as np
 import mmh3
 from dysgu cimport map_set_utils
 
-import pysam
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint32_t, uint8_t

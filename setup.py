@@ -57,10 +57,7 @@ def get_extra_args():
     f = cpp_flag(compiler, flags)
     if f:
         extra_compile_args.append(f)
-    # flags = ['-W#warnings']
-    # f = cpp_flag(compiler, flags)
-    # if f:
-    #     extra_compile_args.append(f)
+
     return extra_compile_args
 
 
@@ -79,8 +76,6 @@ sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.
 #     setup_dir = os.path.dirname(os.path.realpath(__file__))
 #     print(f"Building samtools using ./configure; make; in {setup_dir}")
 #     run(f"cd {setup_dir}/dysgu; tar -xvf htslib-1.9.tar; cd htslib-1.9/; ./configure; make", shell=True)
-#
-#
 # if "--no-hts" not in sys.argv[1:]:
 #     build_htslib()
 # if "--no-hts" in sys.argv[1:]:

@@ -183,7 +183,6 @@ def test_command(ctx, **kwargs):
     """Run dysgu tests"""
 
     tests_path = os.path.dirname(__file__) + "/tests"
-
     runner = CliRunner()
 
     t = [tests_path + '/small.bam', '--post-fix', 'dysgu_test']
