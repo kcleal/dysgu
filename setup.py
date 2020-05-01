@@ -132,7 +132,7 @@ setup(
         ],
     packages=find_packages(where="."),
     ext_modules=cythonize(ext_modules),
-    include_dirs=[numpy.get_include(), rb.get_include()],
+    # include_dirs=[numpy.get_include()],
     include_package_data=True,
     zip_safe=False,
     entry_points='''
