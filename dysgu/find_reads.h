@@ -9,8 +9,8 @@
 
 #include "xxhash64.h"
 
-#include "htslib-1.9/htslib/sam.h"
-#include "htslib-1.9/htslib/hts.h"
+#include "../htslib/sam.h"
+#include "../htslib/hts.h"
 
 
 int search_hts_file(char *infile , char *outfile, const int min_within_size, const int clip_length,
