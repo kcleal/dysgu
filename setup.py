@@ -81,7 +81,12 @@ sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.
 # if "--no-hts" in sys.argv[1:]:
 #     sys.argv.remove("--no-hts")
 
-extras = get_extra_args()
+root = os.path.abspath(os.path.dirname(__file__))
+
+include_dirs = [os.path.join(root, "htslib")]
+
+extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
+                             "-Wno-strict-prototypes", "-Wno-unused-result", "-Wno-discarded-qualifiers"]
 print("Extra compiler args ", extras)
 
 ext_modules = list()
@@ -90,10 +95,9 @@ ext_modules.append(Extension(f"dysgu.sv2bam",
                              [f"dysgu/sv2bam.pyx"] + sources,
                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
                                        ['crypt'] if platform.system() != 'Darwin' else []),
-                             library_dirs=[numpy.get_include(), 'htslib', 'dysgu'],
-                             extra_compile_args=["-Wno-sign-compare", "-Wno-unused-function",
-                                                 "-Wno-strict-prototypes",
-                                                 "-Wno-unused-result", "-Wno-discarded-qualifiers"] + extras,
+                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                             include_dirs=include_dirs,
+                             extra_compile_args=extras,
                              language="c++"))
 
 
@@ -102,7 +106,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), 'dysgu'],
+                                 library_dirs=['htslib', numpy.get_include(), 'dysgu'],
                                  extra_compile_args=extras,
                                  language="c++"))
 
