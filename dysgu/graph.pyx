@@ -7,8 +7,6 @@ from collections import defaultdict, deque
 import itertools
 
 import mmh3
-
-import sortedcontainers
 import ncls
 
 import pysam
@@ -18,8 +16,6 @@ from cpython cimport array
 import array
 import re
 
-from redblackpy.series.tree_series import Series
-from redblackpy.series.tree_series cimport Series
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
