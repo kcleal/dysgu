@@ -77,7 +77,7 @@ if "--no-hts" in sys.argv[1:]:
 # https://github.com/brentp/cyvcf2/blob/master/setup.py
 # Build the Cython extension by statically linking to the bundled htslib
 sources = [
-    x for x in glob.glob('dysgu/htslib-1.9/*.c')
+    x for x in glob.glob('dysgu/htslib-1.9/*.c') + glob.glob('dysgu/htslib-1.9/*.h')
     if not any(e in x for e in ['irods', 'plugin'])
 ]
 sources += glob.glob('dysgu/htslib-1.9/cram/*.c')
@@ -89,15 +89,8 @@ extras = get_extra_args()
 print("Extra compiler args ", extras)
 
 
-ext_modules = []
-for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:
+ext_modules = list()
 
-    ext_modules.append(Extension(f"dysgu.{item}",
-                                 [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include()],
-                                 extra_compile_args=extras,
-                                 language="c++"))
 
 # sv2bam.pyx needs path to local htslib
 ext_modules.append(Extension(f"dysgu.sv2bam",
@@ -106,6 +99,16 @@ ext_modules.append(Extension(f"dysgu.sv2bam",
                                            f"{setup_dir}/dysgu/htslib-1.9/htslib"],
                              extra_compile_args=extras,
                              language="c++"))
+
+
+for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
+             "map_set_utils", "cluster", "sv2fq", "view"]:
+
+    ext_modules.append(Extension(f"dysgu.{item}",
+                                 [f"dysgu/{item}.pyx"],
+                                 library_dirs=[numpy.get_include()],
+                                 extra_compile_args=extras,
+                                 language="c++"))
 
 
 print("Found packages", find_packages(where="."))
