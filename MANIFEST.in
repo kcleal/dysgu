@@ -1,3 +1,5 @@
 include dysgu/*
 include dysgu/tests/*
+graft dysgu/htslib-1.9/*
+graft dysgu/htslib-1.9/htslib/*
 
