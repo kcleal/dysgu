@@ -3,7 +3,6 @@ import setuptools
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
-import redblackpy as rb
 from distutils import ccompiler
 from subprocess import run
 import os
@@ -15,6 +14,7 @@ import glob
 # https://github.com/pybind/python_example/blob/master/setup.py
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
+setup_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 def has_flag(compiler, flagname):
@@ -64,7 +64,6 @@ def get_extra_args():
 
 
 def build_htslib():
-    setup_dir = os.path.dirname(os.path.realpath(__file__))
     print(f"Building samtools using ./configure; make; in {setup_dir}")
     run(f"cd {setup_dir}/dysgu; tar -xvf htslib-1.9.tar; cd htslib-1.9/; ./configure; make", shell=True)
 
@@ -80,13 +79,22 @@ print("Extra compiler args ", extras)
 
 ext_modules = []
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "sv2bam", "cluster", "sv2fq", "view"]:
+             "map_set_utils", "cluster", "sv2fq", "view"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include()], #+ pysam.get_include(),  # rb.get_include()
+                                 library_dirs=[numpy.get_include()],
                                  extra_compile_args=extras,
                                  language="c++"))
+
+# sv2bam.pyx needs path to local htslib
+ext_modules.append(Extension(f"dysgu.sv2bam",
+                             [f"dysgu/sv2bam.pyx"],
+                             library_dirs=[numpy.get_include(),
+                                           f"{setup_dir}/dysgu/htslib-1.9/htslib"],
+                             extra_compile_args=extras,
+                             language="c++"))
+
 
 print("Found packages", find_packages(where="."))
 setup(
@@ -104,13 +112,12 @@ setup(
             'ncls',
             'scikit-bio',
             'sortedcontainers',
-            # 'redblackpy',
             'mmh3',
 
         ],
     packages=find_packages(where="."),
     ext_modules=cythonize(ext_modules),
-    include_dirs=[numpy.get_include(), rb.get_include()],
+    include_dirs=[numpy.get_include()],
     include_package_data=True,
     entry_points='''
         [console_scripts]
