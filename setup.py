@@ -83,7 +83,7 @@ sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.
 
 root = os.path.abspath(os.path.dirname(__file__))
 
-include_dirs = [os.path.join(root, "htslib")]
+include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-strict-prototypes", "-Wno-unused-result", "-Wno-discarded-qualifiers"]
