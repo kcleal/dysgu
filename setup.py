@@ -88,26 +88,30 @@ extras = get_extra_args()  #["-Wno-sign-compare", "-Wno-unused-function",
 print("Extra compiler args ", extras)
 
 
-if clang:
-    ext_modules.append(Extension(f"dysgu.sv2bam",
-                                 [f"dysgu/sv2bam.pyx"],  # + sources,
-                                 # libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-                                 #           ['crypt'] if platform.system() != 'Darwin' else []),
-                                 library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-                                 include_dirs=include_dirs,
-                                 extra_compile_args=extras,
-                                 language="c++"))
+# if clang:
+#     ext_modules.append(Extension(f"dysgu.sv2bam",
+#                                  [f"dysgu/sv2bam.pyx"],  # + sources,
+#                                  libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+#                                            ['crypt'] if platform.system() != 'Darwin' else []),
+#                                  library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+#                                  include_dirs=include_dirs,
+#                                  extra_compile_args=extras,
+#                                  language="c++"))
 
+if not clang:
+    build_sources = [f"dysgu/sv2bam.pyx"] + sources
 else:
-    sources = [f"dysgu/sv2bam.pyx"] + sources
-    ext_modules.append(Extension(f"dysgu.sv2bam",
-                                 [f"dysgu/sv2bam.pyx"] + sources,
-                                 # libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-                                 #           ['crypt'] if platform.system() != 'Darwin' else []),
-                                 library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-                                 include_dirs=include_dirs,
-                                 extra_compile_args=extras,
-                                 language="c++"))
+    build_sources = [f"dysgu/sv2bam.pyx"]
+
+
+ext_modules.append(Extension(f"dysgu.sv2bam",
+                             build_sources,
+                             libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+                                       ['crypt'] if platform.system() != 'Darwin' else []),
+                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                             include_dirs=include_dirs,
+                             extra_compile_args=extras,
+                             language="c++"))
 
 
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
