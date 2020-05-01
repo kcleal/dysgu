@@ -107,6 +107,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
                                  library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                                 include_dirs=include_dirs,
                                  extra_compile_args=extras,
                                  language="c++"))
 
