@@ -73,6 +73,18 @@ if "--no-hts" not in sys.argv[1:]:
 if "--no-hts" in sys.argv[1:]:
     sys.argv.remove("--no-hts")
 
+
+# https://github.com/brentp/cyvcf2/blob/master/setup.py
+# Build the Cython extension by statically linking to the bundled htslib
+sources = [
+    x for x in glob.glob('dysgu/htslib-1.9/*.c')
+    if not any(e in x for e in ['irods', 'plugin'])
+]
+sources += glob.glob('dysgu/htslib-1.9/cram/*.c')
+# Exclude the htslib sources containing main()'s
+sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+
+
 extras = get_extra_args()
 print("Extra compiler args ", extras)
 
@@ -89,7 +101,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
 # sv2bam.pyx needs path to local htslib
 ext_modules.append(Extension(f"dysgu.sv2bam",
-                             [f"dysgu/sv2bam.pyx"],
+                             [f"dysgu/sv2bam.pyx"] + sources,
                              library_dirs=[numpy.get_include(),
                                            f"{setup_dir}/dysgu/htslib-1.9/htslib"],
                              extra_compile_args=extras,
