@@ -30,7 +30,7 @@ int search_hts_file(char *infile , char *outfile, const int min_within_size, con
         exit(1);
     }
 
-    auto f_out = sam_open(outfile, "wb0");
+    samFile *f_out = sam_open(outfile, "wb0");
     result = sam_hdr_write(f_out, bamHdr);
     if (result != 0) { exit(1); }
 
