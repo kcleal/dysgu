@@ -71,12 +71,12 @@ sources += glob.glob('htslib/cram/*.c')
 # Exclude the htslib sources containing main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 
-if 'CC' in os.environ and os.environ['CC'] == "clang":
+if 'CC' in os.environ and "clang" in os.environ['CC']:
     clang = True
 else:
     clang = False
 
-
+print("Clang:", clang)
 ext_modules = list()
 
 root = os.path.abspath(os.path.dirname(__file__))
@@ -88,16 +88,7 @@ extras = get_extra_args()  #["-Wno-sign-compare", "-Wno-unused-function",
 print("Extra compiler args ", extras)
 
 
-# if clang:
-#     ext_modules.append(Extension(f"dysgu.sv2bam",
-#                                  [f"dysgu/sv2bam.pyx"],  # + sources,
-#                                  libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-#                                            ['crypt'] if platform.system() != 'Darwin' else []),
-#                                  library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-#                                  include_dirs=include_dirs,
-#                                  extra_compile_args=extras,
-#                                  language="c++"))
-
+# No idea why this works:
 if not clang:
     build_sources = [f"dysgu/sv2bam.pyx"] + sources
 else:

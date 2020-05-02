@@ -13,12 +13,15 @@
         ],
         "include_dirs": [
             "./dysgu",
-            "dysgu"
+            "dysgu",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
         ],
         "language": "c++",
         "library_dirs": [
+            "htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/redblackpy"
+            "dysgu"
         ],
         "name": "dysgu.map_set_utils",
         "sources": [
@@ -5070,7 +5073,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
  *     c = r.cigartuples
  *     if not c:             # <<<<<<<<<<<<<<
  *         return 0
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
  */
   __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_c); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(1, 164, __pyx_L1_error)
   __pyx_t_3 = ((!__pyx_t_2) != 0);
@@ -5080,7 +5083,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
  *     c = r.cigartuples
  *     if not c:
  *         return 0             # <<<<<<<<<<<<<<
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
  *         return 1
  */
     __pyx_r = 0;
@@ -5091,14 +5094,14 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
  *     c = r.cigartuples
  *     if not c:             # <<<<<<<<<<<<<<
  *         return 0
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
  */
   }
 
   /* "dysgu/map_set_utils.pyx":166
  *     if not c:
  *         return 0
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):             # <<<<<<<<<<<<<<
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):             # <<<<<<<<<<<<<<
  *         return 1
  *     return 0
  */
@@ -5123,7 +5126,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_clip_length); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = PyObject_RichCompare(__pyx_t_4, __pyx_t_1, Py_GT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 166, __pyx_L1_error)
+  __pyx_t_5 = PyObject_RichCompare(__pyx_t_4, __pyx_t_1, Py_GE); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 166, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(1, 166, __pyx_L1_error)
@@ -5156,7 +5159,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_clip_length); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 166, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_4 = PyObject_RichCompare(__pyx_t_1, __pyx_t_5, Py_GT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 166, __pyx_L1_error)
+  __pyx_t_4 = PyObject_RichCompare(__pyx_t_1, __pyx_t_5, Py_GE); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 166, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(1, 166, __pyx_L1_error)
@@ -5167,7 +5170,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
 
     /* "dysgu/map_set_utils.pyx":167
  *         return 0
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
  *         return 1             # <<<<<<<<<<<<<<
  *     return 0
  * 
@@ -5178,14 +5181,14 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
     /* "dysgu/map_set_utils.pyx":166
  *     if not c:
  *         return 0
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):             # <<<<<<<<<<<<<<
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):             # <<<<<<<<<<<<<<
  *         return 1
  *     return 0
  */
   }
 
   /* "dysgu/map_set_utils.pyx":168
- *     if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+ *     if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
  *         return 1
  *     return 0             # <<<<<<<<<<<<<<
  * 

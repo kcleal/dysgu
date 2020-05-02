@@ -14,11 +14,22 @@
         ],
         "include_dirs": [
             "dysgu",
-            "./dysgu"
+            "./dysgu",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
         ],
         "language": "c++",
+        "libraries": [
+            "z",
+            "bz2",
+            "lzma",
+            "curl",
+            "ssl"
+        ],
         "library_dirs": [
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "dysgu"
         ],
         "name": "dysgu.sv2bam",
         "sources": [
@@ -1006,7 +1017,7 @@ struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_1___pyx_f_5dysgu_6sv2bam_get_
 /* "dysgu/sv2bam.pyx":179
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
@@ -3752,7 +3763,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_5config(CYTHON_UNUSED PyObject *__pyx_s
 
   /* "dysgu/sv2bam.pyx":89
  * 
- *     #
+ * 
  *     if exc_tree is None and send_output is None:             # <<<<<<<<<<<<<<
  *         t0 = time.time()
  *         count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
@@ -3771,7 +3782,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_5config(CYTHON_UNUSED PyObject *__pyx_s
   if (__pyx_t_5) {
 
     /* "dysgu/sv2bam.pyx":90
- *     #
+ * 
  *     if exc_tree is None and send_output is None:
  *         t0 = time.time()             # <<<<<<<<<<<<<<
  *         count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
@@ -4107,7 +4118,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_5config(CYTHON_UNUSED PyObject *__pyx_s
 
     /* "dysgu/sv2bam.pyx":89
  * 
- *     #
+ * 
  *     if exc_tree is None and send_output is None:             # <<<<<<<<<<<<<<
  *         t0 = time.time()
  *         count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
@@ -4223,7 +4234,7 @@ static PyObject *__pyx_gb_5dysgu_6sv2bam_9get_reads_2generator1(__pyx_CoroutineO
 /* "dysgu/sv2bam.pyx":179
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
@@ -4400,7 +4411,7 @@ static PyObject *__pyx_gb_5dysgu_6sv2bam_9get_reads_2generator1(__pyx_CoroutineO
       goto __pyx_L9_bool_binop_done;
     }
     __pyx_L10_next_and:;
-    __pyx_t_1 = PyObject_RichCompare(__pyx_cur_scope->__pyx_v_k, __pyx_int_30, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 179, __pyx_L1_error)
+    __pyx_t_1 = PyObject_RichCompare(__pyx_cur_scope->__pyx_v_k, __pyx_int_30, Py_GE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 179, __pyx_L1_error)
     __pyx_t_10 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 179, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_9 = __pyx_t_10;
@@ -5470,7 +5481,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *__pyx_v_args) {
  *             elif r.has_tag("SA"):
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)             # <<<<<<<<<<<<<<
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):
  *                 # read_names.add(qname)
  */
         __pyx_v_read_names.insert(__pyx_v_qname);
@@ -5488,7 +5499,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *__pyx_v_args) {
       /* "dysgu/sv2bam.pyx":179
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
@@ -5502,7 +5513,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *__pyx_v_args) {
       if (__pyx_t_19) {
 
         /* "dysgu/sv2bam.pyx":181
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)             # <<<<<<<<<<<<<<
  * 
@@ -5513,7 +5524,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *__pyx_v_args) {
         /* "dysgu/sv2bam.pyx":179
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
+ *             elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */

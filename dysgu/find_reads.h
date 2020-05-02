@@ -30,20 +30,20 @@ int search_hts_file(char *infile , char *outfile, const int min_within_size, con
         exit(1);
     }
 
-    auto f_out = sam_open(outfile, "wb");
+    auto f_out = sam_open(outfile, "wbu");
     result = sam_hdr_write(f_out, bamHdr);
     if (result != 0) { exit(1); }
 
     const int max_scope = 100000;
     int total = 0;
 
-    std::pair<std::size_t, bam1_t*> scope_item;
-    std::deque<std::pair<std::size_t, bam1_t*>> scope;
-    tsl::robin_set<std::size_t> read_names;
+    std::pair<uint64_t, bam1_t*> scope_item;
+    std::deque<std::pair<uint64_t, bam1_t*>> scope;
+    tsl::robin_set<uint64_t> read_names;
 
     while(sam_read1(fp_in,bamHdr,aln) > 0){
 
-        while (scope.size() > max_scope) {
+        if (scope.size() > max_scope) {
             scope_item = scope[0];
 
             if ( read_names.find(scope_item.first, scope_item.first) != read_names.end() ) {
@@ -56,7 +56,7 @@ int search_hts_file(char *infile , char *outfile, const int min_within_size, con
 
         uint16_t flag = aln->core.flag;
 
-        if (flag & 1280 || aln->core.n_cigar == 0) {
+        if (flag & 1284 || aln->core.n_cigar == 0) {
             continue;
         }
 
@@ -64,7 +64,7 @@ int search_hts_file(char *infile , char *outfile, const int min_within_size, con
 //        std::string qname = std::string(bam_get_qname(aln), aln->core.l_qname);
 //        const std::size_t precalculated_hash = std::hash<std::string>()(qname);
 
-        const std::size_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
+        const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
 
         scope.push_back(std::make_pair(precalculated_hash, aln));
 
@@ -90,11 +90,11 @@ int search_hts_file(char *infile , char *outfile, const int min_within_size, con
                 int op = bam_cigar_op(cigar[k]);
                 int length = bam_cigar_oplen(cigar[k]);
 
-                if ((op == BAM_CSOFT_CLIP || op == BAM_CHARD_CLIP ) && length >= clip_length) {
+                if ((op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
                     break;
-
-                } else if (( op == BAM_CINS || op == BAM_CDEL) && length >= min_within_size) {
+                }
+                if (( op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
                     read_names.insert(precalculated_hash);
                     break;
                 }

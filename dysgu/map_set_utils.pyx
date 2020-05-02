@@ -163,7 +163,7 @@ cdef int cigar_clip(r, int clip_length):
     c = r.cigartuples
     if not c:
         return 0
-    if (c[0][0] == 4 and c[0][1] > clip_length) or (c[-1][0] == 4 and c[-1][1] > clip_length):
+    if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
         return 1
     return 0
 

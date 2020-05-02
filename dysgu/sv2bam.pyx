@@ -85,7 +85,7 @@ def config(args):
     cdef bytes outfile_string = out_name.encode("ascii")
 
 
-    #
+
     if exc_tree is None and send_output is None:
         t0 = time.time()
         count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
@@ -176,7 +176,7 @@ cdef tuple get_reads(args):
             elif r.has_tag("SA"):
                 # read_names.add(qname)
                 read_names.insert(qname)
-            elif any((j == 1 or j == 2) and k > 30 for j, k in r.cigartuples):
+            elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):
                 # read_names.add(qname)
                 read_names.insert(qname)
 
