@@ -10,7 +10,6 @@
 #include "robin_hash.h"
 
 
-
 class DiGraph {
     // Directed non-weighted
     public:
@@ -348,3 +347,5 @@ class StrSet
         tsl::robin_set<std::string> set;
 
 };
+
+

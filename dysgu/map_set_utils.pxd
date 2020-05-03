@@ -12,7 +12,7 @@ import cython
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 
 
-from libc.stdint cimport uint32_t, uint8_t
+from libc.stdint cimport uint32_t, uint8_t, uint64_t
 
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
@@ -21,6 +21,11 @@ ctypedef cpp_pair[int, int] get_val_result
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
+
+
+cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
+    #static uint64_t hash(const void* input, uint64_t length, uint64_t seed)
+    cdef uint64_t hash(void* input, uint64_t length, uint64_t seed)
 
 
 cdef extern from "robin_set.h" namespace "tsl" nogil:

@@ -5,7 +5,8 @@
     "distutils": {
         "depends": [
             "dysgu/robin_set.h",
-            "dysgu/wrap_map_set2.h"
+            "dysgu/wrap_map_set2.h",
+            "dysgu/xxhash64.h"
         ],
         "extra_compile_args": [
             "-std=c++14",
@@ -649,6 +650,7 @@ static CYTHON_INLINE float __PYX_NAN() {
 #include <string.h>
 #include <string>
 #include <stdint.h>
+#include "xxhash64.h"
 #include "robin_set.h"
 #include "wrap_map_set2.h"
 #ifdef _OPENMP
@@ -871,7 +873,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet;
 
 /* "dysgu/map_set_utils.pxd":17
- * from libc.stdint cimport uint32_t, uint8_t
+ * from libc.stdint cimport uint32_t, uint8_t, uint64_t
  * 
  * ctypedef cpp_vector[int] int_vec_t             # <<<<<<<<<<<<<<
  * ctypedef cpp_pair[int, int] get_val_result
@@ -888,7 +890,7 @@ typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
  */
 typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_get_val_result;
 
-/* "dysgu/map_set_utils.pxd":59
+/* "dysgu/map_set_utils.pxd":64
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -902,7 +904,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":87
+/* "dysgu/map_set_utils.pxd":92
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -916,7 +918,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":113
+/* "dysgu/map_set_utils.pxd":118
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -930,7 +932,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "dysgu/map_set_utils.pxd":135
+/* "dysgu/map_set_utils.pxd":140
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -944,7 +946,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
 };
 
 
-/* "dysgu/map_set_utils.pxd":154
+/* "dysgu/map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_StrSet:             # <<<<<<<<<<<<<<

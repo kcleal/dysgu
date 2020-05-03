@@ -10,17 +10,136 @@ from subprocess import call
 from collections import deque, defaultdict
 import resource
 
-from libc.stdint cimport uint32_t, uint8_t, uint16_t
-from libc.string cimport strcpy, strlen
+from libc.stdint cimport uint32_t, uint8_t, uint16_t, uint64_t
+
+from libcpp.deque cimport deque as cpp_deque
+from libcpp.pair cimport pair as cpp_pair
+from libcpp.string cimport string as cpp_string
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport robin_set
 from dysgu.coverage import get_insert_params
+from dysgu.map_set_utils cimport hash as xxhash
+
+from pysam.libchtslib cimport bam_hdr_t, BAM_CMATCH, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, BAM_CHARD_CLIP, \
+    bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, bam_get_aux, bam1_core_t, \
+    bam_hdr_destroy, bam_read1, bam_write1, hts_open, hts_set_threads, sam_hdr_read, bam_init1, sam_open, \
+    sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1
+
+from cython.operator import dereference
+
+from pysam.libcsamfile cimport pysam_bam_get_qname, pysam_bam_get_cigar, pysam_bam_get_aux, pysam_get_l_qname, \
+    pysam_get_flag, pysam_get_n_cigar
+
+
+ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
+
+
+cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
+
+    cdef int result
+
+    cdef htsFile *fp_in = hts_open(infile, "r");
+    result = hts_set_threads(fp_in, threads)
+    if result != 0:
+        exit(1)
+
+    cdef bam_hdr_t *bamHdr = sam_hdr_read(fp_in)  # read header
+    cdef bam1_t *aln = bam_init1()  # initialize an alignment
+    if  not bamHdr:
+        click.echo("Failed to read input header\nn", err=True)
+        exit(1)
+
+    cdef htsFile *f_out = sam_open(outfile, "wb0")
+    result = sam_hdr_write(f_out, bamHdr);
+    if result != 0:
+        exit(1)
+
+    cdef uint32_t max_scope = 100000;
+    cdef uint64_t total = 0;
+
+
+    cdef cpp_pair[uint64_t, bam1_t*] scope_item
+    cdef cpp_deque[deque_item] scope
+    cdef robin_set[uint64_t] read_names
+
+    cdef uint16_t flag
+    cdef uint32_t* cigar
+    cdef uint32_t k, op, length
+    cdef uint64_t precalculated_hash
+
+    while sam_read1(fp_in, bamHdr, aln) > 0:
+
+        if scope.size() > max_scope:
+            scope_item = scope[0]
+
+            if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+                result = sam_write1(f_out, bamHdr, scope_item.second)
+                if result == 0:
+                    exit(1)
+                total += 1
+
+            scope.pop_front()
+
+        # Process current alignment
+        flag = dereference(aln).core.flag
+
+        if flag & 1284 or dereference(aln).core.n_cigar == 0:
+            continue
+
+        precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
+
+        scope.push_back(deque_item(precalculated_hash, aln))
+
+        if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
+
+            # Check for disfordant of supplementary
+            if ~flag & 2 or flag & 2048:
+                read_names.insert(precalculated_hash)
+                continue
+
+            # Check for SA tag
+            if bam_aux_get(aln, "SA"):
+                read_names.insert(precalculated_hash)
+                continue
+
+            cigar = bam_get_cigar(aln)
+
+            # Check cigar
+            # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
+            for k in range(0, dereference(aln).core.n_cigar):
+                op = bam_cigar_op(cigar[k])
+                length = bam_cigar_oplen(cigar[k])
+
+                if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
+                    read_names.insert(precalculated_hash)
+                    break
+
+                if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
+                    read_names.insert(precalculated_hash);
+                    break
+
+
+    while scope.size() > 0:
+        scope_item = scope[0]
+        if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+            result = sam_write1(f_out, bamHdr, scope_item.second)
+            if result == 0:
+                exit(1)
+            total += 1
+
+        scope.pop_front()
+
+
+    # bam_destroy1(aln)
+    hts_close(fp_in)
+    hts_close(f_out)
+
+    return total
 
 
 cdef extern from "find_reads.h" nogil:
-
     int search_hts_file(char* infile, char* outfile, int min_within_size, int clip_length, int threads)
 
 
@@ -63,10 +182,7 @@ def config(args):
 
     bam_i = iter_bam(bam, args["search"])
 
-    exc_tree = None
-    if args["exclude"]:
-        click.echo("Excluding {} from search".format(args["exclude"]), err=True)
-        exc_tree = io_funcs.overlap_regions(args["exclude"])
+
 
     clip_length = args["clip_length"]
 
@@ -81,43 +197,25 @@ def config(args):
 
     out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
 
-    cdef bytes infile_string = args["bam"].encode("ascii")
-    cdef bytes outfile_string = out_name.encode("ascii")
-
-
-
-    if exc_tree is None and send_output is None:
-        t0 = time.time()
-        count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
-        echo(time.time() - t0)
-        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
-                                                                    count,
-                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-        quit()
-
     reads_out = pysam.AlignmentFile(out_name, "wbu", template=bam)
 
     # outbam = pysam.AlignmentFile(out_name + ".bam", "wbu", template=bam, threads=args["procs"])
 
-    return bam, bam_i, exc_tree, clip_length, send_output, reads_out
+    return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(args):
+cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam, paired_end):
 
-    cdef uint32_t clip_length
+    # cdef uint32_t clip_length
     cdef int flag
     # cdef str qname
     cdef long qname
     cdef list cigartuples
-    cdef int paired_end = int(args["paired"] == "True")
 
     # Borrowed from lumpy
     cdef int required = 97
     restricted = 3484
     cdef int flag_mask = required | restricted
-
-    bam, bam_i, exc_tree, clip_length, send_output, outbam = config(args)
 
     scope = deque([])
 
@@ -144,7 +242,6 @@ cdef tuple get_reads(args):
             # if query.qname.__hash__() in read_names:
                 outbam.write(query)
                 count += 1
-
 
         if exc_tree:  # Skip exclude regions
             if io_funcs.intersecter_int_chrom(exc_tree, r.rname, r.pos, r.pos + 1):
@@ -199,7 +296,7 @@ cdef tuple get_reads(args):
             raise ValueError("No paired end reads")
         approx_read_length = int(np.mean(read_length))
         if len(insert_size) == 0:
-            insert_median, insert_stdev = args["insert_median"], args["insert_stdev"]
+            insert_median, insert_stdev = 300, 150  # args["insert_median"], args["insert_stdev"]
             click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
         else:
             insert_median, insert_stdev = get_insert_params(insert_size)
@@ -215,7 +312,36 @@ cdef tuple get_reads(args):
 def process(args):
     t0 = time.time()
 
-    count, insert_median, insert_stdev, read_length = get_reads(args)
+    cdef int paired_end = int(args["paired"] == "True")
+
+    exc_tree = None
+    if args["exclude"]:
+        click.echo("Excluding {} from search".format(args["exclude"]), err=True)
+        exc_tree = io_funcs.overlap_regions(args["exclude"])
+
+
+    out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
+    cdef bytes infile_string = args["bam"].encode("ascii")
+    cdef bytes outfile_string = out_name.encode("ascii")
+
+    if args["output"] == "None" and exc_tree is None:
+        t0 = time.time()
+        count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+        # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+        echo(time.time() - t0)
+        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
+                                                                    count,
+                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+        quit()
+        return {}
+
+    else:
+        bam, bam_i, clip_length, send_output, outbam = config(args)
+        count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
+                                                                paired_end)
+
+
     if args["index"] == "True" and args["reads"] not in "-,stdout":
         call("samtools index -@{} {}".format(args["procs"], args["reads"]), shell=True)
 
