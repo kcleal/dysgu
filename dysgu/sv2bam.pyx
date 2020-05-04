@@ -7,14 +7,13 @@ import datetime
 import numpy as np
 import click
 from subprocess import call
-from collections import deque, defaultdict
+from collections import deque
 import resource
 
-from libc.stdint cimport uint32_t, uint8_t, uint16_t, uint64_t
+from libc.stdint cimport uint32_t, uint16_t, uint64_t
 
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
-from libcpp.string cimport string as cpp_string
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
@@ -22,15 +21,13 @@ from dysgu.map_set_utils cimport robin_set
 from dysgu.coverage import get_insert_params
 from dysgu.map_set_utils cimport hash as xxhash
 
-from pysam.libchtslib cimport bam_hdr_t, BAM_CMATCH, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, BAM_CHARD_CLIP, \
-    bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, bam_get_aux, bam1_core_t, \
-    bam_hdr_destroy, bam_read1, bam_write1, hts_open, hts_set_threads, sam_hdr_read, bam_init1, sam_open, \
-    sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1
+from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
+    bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, \
+    hts_open, hts_set_threads, sam_hdr_read, bam_init1, bam_hdr_read, bam_hdr_write, \
+    sam_hdr_write, htsFile, bam_destroy1, hts_close, sam_close, bam_aux_get, sam_write1, sam_read1, bam_read1, \
+    bam_write1, BGZF, hts_get_bgzfp
 
 from cython.operator import dereference
-
-from pysam.libcsamfile cimport pysam_bam_get_qname, pysam_bam_get_cigar, pysam_bam_get_aux, pysam_get_l_qname, \
-    pysam_get_flag, pysam_get_n_cigar
 
 
 ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
@@ -40,25 +37,27 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
 
     cdef int result
 
-    cdef htsFile *fp_in = hts_open(infile, "r");
+    cdef htsFile *fp_in = hts_open(infile, "r")
+    cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)
+
     result = hts_set_threads(fp_in, threads)
     if result != 0:
-        exit(1)
+        raise IOError("Failed to set threads")
 
-    cdef bam_hdr_t *bamHdr = sam_hdr_read(fp_in)  # read header
+    cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
     cdef bam1_t *aln = bam_init1()  # initialize an alignment
-    if  not bamHdr:
-        click.echo("Failed to read input header\nn", err=True)
-        exit(1)
+    if not bamHdr:
+        raise IOError("Failed to read input header")
 
-    cdef htsFile *f_out = sam_open(outfile, "wb0")
-    result = sam_hdr_write(f_out, bamHdr);
+    cdef htsFile *f_out = hts_open(outfile, "wb0")
+    cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
+
+    result = bam_hdr_write(f_bgzf_out, bamHdr)
     if result != 0:
-        exit(1)
+        raise IOError("Failed to write header to output")
 
-    cdef uint32_t max_scope = 100000;
-    cdef uint64_t total = 0;
-
+    cdef uint32_t max_scope = 100000
+    cdef uint64_t total = 0
 
     cdef cpp_pair[uint64_t, bam1_t*] scope_item
     cdef cpp_deque[deque_item] scope
@@ -69,15 +68,15 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef uint32_t k, op, length
     cdef uint64_t precalculated_hash
 
-    while sam_read1(fp_in, bamHdr, aln) > 0:
+    while bam_read1(f_in_bgzf, aln) > 0:
 
         if scope.size() > max_scope:
             scope_item = scope[0]
 
             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                result = sam_write1(f_out, bamHdr, scope_item.second)
-                if result == 0:
-                    exit(1)
+                result = bam_write1(f_bgzf_out, scope_item.second)
+                if result < 0:
+                    raise IOError("Problem writing alignment record")
                 total += 1
 
             scope.pop_front()
@@ -117,30 +116,36 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
                     break
 
                 if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
-                    read_names.insert(precalculated_hash);
+                    read_names.insert(precalculated_hash)
                     break
-
 
     while scope.size() > 0:
         scope_item = scope[0]
         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-            result = sam_write1(f_out, bamHdr, scope_item.second)
-            if result == 0:
-                exit(1)
+            result = bam_write1(f_bgzf_out, scope_item.second)
+            if result < 0:
+                raise IOError("Problem writing alignment record")
             total += 1
 
         scope.pop_front()
 
 
-    # bam_destroy1(aln)
-    hts_close(fp_in)
-    hts_close(f_out)
 
+    result = hts_close(fp_in)
+    if result < 0:
+        raise IOError("Problem closing input file handle")
+
+    result = sam_close(f_out)
+    if result < 0:
+        raise IOError("Problem closing output file handle")
+    f_out = NULL
+
+    bam_destroy1(aln)
     return total
 
 
-cdef extern from "find_reads.h" nogil:
-    int search_hts_file(char* infile, char* outfile, int min_within_size, int clip_length, int threads)
+# cdef extern from "find_reads.h" nogil:
+#     int search_hts_file(char* infile, char* outfile, int min_within_size, int clip_length, int threads)
 
 
 def echo(*args):
@@ -319,8 +324,8 @@ def process(args):
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
         exc_tree = io_funcs.overlap_regions(args["exclude"])
 
-
     out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
+
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
