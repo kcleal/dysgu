@@ -14,6 +14,7 @@ from libc.stdint cimport uint32_t, uint16_t, uint64_t
 
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
+from libcpp.memory cimport unique_ptr
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
@@ -30,6 +31,11 @@ from cython.operator import dereference
 
 
 ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
+
+from libc.stdlib cimport malloc, free
+
+cdef extern from "<utility>" namespace "std" nogil:
+    cdef T move[T](T)
 
 
 cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
@@ -48,7 +54,7 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     if not samHdr:
         raise IOError("Failed to read input header")
 
-    cdef htsFile *f_out = hts_open(outfile, "wb0")
+    cdef htsFile *f_out = hts_open(outfile, "wu")
     # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
 
     result = sam_hdr_write(f_out, samHdr)
@@ -66,67 +72,78 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef uint32_t* cigar
     cdef uint32_t k, op, length
     cdef uint64_t precalculated_hash
+    cdef bam1_t* bam_ptr
 
-    while sam_read1(fp_in, samHdr, aln) >= 0:
+    while True:
 
-        if scope.size() > max_scope:
-            scope_item = scope[0]
+        result = sam_read1(fp_in, samHdr, aln)
 
-            if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                result = sam_write1(f_out, samHdr, scope_item.second)
-                if result < 0:
-                    raise IOError("Problem writing alignment record")
-                total += 1
+        if result >= 0:
 
-            scope.pop_front()
+            if scope.size() > max_scope:
+                scope_item = scope[0]
 
-        # Process current alignment
-        flag = dereference(aln).core.flag
+                if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+                    # bam_ptr = &scope_item.second
+                    result = sam_write1(f_out, samHdr, scope_item.second)
 
-        if flag & 1284 or dereference(aln).core.n_cigar == 0:
-            continue
+                    if result < 0:
+                        raise IOError("Problem writing alignment record")
+                    total += 1
 
-        precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
+                scope.pop_front()
 
-        scope.push_back(deque_item(precalculated_hash, aln))
+            # Process current alignment
+            flag = dereference(aln).core.flag
 
-        if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
-
-            # Check for disfordant of supplementary
-            if ~flag & 2 or flag & 2048:
-                read_names.insert(precalculated_hash)
+            if flag & 1284 or dereference(aln).core.n_cigar == 0:
                 continue
 
-            # Check for SA tag
-            if bam_aux_get(aln, "SA"):
-                read_names.insert(precalculated_hash)
-                continue
+            precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
 
-            cigar = bam_get_cigar(aln)
+            scope.push_back(deque_item(precalculated_hash, aln))
+            # echo("{0:x}".format(<unsigned long>&scope_item.second))
 
-            # Check cigar
-            # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
-            for k in range(0, dereference(aln).core.n_cigar):
-                op = bam_cigar_op(cigar[k])
-                length = bam_cigar_oplen(cigar[k])
+            if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
 
-                if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
+                # Check for disfordant of supplementary
+                if ~flag & 2 or flag & 2048:
                     read_names.insert(precalculated_hash)
-                    break
+                    continue
 
-                if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
+                # Check for SA tag
+                if bam_aux_get(aln, "SA"):
                     read_names.insert(precalculated_hash)
-                    break
+                    continue
 
-    while scope.size() > 0:
-        scope_item = scope[0]
-        if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-            result = sam_write1(f_out, samHdr, scope_item.second)
-            if result < 0:
-                raise IOError("Problem writing alignment record")
-            total += 1
+                cigar = bam_get_cigar(aln)
 
-        scope.pop_front()
+                # Check cigar
+                # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
+                for k in range(0, dereference(aln).core.n_cigar):
+                    op = bam_cigar_op(cigar[k])
+                    length = bam_cigar_oplen(cigar[k])
+
+                    if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
+                        read_names.insert(precalculated_hash)
+                        break
+
+                    if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
+                        read_names.insert(precalculated_hash)
+                        break
+        else:
+            while scope.size() > 0:
+                scope_item = scope[0]
+                if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+                    # bam_ptr = &scope_item.second
+                    result = sam_write1(f_out, samHdr, scope_item.second)
+                    echo("{0:x}".format(<unsigned long>&scope_item.second))
+                    if result < 0:
+                        raise IOError("Problem writing alignment record")
+                    total += 1
+
+                scope.pop_front()
+            break
 
 
 
@@ -325,25 +342,25 @@ def process(args):
 
     out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
 
-    cdef bytes infile_string = args["bam"].encode("ascii")
-    cdef bytes outfile_string = out_name.encode("ascii")
-
-    if args["output"] == "None" and exc_tree is None:
-        t0 = time.time()
-        count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
-        # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
-        echo(time.time() - t0)
-        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
-                                                                    count,
-                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-        quit()
-        return {}
-
-    else:
-        bam, bam_i, clip_length, send_output, outbam = config(args)
-        count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                paired_end)
+    # cdef bytes infile_string = args["bam"].encode("ascii")
+    # cdef bytes outfile_string = out_name.encode("ascii")
+    #
+    # if args["output"] == "None" and exc_tree is None:
+    #     t0 = time.time()
+    #     count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+    #     # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+    #     echo(time.time() - t0)
+    #     click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
+    #                                                                 count,
+    #                                                                int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+    #                                                                str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+    #     quit()
+    #     return {}
+    #
+    # else:
+    bam, bam_i, clip_length, send_output, outbam = config(args)
+    count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
+                                                            paired_end)
 
 
     if args["index"] == "True" and args["reads"] not in "-,stdout":

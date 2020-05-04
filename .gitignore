@@ -25,3 +25,4 @@ setup-requires/*
 .idea
 .DS_Store
 dysgu/.DS_Store
+.gitmodules
