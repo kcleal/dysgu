@@ -88,7 +88,7 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
                 if result < 0:
                     raise IOError("Problem writing alignment record")
                 total += 1
-
+            bam_destroy1(scope_item.second)
             scope.pop_front()
 
         # Process current alignment
