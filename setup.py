@@ -3,9 +3,7 @@ import setuptools
 from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
-import redblackpy as rb
 from distutils import ccompiler
-from subprocess import run
 import os
 import sys
 import glob
@@ -69,45 +67,45 @@ ext_modules = list()
 
 # https://github.com/brentp/cyvcf2/blob/master/setup.py
 # Build the Cython extension by statically linking to the bundled htslib
-# sources = [
-#     x for x in glob.glob('htslib/*.c')
-#     if not any(e in x for e in ['irods', 'plugin'])
-# ]
-# sources += glob.glob('htslib/cram/*.c')
-# # Exclude the htslib sources containing main()'s
-# sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
-#
-# if 'CC' in os.environ and "clang" in os.environ['CC']:
-#     clang = True
-# else:
-#     clang = False
-#
-# print("Clang:", clang)
+sources = [
+    x for x in glob.glob('htslib/*.c')
+    if not any(e in x for e in ['irods', 'plugin'])
+]
+sources += glob.glob('htslib/cram/*.c')
+# Exclude the htslib sources containing main()'s
+sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+
+if 'CC' in os.environ and "clang" in os.environ['CC']:
+    clang = True
+else:
+    clang = False
+
+print("Clang:", clang)
 
 
 root = os.path.abspath(os.path.dirname(__file__))
 include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
 
-# No idea why this works:
-# if not clang:
-#     build_sources = [f"dysgu/sv2bam.pyx"] + sources
-# else:
-#     build_sources = [f"dysgu/sv2bam.pyx"]
-#
-#
-# ext_modules.append(Extension(f"dysgu.sv2bam",
-#                              build_sources,
-#                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-#                                        ['crypt'] if platform.system() != 'Darwin' else []),
-#                              library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-#                              include_dirs=include_dirs,
-#                              extra_compile_args=extras,
-#                              language="c++"))
+# No idea why this works, or how robust this is:
+if not clang:
+    build_sources = [f"dysgu/sv2bam.pyx"] + sources
+else:
+    build_sources = [f"dysgu/sv2bam.pyx"]
+
+
+ext_modules.append(Extension(f"dysgu.sv2bam",
+                             build_sources,
+                             libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+                                       ['crypt'] if platform.system() != 'Darwin' else []),
+                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                             include_dirs=include_dirs,
+                             extra_compile_args=extras,
+                             language="c++"))
 
 
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "sv2bam", "view"]:
+             "map_set_utils", "cluster", "sv2fq", "view"]:  # "sv2bam",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
