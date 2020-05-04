@@ -23,9 +23,8 @@ from dysgu.map_set_utils cimport hash as xxhash
 
 from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
     bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, \
-    hts_open, hts_set_threads, sam_hdr_read, bam_init1, bam_hdr_read, bam_hdr_write, \
-    sam_hdr_write, htsFile, bam_destroy1, hts_close, sam_close, bam_aux_get, sam_write1, sam_read1, bam_read1, \
-    bam_write1, BGZF, hts_get_bgzfp
+    hts_open, hts_set_threads, sam_hdr_read, bam_init1, \
+    sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1
 
 from cython.operator import dereference
 
