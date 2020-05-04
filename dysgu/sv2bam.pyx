@@ -20,144 +20,145 @@ from dysgu import io_funcs
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport robin_set
 from dysgu.coverage import get_insert_params
-from dysgu.map_set_utils cimport hash as xxhash
 
-from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
-    bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, \
-    hts_open, hts_set_threads, sam_hdr_read, bam_init1, \
-    sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1
+# from dysgu.map_set_utils cimport hash as xxhash
+#
+# from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
+#     bam_cigar_op, bam_cigar_oplen, bam1_t, bam_get_qname, bam_get_cigar, \
+#     hts_open, hts_set_threads, sam_hdr_read, bam_init1, \
+#     sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1
 
 from cython.operator import dereference
 
 
-ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
+# ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
 
 from libc.stdlib cimport malloc, free
 
-cdef extern from "<utility>" namespace "std" nogil:
-    cdef T move[T](T)
+# cdef extern from "<utility>" namespace "std" nogil:
+#     cdef T move[T](T)
 
 
-cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
-
-    cdef int result
-
-    cdef htsFile *fp_in = hts_open(infile, "r")
-    # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
-
-    result = hts_set_threads(fp_in, threads)
-    if result != 0:
-        raise IOError("Failed to set threads")
-
-    cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
-    cdef bam1_t* aln = bam_init1()  # initialize an alignment
-    if not samHdr:
-        raise IOError("Failed to read input header")
-
-    cdef htsFile *f_out = hts_open(outfile, "wu")
-    # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
-
-    result = sam_hdr_write(f_out, samHdr)
-    if result != 0:
-        raise IOError("Failed to write header to output")
-
-    cdef uint32_t max_scope = 100000
-    cdef uint64_t total = 0
-
-    cdef cpp_pair[uint64_t, bam1_t*] scope_item
-    cdef cpp_deque[deque_item] scope
-    cdef robin_set[uint64_t] read_names
-
-    cdef uint16_t flag
-    cdef uint32_t* cigar
-    cdef uint32_t k, op, length
-    cdef uint64_t precalculated_hash
-    cdef bam1_t* bam_ptr
-
-    while True:
-
-        result = sam_read1(fp_in, samHdr, aln)
-
-        if result >= 0:
-
-            if scope.size() > max_scope:
-                scope_item = scope[0]
-
-                if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                    # bam_ptr = &scope_item.second
-                    result = sam_write1(f_out, samHdr, scope_item.second)
-
-                    if result < 0:
-                        raise IOError("Problem writing alignment record")
-                    total += 1
-
-                scope.pop_front()
-
-            # Process current alignment
-            flag = dereference(aln).core.flag
-
-            if flag & 1284 or dereference(aln).core.n_cigar == 0:
-                continue
-
-            precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
-
-            scope.push_back(deque_item(precalculated_hash, aln))
-            # echo("{0:x}".format(<unsigned long>&scope_item.second))
-
-            if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
-
-                # Check for disfordant of supplementary
-                if ~flag & 2 or flag & 2048:
-                    read_names.insert(precalculated_hash)
-                    continue
-
-                # Check for SA tag
-                if bam_aux_get(aln, "SA"):
-                    read_names.insert(precalculated_hash)
-                    continue
-
-                cigar = bam_get_cigar(aln)
-
-                # Check cigar
-                # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
-                for k in range(0, dereference(aln).core.n_cigar):
-                    op = bam_cigar_op(cigar[k])
-                    length = bam_cigar_oplen(cigar[k])
-
-                    if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
-                        read_names.insert(precalculated_hash)
-                        break
-
-                    if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
-                        read_names.insert(precalculated_hash)
-                        break
-        else:
-            while scope.size() > 0:
-                scope_item = scope[0]
-                if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                    # bam_ptr = &scope_item.second
-                    result = sam_write1(f_out, samHdr, scope_item.second)
-                    echo("{0:x}".format(<unsigned long>&scope_item.second))
-                    if result < 0:
-                        raise IOError("Problem writing alignment record")
-                    total += 1
-
-                scope.pop_front()
-            break
-
-
-
-    result = hts_close(fp_in)
-    if result != 0:
-        raise IOError("Problem closing input file handle")
-
-    result = hts_close(f_out)
-    if result != 0:
-        raise IOError("Problem closing output file handle")
-    f_out = NULL
-
-    bam_destroy1(aln)
-    return total
+# cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
+#
+#     cdef int result
+#
+#     cdef htsFile *fp_in = hts_open(infile, "r")
+#     # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
+#
+#     result = hts_set_threads(fp_in, threads)
+#     if result != 0:
+#         raise IOError("Failed to set threads")
+#
+#     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
+#     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+#     if not samHdr:
+#         raise IOError("Failed to read input header")
+#
+#     cdef htsFile *f_out = hts_open(outfile, "wu")
+#     # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
+#
+#     result = sam_hdr_write(f_out, samHdr)
+#     if result != 0:
+#         raise IOError("Failed to write header to output")
+#
+#     cdef uint32_t max_scope = 100000
+#     cdef uint64_t total = 0
+#
+#     cdef cpp_pair[uint64_t, bam1_t*] scope_item
+#     cdef cpp_deque[deque_item] scope
+#     cdef robin_set[uint64_t] read_names
+#
+#     cdef uint16_t flag
+#     cdef uint32_t* cigar
+#     cdef uint32_t k, op, length
+#     cdef uint64_t precalculated_hash
+#     cdef bam1_t* bam_ptr
+#
+#     while True:
+#
+#         result = sam_read1(fp_in, samHdr, aln)
+#
+#         if result >= 0:
+#
+#             if scope.size() > max_scope:
+#                 scope_item = scope[0]
+#
+#                 if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+#                     # bam_ptr = &scope_item.second
+#                     result = sam_write1(f_out, samHdr, scope_item.second)
+#
+#                     if result < 0:
+#                         raise IOError("Problem writing alignment record")
+#                     total += 1
+#
+#                 scope.pop_front()
+#
+#             # Process current alignment
+#             flag = dereference(aln).core.flag
+#
+#             if flag & 1284 or dereference(aln).core.n_cigar == 0:
+#                 continue
+#
+#             precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
+#
+#             scope.push_back(deque_item(precalculated_hash, aln))
+#             # echo("{0:x}".format(<unsigned long>&scope_item.second))
+#
+#             if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
+#
+#                 # Check for disfordant of supplementary
+#                 if ~flag & 2 or flag & 2048:
+#                     read_names.insert(precalculated_hash)
+#                     continue
+#
+#                 # Check for SA tag
+#                 if bam_aux_get(aln, "SA"):
+#                     read_names.insert(precalculated_hash)
+#                     continue
+#
+#                 cigar = bam_get_cigar(aln)
+#
+#                 # Check cigar
+#                 # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
+#                 for k in range(0, dereference(aln).core.n_cigar):
+#                     op = bam_cigar_op(cigar[k])
+#                     length = bam_cigar_oplen(cigar[k])
+#
+#                     if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
+#                         read_names.insert(precalculated_hash)
+#                         break
+#
+#                     if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
+#                         read_names.insert(precalculated_hash)
+#                         break
+#         else:
+#             while scope.size() > 0:
+#                 scope_item = scope[0]
+#                 if read_names.find(scope_item.first, scope_item.first) != read_names.end():
+#                     # bam_ptr = &scope_item.second
+#                     result = sam_write1(f_out, samHdr, scope_item.second)
+#                     echo("{0:x}".format(<unsigned long>&scope_item.second))
+#                     if result < 0:
+#                         raise IOError("Problem writing alignment record")
+#                     total += 1
+#
+#                 scope.pop_front()
+#             break
+#
+#
+#
+#     result = hts_close(fp_in)
+#     if result != 0:
+#         raise IOError("Problem closing input file handle")
+#
+#     result = hts_close(f_out)
+#     if result != 0:
+#         raise IOError("Problem closing output file handle")
+#     f_out = NULL
+#
+#     bam_destroy1(aln)
+#     return total
 
 
 # cdef extern from "find_reads.h" nogil:
