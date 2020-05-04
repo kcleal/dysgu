@@ -4,16 +4,6 @@
 {
     "distutils": {
         "depends": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/bgzf.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/cram.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/faidx.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/hfile.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/hts.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/kstring.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/sam.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/tbx.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/vcf.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib/vcfutils.h",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/htslib_util.h",
             "dysgu/robin_set.h",
             "dysgu/wrap_map_set2.h",
@@ -24,21 +14,13 @@
             "--stdlib=libc++"
         ],
         "include_dirs": [
-            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
+            "./dysgu",
+            "dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
         ],
         "language": "c++",
-        "libraries": [
-            "z",
-            "bz2",
-            "lzma",
-            "curl",
-            "ssl"
-        ],
         "library_dirs": [
-            "htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "dysgu"
         ],
@@ -2255,11 +2237,9 @@ static PyObject *__pyx_codeobj__26;
 static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *__pyx_v_outfile, uint32_t __pyx_v_min_within_size, uint32_t __pyx_v_clip_length, int __pyx_v_threads) {
   int __pyx_v_result;
   htsFile *__pyx_v_fp_in;
-  BGZF *__pyx_v_f_in_bgzf;
-  bam_hdr_t *__pyx_v_bamHdr;
+  bam_hdr_t *__pyx_v_samHdr;
   bam1_t *__pyx_v_aln;
   htsFile *__pyx_v_f_out;
-  BGZF *__pyx_v_f_bgzf_out;
   uint32_t __pyx_v_max_scope;
   uint64_t __pyx_v_total;
   std::pair<uint64_t,bam1_t *>  __pyx_v_scope_item;
@@ -2287,22 +2267,13 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *     cdef int result
  * 
  *     cdef htsFile *fp_in = hts_open(infile, "r")             # <<<<<<<<<<<<<<
- *     cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)
+ *     # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
  * 
  */
   __pyx_v_fp_in = hts_open(__pyx_v_infile, ((char const *)"r"));
 
-  /* "dysgu/sv2bam.pyx":41
- * 
- *     cdef htsFile *fp_in = hts_open(infile, "r")
- *     cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)             # <<<<<<<<<<<<<<
- * 
- *     result = hts_set_threads(fp_in, threads)
- */
-  __pyx_v_f_in_bgzf = hts_get_bgzfp(__pyx_v_fp_in);
-
   /* "dysgu/sv2bam.pyx":43
- *     cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)
+ *     # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
  * 
  *     result = hts_set_threads(fp_in, threads)             # <<<<<<<<<<<<<<
  *     if result != 0:
@@ -2325,7 +2296,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *     if result != 0:
  *         raise IOError("Failed to set threads")             # <<<<<<<<<<<<<<
  * 
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
  */
     __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_IOError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 45, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
@@ -2345,34 +2316,34 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
   /* "dysgu/sv2bam.pyx":47
  *         raise IOError("Failed to set threads")
  * 
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header             # <<<<<<<<<<<<<<
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment
- *     if not bamHdr:
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header             # <<<<<<<<<<<<<<
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+ *     if not samHdr:
  */
-  __pyx_v_bamHdr = bam_hdr_read(__pyx_v_f_in_bgzf);
+  __pyx_v_samHdr = sam_hdr_read(__pyx_v_fp_in);
 
   /* "dysgu/sv2bam.pyx":48
  * 
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment             # <<<<<<<<<<<<<<
- *     if not bamHdr:
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment             # <<<<<<<<<<<<<<
+ *     if not samHdr:
  *         raise IOError("Failed to read input header")
  */
   __pyx_v_aln = bam_init1();
 
   /* "dysgu/sv2bam.pyx":49
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment
- *     if not bamHdr:             # <<<<<<<<<<<<<<
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+ *     if not samHdr:             # <<<<<<<<<<<<<<
  *         raise IOError("Failed to read input header")
  * 
  */
-  __pyx_t_1 = ((!(__pyx_v_bamHdr != 0)) != 0);
+  __pyx_t_1 = ((!(__pyx_v_samHdr != 0)) != 0);
   if (unlikely(__pyx_t_1)) {
 
     /* "dysgu/sv2bam.pyx":50
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment
- *     if not bamHdr:
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+ *     if not samHdr:
  *         raise IOError("Failed to read input header")             # <<<<<<<<<<<<<<
  * 
  *     cdef htsFile *f_out = hts_open(outfile, "wb0")
@@ -2384,9 +2355,9 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
     __PYX_ERR(0, 50, __pyx_L1_error)
 
     /* "dysgu/sv2bam.pyx":49
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment
- *     if not bamHdr:             # <<<<<<<<<<<<<<
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+ *     if not samHdr:             # <<<<<<<<<<<<<<
  *         raise IOError("Failed to read input header")
  * 
  */
@@ -2396,32 +2367,23 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *         raise IOError("Failed to read input header")
  * 
  *     cdef htsFile *f_out = hts_open(outfile, "wb0")             # <<<<<<<<<<<<<<
- *     cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
+ *     # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
  * 
  */
   __pyx_v_f_out = hts_open(__pyx_v_outfile, ((char const *)"wb0"));
 
-  /* "dysgu/sv2bam.pyx":53
- * 
- *     cdef htsFile *f_out = hts_open(outfile, "wb0")
- *     cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)             # <<<<<<<<<<<<<<
- * 
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)
- */
-  __pyx_v_f_bgzf_out = hts_get_bgzfp(__pyx_v_f_out);
-
   /* "dysgu/sv2bam.pyx":55
- *     cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
+ *     # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
  * 
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)             # <<<<<<<<<<<<<<
+ *     result = sam_hdr_write(f_out, samHdr)             # <<<<<<<<<<<<<<
  *     if result != 0:
  *         raise IOError("Failed to write header to output")
  */
-  __pyx_v_result = bam_hdr_write(__pyx_v_f_bgzf_out, __pyx_v_bamHdr);
+  __pyx_v_result = sam_hdr_write(__pyx_v_f_out, __pyx_v_samHdr);
 
   /* "dysgu/sv2bam.pyx":56
  * 
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)
+ *     result = sam_hdr_write(f_out, samHdr)
  *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Failed to write header to output")
  * 
@@ -2430,7 +2392,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
   if (unlikely(__pyx_t_1)) {
 
     /* "dysgu/sv2bam.pyx":57
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)
+ *     result = sam_hdr_write(f_out, samHdr)
  *     if result != 0:
  *         raise IOError("Failed to write header to output")             # <<<<<<<<<<<<<<
  * 
@@ -2444,7 +2406,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
 
     /* "dysgu/sv2bam.pyx":56
  * 
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)
+ *     result = sam_hdr_write(f_out, samHdr)
  *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Failed to write header to output")
  * 
@@ -2472,16 +2434,16 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
   /* "dysgu/sv2bam.pyx":71
  *     cdef uint64_t precalculated_hash
  * 
- *     while bam_read1(f_in_bgzf, aln) > 0:             # <<<<<<<<<<<<<<
+ *     while sam_read1(fp_in, samHdr, aln) >= 0:             # <<<<<<<<<<<<<<
  * 
  *         if scope.size() > max_scope:
  */
   while (1) {
-    __pyx_t_1 = ((bam_read1(__pyx_v_f_in_bgzf, __pyx_v_aln) > 0) != 0);
+    __pyx_t_1 = ((sam_read1(__pyx_v_fp_in, __pyx_v_samHdr, __pyx_v_aln) >= 0) != 0);
     if (!__pyx_t_1) break;
 
     /* "dysgu/sv2bam.pyx":73
- *     while bam_read1(f_in_bgzf, aln) > 0:
+ *     while sam_read1(fp_in, samHdr, aln) >= 0:
  * 
  *         if scope.size() > max_scope:             # <<<<<<<<<<<<<<
  *             scope_item = scope[0]
@@ -2503,7 +2465,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *             scope_item = scope[0]
  * 
  *             if read_names.find(scope_item.first, scope_item.first) != read_names.end():             # <<<<<<<<<<<<<<
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:
  */
       __pyx_t_1 = ((__pyx_v_read_names.find(__pyx_v_scope_item.first, __pyx_v_scope_item.first) != __pyx_v_read_names.end()) != 0);
@@ -2512,15 +2474,15 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
         /* "dysgu/sv2bam.pyx":77
  * 
  *             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *                 result = bam_write1(f_bgzf_out, scope_item.second)             # <<<<<<<<<<<<<<
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)             # <<<<<<<<<<<<<<
  *                 if result < 0:
  *                     raise IOError("Problem writing alignment record")
  */
-        __pyx_v_result = bam_write1(__pyx_v_f_bgzf_out, __pyx_v_scope_item.second);
+        __pyx_v_result = sam_write1(__pyx_v_f_out, __pyx_v_samHdr, __pyx_v_scope_item.second);
 
         /* "dysgu/sv2bam.pyx":78
  *             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:             # <<<<<<<<<<<<<<
  *                     raise IOError("Problem writing alignment record")
  *                 total += 1
@@ -2529,7 +2491,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
         if (unlikely(__pyx_t_1)) {
 
           /* "dysgu/sv2bam.pyx":79
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:
  *                     raise IOError("Problem writing alignment record")             # <<<<<<<<<<<<<<
  *                 total += 1
@@ -2543,7 +2505,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
 
           /* "dysgu/sv2bam.pyx":78
  *             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:             # <<<<<<<<<<<<<<
  *                     raise IOError("Problem writing alignment record")
  *                 total += 1
@@ -2563,7 +2525,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *             scope_item = scope[0]
  * 
  *             if read_names.find(scope_item.first, scope_item.first) != read_names.end():             # <<<<<<<<<<<<<<
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:
  */
       }
@@ -2578,7 +2540,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
       __pyx_v_scope.pop_front();
 
       /* "dysgu/sv2bam.pyx":73
- *     while bam_read1(f_in_bgzf, aln) > 0:
+ *     while sam_read1(fp_in, samHdr, aln) >= 0:
  * 
  *         if scope.size() > max_scope:             # <<<<<<<<<<<<<<
  *             scope_item = scope[0]
@@ -2912,7 +2874,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *     while scope.size() > 0:
  *         scope_item = scope[0]             # <<<<<<<<<<<<<<
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  */
     __pyx_v_scope_item = (__pyx_v_scope[0]);
 
@@ -2920,7 +2882,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *     while scope.size() > 0:
  *         scope_item = scope[0]
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():             # <<<<<<<<<<<<<<
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  *             if result < 0:
  */
     __pyx_t_1 = ((__pyx_v_read_names.find(__pyx_v_scope_item.first, __pyx_v_scope_item.first) != __pyx_v_read_names.end()) != 0);
@@ -2929,15 +2891,15 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
       /* "dysgu/sv2bam.pyx":125
  *         scope_item = scope[0]
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *             result = bam_write1(f_bgzf_out, scope_item.second)             # <<<<<<<<<<<<<<
+ *             result = sam_write1(f_out, samHdr, scope_item.second)             # <<<<<<<<<<<<<<
  *             if result < 0:
  *                 raise IOError("Problem writing alignment record")
  */
-      __pyx_v_result = bam_write1(__pyx_v_f_bgzf_out, __pyx_v_scope_item.second);
+      __pyx_v_result = sam_write1(__pyx_v_f_out, __pyx_v_samHdr, __pyx_v_scope_item.second);
 
       /* "dysgu/sv2bam.pyx":126
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  *             if result < 0:             # <<<<<<<<<<<<<<
  *                 raise IOError("Problem writing alignment record")
  *             total += 1
@@ -2946,7 +2908,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
       if (unlikely(__pyx_t_1)) {
 
         /* "dysgu/sv2bam.pyx":127
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  *             if result < 0:
  *                 raise IOError("Problem writing alignment record")             # <<<<<<<<<<<<<<
  *             total += 1
@@ -2960,7 +2922,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
 
         /* "dysgu/sv2bam.pyx":126
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  *             if result < 0:             # <<<<<<<<<<<<<<
  *                 raise IOError("Problem writing alignment record")
  *             total += 1
@@ -2980,7 +2942,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  *     while scope.size() > 0:
  *         scope_item = scope[0]
  *         if read_names.find(scope_item.first, scope_item.first) != read_names.end():             # <<<<<<<<<<<<<<
- *             result = bam_write1(f_bgzf_out, scope_item.second)
+ *             result = sam_write1(f_out, samHdr, scope_item.second)
  *             if result < 0:
  */
     }
@@ -2999,7 +2961,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
  * 
  * 
  *     result = hts_close(fp_in)             # <<<<<<<<<<<<<<
- *     if result < 0:
+ *     if result != 0:
  *         raise IOError("Problem closing input file handle")
  */
   __pyx_v_result = hts_close(__pyx_v_fp_in);
@@ -3007,19 +2969,19 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
   /* "dysgu/sv2bam.pyx":135
  * 
  *     result = hts_close(fp_in)
- *     if result < 0:             # <<<<<<<<<<<<<<
+ *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Problem closing input file handle")
  * 
  */
-  __pyx_t_1 = ((__pyx_v_result < 0) != 0);
+  __pyx_t_1 = ((__pyx_v_result != 0) != 0);
   if (unlikely(__pyx_t_1)) {
 
     /* "dysgu/sv2bam.pyx":136
  *     result = hts_close(fp_in)
- *     if result < 0:
+ *     if result != 0:
  *         raise IOError("Problem closing input file handle")             # <<<<<<<<<<<<<<
  * 
- *     result = sam_close(f_out)
+ *     result = hts_close(f_out)
  */
     __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_IOError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 136, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
@@ -3030,7 +2992,7 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
     /* "dysgu/sv2bam.pyx":135
  * 
  *     result = hts_close(fp_in)
- *     if result < 0:             # <<<<<<<<<<<<<<
+ *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Problem closing input file handle")
  * 
  */
@@ -3039,25 +3001,25 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
   /* "dysgu/sv2bam.pyx":138
  *         raise IOError("Problem closing input file handle")
  * 
- *     result = sam_close(f_out)             # <<<<<<<<<<<<<<
- *     if result < 0:
+ *     result = hts_close(f_out)             # <<<<<<<<<<<<<<
+ *     if result != 0:
  *         raise IOError("Problem closing output file handle")
  */
-  __pyx_v_result = sam_close(__pyx_v_f_out);
+  __pyx_v_result = hts_close(__pyx_v_f_out);
 
   /* "dysgu/sv2bam.pyx":139
  * 
- *     result = sam_close(f_out)
- *     if result < 0:             # <<<<<<<<<<<<<<
+ *     result = hts_close(f_out)
+ *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Problem closing output file handle")
  *     f_out = NULL
  */
-  __pyx_t_1 = ((__pyx_v_result < 0) != 0);
+  __pyx_t_1 = ((__pyx_v_result != 0) != 0);
   if (unlikely(__pyx_t_1)) {
 
     /* "dysgu/sv2bam.pyx":140
- *     result = sam_close(f_out)
- *     if result < 0:
+ *     result = hts_close(f_out)
+ *     if result != 0:
  *         raise IOError("Problem closing output file handle")             # <<<<<<<<<<<<<<
  *     f_out = NULL
  * 
@@ -3070,15 +3032,15 @@ static int __pyx_f_5dysgu_6sv2bam_search_alignments(char *__pyx_v_infile, char *
 
     /* "dysgu/sv2bam.pyx":139
  * 
- *     result = sam_close(f_out)
- *     if result < 0:             # <<<<<<<<<<<<<<
+ *     result = hts_close(f_out)
+ *     if result != 0:             # <<<<<<<<<<<<<<
  *         raise IOError("Problem closing output file handle")
  *     f_out = NULL
  */
   }
 
   /* "dysgu/sv2bam.pyx":141
- *     if result < 0:
+ *     if result != 0:
  *         raise IOError("Problem closing output file handle")
  *     f_out = NULL             # <<<<<<<<<<<<<<
  * 
@@ -8570,15 +8532,15 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     if result != 0:
  *         raise IOError("Failed to set threads")             # <<<<<<<<<<<<<<
  * 
- *     cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
+ *     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
  */
   __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_u_Failed_to_set_threads); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 45, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
   /* "dysgu/sv2bam.pyx":50
- *     cdef bam1_t *aln = bam_init1()  # initialize an alignment
- *     if not bamHdr:
+ *     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+ *     if not samHdr:
  *         raise IOError("Failed to read input header")             # <<<<<<<<<<<<<<
  * 
  *     cdef htsFile *f_out = hts_open(outfile, "wb0")
@@ -8588,7 +8550,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__2);
 
   /* "dysgu/sv2bam.pyx":57
- *     result = bam_hdr_write(f_bgzf_out, bamHdr)
+ *     result = sam_hdr_write(f_out, samHdr)
  *     if result != 0:
  *         raise IOError("Failed to write header to output")             # <<<<<<<<<<<<<<
  * 
@@ -8599,7 +8561,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__3);
 
   /* "dysgu/sv2bam.pyx":79
- *                 result = bam_write1(f_bgzf_out, scope_item.second)
+ *                 result = sam_write1(f_out, samHdr, scope_item.second)
  *                 if result < 0:
  *                     raise IOError("Problem writing alignment record")             # <<<<<<<<<<<<<<
  *                 total += 1
@@ -8611,18 +8573,18 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "dysgu/sv2bam.pyx":136
  *     result = hts_close(fp_in)
- *     if result < 0:
+ *     if result != 0:
  *         raise IOError("Problem closing input file handle")             # <<<<<<<<<<<<<<
  * 
- *     result = sam_close(f_out)
+ *     result = hts_close(f_out)
  */
   __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_Problem_closing_input_file_handl); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 136, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
 
   /* "dysgu/sv2bam.pyx":140
- *     result = sam_close(f_out)
- *     if result < 0:
+ *     result = hts_close(f_out)
+ *     if result != 0:
  *         raise IOError("Problem closing output file handle")             # <<<<<<<<<<<<<<
  *     f_out = NULL
  * 

@@ -38,21 +38,21 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef int result
 
     cdef htsFile *fp_in = hts_open(infile, "r")
-    cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)
+    # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
 
     result = hts_set_threads(fp_in, threads)
     if result != 0:
         raise IOError("Failed to set threads")
 
-    cdef bam_hdr_t *bamHdr = bam_hdr_read(f_in_bgzf)  # read header
-    cdef bam1_t *aln = bam_init1()  # initialize an alignment
-    if not bamHdr:
+    cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
+    cdef bam1_t* aln = bam_init1()  # initialize an alignment
+    if not samHdr:
         raise IOError("Failed to read input header")
 
     cdef htsFile *f_out = hts_open(outfile, "wb0")
-    cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
+    # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
 
-    result = bam_hdr_write(f_bgzf_out, bamHdr)
+    result = sam_hdr_write(f_out, samHdr)
     if result != 0:
         raise IOError("Failed to write header to output")
 
@@ -68,13 +68,13 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef uint32_t k, op, length
     cdef uint64_t precalculated_hash
 
-    while bam_read1(f_in_bgzf, aln) > 0:
+    while sam_read1(fp_in, samHdr, aln) >= 0:
 
         if scope.size() > max_scope:
             scope_item = scope[0]
 
             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                result = bam_write1(f_bgzf_out, scope_item.second)
+                result = sam_write1(f_out, samHdr, scope_item.second)
                 if result < 0:
                     raise IOError("Problem writing alignment record")
                 total += 1
@@ -122,7 +122,7 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     while scope.size() > 0:
         scope_item = scope[0]
         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-            result = bam_write1(f_bgzf_out, scope_item.second)
+            result = sam_write1(f_out, samHdr, scope_item.second)
             if result < 0:
                 raise IOError("Problem writing alignment record")
             total += 1
@@ -132,11 +132,11 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
 
 
     result = hts_close(fp_in)
-    if result < 0:
+    if result != 0:
         raise IOError("Problem closing input file handle")
 
-    result = sam_close(f_out)
-    if result < 0:
+    result = hts_close(f_out)
+    if result != 0:
         raise IOError("Problem closing output file handle")
     f_out = NULL
 
