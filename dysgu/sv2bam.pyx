@@ -35,11 +35,8 @@ ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
 
 from libc.stdlib cimport malloc, free
 
-cdef extern from "<utility>" namespace "std" nogil:
-    cdef T move[T](T)
 
-
-cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
+cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads) nogil:
 
     cdef int result
 
@@ -88,7 +85,10 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
                 if result < 0:
                     raise IOError("Problem writing alignment record")
                 total += 1
+            # free(dereference(scope_item.second).data)
+            # free(scope_item.second)
             bam_destroy1(scope_item.second)
+
             scope.pop_front()
 
         # Process current alignment
@@ -99,10 +99,11 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
 
         precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
 
-        bam_ptr = bam_init1()
-        bam_ptr = bam_dup1(aln)
+        # bam_ptr = bam_init1()
+        # bam_ptr = bam_dup1(aln)
 
-        scope.push_back(deque_item(precalculated_hash, bam_ptr))
+
+        scope.push_back(deque_item(precalculated_hash, bam_dup1(aln)))
         # echo("{0:x}".format(<unsigned long>&scope_item.second))
         # echo("{0:x}".format(<unsigned long>&bam_ptr))
         # quit()
