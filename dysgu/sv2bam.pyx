@@ -36,7 +36,7 @@ ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
 from libc.stdlib cimport malloc, free
 
 
-cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads) nogil:
+cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
 
     cdef int result
 
@@ -73,6 +73,7 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef bam1_t* bam_ptr
     cdef bam1_t bamt
 
+
     while sam_read1(fp_in, samHdr, aln) >= 0:
 
         if scope.size() > max_scope:
@@ -87,14 +88,15 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
                 total += 1
             # free(dereference(scope_item.second).data)
             # free(scope_item.second)
+
             bam_destroy1(scope_item.second)
 
             scope.pop_front()
-
+        echo("h2i", dereference(aln).core.l_qname)
         # Process current alignment
         flag = dereference(aln).core.flag
 
-        if flag & 1284 or dereference(aln).core.n_cigar == 0:
+        if flag & 1284 or dereference(aln).core.n_cigar == 0 or dereference(aln).core.l_qname == 0:
             continue
 
         precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
@@ -102,14 +104,15 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
         # bam_ptr = bam_init1()
         # bam_ptr = bam_dup1(aln)
 
-
         scope.push_back(deque_item(precalculated_hash, bam_dup1(aln)))
+
         # echo("{0:x}".format(<unsigned long>&scope_item.second))
         # echo("{0:x}".format(<unsigned long>&bam_ptr))
         # quit()
+
         if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
 
-            # Check for disfordant of supplementary
+            # Check for discordant of supplementary
             if ~flag & 2 or flag & 2048:
                 read_names.insert(precalculated_hash)
                 continue
@@ -124,8 +127,13 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
             # Check cigar
             # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
             for k in range(0, dereference(aln).core.n_cigar):
+
                 op = bam_cigar_op(cigar[k])
+                if op == -1:
+                    break
                 length = bam_cigar_oplen(cigar[k])
+                if length == -1:
+                    break
 
                 if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash)
@@ -335,7 +343,7 @@ def process(args):
     t0 = time.time()
 
     cdef int paired_end = int(args["paired"] == "True")
-
+    echo("Paired end", paired_end)
     exc_tree = None
     if args["exclude"]:
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
@@ -346,7 +354,7 @@ def process(args):
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
-    if args["output"] == "None" and exc_tree is None:
+    if args["output"] == "None" and exc_tree is None and paired_end:
         t0 = time.time()
         count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
         # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])

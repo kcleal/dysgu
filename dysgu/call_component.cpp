@@ -7,10 +7,14 @@
             "-std=c++14",
             "--stdlib=libc++"
         ],
+        "include_dirs": [
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+        ],
         "language": "c++",
         "library_dirs": [
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/redblackpy"
+            "dysgu"
         ],
         "name": "dysgu.call_component",
         "sources": [
@@ -10831,7 +10835,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
  *     as1 = None
  *     as2 = None             # <<<<<<<<<<<<<<
  * 
- *     if to_assemble or len(spanning_alignments) > 0:
+ *     if to_assemble:  # or len(spanning_alignments) > 0:
  */
   __Pyx_INCREF(Py_None);
   __pyx_v_as2 = Py_None;
@@ -10839,25 +10843,16 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
   /* "dysgu/call_component.pyx":494
  *     as2 = None
  * 
- *     if to_assemble or len(spanning_alignments) > 0:             # <<<<<<<<<<<<<<
+ *     if to_assemble:  # or len(spanning_alignments) > 0:             # <<<<<<<<<<<<<<
  *         if info["preciseA"]:
  *             as1 = assembler.base_assemble(u_reads)
  */
-  __pyx_t_32 = (__pyx_v_to_assemble != 0);
-  if (!__pyx_t_32) {
-  } else {
-    __pyx_t_10 = __pyx_t_32;
-    goto __pyx_L102_bool_binop_done;
-  }
-  __pyx_t_13 = PyList_GET_SIZE(__pyx_v_spanning_alignments); if (unlikely(__pyx_t_13 == ((Py_ssize_t)-1))) __PYX_ERR(0, 494, __pyx_L1_error)
-  __pyx_t_32 = ((__pyx_t_13 > 0) != 0);
-  __pyx_t_10 = __pyx_t_32;
-  __pyx_L102_bool_binop_done:;
+  __pyx_t_10 = (__pyx_v_to_assemble != 0);
   if (__pyx_t_10) {
 
     /* "dysgu/call_component.pyx":495
  * 
- *     if to_assemble or len(spanning_alignments) > 0:
+ *     if to_assemble:  # or len(spanning_alignments) > 0:
  *         if info["preciseA"]:             # <<<<<<<<<<<<<<
  *             as1 = assembler.base_assemble(u_reads)
  * 
@@ -10869,7 +10864,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
     if (__pyx_t_10) {
 
       /* "dysgu/call_component.pyx":496
- *     if to_assemble or len(spanning_alignments) > 0:
+ *     if to_assemble:  # or len(spanning_alignments) > 0:
  *         if info["preciseA"]:
  *             as1 = assembler.base_assemble(u_reads)             # <<<<<<<<<<<<<<
  * 
@@ -10900,7 +10895,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
 
       /* "dysgu/call_component.pyx":495
  * 
- *     if to_assemble or len(spanning_alignments) > 0:
+ *     if to_assemble:  # or len(spanning_alignments) > 0:
  *         if info["preciseA"]:             # <<<<<<<<<<<<<<
  *             as1 = assembler.base_assemble(u_reads)
  * 
@@ -10962,7 +10957,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
     /* "dysgu/call_component.pyx":494
  *     as2 = None
  * 
- *     if to_assemble or len(spanning_alignments) > 0:             # <<<<<<<<<<<<<<
+ *     if to_assemble:  # or len(spanning_alignments) > 0:             # <<<<<<<<<<<<<<
  *         if info["preciseA"]:
  *             as1 = assembler.base_assemble(u_reads)
  */
@@ -11026,12 +11021,12 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
   if (__pyx_t_11) {
   } else {
     __pyx_t_10 = __pyx_t_11;
-    goto __pyx_L107_bool_binop_done;
+    goto __pyx_L105_bool_binop_done;
   }
   __pyx_t_11 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_contig, __pyx_v_as1, Py_EQ)); if (unlikely(__pyx_t_11 < 0)) __PYX_ERR(0, 506, __pyx_L1_error)
   __pyx_t_32 = (__pyx_t_11 != 0);
   __pyx_t_10 = __pyx_t_32;
-  __pyx_L107_bool_binop_done:;
+  __pyx_L105_bool_binop_done:;
   if (__pyx_t_10) {
 
     /* "dysgu/call_component.pyx":507
@@ -11082,12 +11077,12 @@ static PyObject *__pyx_f_5dysgu_14call_component_single(CYTHON_UNUSED PyObject *
   if (__pyx_t_11) {
   } else {
     __pyx_t_10 = __pyx_t_11;
-    goto __pyx_L110_bool_binop_done;
+    goto __pyx_L108_bool_binop_done;
   }
   __pyx_t_11 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_contig, __pyx_v_as2, Py_EQ)); if (unlikely(__pyx_t_11 < 0)) __PYX_ERR(0, 510, __pyx_L1_error)
   __pyx_t_32 = (__pyx_t_11 != 0);
   __pyx_t_10 = __pyx_t_32;
-  __pyx_L110_bool_binop_done:;
+  __pyx_L108_bool_binop_done:;
   if (__pyx_t_10) {
 
     /* "dysgu/call_component.pyx":511

@@ -872,12 +872,14 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
             if r.mapq < mapq_thresh:
                 continue
-
+            # echo(r.qname, r.cigartuples, r.has_tag("SA"))
             event_pos = r.pos
 
             added = 0
             if len(r.cigartuples) > 1:
+
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
+
                     if (opp == 4 or opp == 5) and (length > 30 or r.has_tag("SA")):  #length > 30:
                         update_graph(G, r, clip_l, loci_dist, gettid,
                            overlap_regions, clustering_dist, clip_scope, pe_scope,

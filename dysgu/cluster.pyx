@@ -379,14 +379,14 @@ def pipe1(args, infile, kind, regions):
     else:
         rel_diffs = True
         diffs = 0.15
-
+    echo("len components", len(cc))
     for start_i, end_i in cc:
         cnt += 1
         if end_i - start_i >= min_support:
             component = list(cmp[start_i: end_i])
 
-
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, min_support)
+
             if res:
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}

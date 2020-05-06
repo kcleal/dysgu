@@ -10,13 +10,19 @@ import glob
 import platform
 import pysam
 
+# Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
+# https://stackoverflow.com/questions/8106258/cc1plus-warning-command-line-option-wstrict-prototypes-is-valid-for-ada-c-o
+import distutils.sysconfig
+cfg_vars = distutils.sysconfig.get_config_vars()
+for key, value in cfg_vars.items():
+    if type(value) == str:
+        cfg_vars[key] = value.replace("-Wstrict-prototypes", "")
+
 
 # This was stolen from pybind11
 # https://github.com/pybind/python_example/blob/master/setup.py
 # As of Python 3.6, CCompiler has a `has_flag` method.
 # cf http://bugs.python.org/issue26689
-
-
 def has_flag(compiler, flagname):
     """Return a boolean indicating whether a flag name is supported on
     the specified compiler.
@@ -94,24 +100,26 @@ else:
     build_sources = [f"dysgu/sv2bam.pyx"]
 
 
-ext_modules.append(Extension(f"dysgu.sv2bam",
-                             build_sources,
-                             libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-                                       ['crypt'] if platform.system() != 'Darwin' else []),
-                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-                             include_dirs=include_dirs,
-                             extra_compile_args=extras,
-                             language="c++"))
+# ext_modules.append(Extension(f"dysgu.sv2bam",
+#                              build_sources,
+#                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+#                                        ['crypt'] if platform.system() != 'Darwin' else []),
+#                              library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+#                              include_dirs=include_dirs,
+#                              extra_compile_args=extras,
+#                              language="c++"))
 
 
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:  # "sv2bam",
+             "map_set_utils", "cluster", "sv2fq", "view", "sv2bam"]:  # "sv2bam",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), 'dysgu'],  # 'htslib',
+                                 library_dirs=[numpy.get_include(), 'dysgu'] + pysam.get_include(),  # 'htslib',
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
+                                 extra_link_args=pysam.get_libraries(),
+                                 define_macros=pysam.get_defines(),
                                  language="c++"))
 
 print("Found packages", find_packages(where="."))
@@ -122,7 +130,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.4.7',
+    version='0.4.8',
     python_requires='>=3.7',
     install_requires=[
             'cython',

@@ -491,7 +491,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     as1 = None
     as2 = None
 
-    if to_assemble or len(spanning_alignments) > 0:
+    if to_assemble:  # or len(spanning_alignments) > 0:
         if info["preciseA"]:
             as1 = assembler.base_assemble(u_reads)
 
