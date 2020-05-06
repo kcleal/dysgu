@@ -4,11 +4,8 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
 from distutils import ccompiler
-import os
-import sys
-import glob
-import platform
 import pysam
+import site
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 # https://stackoverflow.com/questions/8106258/cc1plus-warning-command-line-option-wstrict-prototypes-is-valid-for-ada-c-o
@@ -73,31 +70,34 @@ ext_modules = list()
 
 # https://github.com/brentp/cyvcf2/blob/master/setup.py
 # Build the Cython extension by statically linking to the bundled htslib
-sources = [
-    x for x in glob.glob('htslib/*.c')
-    if not any(e in x for e in ['irods', 'plugin'])
-]
-sources += glob.glob('htslib/cram/*.c')
-# Exclude the htslib sources containing main()'s
-sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+# sources = [
+#     x for x in glob.glob('htslib/*.c')
+#     if not any(e in x for e in ['irods', 'plugin'])
+# ]
+# sources += glob.glob('htslib/cram/*.c')
+# # Exclude the htslib sources containing main()'s
+# sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+#
+# if 'CC' in os.environ and "clang" in os.environ['CC']:
+#     clang = True
+# else:
+#     clang = False
+#
+# print("Clang:", clang)
 
-if 'CC' in os.environ and "clang" in os.environ['CC']:
-    clang = True
-else:
-    clang = False
 
-print("Clang:", clang)
+# root = os.path.abspath(os.path.dirname(__file__))
+# include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
-
-root = os.path.abspath(os.path.dirname(__file__))
-include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
+include_dirs = [numpy.get_include(), "dysgu"] + pysam.get_include()
+include_dirs.append(site.getsitepackages()[0] + "/pysam/include/htslib/htslib")  # Need header paths
 
 
 # No idea why this works, or how robust this is:
-if not clang:
-    build_sources = [f"dysgu/sv2bam.pyx"] + sources
-else:
-    build_sources = [f"dysgu/sv2bam.pyx"]
+# if not clang:
+#     build_sources = [f"dysgu/sv2bam.pyx"] + sources
+# else:
+#     build_sources = [f"dysgu/sv2bam.pyx"]
 
 
 # ext_modules.append(Extension(f"dysgu.sv2bam",
@@ -115,7 +115,7 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), 'dysgu'] + pysam.get_include(),  # 'htslib',
+                                 library_dirs=[numpy.get_include(), 'dysgu'] + pysam.get_include(),
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
                                  extra_link_args=pysam.get_libraries(),
@@ -130,7 +130,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.4.8',
+    version='0.4.9',
     python_requires='>=3.7',
     install_requires=[
             'cython',

@@ -24,7 +24,7 @@ cimport cython
 from libc.math cimport exp
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport robin_set
+from dysgu.map_set_utils cimport robin_set, DiGraph
 
 
 def echo(*args):
@@ -41,14 +41,14 @@ def echo(*args):
 
 
 # ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph_t
-ctypedef map_set_utils.Py_DiGraph Py_DiGraph_t
-
+# ctypedef map_set_utils.Py_DiGraph Py_DiGraph_t
+# ctypedef map_set_utils.DiGraph DiGraph_t
 
 ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
 ctypedef map_set_utils.Py_IntSet Py_IntSet
 
 
-cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
+cdef void add_to_graph(DiGraph& G, r, cpp_vector[int]& nweight, ndict_r):
 
     cdef int i = 0
     cdef str rseq = r.seq
@@ -95,9 +95,9 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                     nweight[n] += qual
                     if prev_node != -1:
                         # added_edges.append((prev_node, n))
-                        if not G.hasEdge(prev_node, n):
-                            G.addEdge(prev_node, n)
-
+                        # if not G.hasEdge(prev_node, n):
+                        #     G.addEdge(prev_node, n, qual)
+                        G.updateEdge(prev_node, n, qual)
 
                     prev_node = n
 
@@ -123,9 +123,9 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                     nweight[n] += qual
                     if prev_node != -1:
                         # added_edges.append((prev_node, n))
-                        if not G.hasEdge(prev_node, n):
-                            G.addEdge(prev_node, n)
-
+                        # if not G.hasEdge(prev_node, n):
+                        #     G.addEdge(prev_node, n, qual)
+                        G.updateEdge(prev_node, n, qual)
 
                     prev_node = n
 
@@ -153,9 +153,9 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                 nweight[n] += qual
                 if prev_node != -1:
                     # added_edges.append((prev_node, n))
-                    if not G.hasEdge(prev_node, n):
-                        G.addEdge(prev_node, n)
-
+                    # if not G.hasEdge(prev_node, n):
+                    #     G.addEdge(prev_node, n, qual)
+                    G.updateEdge(prev_node, n, qual)
 
                 prev_node = n
 
@@ -195,9 +195,9 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
                 nweight[n] += qual
                 if prev_node != -1:
                     # added_edges.append((prev_node, n))
-                    if not G.hasEdge(prev_node, n):
-                        G.addEdge(prev_node, n)
-
+                    # if not G.hasEdge(prev_node, n):
+                    #     G.addEdge(prev_node, n, qual)
+                    G.updateEdge(prev_node, n, qual)
                         # if prev_node == 76 and n == 77:
                         #     echo("hi")
                 prev_node = n
@@ -207,7 +207,7 @@ cdef void add_to_graph(Py_DiGraph_t G, r, cpp_vector[int]& nweight, ndict_r):
 
     # echo("rep nodes", rep_nodes, len(r.seq))
 
-cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
+cdef cpp_deque[int] topo_sort2(DiGraph& G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
 
     # cdef Py_IntSet seen = map_set_utils.Py_IntSet()
@@ -263,18 +263,18 @@ cdef cpp_deque[int] topo_sort2(Py_DiGraph_t G):
     return order
 
 
-cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
+cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
 
-    cdef cpp_vector[int] node_scores = n_weights
+    cdef cpp_vector[int] node_scores = n_weights  # Copy
     cdef Py_Int2IntMap pred_trace2 = map_set_utils.Py_Int2IntMap()
 
     cdef int best_score = -1
     cdef int best_node = -1
     cdef int i, u, node_weight, maxi, score
 
-    cdef cpp_vector[int] neighborList
-    cdef int pred, pred_score, local_score, best_local_score, best_local_i
-
+    cdef cpp_vector[cpp_pair[int, int]] neighborList  # node, weight
+    cdef int pred_score, local_score, best_local_score, best_local_i
+    cdef cpp_pair[int, int] pred
     cdef cpp_deque[int] path
 
     cdef int len_nodes = nodes_to_visit.size()
@@ -304,17 +304,17 @@ cdef cpp_deque[int] score_best_path(Py_DiGraph_t G, cpp_deque[int]& nodes_to_vis
             best_local_i = -1
             for pred in neighborList:
 
-                pred_score = node_scores[pred]
+                pred_score = node_scores[pred.first]
                 score = node_weight + pred_score
                 node_scores[u] = score
                 if score >= best_score:
                     best_score = score
                     best_node = u
 
-                local_score = n_weights[pred]
+                local_score = G.weight(u, pred.first) #n_weights[pred.first]
                 if local_score > best_local_score:
                     best_local_score = local_score
-                    best_local_i = pred
+                    best_local_i = pred.first
 
             if best_local_i != -1:
                 pred_trace2.insert(u, best_local_i)
@@ -352,7 +352,8 @@ cpdef dict base_assemble(rd):
 
     # G = nk.Graph(weighted=False, directed=True)
 
-    cdef Py_DiGraph_t G = map_set_utils.Py_DiGraph()
+    # cdef Py_DiGraph_t G = map_set_utils.Py_DiGraph()
+    cdef DiGraph G = DiGraph()
     node_dict_r = {}
 
     # cdef Py_Int2IntVecMap node_dict2 = Py_Int2IntVecMap()

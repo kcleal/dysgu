@@ -10,15 +10,19 @@
 #include "robin_hash.h"
 
 
+typedef std::pair<int, uint8_t> PairW;  // v, weight
+typedef std::pair<int, int> PairW2;  // v, weight
+
+
 class DiGraph {
-    // Directed non-weighted
+    // Directed weighted
     public:
 
         DiGraph() {}  // Construct
         ~DiGraph() {}
 
-        std::vector<std::vector<int>> inList;
-        std::vector<std::vector<int>> outList;
+        std::vector<std::vector<PairW2>> inList;
+        std::vector<std::vector<PairW2>> outList;
 
         int N = 0;
         int n_edges = 0;
@@ -27,8 +31,8 @@ class DiGraph {
 
             int n = N;
 
-            std::vector<int> node;
-            std::vector<int> in_node;
+            std::vector<PairW2> node;
+            std::vector<PairW2> in_node;
 
             outList.push_back(node);  // empty, no edges
             inList.push_back(in_node);
@@ -41,7 +45,7 @@ class DiGraph {
 
             // Look for v
             for (const auto& val: outList[u]) {
-                if (val == v) {
+                if (val.first == v) {
                     return 1;
                 }
             }
@@ -49,13 +53,46 @@ class DiGraph {
 
         }
 
-        void addEdge(int u, int v) {
+        void addEdge(int u, int v, int w) {
             // Assume hasEdge has been call
-            outList[u].push_back(v);
-            inList[v].push_back(u);
+            outList[u].push_back(std::make_pair(v, w));
+            inList[v].push_back(std::make_pair(u, w));
             n_edges += 1;
         }
 
+        void updateEdge(int u, int v, int w) {
+            // Check for edge and update, else create new edge
+            if ((u > N ) || (v > N)) {
+                outList[u].push_back(std::make_pair(v, w));
+                inList[v].push_back(std::make_pair(u, w));
+                n_edges += 1;
+                return;
+            }
+
+            for (auto& val: outList[u]) {
+                if (val.first == v) {
+                    val.second += w;
+                    return;
+                }
+            }
+
+            outList[u].push_back(std::make_pair(v, w));
+            inList[v].push_back(std::make_pair(u, w));
+            n_edges += 1;
+        }
+
+        int weight(int u, int v) {
+
+            if ((u > N ) || (v > N)) { return 0; }
+
+            for (const auto& val: outList[u]) {
+                if (val.first == v) {
+                    return val.second;
+                }
+            }
+
+            return 0;
+        }
 
         int numberOfNodes() { return N; }
 
@@ -65,7 +102,7 @@ class DiGraph {
             std::vector<int> neigh;
 
             for (const auto& val: outList[u]) {
-                neigh.push_back(val);
+                neigh.push_back(val.first);
             }
 
             return neigh;
@@ -73,9 +110,9 @@ class DiGraph {
         }
 
 
-        std::vector<int> forInEdgesOf(int u) {
+        std::vector<PairW2> forInEdgesOf(int u) {
 
-            std::vector<int> inEdges;
+            std::vector<PairW2> inEdges;
 
             for (const auto& val: inList[u]) {
                 inEdges.push_back(val);
@@ -87,9 +124,6 @@ class DiGraph {
 
 
 };
-
-
-typedef std::pair<int, uint8_t> PairW;  // v, weight
 
 
 class SimpleGraph {

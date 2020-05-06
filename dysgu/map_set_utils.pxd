@@ -40,8 +40,6 @@ cdef extern from "robin_set.h" namespace "tsl" nogil:
         void erase(T&)
         int size()
         iterator find(const T&, size_t precalculated_hash)
-        # T& operator[](int)
-        # T& at(int)
         iterator begin()
         iterator end()
         void clear()
@@ -54,9 +52,11 @@ cdef extern from "wrap_map_set2.h" nogil:
 
         int addNode()
         int hasEdge(int, int)
-        void addEdge(int, int)
+        void addEdge(int, int, int)
+        int weight(int, int)
+        void updateEdge(int, int, int)
         int numberOfNodes() nogil
-        cpp_vector[int] forInEdgesOf(int) nogil
+        cpp_vector[cpp_pair[int, int]] forInEdgesOf(int) nogil
         cpp_vector[int] neighbors(int) nogil
 
 
@@ -67,9 +67,10 @@ cdef class Py_DiGraph:
 
     cdef int addNode(self)
     cdef int hasEdge(self, int u, int v)
-    cdef void addEdge(self, int u, int v)
+    cdef void addEdge(self, int u, int v, int w)
+    cdef void updateEdge(self, int u, int v, int w)
     cdef int numberOfNodes(self) nogil
-    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil
+    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
     cdef cpp_vector[int] neighbors(self, int u) nogil
 
 

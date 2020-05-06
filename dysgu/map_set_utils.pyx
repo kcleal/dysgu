@@ -32,11 +32,13 @@ cdef class Py_DiGraph:
         return self.thisptr.addNode()
     cdef int hasEdge(self, int u, int v):
         return self.thisptr.hasEdge(u, v)
-    cdef void addEdge(self, int u, int v):
-        self.thisptr.addEdge(u, v)
+    cdef void addEdge(self, int u, int v, int w):
+        self.thisptr.addEdge(u, v, w)
+    cdef void updateEdge(self, int u, int v, int w):
+        self.thisptr.addEdge(u, v, w)
     cdef int numberOfNodes(self) nogil:
         return self.thisptr.numberOfNodes()
-    cdef cpp_vector[int] forInEdgesOf(self, int u) nogil:
+    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil:
         return self.thisptr.forInEdgesOf(u)
     cdef cpp_vector[int] neighbors(self, int u) nogil:
         return self.thisptr.neighbors(u)

@@ -47,7 +47,7 @@ still need to be sorted prior to running `dysgu call`::
 
     $ bwa mem -a -t8 ref.fa read1.fq read2.fq | \
         samtools view -bh - | \
-        dysgu fetch -o all_reads.bam -r sv_reads.bam  -  #  <- needs sorting
+        dysgu fetch -r all_reads.bam -o sv_reads.bam  -  #  -r and -o still need sorting
 
 `fetch` can be run downstream of sorting which preserves sort order::
 

@@ -55,10 +55,10 @@ def cli():
                                          "'fq' output is collated by name",
               default="bam", type=click.Choice(["bam", "fq", "fasta"]),
               show_default=True)
-@click.option("-o", "--output", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
+@click.option("-r", "--output", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
               default="None",
               type=str, show_default=True)
-@click.option("-r", "--reads", help="Output reads, discordant, supplementary and soft-clipped reads to file. "
+@click.option("-o", "--reads", help="Output reads, discordant, supplementary and soft-clipped reads to file. "
                                     "If --out-format is fq/fasta and --reads2 is not provided, "
                                     "output an interleaved fq/fasta", default="stdout", type=str, show_default=True)
 @click.option("-r2", "--reads2", help="Output read2 for fq/fasta output only", default="None", type=str,
@@ -67,8 +67,8 @@ def cli():
               type=int, show_default=True)
 @click.option('--index', help="Call 'samtools index' of bam if '--reads' argument is provided",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--paired", help="Paired-end reads or single", default="True",
-              type=click.Choice(["True", "False"]), show_default=True)
+# @click.option("--paired", help="Paired-end reads or single", default="True",
+#               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))

@@ -15,7 +15,6 @@ from libc.stdint cimport uint32_t, uint16_t, uint64_t
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
-
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport robin_set
@@ -30,18 +29,14 @@ from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
 
 from cython.operator import dereference
 
-
 ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
 
-from libc.stdlib cimport malloc, free
 
-
-cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length, int threads):
+cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
+                           int threads) nogil:
 
     cdef int result
-
     cdef htsFile *fp_in = hts_open(infile, "r")
-    # cdef BGZF* f_in_bgzf = hts_get_bgzfp(fp_in)  # Need to work with bgzf* for mab type
 
     result = hts_set_threads(fp_in, threads)
     if result != 0:
@@ -53,7 +48,6 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
         raise IOError("Failed to read input header")
 
     cdef htsFile *f_out = hts_open(outfile, "wb0")
-    # cdef BGZF* f_bgzf_out = hts_get_bgzfp(f_out)
 
     result = sam_hdr_write(f_out, samHdr)
     if result != 0:
@@ -73,45 +67,30 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     cdef bam1_t* bam_ptr
     cdef bam1_t bamt
 
-
     while sam_read1(fp_in, samHdr, aln) >= 0:
 
         if scope.size() > max_scope:
             scope_item = scope[0]
 
             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-                # bam_ptr = &scope_item.second
                 result = sam_write1(f_out, samHdr, scope_item.second)
-
                 if result < 0:
                     raise IOError("Problem writing alignment record")
                 total += 1
             # free(dereference(scope_item.second).data)
             # free(scope_item.second)
-
             bam_destroy1(scope_item.second)
-
             scope.pop_front()
-        echo("h2i", dereference(aln).core.l_qname)
+
         # Process current alignment
         flag = dereference(aln).core.flag
-
         if flag & 1284 or dereference(aln).core.n_cigar == 0 or dereference(aln).core.l_qname == 0:
             continue
 
         precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
-
-        # bam_ptr = bam_init1()
-        # bam_ptr = bam_dup1(aln)
-
         scope.push_back(deque_item(precalculated_hash, bam_dup1(aln)))
 
-        # echo("{0:x}".format(<unsigned long>&scope_item.second))
-        # echo("{0:x}".format(<unsigned long>&bam_ptr))
-        # quit()
-
         if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
-
             # Check for discordant of supplementary
             if ~flag & 2 or flag & 2048:
                 read_names.insert(precalculated_hash)
@@ -146,15 +125,12 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
     while scope.size() > 0:
         scope_item = scope[0]
         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-            # bam_ptr = &scope_item.second
             result = sam_write1(f_out, samHdr, scope_item.second)
-            # echo("{0:x}".format(<unsigned long>&scope_item.second))
             if result < 0:
                 raise IOError("Problem writing alignment record")
             total += 1
 
         scope.pop_front()
-
 
     result = hts_close(fp_in)
     if result != 0:
@@ -167,10 +143,6 @@ cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size
 
     bam_destroy1(aln)
     return total
-
-
-# cdef extern from "find_reads.h" nogil:
-#     int search_hts_file(char* infile, char* outfile, int min_within_size, int clip_length, int threads)
 
 
 def echo(*args):
@@ -234,7 +206,7 @@ def config(args):
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam, paired_end):
+cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam):
 
     # cdef uint32_t clip_length
     cdef int flag
@@ -258,6 +230,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
     cdef int max_scope = 100000
     cdef int count = 0
     cdef int nn = 0
+    cdef bint paired_end = 0
 
     for nn, r in enumerate(bam_i):
 
@@ -281,8 +254,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
         if flag & 1284 or r.cigartuples is None:
             continue  # Read is duplicate or not primary alignment, or unmapped
 
-        if paired_end and len(insert_size) < 100000:
-
+        if flag & 1 and len(insert_size) < 100000:  # read_paired
+            paired_end = 1
             if r.seq is not None:
                 if r.rname == r.rnext and r.flag & flag_mask == required and r.tlen >= 0:
                     read_length.append(r.infer_read_length())
@@ -297,7 +270,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
             if map_set_utils.cigar_clip(r, clip_length):
                 # read_names.add(qname)
                 read_names.insert(qname)
-            elif paired_end and (~ flag & 2 or flag & 2048):  # Save if read is discordant or supplementary
+            elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary
                 # read_names.add(qname)
                 read_names.insert(qname)
             elif r.has_tag("SA"):
@@ -342,8 +315,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
 def process(args):
     t0 = time.time()
 
-    cdef int paired_end = int(args["paired"] == "True")
-    echo("Paired end", paired_end)
+    # cdef int paired_end = int(args["paired"] == "True")
+
     exc_tree = None
     if args["exclude"]:
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
@@ -354,7 +327,7 @@ def process(args):
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
-    if args["output"] == "None" and exc_tree is None and paired_end:
+    if args["output"] == "None" and exc_tree is None:  # and paired_end:
         t0 = time.time()
         count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
         # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
@@ -369,7 +342,7 @@ def process(args):
     # else:
     bam, bam_i, clip_length, send_output, outbam = config(args)
     count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                            paired_end)
+                                                                )
 
 
     if args["index"] == "True" and args["reads"] not in "-,stdout":

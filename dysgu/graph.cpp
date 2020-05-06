@@ -14,15 +14,31 @@
             "-std=c++14",
             "--stdlib=libc++"
         ],
+        "extra_link_args": [
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libctabixproxies.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libcfaidx.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libcsamfile.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libcvcf.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libcbcf.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libctabix.cpython-37m-darwin.so",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/libchtslib.cpython-37m-darwin.so"
+        ],
         "include_dirs": [
             "./dysgu",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "dysgu",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib"
         ],
         "language": "c++",
         "library_dirs": [
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
-            "dysgu"
+            "dysgu",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "name": "dysgu.graph",
         "sources": [
@@ -1392,7 +1408,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "map_set_utils.pxd":92
+/* "map_set_utils.pxd":93
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1406,7 +1422,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "map_set_utils.pxd":118
+/* "map_set_utils.pxd":119
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1420,7 +1436,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "map_set_utils.pxd":140
+/* "map_set_utils.pxd":141
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1434,7 +1450,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
 };
 
 
-/* "map_set_utils.pxd":159
+/* "map_set_utils.pxd":160
  * 
  * 
  * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
@@ -1622,15 +1638,16 @@ struct __pyx_obj_5dysgu_5graph___pyx_scope_struct_5_genexpr {
 struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph {
   int (*addNode)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *);
   int (*hasEdge)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int, int);
-  void (*addEdge)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int, int);
+  void (*addEdge)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int, int, int);
+  void (*updateEdge)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int, int, int);
   int (*numberOfNodes)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *);
-  std::vector<int>  (*forInEdgesOf)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int);
+  std::vector<std::pair<int,int> >  (*forInEdgesOf)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int);
   std::vector<int>  (*neighbors)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph;
 
 
-/* "map_set_utils.pxd":92
+/* "map_set_utils.pxd":93
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1652,7 +1669,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph;
 
 
-/* "map_set_utils.pxd":118
+/* "map_set_utils.pxd":119
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1671,7 +1688,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap *__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap;
 
 
-/* "map_set_utils.pxd":140
+/* "map_set_utils.pxd":141
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1688,7 +1705,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet;
 
 
-/* "map_set_utils.pxd":159
+/* "map_set_utils.pxd":160
  * 
  * 
  * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
@@ -30164,17 +30181,17 @@ static int __Pyx_modinit_type_import_code(void) {
    if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(7, 64, __pyx_L1_error)
   __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(7, 64, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_SimpleGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(7, 92, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(7, 92, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(7, 93, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(7, 93, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_Int2IntMap", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(7, 118, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(7, 118, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(7, 119, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(7, 119, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_IntSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(7, 140, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(7, 140, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(7, 141, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(7, 141, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_StrSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet) __PYX_ERR(7, 159, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet)) __PYX_ERR(7, 159, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet) __PYX_ERR(7, 160, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet)) __PYX_ERR(7, 160, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_RefNannyFinishContext();
   return 0;
