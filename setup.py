@@ -6,6 +6,10 @@ import numpy
 from distutils import ccompiler
 import pysam
 import site
+import glob
+import platform
+import os
+
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 # https://stackoverflow.com/questions/8106258/cc1plus-warning-command-line-option-wstrict-prototypes-is-valid-for-ada-c-o
@@ -70,55 +74,64 @@ ext_modules = list()
 
 # https://github.com/brentp/cyvcf2/blob/master/setup.py
 # Build the Cython extension by statically linking to the bundled htslib
-# sources = [
-#     x for x in glob.glob('htslib/*.c')
-#     if not any(e in x for e in ['irods', 'plugin'])
-# ]
-# sources += glob.glob('htslib/cram/*.c')
-# # Exclude the htslib sources containing main()'s
-# sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
-#
-# if 'CC' in os.environ and "clang" in os.environ['CC']:
-#     clang = True
-# else:
-#     clang = False
-#
-# print("Clang:", clang)
+sources = [
+    x for x in glob.glob('htslib/*.c')
+    if not any(e in x for e in ['irods', 'plugin'])
+]
+sources += glob.glob('htslib/cram/*.c')
+# Exclude the htslib sources containing main()'s
+sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+
+if 'CC' in os.environ and "clang" in os.environ['CC']:
+    clang = True
+else:
+    clang = False
+
+print("Clang:", clang)
 
 
 # root = os.path.abspath(os.path.dirname(__file__))
 # include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
-include_dirs = [numpy.get_include(), "dysgu"] + pysam.get_include()
-include_dirs.append(site.getsitepackages()[0] + "/pysam/include/htslib/htslib")  # Need header paths
-
+include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
+# include_dirs.append(site.getsitepackages()[0] + "/pysam/include/htslib/htslib")  # Need header paths
+# print("Include dirs", include_dirs)
+#
+# extrasf = glob.glob(site.getsitepackages()[0] + "/pysam/*.so")
+# print("Extrasf", extrasf)
+# quit()
 
 # No idea why this works, or how robust this is:
-# if not clang:
-#     build_sources = [f"dysgu/sv2bam.pyx"] + sources
-# else:
-#     build_sources = [f"dysgu/sv2bam.pyx"]
+if not clang:
+    build_sources = [f"dysgu/sv2bam.pyx"] + sources
+else:
+    build_sources = [f"dysgu/sv2bam.pyx"]
 
 
-# ext_modules.append(Extension(f"dysgu.sv2bam",
-#                              build_sources,
-#                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-#                                        ['crypt'] if platform.system() != 'Darwin' else []),
-#                              library_dirs=['htslib', numpy.get_include(), 'dysgu'],
-#                              include_dirs=include_dirs,
-#                              extra_compile_args=extras,
-#                              language="c++"))
+ext_modules.append(Extension(f"dysgu.sv2bam",
+                             ['dysgu/sv2bam.pyx'], #build_sources,
+                             libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+                                       ['crypt'] if platform.system() != 'Darwin' else []),
+                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                             include_dirs=include_dirs,
+                             extra_compile_args=extras,
+                             language="c++"))
+
+print("library dirs", ['htslib', numpy.get_include(), 'dysgu'])
+print("include dirs", include_dirs)
+print("extras", extras)
+# print("build_sources", build_sources)
 
 
 for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view", "sv2bam"]:  # "sv2bam",
+             "map_set_utils", "cluster", "sv2fq", "view"]:  # "sv2bam",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
                                  library_dirs=[numpy.get_include(), 'dysgu'] + pysam.get_include(),
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
-                                 extra_link_args=pysam.get_libraries(),
+                                 # extra_link_args=pysam.get_libraries() + extrasf,
                                  define_macros=pysam.get_defines(),
                                  language="c++"))
 

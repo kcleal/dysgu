@@ -55,7 +55,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
             if a.has_tag("DA"):
                 r["DAsupp"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
-                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
             if a.has_tag("AS"):
                 r["maxASsupp"].append(float(a.get_tag("AS")))
 
@@ -68,7 +71,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
             if a.has_tag("DA"):
                 r["DApri"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
-                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMpri"].append(0)
 
         if flag & 16:
             r["minus"] += 1
@@ -101,7 +107,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
             if a.has_tag("DA"):
                 r["DAsupp"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
-                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
             if a.has_tag("AS"):
                 r["maxASsupp"].append(float(a.get_tag("AS")))
 
@@ -114,7 +123,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
             if a.has_tag("DA"):
                 r["DApri"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
-                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMpri"].append(0)
 
         if flag & 16:
             r["minus"] += 1
@@ -168,7 +180,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
             r["supp"] += 1
             r["MAPQsupp"].append(a.mapq)
             if a.has_tag("NM"):
-                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
             if a.has_tag("AS"):
                 r["maxASsupp"].append(float(a.get_tag("AS")))
 
@@ -179,7 +194,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
             else:
                 paired_end.add(qname)
             if a.has_tag("NM"):
-                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMpri"].append(0)
 
         if flag & 16:
             r["minus"] += 1
@@ -201,7 +219,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
             r["supp"] += 1
             r["MAPQsupp"].append(a.mapq)
             if a.has_tag("NM"):
-                r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
             if a.has_tag("AS"):
                 r["maxASsupp"].append(float(a.get_tag("AS")))
 
@@ -212,7 +233,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
             else:
                 paired_end.add(qname)
             if a.has_tag("NM"):
-                r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                if a_bases:
+                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMpri"].append(0)
 
         if flag & 16:
             r["minus"] += 1
@@ -1777,14 +1801,9 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
         ar = True
 
-    if "chrB" not in r:  # Todo Does this happen?
-        raise ValueError
-        return None
-
     br = False
     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
         br = True
-
 
     kind = "extra-regional"
 

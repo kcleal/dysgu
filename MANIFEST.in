@@ -2,6 +2,7 @@ include dysgu/*
 include dysgu/tests/*
 include *.rst
 include *.md
+include htslib/*.o
 include htslib/*.c
 include htslib/*.h
 include htslib/htslib/*.h

@@ -7,13 +7,25 @@ from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
 import mmh3
-from dysgu cimport map_set_utils
+# from dysgu.map_set_utils cimport robin_set
 
-# from pysam.libcalignmentfile cimport AlignmentFile
-# from pysam.libcalignedsegment cimport AlignedSegment
-from libc.stdint cimport uint32_t, uint8_t
+# from dysgu.map_set_utils cimport hash as xxhash
+
+# from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
+#     bam_cigar_op, bam_cigar_oplen, bam_get_qname, bam_get_cigar, bam_init1, \
+#     htsFile, bam_destroy1, bam_aux_get, sam_read1, bam1_t, bam_dup1, hts_set_threads
+#
+# from pysam.libcalignedsegment cimport makeAlignedSegment, AlignedSegment
+# from pysam.libcalignmentfile cimport AlignmentFile, AlignmentHeader
 
 
+# from cython.operator import dereference
+
+# from libc.stdint cimport uint16_t, uint32_t, uint64_t
+# from libcpp.deque cimport deque as cpp_deque
+# from libcpp.pair cimport pair as cpp_pair
+
+# ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
@@ -135,15 +147,145 @@ def get_insert_params(L, mads=8):  # default for lumpy is 10
     return mean, stdev
 
 
+# cdef struct DequeItem:
+#     uint64_t hash_val
+#     bam1_t* bam_ptr
+#     long tell
+#
+#
+# cdef DequeItem makeItem(uint64_t hash_val, bam1_t* bam_ptr, long tell) nogil:
+#     cdef DequeItem v
+#     v.hash_val = hash_val
+#     v.bam_ptr = bam_ptr
+#     v.tell = tell
+#     return v
+#
+#
+# cdef AlignedSegment passAlignedSegment(bam1_t *src,
+#                                        AlignmentHeader header):
+#     '''return an AlignedSegment object constructed from `src`'''
+#     # note that the following does not call __init__
+#     cdef AlignedSegment dest = AlignedSegment.__new__(AlignedSegment)
+#     dest._delegate = src #bam_dup1(src)
+#     dest.header = header
+#     return dest
+#
+#
+# def htslib_iterator(AlignmentFile infile, uint32_t min_within_size, uint32_t clip_length):
+#     # Similar to sv2bam.pyx script, but yields SV alignments and tell position rather than outputting to file
+#
+#     cdef int result
+#     cdef htsFile *fp_in = infile.htsfile #hts_open(infile, "r")
+#
+#     result = hts_set_threads(fp_in, 4)
+#     if result != 0:
+#         raise IOError("Failed to set threads")
+#
+#     cdef AlignmentHeader pysam_header = infile.header
+#     cdef bam_hdr_t* samHdr = infile.header.ptr  #sam_hdr_read(fp_in)  # read header
+#     cdef bam1_t* aln = bam_init1()  # initialize an alignment
+#     if not samHdr:
+#         raise IOError("Failed to read input header")
+#
+#     cdef uint32_t max_scope = 100000
+#     cdef uint64_t total = 0
+#
+#     # cdef cpp_pair[uint64_t, bam1_t*] scope_item
+#     cdef cpp_deque[DequeItem] scope
+#     cdef robin_set[uint64_t] read_names
+#
+#     cdef uint16_t flag
+#     cdef uint32_t* cigar
+#     cdef uint32_t k, op, length
+#     cdef uint64_t precalculated_hash
+#     cdef bam1_t* bam_ptr
+#     cdef bam1_t bamt
+#
+#     cdef long tell = infile.tell()
+#     cdef DequeItem scope_item
+#     yield_queue = []
+#     while sam_read1(fp_in, samHdr, aln) >= 0:
+#
+#         if scope.size() > max_scope:
+#             scope_item = scope[0]
+#
+#             if read_names.find(scope_item.hash_val, scope_item.hash_val) != read_names.end():
+#                 # if not yielded:
+#                 yield passAlignedSegment(scope_item.bam_ptr, pysam_header), scope_item.tell
+#                     # yielded = 1
+#                 # else:
+#                 #     bam_destroy1(scope_item.bam_ptr)
+#             else:
+#                 bam_destroy1(scope_item.bam_ptr)
+#             # bam_destroy1(scope_item.bam_ptr)
+#             # free(scope_item)
+#             scope.pop_front()
+#
+#         # Process current alignment
+#         flag = dereference(aln).core.flag
+#         if flag & 1284 or dereference(aln).core.n_cigar == 0 or dereference(aln).core.l_qname == 0:
+#             continue
+#
+#         precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
+#         scope.push_back(makeItem(precalculated_hash, bam_dup1(aln), tell))
+#         tell = infile.tell() #hts_utell(fp_in)
+#         # tell = 1
+#         if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
+#             # Check for discordant of supplementary
+#             if ~flag & 2 or flag & 2048:
+#                 read_names.insert(precalculated_hash)
+#                 continue
+#
+#             # Check for SA tag
+#             if bam_aux_get(aln, "SA"):
+#                 read_names.insert(precalculated_hash)
+#                 continue
+#
+#             cigar = bam_get_cigar(aln)
+#             for k in range(0, dereference(aln).core.n_cigar):
+#
+#                 op = bam_cigar_op(cigar[k])
+#                 if op == -1:
+#                     break
+#                 length = bam_cigar_oplen(cigar[k])
+#                 if length == -1:
+#                     break
+#
+#                 if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
+#                     read_names.insert(precalculated_hash)
+#                     break
+#
+#                 if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
+#                     read_names.insert(precalculated_hash)
+#                     break
+#
+#     while scope.size() > 0:
+#         scope_item = scope[0]
+#         if read_names.find(scope_item.hash_val, scope_item.hash_val) != read_names.end():
+#             yield passAlignedSegment(scope_item.bam_ptr, pysam_header), scope_item.tell
+#         else:
+#             bam_destroy1(scope_item.bam_ptr)
+#         scope.pop_front()
+#
+#     # result = hts_close(fp_in)
+#     # if result != 0:
+#     #     raise IOError("Problem closing input file handle")
+#
+#     bam_destroy1(aln)
+
+
 class GenomeScanner:
 
-    def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin):
+    def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin,
+                 clip_length=30, min_within_size=30):
 
         self.input_bam = inputbam
         self.max_cov = max_cov
         self.include_regions = include_regions
         self.overlap_regions = io_funcs.overlap_regions(include_regions, int_chroms=True, infile=inputbam)
         self.regions_only = regions_only
+        self.clip_length = clip_length
+        self.min_within_size = min_within_size
 
         self.staged_reads = deque([])
         self.procs = read_threads
@@ -168,16 +310,37 @@ class GenomeScanner:
 
     def _get_reads(self):
         # Two options, reads are collected from whole genome, or from target regions only
+
+        # Scan whole genome
         if not self.include_regions or not self.regions_only:
 
-            while len(self.staged_reads) > 0:  # Some reads may have been staged from getting read_length
+            # Some reads may have been staged from getting read_length (if file is streamed from stdin)
+            while len(self.staged_reads) > 0:
                 yield self.staged_reads.popleft()
 
-            tell = 0 if self.no_tell else self.input_bam.tell()
-            for a in self.input_bam:
+            # if self.no_tell:
+            #     input_iter = self.input_bam
+            #     tell = self.input_bam.tell()
+            #     update_tel = True
+            #
+            # else:  # tell gets reset for normal file input
+            #     input_iter = htslib_iterator(self.input_bam, self.min_within_size, self.clip_length)
+            #     tell = 0
+            #     update_tel = False
 
-                self._add_to_bin_buffer(a, tell)
+            tell = 0 if self.no_tell else self.input_bam.tell()
+            for aln in self.input_bam:
+            # for tmp in input_iter: #self.input_bam:
+
+                # if update_tel:
+                    # echo(tmp.tostring(), tell)
+                    # quit()
+                self._add_to_bin_buffer(aln, tell)
                 tell = 0 if self.no_tell else self.input_bam.tell()
+                # else:
+                #     # echo(tmp[0].tostring(), tmp[1])
+                #     # quit()
+                #     self._add_to_bin_buffer(*tmp)  # tmp is alignment, tell
 
                 while len(self.staged_reads) > 0:
                     yield self.staged_reads.popleft()
@@ -185,6 +348,7 @@ class GenomeScanner:
             if len(self.current_bin) > 0:
                 yield self.current_bin
 
+        # Scan input regions
         else:
             # Reads must be fed into graph in sorted order, find regions of interest first
             intervals_to_check = []  # Containing include_regions, and also mate pairs
