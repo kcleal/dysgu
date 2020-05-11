@@ -69,7 +69,7 @@ def get_extra_args():
 
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
-                             "-Wno-strict-prototypes", "-Wno-unused-result", '-Wno-ignored-qualifiers']
+                             "-Wno-unused-result", '-Wno-ignored-qualifiers']
 print("Extra compiler args ", extras)
 ext_modules = list()
 
@@ -111,7 +111,10 @@ root = os.path.abspath(os.path.dirname(__file__))
 
 htslib = os.path.join(root, "htslib")
 
-library_dirs = [htslib, numpy.get_include(), root, "htslib"]
+libraries = []
+libraries += ['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else [])
+
+library_dirs = [htslib, numpy.get_include(), root, "htslib", "dysgu"]
 include_dirs = [numpy.get_include(), root, htslib]
 for item in ["htslib", "cram"]:
     include_dirs.append(os.path.join(htslib, item))
@@ -120,15 +123,15 @@ for item in ["htslib", "cram"]:
 extra_lib_paths = [i for i in glob.glob(f"{htslib}/*.o") if os.path.basename(i) not in ["bgzip.o", "tabix.o", "htsfile.o"]]
 extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
 
-ext_modules.append(Extension(f"dysgu.sv2bam",
-                             ['dysgu/sv2bam.pyx'], #build_sources,
-                             libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-                                       ['crypt'] if platform.system() != 'Darwin' else []),
-                             library_dirs=library_dirs,
-                             include_dirs=include_dirs,
-                             extra_link_args=extra_lib_paths,
-                             extra_compile_args=extras,
-                             language="c++"))
+# ext_modules.append(Extension(f"dysgu.sv2bam",
+#                              ['dysgu/sv2bam.pyx'], #build_sources,
+#                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
+#                                        ['crypt'] if platform.system() != 'Darwin' else []),
+#                              library_dirs=library_dirs,
+#                              include_dirs=include_dirs,
+#                              extra_link_args=extra_lib_paths,
+#                              extra_compile_args=extras,
+#                              language="c++"))
 
 print("library dirs", library_dirs)
 print("include dirs", include_dirs)
@@ -138,12 +141,13 @@ print("extras compile", extras)
 # print("build_sources", build_sources)
 
 
-for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:  # "sv2bam",
+for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
+             "map_set_utils", "cluster", "sv2fq", "view"]:  #
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), 'dysgu'], #+ pysam.get_include(),
+                                 libraries=libraries,
+                                 library_dirs=library_dirs, #+ pysam.get_include(),
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
                                  # extra_link_args=pysam.get_libraries() + extrasf,
@@ -158,7 +162,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.5.0',
+    version='0.5.2',
     python_requires='>=3.7',
     install_requires=[
             'cython',
@@ -174,8 +178,10 @@ setup(
             'mmh3',
 
         ],
-    packages=find_packages(where="."),
+    packages=["dysgu", "dysgu.tests"],
+    package_data={"dysgu": ["htslib/*"]},
     ext_modules=cythonize(ext_modules),
+
     include_package_data=True,
     zip_safe=False,
     entry_points='''

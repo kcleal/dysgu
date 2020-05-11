@@ -10,8 +10,8 @@ from subprocess import call
 from collections import deque
 import resource
 
-from libc.stdint cimport uint32_t, uint16_t, uint64_t
 
+from libc.stdint cimport uint32_t, uint16_t, uint64_t
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
@@ -315,7 +315,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
     return count, insert_median, insert_stdev, approx_read_length
 
 
-cdef extern from "wrap_map_set2.h":
+cdef extern from "find_reads.h":
+
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
                                     int threads)
 
