@@ -15,7 +15,6 @@ import pickle
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
-from dysgu cimport map_set_utils
 
 
 def echo(*args):

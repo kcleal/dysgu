@@ -8,6 +8,7 @@
 #include "robin_map.h"
 #include "robin_set.h"
 #include "robin_hash.h"
+
 #include "../htslib/htslib/sam.h"
 #include "../htslib/htslib/hfile.h"
 #include "xxhash64.h"
@@ -390,8 +391,8 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     int result;
     htsFile *fp_in = hts_open(infile, "r");
-    if (threads > 0) {
-        result = hts_set_threads(fp_in, threads);
+    if (threads > 1) {  // set additional threads
+        result = hts_set_threads(fp_in, threads - 1);
         if (result != 0) { return -1; }
     }
 
@@ -403,8 +404,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }
 
-    XXHash64::XXHash64 hasher(0);
-
     uint32_t max_scope = 100000;
     uint64_t total = 0;
 
@@ -414,10 +413,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     uint16_t flag;
     uint32_t* cigar;
-//    uint32_t k, op, length;
-//    uint64_t precalculated_hash;
     bam1_t* bam_ptr;
-//    bam1_t bamt;
 
     while (sam_read1(fp_in, samHdr, aln) >= 0) {
 
@@ -437,12 +433,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
         // Process current alignment
         flag = aln->core.flag;
-        if (flag & 1284 or aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
+        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
 
-//        precalculated_hash = XXHash64::hash(bam_get_qname(aln), &aln->core.l_qname, 0);
-        hasher.add(bam_get_qname(aln), aln->core.l_qname); // call add() as often as you like to ...
-        // and compute hash:
-        uint64_t precalculated_hash = hasher.hash();
+        const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
 
         bam_ptr = bam_dup1(aln);
         scope.push_back(std::make_pair(precalculated_hash, bam_ptr));  // bam_dup1(aln)
@@ -463,21 +456,17 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             cigar = bam_get_cigar(aln);
 
             // Check cigar
-            for (uint32_t k = 0; k < aln->core.n_cigar; k++) {
-//            for k in range(0, dereference(aln).core.n_cigar):
+            for (uint32_t k=0; k < aln->core.n_cigar; k++) {
 
                 uint32_t op = bam_cigar_op(cigar[k]);
-                //if (!op) { break; }
-
                 uint32_t length = bam_cigar_oplen(cigar[k]);
-                //if (!length) { break; }
 
                 if ((op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
                     break;
                 }
 
-                if ((op == BAM_CINS or op == BAM_CDEL) && (length >= min_within_size)) {
+                if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
                     read_names.insert(precalculated_hash);
                     break;
                 }
@@ -492,7 +481,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             if (result < 0) { return -1; };
             total += 1;
         }
-
         scope.pop_front();
     }
 
@@ -503,8 +491,8 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (result < 0) { return -1; };
 
     f_out = NULL;
-
     bam_destroy1(aln);
+
     return total;
 
 }

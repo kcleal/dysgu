@@ -4,12 +4,13 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
 from distutils import ccompiler
-import pysam
+
 import site
 import glob
 import platform
 import os
 
+# Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
 
 # Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
 # https://stackoverflow.com/questions/8106258/cc1plus-warning-command-line-option-wstrict-prototypes-is-valid-for-ada-c-o
@@ -67,8 +68,8 @@ def get_extra_args():
     return extra_compile_args
 
 
-extras = get_extra_args()  #["-Wno-sign-compare", "-Wno-unused-function",
-                            # "-Wno-strict-prototypes", "-Wno-unused-result", "-Wno-discarded-qualifiers"]
+extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
+                             "-Wno-strict-prototypes", "-Wno-unused-result", '-Wno-ignored-qualifiers']
 print("Extra compiler args ", extras)
 ext_modules = list()
 
@@ -82,18 +83,19 @@ sources += glob.glob('htslib/cram/*.c')
 # Exclude the htslib sources containing main()'s
 sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 
-if 'CC' in os.environ and "clang" in os.environ['CC']:
-    clang = True
-else:
-    clang = False
+# # CC not always set
+# if 'CC' in os.environ and "clang" in os.environ['CC']:
+#     clang = True
+# else:
+#     clang = False
+#
+# print("Clang:", clang)
 
-print("Clang:", clang)
 
-
-# root = os.path.abspath(os.path.dirname(__file__))
+root = os.path.abspath(os.path.dirname(__file__))
 # include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
-include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
+# include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
 # include_dirs.append(site.getsitepackages()[0] + "/pysam/include/htslib/htslib")  # Need header paths
 # print("Include dirs", include_dirs)
 #
@@ -102,24 +104,37 @@ include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
 # quit()
 
 # No idea why this works, or how robust this is:
-if not clang:
-    build_sources = [f"dysgu/sv2bam.pyx"] + sources
-else:
-    build_sources = [f"dysgu/sv2bam.pyx"]
+# if not clang:
+#     build_sources = [f"dysgu/sv2bam.pyx"] + sources
+# else:
+#     build_sources = [f"dysgu/sv2bam.pyx"]
 
+htslib = os.path.join(root, "htslib")
+
+library_dirs = [htslib, numpy.get_include(), root, "htslib"]
+include_dirs = [numpy.get_include(), root, htslib]
+for item in ["htslib", "cram"]:
+    include_dirs.append(os.path.join(htslib, item))
+
+
+extra_lib_paths = [i for i in glob.glob(f"{htslib}/*.o") if os.path.basename(i) not in ["bgzip.o", "tabix.o", "htsfile.o"]]
+extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
 
 ext_modules.append(Extension(f"dysgu.sv2bam",
                              ['dysgu/sv2bam.pyx'], #build_sources,
                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
                                        ['crypt'] if platform.system() != 'Darwin' else []),
-                             library_dirs=['htslib', numpy.get_include(), 'dysgu'],
+                             library_dirs=library_dirs,
                              include_dirs=include_dirs,
+                             extra_link_args=extra_lib_paths,
                              extra_compile_args=extras,
                              language="c++"))
 
-print("library dirs", ['htslib', numpy.get_include(), 'dysgu'])
+print("library dirs", library_dirs)
 print("include dirs", include_dirs)
-print("extras", extras)
+print("extra link args", extra_lib_paths)
+print("extras compile", extras)
+
 # print("build_sources", build_sources)
 
 
@@ -128,11 +143,11 @@ for item in ["io_funcs", "graph", "coverage", "assembler", "call_component",
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
-                                 library_dirs=[numpy.get_include(), 'dysgu'] + pysam.get_include(),
+                                 library_dirs=[numpy.get_include(), 'dysgu'], #+ pysam.get_include(),
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
                                  # extra_link_args=pysam.get_libraries() + extrasf,
-                                 define_macros=pysam.get_defines(),
+                                 # define_macros=pysam.get_defines(),
                                  language="c++"))
 
 print("Found packages", find_packages(where="."))
@@ -143,7 +158,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.4.9',
+    version='0.5.0',
     python_requires='>=3.7',
     install_requires=[
             'cython',

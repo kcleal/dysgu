@@ -7,17 +7,15 @@ from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
 import mmh3
-# from dysgu.map_set_utils cimport robin_set
 
+# from dysgu.map_set_utils cimport robin_set
 # from dysgu.map_set_utils cimport hash as xxhash
 
 # from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
 #     bam_cigar_op, bam_cigar_oplen, bam_get_qname, bam_get_cigar, bam_init1, \
 #     htsFile, bam_destroy1, bam_aux_get, sam_read1, bam1_t, bam_dup1, hts_set_threads
-#
 # from pysam.libcalignedsegment cimport makeAlignedSegment, AlignedSegment
 # from pysam.libcalignmentfile cimport AlignmentFile, AlignmentHeader
-
 
 # from cython.operator import dereference
 
@@ -434,7 +432,6 @@ class GenomeScanner:
                         approx_read_length_l.append(rl)
                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
                             inserts.append(a.tlen)
-
                             if not tags_checked:
                                 if a.has_tag("DP"):
                                     self.extended_tags = True

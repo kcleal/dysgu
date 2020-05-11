@@ -315,6 +315,10 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
     return count, insert_median, insert_stdev, approx_read_length
 
 
+cdef extern from "wrap_map_set2.h":
+    cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
+                                    int threads)
+
 def process(args):
     t0 = time.time()
 
@@ -330,21 +334,26 @@ def process(args):
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
-    # if args["output"] == "None" and exc_tree is None:  # and paired_end:
-    #     t0 = time.time()
-    #     count = search_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
-    #     # count = search_hts_file(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
-    #     echo(time.time() - t0)
-    #     click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
-    #                                                                 count,
-    #                                                                int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-    #                                                                str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-    #     quit()
-    #     return {}
-    #
-    # else:
-    bam, bam_i, clip_length, send_output, outbam = config(args)
-    count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
+    if args["output"] == "None" and exc_tree is None:  # and paired_end:
+
+        t0 = time.time()
+
+        count = search_hts_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+        if count < 0:
+            click.echo("Error reading input file", err=True)
+            quit()
+        echo(time.time() - t0)
+        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
+                                                                    count,
+                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+        quit()
+        return {}
+
+    else:
+        echo("pysam version")
+        bam, bam_i, clip_length, send_output, outbam = config(args)
+        count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
                                                                 )
 
 

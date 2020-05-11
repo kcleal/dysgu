@@ -7,9 +7,14 @@
             "-std=c++14",
             "--stdlib=libc++"
         ],
+        "include_dirs": [
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "dysgu"
+        ],
         "language": "c++",
         "library_dirs": [
-            "/Users/kateliddiard/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "dysgu"
         ],
         "name": "dysgu.sv2fq",
         "sources": [

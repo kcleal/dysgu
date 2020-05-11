@@ -5,9 +5,6 @@ A basic assembler. Takes an overlap graph and merges reads in-place in a POA sty
 are then overlapped and 'linked'.
 """
 
-import numpy as np
-cimport numpy as np
-from collections import deque
 import click
 import warnings
 import array
