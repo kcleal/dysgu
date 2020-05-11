@@ -307,7 +307,6 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
         else:
             insert_median, insert_stdev = get_insert_params(insert_size)
             insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
-
         click.echo(f"Inferred read length {approx_read_length}, "
                        f"insert median {insert_median}, "
                        f"insert stdev {insert_stdev}", err=True)
@@ -316,7 +315,6 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
 
 
 cdef extern from "find_reads.h":
-
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
                                     int threads)
 

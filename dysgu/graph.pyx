@@ -82,9 +82,10 @@ cdef class Table:
     def get_val(self, v):
         cdef vector[np.int64_t] values = v
         cdef np.ndarray[np.int64_t] a = np.empty(values.size(), dtype=np.int)
+        cdef int len_a = len(a)  #.shape[0]
         cdef int i
         with nogil:
-            for i in range(a.shape[0]):
+            for i in range(len_a):
                 a[i] = values[i]
         return a
 

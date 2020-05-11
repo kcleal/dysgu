@@ -150,8 +150,11 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  library_dirs=library_dirs, #+ pysam.get_include(),
                                  include_dirs=include_dirs,
                                  extra_compile_args=extras,
+                                 runtime_library_dirs=[htslib, htslib + "/cram"],
+                                 extra_objects=extra_lib_paths,
                                  # extra_link_args=pysam.get_libraries() + extrasf,
                                  # define_macros=pysam.get_defines(),
+                                 define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
 print("Found packages", find_packages(where="."))
@@ -162,7 +165,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.5.2',
+    version='0.5.3',
     python_requires='>=3.7',
     install_requires=[
             'cython',
