@@ -21,7 +21,7 @@ To build from source::
 
 Alternatively use the install script::
 
-    $ python INSTALL.sh
+    $ cd dysgu; python INSTALL.sh
 
 Run tests::
 

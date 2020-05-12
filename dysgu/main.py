@@ -172,9 +172,6 @@ def get_reads(ctx, **kwargs):
     if kwargs["out_format"] == "bam" and kwargs["reads2"] != "None":
         raise ValueError("--out-format is bam, cannot except -r2")
 
-    if kwargs["out_format"] == "bam" and kwargs["index"] == "True" and kwargs["reads"] in "-,stdout":
-        raise ValueError("Cannot index if --reads is stdout")
-
     ctx = apply_ctx(ctx, kwargs)
 
     if kwargs["out_format"] == "bam":

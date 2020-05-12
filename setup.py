@@ -5,6 +5,7 @@ from Cython.Build import cythonize
 import numpy
 from distutils import ccompiler
 import os
+import pysam
 
 # Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
 
@@ -73,8 +74,8 @@ root = os.path.abspath(os.path.dirname(__file__))
 htslib = os.path.join(root, "dysgu/htslib")
 
 libraries = [f"{htslib}/hts"]  # Library name for libhts.so
-library_dirs = [htslib, numpy.get_include()]
-include_dirs = [numpy.get_include(), root, f"{htslib}/htslib", f"{htslib}/cram"]
+library_dirs = [htslib, numpy.get_include()] + pysam.get_include()
+include_dirs = [numpy.get_include(), root, f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
 runtime_dirs = [os.path.join(root, "dysgu/htslib")]
 
 
@@ -92,7 +93,7 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  libraries=libraries,
                                  library_dirs=library_dirs,
                                  include_dirs=include_dirs,
-                                 runtime_dirs=runtime_dirs,
+                                 runtime_library_dirs=runtime_dirs,
                                  extra_compile_args=extras,
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
