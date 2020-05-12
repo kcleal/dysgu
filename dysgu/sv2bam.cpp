@@ -23,80 +23,23 @@
             "-Wno-unused-result",
             "-Wno-ignored-qualifiers"
         ],
-        "extra_objects": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/bcf_sr_sort.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/bgzf.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/errmod.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/faidx.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/header.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile_gcs.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile_libcurl.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile_net.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile_s3.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hfile_s3_write.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hts.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/hts_os.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/kfunc.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/knetfile.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/kstring.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/md5.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/multipart.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/probaln.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/realn.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/regidx.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/region.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/sam.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/synced_bcf_reader.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/tbx.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/textutils.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/thread_pool.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/vcf.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/vcf_sweep.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/vcfutils.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_codecs.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_decode.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_encode.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_external.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_index.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_io.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_samtools.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/cram_stats.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/mFILE.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/open_trace_file.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/pooled_alloc.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/rANS_static.o",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram/string_alloc.o"
-        ],
         "include_dirs": [
             "dysgu",
             "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram"
         ],
         "language": "c++",
         "libraries": [
-            "z",
-            "bz2",
-            "lzma",
-            "curl",
-            "ssl"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/hts"
         ],
         "library_dirs": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
-            "htslib",
-            "dysgu"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
         ],
         "name": "dysgu.sv2bam",
-        "runtime_library_dirs": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/htslib/cram"
-        ],
         "sources": [
             "dysgu/sv2bam.pyx"
         ]
@@ -5746,8 +5689,8 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
  *                                     int threads)
  * 
  * def process(args):             # <<<<<<<<<<<<<<
- *     t0 = time.time()
  * 
+ *     t0 = time.time()
  */
 
 /* Python wrapper */
@@ -5801,16 +5744,16 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
   PyObject *(*__pyx_t_18)(PyObject *);
   __Pyx_RefNannySetupContext("process", 0);
 
-  /* "dysgu/sv2bam.pyx":322
- * 
+  /* "dysgu/sv2bam.pyx":323
  * def process(args):
- *     t0 = time.time()             # <<<<<<<<<<<<<<
  * 
+ *     t0 = time.time()             # <<<<<<<<<<<<<<
  *     # cdef int paired_end = int(args["paired"] == "True")
+ * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 322, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 322, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 323, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -5825,7 +5768,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
   }
   __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 322, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 323, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_t0 = __pyx_t_1;
@@ -7041,8 +6984,8 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
  *                                     int threads)
  * 
  * def process(args):             # <<<<<<<<<<<<<<
- *     t0 = time.time()
  * 
+ *     t0 = time.time()
  */
 
   /* function exit code */
@@ -7806,8 +7749,8 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *                                     int threads)
  * 
  * def process(args):             # <<<<<<<<<<<<<<
- *     t0 = time.time()
  * 
+ *     t0 = time.time()
  */
   __pyx_tuple__20 = PyTuple_Pack(15, __pyx_n_s_args, __pyx_n_s_t0, __pyx_n_s_exc_tree, __pyx_n_s_out_name, __pyx_n_s_infile_string, __pyx_n_s_outfile_string, __pyx_n_s_count, __pyx_n_s_bam, __pyx_n_s_bam_i, __pyx_n_s_clip_length, __pyx_n_s_send_output, __pyx_n_s_outbam, __pyx_n_s_insert_median_2, __pyx_n_s_insert_stdev_2, __pyx_n_s_read_length); if (unlikely(!__pyx_tuple__20)) __PYX_ERR(0, 321, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__20);
@@ -8351,8 +8294,8 @@ if (!__Pyx_RefNanny) {
  *                                     int threads)
  * 
  * def process(args):             # <<<<<<<<<<<<<<
- *     t0 = time.time()
  * 
+ *     t0 = time.time()
  */
   __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_6sv2bam_8process, NULL, __pyx_n_s_dysgu_sv2bam); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 321, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);

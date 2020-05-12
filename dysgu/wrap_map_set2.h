@@ -9,8 +9,8 @@
 #include "robin_set.h"
 #include "robin_hash.h"
 
-#include "../htslib/htslib/sam.h"
-#include "../htslib/htslib/hfile.h"
+#include "./htslib/htslib/sam.h"
+#include "./htslib/htslib/hfile.h"
 #include "xxhash64.h"
 
 typedef std::pair<int, uint8_t> PairW;  // v, weight

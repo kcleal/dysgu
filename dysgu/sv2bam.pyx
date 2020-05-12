@@ -319,8 +319,8 @@ cdef extern from "find_reads.h":
                                     int threads)
 
 def process(args):
-    t0 = time.time()
 
+    t0 = time.time()
     # cdef int paired_end = int(args["paired"] == "True")
 
     exc_tree = None

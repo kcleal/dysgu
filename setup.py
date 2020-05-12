@@ -75,13 +75,13 @@ ext_modules = list()
 
 # https://github.com/brentp/cyvcf2/blob/master/setup.py
 # Build the Cython extension by statically linking to the bundled htslib
-sources = [
-    x for x in glob.glob('htslib/*.c')
-    if not any(e in x for e in ['irods', 'plugin'])
-]
-sources += glob.glob('htslib/cram/*.c')
-# Exclude the htslib sources containing main()'s
-sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
+# sources = [
+#     x for x in glob.glob('htslib/*.c')
+#     if not any(e in x for e in ['irods', 'plugin'])
+# ]
+# sources += glob.glob('htslib/cram/*.c')
+# # Exclude the htslib sources containing main()'s
+# sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
 
 # # CC not always set
 # if 'CC' in os.environ and "clang" in os.environ['CC']:
@@ -92,7 +92,9 @@ sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.
 # print("Clang:", clang)
 
 
-root = os.path.abspath(os.path.dirname(__file__))
+
+
+
 # include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
 
 # include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
@@ -109,19 +111,24 @@ root = os.path.abspath(os.path.dirname(__file__))
 # else:
 #     build_sources = [f"dysgu/sv2bam.pyx"]
 
-htslib = os.path.join(root, "htslib")
+root = os.path.abspath(os.path.dirname(__file__))
+htslib = os.path.join(root, "dysgu/htslib")
 
-libraries = []
-libraries += ['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else [])
+libraries = [f"{htslib}/hts"]  # Library name for libhts.so
+library_dirs = [htslib, numpy.get_include()]
+include_dirs = [numpy.get_include(), root, f"{htslib}/htslib", f"{htslib}/cram"]
+runtime_dirs = [os.path.join(root, "dysgu/htslib")]
 
-library_dirs = [htslib, numpy.get_include(), root, "htslib", "dysgu"]
-include_dirs = [numpy.get_include(), root, htslib]
-for item in ["htslib", "cram"]:
-    include_dirs.append(os.path.join(htslib, item))
+# libraries += ['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else [])
+
+# library_dirs = [htslib, numpy.get_include(), root, "htslib", "dysgu"]
+# include_dirs = [numpy.get_include(), root, htslib]
+# for item in ["htslib", "cram"]:
+#     include_dirs.append(os.path.join(htslib, item))
 
 
-extra_lib_paths = [i for i in glob.glob(f"{htslib}/*.o") if os.path.basename(i) not in ["bgzip.o", "tabix.o", "htsfile.o"]]
-extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
+# extra_lib_paths = [i for i in glob.glob(f"{htslib}/*.o") if os.path.basename(i) not in ["bgzip.o", "tabix.o", "htsfile.o"]]
+# extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
 
 # ext_modules.append(Extension(f"dysgu.sv2bam",
 #                              ['dysgu/sv2bam.pyx'], #build_sources,
@@ -133,13 +140,19 @@ extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
 #                              extra_compile_args=extras,
 #                              language="c++"))
 
+print("libs", libraries)
 print("library dirs", library_dirs)
 print("include dirs", include_dirs)
-print("extra link args", extra_lib_paths)
+print("runtime dirs", runtime_dirs)
+# print("extra link args", extra_lib_paths)
 print("extras compile", extras)
 
 # print("build_sources", build_sources)
 
+# runtime_library_dirs=[htslib, htslib + "/cram"],
+                                 # extra_objects=extra_lib_paths,
+                                 # extra_link_args=pysam.get_libraries() + extrasf,
+                                 # define_macros=pysam.get_defines(),
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
              "map_set_utils", "cluster", "sv2fq", "view"]:  #
@@ -147,13 +160,10 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
                                  libraries=libraries,
-                                 library_dirs=library_dirs, #+ pysam.get_include(),
+                                 library_dirs=library_dirs,
                                  include_dirs=include_dirs,
+                                 runtime_dirs=runtime_dirs,
                                  extra_compile_args=extras,
-                                 runtime_library_dirs=[htslib, htslib + "/cram"],
-                                 extra_objects=extra_lib_paths,
-                                 # extra_link_args=pysam.get_libraries() + extrasf,
-                                 # define_macros=pysam.get_defines(),
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
@@ -165,7 +175,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.5.3',
+    version='0.6.0',
     python_requires='>=3.7',
     install_requires=[
             'cython',
@@ -182,7 +192,7 @@ setup(
 
         ],
     packages=["dysgu", "dysgu.tests"],
-    package_data={"dysgu": ["htslib/*"]},
+    # package_data={"dysgu": ["htslib/*"]},
     ext_modules=cythonize(ext_modules),
 
     include_package_data=True,

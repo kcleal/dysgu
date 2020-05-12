@@ -2,9 +2,10 @@ include dysgu/*
 include dysgu/tests/*
 include *.rst
 include *.md
-include htslib/*.o
-include htslib/*.c
-include htslib/*.h
-include htslib/htslib/*.h
-include htslib/cram/*.c
-include htslib/cram/*.h
+graft dysgu/htslib
+#include htslib/*.o
+#include htslib/*.c
+#include htslib/*.h
+#include htslib/htslib/*.h
+#include htslib/cram/*.c
+#include htslib/cram/*.h
