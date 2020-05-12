@@ -295,7 +295,7 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
     return potential_events, event_id
 
 
-def pipe1(args, infile, kind, regions):
+def pipe1(args, infile, kind, regions, ibam):
     t6 = time.time()
     # inputbam, int max_cov, tree, read_threads, buffer_size
     regions_only = False if args["regions_only"] == "False" else True
@@ -315,7 +315,7 @@ def pipe1(args, infile, kind, regions):
 
     if paired_end:
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
-                                                                     read_len)
+                                                                     read_len, ibam)
 
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
@@ -437,12 +437,21 @@ def cluster_reads(args):
     kind = args["sv_aligns"].split(".")[-1]
     kind = "stdin" if kind == "-" else kind
     opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
-
+    if kind not in opts:
+        raise ValueError("Input must be a .bam/cam/sam or stdin")
     # if args["procs"] > 1:
     #     raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
 
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
+
+    ibam = None
+    if args["ibam"] is not None:
+        kind = args["sv_aligns"].split(".")[-1]
+        if kind == "stdin" or kind == "-" or kind not in opts:
+            raise ValueError("--ibam must be a .bam/cam/sam file")
+        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=args["procs"])
+
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
@@ -476,7 +485,7 @@ def cluster_reads(args):
     # Run dysgu here:
 
     t4 = time.time()
-    events, extended_tags = pipe1(args, infile, kind, regions)
+    events, extended_tags = pipe1(args, infile, kind, regions, ibam)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
@@ -504,8 +513,7 @@ def cluster_reads(args):
 
     infile.close()
     echo(time.time() - t0)
-    click.echo("dysgu call {} complete, n={}, mem={} Mb, time={} h:m:s".format(
-        args["sv_aligns"],
-        len(df),
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-        str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+    click.echo("dysgu call {} complete, n={}, time={} h:m:s".format(
+               args["sv_aligns"],
+               len(df),
+               str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)

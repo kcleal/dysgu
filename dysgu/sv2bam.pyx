@@ -185,7 +185,7 @@ def config(args):
     except:
         raise RuntimeError("Problem opening bam/sam/cram, check file has .bam/.sam/.cram in file name, and file has a header")
 
-    bam_i = iter_bam(bam, args["search"])
+    bam_i = iter_bam(bam, args["search"] if "search" in args else None)
 
 
 
@@ -193,14 +193,14 @@ def config(args):
 
     send_output = None
     v = ""
-    if args["output"] != "None":
-        if args["output"] == "stdout":
+    if "reads" in args and args["reads"] != "None":
+        if args["reads"] == "stdout":
             v = "-"
         else:
-            v = args["output"]
+            v = args["reads"]
         send_output = pysam.AlignmentFile(v, "wb", template=bam)
 
-    out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
+    out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
 
     reads_out = pysam.AlignmentFile(out_name, "wbu", template=bam)
 
@@ -321,48 +321,39 @@ cdef extern from "find_reads.h":
 def process(args):
 
     t0 = time.time()
-    # cdef int paired_end = int(args["paired"] == "True")
 
     exc_tree = None
-    if args["exclude"]:
+    if "exclude" in args and args["exclude"]:
         click.echo("Excluding {} from search".format(args["exclude"]), err=True)
         exc_tree = io_funcs.overlap_regions(args["exclude"])
 
-    out_name = "-" if (args["reads"] == "-" or args["reads"] == "stdout") else args["reads"]
+
+    out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
 
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
-    if args["output"] == "None" and exc_tree is None:  # and paired_end:
-
-        t0 = time.time()
+    if ("reads" not in args or args["reads"] == "None") and exc_tree is None:  # and paired_end:
 
         count = search_hts_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
         if count < 0:
             click.echo("Error reading input file", err=True)
             quit()
-        echo(time.time() - t0)
-        click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
-                                                                    count,
-                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-        quit()
+        click.echo("dysgu fetch {}, n={}, time={} h:m:s".format(args["bam"],
+                                                                count,
+                                                                str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+
         return {}
 
     else:
-        echo("pysam version")
+        click.echo("Fetching with pysam", err=True)
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
                                                                 )
 
-
-    if args["index"] == "True" and args["reads"] not in "-,stdout":
-        call("samtools index -@{} {}".format(args["procs"], args["reads"]), shell=True)
-
-    click.echo("dysgu fetch {}, n={}, mem={} Mb, time={} h:m:s".format(args["bam"],
-                                                                    count,
-                                                                   int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-                                                                   str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+    click.echo("dysgu fetch {} complete, n={}, time={} h:m:s".format(args["bam"],
+                                                            count,
+                                                            str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
     click.echo(time.time() - t0, err=True)
     return {"insert_median": insert_median,
             "insert_stdev": insert_stdev,

@@ -393,8 +393,9 @@ class GenomeScanner:
                 if len(self.current_bin) > 0:
                     yield self.current_bin
 
-    def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len):
-        # This is invoked first to scan the first part of the file for the insert size metrics
+    def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len, ibam=None):
+        # This is invoked first to scan the first part of the file for the insert size metrics,
+        # or open and process the --ibam alignment file
         if read_len != -1:
             click.echo(f"Read length {read_len}, "
                    f"insert_median {insert_median}, "
@@ -418,13 +419,20 @@ class GenomeScanner:
         # Check if tags from dodi have been added to input reads --> add to vcf output if True
         tags_checked = False
 
-        for a in self.input_bam:
+        # Use ibam for insert params if possible
+        if ibam is not None:
+            file_iter = ibam
+        else:
+            file_iter = self.input_bam
 
-            tell = 0 if self.no_tell else self.input_bam.tell()
-            if self.no_tell:
-                self._add_to_bin_buffer(a, tell)
+        for a in file_iter:  # self.input_bam:
 
-            if len(approx_read_length_l) < 100000:
+            if ibam is None:
+                tell = 0 if self.no_tell else self.input_bam.tell()
+                if self.no_tell:  # Buffer reads if coming from stdin
+                    self._add_to_bin_buffer(a, tell)
+
+            if len(approx_read_length_l) < 200000:
                 flag = a.flag
                 if a.seq is not None:
                     rl = a.infer_read_length()
@@ -440,7 +448,7 @@ class GenomeScanner:
             else:
                 break
 
-            if c > 10000000:
+            if c > 20000000:
                 raise ValueError("Cant infer read length after 10 million reads, is max-tlen < 8000?")
             c += 1
 
@@ -459,10 +467,14 @@ class GenomeScanner:
         click.echo(f"Inferred read length {approx_read_length}, "
                    f"insert median {insert_median}, "
                    f"insert stdev {insert_stdev}", err=True)
-        self.last_tell = tell
 
-        if not self.no_tell:
-            self.input_bam.reset()
+        if ibam is None:
+            self.last_tell = tell
+            if not self.no_tell:
+                self.input_bam.reset()
+        else:
+            ibam.close()
+
         return insert_median, insert_stdev
 
     def iter_genome(self):

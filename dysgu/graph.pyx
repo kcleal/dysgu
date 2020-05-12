@@ -4,18 +4,15 @@ from __future__ import absolute_import
 import time
 import click
 from collections import defaultdict, deque
-import itertools
 
 import mmh3
 import ncls
 
-import pysam
 import numpy as np
 cimport numpy as np
 from cpython cimport array
 import array
 import re
-
 
 from libcpp.vector cimport vector
 from libcpp.deque cimport deque as cpp_deque
@@ -24,35 +21,25 @@ from libcpp.map cimport map as cpp_map
 from libcpp.unordered_map cimport unordered_map
 from libcpp.string cimport string
 
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t, int64_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t
 from libc.stdlib cimport abs as c_abs
 
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 
-# from libcpp.set cimport set as cpp_set
-# from libcpp.unordered_set cimport unordered_set as cpp_u_set
+from pysam.libcalignedsegment cimport AlignedSegment
 
-# from libcpp.string cimport string as cpp_string
-# from libc.stdint cimport int32_t, int64_t
-# from cython.operator cimport dereference as deref, preincrement as inc
-
-# from pysam.libcalignmentfile cimport AlignmentFile
-# from pysam.libcalignedsegment cimport AlignedSegment
-# from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
-# from libc.stdint cimport uint32_t, uint8_t
+from pysam.libchtslib cimport bam_get_qname
 
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
 
 from dysgu.map_set_utils cimport robin_set
-
+from dysgu.map_set_utils cimport hash as xxhasher
 
 ctypedef cpp_pair[int, int] cpp_item
 
 ctypedef map_set_utils.Py_IntSet Py_IntSet
 ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
-
-# ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph_t
 
 ctypedef cpp_map[int, cpp_item] ScopeItem_t
 ctypedef vector[ScopeItem_t] ForwardScope_t
@@ -588,7 +575,7 @@ cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges te
 
 cdef class NodeToName:
 
-    cdef vector[int64_t] h
+    cdef vector[uint64_t] h
     cdef vector[uint16_t] f
     cdef vector[uint32_t] p
     cdef vector[uint16_t] c
@@ -614,7 +601,7 @@ cdef class NodeToName:
         return self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx], self.cigar_index[idx], self.event_pos[idx]
 
 
-cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
+cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                        overlap_regions, int clustering_dist, clip_scope, PairedEndScoper_t pe_scope,
                        int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                        TemplateEdges_t template_edges, NodeToName node_to_name):
@@ -630,6 +617,8 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
     cdef int pos = event_pos #r.pos
     cdef int flag = r.flag
     cdef str qname = r.qname
+    cdef uint64_t v
+
     # if qname == tt:
     #     echo(qname, r.pos, flag, cigar_index, r.cigartuples)
     cdef uint16_t clip_or_wr = 0
@@ -644,7 +633,10 @@ cdef void update_graph(G, r, int clip_l, int loci_dist, gettid,
     cdef int node_name = G.addNode()
     ####
     # echo(node_name, flag, pos, chrom, cigar_index, event_pos, qname, clip_or_wr)
-    node_to_name.append(mmh3.hash(qname, 42), flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
+
+    v = xxhasher(bam_get_qname(r._delegate), len(qname), 42)
+    # v = mmh3.hash(qname, 42)
+    node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
 
     genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
 
@@ -953,7 +945,8 @@ cpdef dict get_reads(infile, sub_graph_reads):
     # missing = set([])  # Integer nodes
     cdef int j, int_node
     cdef long int p
-
+    cdef uint64_t v
+    cdef AlignedSegment a
     for int_node, node in sub_graph_reads.items():
 
         node = tuple(node[:-2])  # drop cigar index and event pos
@@ -961,13 +954,14 @@ cpdef dict get_reads(infile, sub_graph_reads):
         p = node[4]
         infile.seek(p)
         a = next(infile)
-        n1 = (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p)
-
+        v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+        # n1 = (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p)
+        n1 = (v, a.flag, a.pos, a.rname, p)
         # Try next few reads, sometimes they are on top of one another
         if n1 != node:
             for j in range(5):
                 a = next(infile)
-                n2 = (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p)
+                n2 = (xxhasher(bam_get_qname(a._delegate), len(a.qname), 42), a.flag, a.pos, a.rname, p)
                 if n2 == node:
                     rd[int_node] = a
                     break

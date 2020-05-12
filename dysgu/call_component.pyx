@@ -5,10 +5,12 @@ from collections import Counter, defaultdict
 import click
 import numpy as np
 import itertools
-import mmh3
-from dysgu import io_funcs, assembler, graph, coverage
-
+from dysgu import io_funcs, assembler, coverage
+from dysgu.map_set_utils cimport hash as xxhasher
 import warnings
+from pysam.libcalignedsegment cimport AlignedSegment
+from libc.stdint cimport uint64_t
+from pysam.libchtslib cimport bam_get_qname
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -1642,6 +1644,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
     cdef int j, int_node
     cdef long int p
+    cdef uint64_t v
+    cdef AlignedSegment a
     aligns = []
     for int_node in nodes_info:
 
@@ -1654,7 +1658,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
         infile.seek(p)
         a = next(infile)
-        if (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p) == node:
+        v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+        if (v, a.flag, a.pos, a.rname, p) == node:
             aligns.append((n, a))
             if add_to_buffer:
                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
@@ -1666,7 +1671,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
                 # echo("hi")
                 a = next(infile)
                 steps += 1
-                if (mmh3.hash(a.qname, 42), a.flag, a.pos, a.rname, p) == node:
+                v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+                if (v, a.flag, a.pos, a.rname, p) == node:
                     aligns.append((n, a))
                     if add_to_buffer:
                         buffered_reads[int_node] = a

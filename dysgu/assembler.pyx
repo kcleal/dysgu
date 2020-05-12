@@ -17,7 +17,6 @@ from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
-cimport cython
 from libc.math cimport exp
 
 from dysgu cimport map_set_utils
@@ -63,9 +62,6 @@ cdef void add_to_graph(DiGraph& G, r, cpp_vector[int]& nweight, ndict_r):
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
 
-    # rep_nodes = 0
-
-    # echo(cigar)
     for opp, length in cigar:
         # echo("opp", opp, "length", length)
         if opp == 4:

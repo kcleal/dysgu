@@ -7,14 +7,21 @@ dysgu (pronounced *duss-key*) is a collection of tools for calling structural va
 
 Installation
 ------------
-Install using::
+To build from source::
 
-    $ git clone https://github.com/kcleal/dysgu.git; cd dysgu
-    $ python setup.py install
+    $ git clone --recursive https://github.com/kcleal/dysgu.git; cd dysgu
+    $ cd dysgu/dysgu/htslib
+    $ autoheader
+    $ autoconf
+    $ ./configure
+    $ make
+    $ cd ../../
+    $ $ pip install -r requirements.txt
+    $ pip install .
 
-To satisfy requirements::
+Alternatively use the install script::
 
-    $ pip install -r requirements.txt; pip install .
+    $ python INSTALL.sh
 
 Run tests::
 
@@ -28,6 +35,7 @@ Usage
 -----
 Available commands::
 
+    $ dysgu run     # Run using default arguments, wraps fetch and call commands
     $ dysgu fetch   # Seperate SV reads from input bam file
     $ dysgu call    # SV calling paired-end reads
     $ dysgu view    # Merge calls from multiple dysgu call runs
@@ -36,8 +44,7 @@ Available commands::
 
 Structural variant pipeline basic usage::
 
-    $ dysgu fetch your.bam > sv_reads.bam
-    $ dysgu call sv_reads.bam > results.vcf
+    $ dysgu run your.bam > calls.vcf
 
 
 Fetching SV reads

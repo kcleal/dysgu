@@ -4,10 +4,6 @@ from setuptools.extension import Extension
 from Cython.Build import cythonize
 import numpy
 from distutils import ccompiler
-
-import site
-import glob
-import platform
 import os
 
 # Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
@@ -70,46 +66,8 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers']
-print("Extra compiler args ", extras)
+
 ext_modules = list()
-
-# https://github.com/brentp/cyvcf2/blob/master/setup.py
-# Build the Cython extension by statically linking to the bundled htslib
-# sources = [
-#     x for x in glob.glob('htslib/*.c')
-#     if not any(e in x for e in ['irods', 'plugin'])
-# ]
-# sources += glob.glob('htslib/cram/*.c')
-# # Exclude the htslib sources containing main()'s
-# sources = [x for x in sources if not x.endswith(('htsfile.c', 'tabix.c', 'bgzip.c'))]
-
-# # CC not always set
-# if 'CC' in os.environ and "clang" in os.environ['CC']:
-#     clang = True
-# else:
-#     clang = False
-#
-# print("Clang:", clang)
-
-
-
-
-
-# include_dirs = [os.path.join(root, "htslib"), numpy.get_include()]
-
-# include_dirs = [numpy.get_include(), "dysgu"] # + pysam.get_include()
-# include_dirs.append(site.getsitepackages()[0] + "/pysam/include/htslib/htslib")  # Need header paths
-# print("Include dirs", include_dirs)
-#
-# extrasf = glob.glob(site.getsitepackages()[0] + "/pysam/*.so")
-# print("Extrasf", extrasf)
-# quit()
-
-# No idea why this works, or how robust this is:
-# if not clang:
-#     build_sources = [f"dysgu/sv2bam.pyx"] + sources
-# else:
-#     build_sources = [f"dysgu/sv2bam.pyx"]
 
 root = os.path.abspath(os.path.dirname(__file__))
 htslib = os.path.join(root, "dysgu/htslib")
@@ -119,43 +77,15 @@ library_dirs = [htslib, numpy.get_include()]
 include_dirs = [numpy.get_include(), root, f"{htslib}/htslib", f"{htslib}/cram"]
 runtime_dirs = [os.path.join(root, "dysgu/htslib")]
 
-# libraries += ['z', 'bz2', 'lzma', 'curl', 'ssl'] + (['crypt'] if platform.system() != 'Darwin' else [])
 
-# library_dirs = [htslib, numpy.get_include(), root, "htslib", "dysgu"]
-# include_dirs = [numpy.get_include(), root, htslib]
-# for item in ["htslib", "cram"]:
-#     include_dirs.append(os.path.join(htslib, item))
-
-
-# extra_lib_paths = [i for i in glob.glob(f"{htslib}/*.o") if os.path.basename(i) not in ["bgzip.o", "tabix.o", "htsfile.o"]]
-# extra_lib_paths += glob.glob(f"{htslib}/cram/*.o")
-
-# ext_modules.append(Extension(f"dysgu.sv2bam",
-#                              ['dysgu/sv2bam.pyx'], #build_sources,
-#                              libraries=['z', 'bz2', 'lzma', 'curl', 'ssl'] + (
-#                                        ['crypt'] if platform.system() != 'Darwin' else []),
-#                              library_dirs=library_dirs,
-#                              include_dirs=include_dirs,
-#                              extra_link_args=extra_lib_paths,
-#                              extra_compile_args=extras,
-#                              language="c++"))
-
-print("libs", libraries)
-print("library dirs", library_dirs)
-print("include dirs", include_dirs)
-print("runtime dirs", runtime_dirs)
-# print("extra link args", extra_lib_paths)
-print("extras compile", extras)
-
-# print("build_sources", build_sources)
-
-# runtime_library_dirs=[htslib, htslib + "/cram"],
-                                 # extra_objects=extra_lib_paths,
-                                 # extra_link_args=pysam.get_libraries() + extrasf,
-                                 # define_macros=pysam.get_defines(),
+print("Libs", libraries)
+print("Library dirs", library_dirs)
+print("Include dirs", include_dirs)
+print("Runtime dirs", runtime_dirs)
+print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:  #
+             "map_set_utils", "cluster", "sv2fq", "view"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -192,7 +122,6 @@ setup(
 
         ],
     packages=["dysgu", "dysgu.tests"],
-    # package_data={"dysgu": ["htslib/*"]},
     ext_modules=cythonize(ext_modules),
 
     include_package_data=True,
