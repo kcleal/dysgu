@@ -9,7 +9,7 @@ Installation
 ------------
 To build from source::
 
-    $ git clone --recursive https://github.com/kcleal/dysgu.git; cd dysgu
+    $ git clone --recursive https://github.com/kcleal/dysgu.git
     $ cd dysgu/dysgu/htslib
     $ autoheader
     $ autoconf

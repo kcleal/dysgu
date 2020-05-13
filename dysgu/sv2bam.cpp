@@ -29,7 +29,10 @@
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "language": "c++",
         "libraries": [
@@ -37,9 +40,15 @@
         ],
         "library_dirs": [
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "name": "dysgu.sv2bam",
+        "runtime_library_dirs": [
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib"
+        ],
         "sources": [
             "dysgu/sv2bam.pyx"
         ]

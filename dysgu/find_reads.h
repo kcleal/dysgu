@@ -11,6 +11,7 @@
 
 #include "./htslib/htslib/sam.h"
 #include "./htslib/htslib/hfile.h"
+
 #include "xxhash64.h"
 
 
@@ -19,7 +20,8 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     int result;
     htsFile *fp_in = hts_open(infile, "r");
-    if (threads > 1) {  // set additional threads
+
+    if (threads > 1) {  // set additional threads beyond main thread
         result = hts_set_threads(fp_in, threads - 1);
         if (result != 0) { return -1; }
     }
@@ -29,14 +31,20 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (!samHdr) { return -1;}
 
     htsFile *f_out = hts_open(outfile, "wb0");
+    result = hts_set_threads(f_out, 1);
+        if (result != 0) { return -1; }
+
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }
 
-    uint32_t max_scope = 100000;
+    int max_scope = 100000;
+    int max_write_queue = 1000000;
+
     uint64_t total = 0;
 
     std::pair<uint64_t, bam1_t*> scope_item;
     std::deque<std::pair<uint64_t, bam1_t*>> scope;
+    std::vector<bam1_t*> write_queue;  // Write in blocks
     tsl::robin_set<uint64_t> read_names;
 
     uint16_t flag;
@@ -49,14 +57,25 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             scope_item = scope[0];
 
             if (read_names.find(scope_item.first, scope_item.first) != read_names.end()) {
-                result = sam_write1(f_out, samHdr, scope_item.second);
-                if (result < 0) { return -1; }
-                total += 1;
+                write_queue.push_back(scope_item.second);
+            } else {
+                bam_destroy1(scope_item.second);
             }
             // free(dereference(scope_item.second).data)
             // free(scope_item.second)
-            bam_destroy1(scope_item.second);
+
             scope.pop_front();
+        }
+
+        // Check if write queue is full
+        if (write_queue.size() > max_write_queue) {
+            for (const auto& val: write_queue) {
+                result = sam_write1(f_out, samHdr, val);
+                if (result < 0) { return -1; }
+                total += 1;
+                bam_destroy1(val);
+            }
+            write_queue.clear();
         }
 
         // Process current alignment
@@ -105,11 +124,21 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     while (scope.size() > 0) {
         scope_item = scope[0];
         if (read_names.find(scope_item.first, scope_item.first) != read_names.end()) {
-            result = sam_write1(f_out, samHdr, scope_item.second);
-            if (result < 0) { return -1; };
-            total += 1;
+            write_queue.push_back(scope_item.second);
+//            result = sam_write1(f_out, samHdr, scope_item.second);
+//            if (result < 0) { return -1; };
+//            total += 1;
+        } else {
+            bam_destroy1(scope_item.second);
         }
         scope.pop_front();
+    }
+
+    for (const auto& val: write_queue) {
+        result = sam_write1(f_out, samHdr, val);
+        if (result < 0) { return -1; }
+        total += 1;
+        bam_destroy1(val);
     }
 
     result = hts_close(fp_in);
