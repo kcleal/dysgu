@@ -9,17 +9,17 @@ Installation
 ------------
 To build from source::
 
-    $ git clone --recursive https://github.com/kcleal/dysgu.git
-    $ cd dysgu/dysgu/htslib
-    $ autoheader
-    $ autoconf
-    $ ./configure
-    $ make
-    $ cd ../../
-    $ $ pip install -r requirements.txt
-    $ pip install .
+    $ git clone --recursive https://github.com/kcleal/dysgu.git \
+        cd dysgu/dysgu/htslib \
+        autoheader \
+        autoconf \
+        ./configure \
+        make \
+        cd ../../ \
+        pip install -r requirements.txt \
+        pip install .
 
-Alternatively use the install script::
+For convenience use the install script::
 
     $ cd dysgu; python INSTALL.sh
 
