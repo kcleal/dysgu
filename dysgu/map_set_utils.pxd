@@ -25,7 +25,7 @@ from cython.operator cimport dereference as deref, preincrement as inc #derefere
 
 cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
     #static uint64_t hash(const void* input, uint64_t length, uint64_t seed)
-    cdef uint64_t hash(void* input, uint64_t length, uint64_t seed)
+    cdef uint64_t hash(void* input, uint64_t length, uint64_t seed) nogil
 
 
 cdef extern from "robin_set.h" namespace "tsl" nogil:

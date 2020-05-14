@@ -14,6 +14,16 @@
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/wrap_map_set2.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/xxhash64.h",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/htslib_util.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/bgzf.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/cram.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/faidx.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/hfile.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/hts.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/kstring.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/sam.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/tbx.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/vcf.h",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib/htslib/vcfutils.h",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/pysam_stream.h"
         ],
         "extra_compile_args": [
@@ -25,12 +35,14 @@
             "-Wno-ignored-qualifiers"
         ],
         "include_dirs": [
-            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "language": "c++",
         "libraries": [
@@ -38,9 +50,15 @@
         ],
         "library_dirs": [
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "name": "dysgu.call_component",
+        "runtime_library_dirs": [
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib"
+        ],
         "sources": [
             "dysgu/call_component.pyx"
         ]

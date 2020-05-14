@@ -12,23 +12,29 @@ import array
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 from skbio.alignment import StripedSmithWaterman
-from libcpp.vector cimport vector as cpp_vector
 
+from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
 from libc.math cimport exp
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t
 
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport robin_set, DiGraph
 
+from pysam.libcalignedsegment cimport AlignedSegment
+from pysam.libchtslib cimport bam_seqi, bam_get_seq
+from cython.operator import dereference
+
+import numpy as np
 
 def echo(*args):
     click.echo(args, err=True)
 
 # DTYPE = np.int64
 # ctypedef np.int64_t DTYPE_t
-# ctypedef cpp_vector[int] int_vec_t
+ctypedef cpp_vector[int] int_vec_t
 # ctypedef cpp_pair[int, int] get_val_result
 # ctypedef cpp_pair[int, int] cpp_item
 
@@ -44,10 +50,30 @@ ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
 ctypedef map_set_utils.Py_IntSet Py_IntSet
 
 
-cdef void add_to_graph(DiGraph& G, r, cpp_vector[int]& nweight, ndict_r):
+cdef extern from "wrap_map_set2.h" nogil:
+
+    cdef cppclass TwoWayMap:
+        TwoWayMap() nogil
+
+        uint64_t key_2_64(char, uint64_t, uint64_t, uint64_t) nogil
+        void add_tuple_key(uint64_t, int) nogil
+        int has_tuple_key(uint64_t) nogil
+        int get_index_prev() nogil
+        int get_key_prev() nogil
+        cpp_vector[int] idx_2_vec(int) nogil
+
+
+basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', '.', '.', 'N'])
+
+
+cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2):
 
     cdef int i = 0
     cdef str rseq = r.seq
+
+    cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
+    cdef char base
+
     cdef const unsigned char[:] quals = r.query_qualities
 
     cdef list cigar = r.cigartuples
@@ -62,143 +88,165 @@ cdef void add_to_graph(DiGraph& G, r, cpp_vector[int]& nweight, ndict_r):
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
 
+
     for opp, length in cigar:
         # echo("opp", opp, "length", length)
-        if opp == 4:
-            if start:
-                for o in range(length, 0, -1):
-                    seq = rseq[i]
-                    qual = quals[i]
-                    i += 1
+        with nogil:
 
-                    k = (seq, current_pos, o, 0)  # 0 = left soft clip
+            if opp == 4:
+                if start:
+                    for o in range(length, 0, -1):
+                        # seq = rseq[i]
+                        qual = quals[i]
 
-                    if k in ndict_r:  #
-                        n = ndict_r[k]  #
-                        # rep_nodes += 1
-                    else:
-                        n = G.addNode()
+                        base = bam_seqi(char_ptr_rseq, i)
 
-                        if n >= nweight.size():
-                            nweight.push_back(0)
+                        i += 1
 
-                        ndict_r[k] = n  #
-                        # ndict[n] = k
+                        # k = (seq, current_pos, o, 0)  # 0 = left soft clip
+                        key = ndict_r2.key_2_64(base, current_pos, o, 0)
+                        if ndict_r2.has_tuple_key(key):
+                            n = ndict_r2.get_index_prev()
 
-                    nweight[n] += qual
-                    if prev_node != -1:
-                        # added_edges.append((prev_node, n))
-                        # if not G.hasEdge(prev_node, n):
-                        #     G.addEdge(prev_node, n, qual)
-                        G.updateEdge(prev_node, n, qual)
+                        # if k in ndict_r:  #
+                        #     n = ndict_r[k]  #
+                        #     if n2 != n:
+                        #         echo(n2, n, 0)
+                        #         quit()
 
-                    prev_node = n
+                        else:
+                            n = G.addNode()
 
-            else:
+                            if n >= nweight.size():
+                                nweight.push_back(0)
+
+                            # ndict_r[k] = n  #
+                            ndict_r2.add_tuple_key(key, n)
+
+
+                        nweight[n] += qual
+                        if prev_node != -1:
+                            G.updateEdge(prev_node, n, qual)
+
+                        prev_node = n
+
+                else:
+                    for o in range(1, length + 1, 1):
+                        # seq = rseq[i]
+                        qual = quals[i]
+
+                        base = bam_seqi(char_ptr_rseq, i)
+
+                        i += 1
+
+                        # k = (seq, current_pos, o, 1)  # 1 = right soft clip
+
+                        key = ndict_r2.key_2_64(base, current_pos, o, 1)
+                        if ndict_r2.has_tuple_key(key):
+                            n = ndict_r2.get_index_prev()
+                        # if k in ndict_r:
+                        #     n = ndict_r[k]
+                        #     if n2 != n:
+                        #         echo(n2, n, 1)
+                        #         quit()
+
+                        else:
+                            n = G.addNode()
+                            if n >= nweight.size():
+                                nweight.push_back(0)
+
+                            # ndict_r[k] = n
+                            ndict_r2.add_tuple_key(key, n)
+
+
+                        nweight[n] += qual
+                        if prev_node != -1:
+
+                            G.updateEdge(prev_node, n, qual)
+
+                        prev_node = n
+
+            elif opp == 1:  # Insertion
+
                 for o in range(1, length + 1, 1):
-                    seq = rseq[i]
+
+                    # seq = rseq[i]
                     qual = quals[i]
+
+                    base = bam_seqi(char_ptr_rseq, i)
                     i += 1
 
-                    k = (seq, current_pos, o, 1)  # 1 = right soft clip
+                    # k = (seq, current_pos, o, 2)  # 2 = insertion
 
-                    if k in ndict_r:
-                        n = ndict_r[k]
-                        # rep_nodes += 1
+                    key = ndict_r2.key_2_64(base, current_pos, o, 2)
+                    if ndict_r2.has_tuple_key(key):
+                        n = ndict_r2.get_index_prev()
+                    # if k in ndict_r:
+                    #     n = ndict_r[k]
+                    #     if n2 != n:
+                    #             echo(n2, n, 2)
+                    #             quit()
+
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
 
-                        ndict_r[k] = n
-                        # ndict[n] = k
+                        # ndict_r[k] = n
+
+                        ndict_r2.add_tuple_key(key, n)
 
                     nweight[n] += qual
                     if prev_node != -1:
-                        # added_edges.append((prev_node, n))
-                        # if not G.hasEdge(prev_node, n):
-                        #     G.addEdge(prev_node, n, qual)
+
                         G.updateEdge(prev_node, n, qual)
 
                     prev_node = n
 
-        elif opp == 1:  # Insertion
+                current_pos += 1  # Reference pos increases only 1
 
-            for o in range(1, length + 1, 1):
+            elif opp == 2 or opp == 5:  # Hard clip or deletion
+                current_pos += length + 1
 
-                seq = rseq[i]
-                qual = quals[i]
-                i += 1
+            elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
 
-                k = (seq, current_pos, o, 2)  # 2 = insertion
+                for p in range(current_pos, current_pos + length):
 
-                if k in ndict_r:
-                    n = ndict_r[k]
-                    # rep_nodes += 1
-                else:
-                    n = G.addNode()
-                    if n >= nweight.size():
-                        nweight.push_back(0)
+                    current_pos = p  #### + 1??
+                    # seq = rseq[i]
+                    qual = quals[i]
 
-                    ndict_r[k] = n
-                    # ndict[n] = k
+                    base = bam_seqi(char_ptr_rseq, i)
+                    i += 1
 
-                nweight[n] += qual
-                if prev_node != -1:
-                    # added_edges.append((prev_node, n))
-                    # if not G.hasEdge(prev_node, n):
-                    #     G.addEdge(prev_node, n, qual)
-                    G.updateEdge(prev_node, n, qual)
+                    # k = (seq, current_pos, 0, 4)  # 4 = matched base
 
-                prev_node = n
+                    key = ndict_r2.key_2_64(base, current_pos, 0, 4)
+                    if ndict_r2.has_tuple_key(key):
+                        n = ndict_r2.get_index_prev()
 
-            current_pos += 1  # Reference pos increases only 1
+                    # if k in ndict_r:
+                    #     n = ndict_r[k]
+                    #     if n2 != n:
+                    #             echo(n2, n, 4)
+                    #             quit()
 
-        elif opp == 2 or opp == 5:  # Hard clip or deletion
-            current_pos += length + 1
+                    else:
+                        n = G.addNode()
+                        if n >= nweight.size():
+                            nweight.push_back(0)
 
-        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
+                        # ndict_r[k] = n
+                        ndict_r2.add_tuple_key(key, n)
 
-            for p in range(current_pos, current_pos + length):
+                    nweight[n] += qual
+                    if prev_node != -1:
+                        G.updateEdge(prev_node, n, qual)
 
-                current_pos = p  #### + 1??
-                seq = rseq[i]
-                qual = quals[i]
-                i += 1
+                    prev_node = n
 
-                k = (seq, current_pos, 0, 4)  # 4 = matched base
+            start = 0
 
-                if k in ndict_r:
-                    n = ndict_r[k]
-                    # echo("here")
-                    # echo(k, n, prev_node)
-                    # if prev_node != -1:
-                    #     quit()
-                    # rep_nodes += 1
-
-                else:
-                    # echo(k, "not in")
-                    n = G.addNode()
-                    if n >= nweight.size():
-                        nweight.push_back(0)
-
-                    ndict_r[k] = n
-                    # ndict[n] = k
-
-                nweight[n] += qual
-                if prev_node != -1:
-                    # added_edges.append((prev_node, n))
-                    # if not G.hasEdge(prev_node, n):
-                    #     G.addEdge(prev_node, n, qual)
-                    G.updateEdge(prev_node, n, qual)
-                        # if prev_node == 76 and n == 77:
-                        #     echo("hi")
-                prev_node = n
-
-
-        start = 0
-
-    # echo("rep nodes", rep_nodes, len(r.seq))
 
 cdef cpp_deque[int] topo_sort2(DiGraph& G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
@@ -349,6 +397,8 @@ cpdef dict base_assemble(rd):
     cdef DiGraph G = DiGraph()
     node_dict_r = {}
 
+    cdef TwoWayMap ndict_r2
+
     # cdef Py_Int2IntVecMap node_dict2 = Py_Int2IntVecMap()
     # cdef Py_IntVec2IntMap node_dict2_r = Py_IntVec2IntMap()
 
@@ -395,42 +445,16 @@ cpdef dict base_assemble(rd):
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
 
-        add_to_graph(G, r, node_weights, node_dict_r)
+        add_to_graph(G, r, node_weights, node_dict_r, ndict_r2)
         # count += 1
         # if count == 3:
         #     break
 
-    # import networkx as nx
-    # import matplotlib.pyplot as plt
-    # from collections import Counter
-    #
-    # ecounts = Counter(added_edges)
-    # echo(Counter(ecounts.values()))
-    # Gx = nx.DiGraph()
-    # for u, v in added_edges: #[:6633]:
-    #     Gx.add_edge(u, v, w=ecounts[(u, v)])
-    #
-    # nx.write_gml(Gx, "/Users/kateliddiard/Desktop/test.gml")
-    # nx.draw_circular(Gx)
-    # plt.show()
-    # echo(Gx.edges())
-
-    # quit()
-
-
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
     cdef cpp_deque[int] path2
 
-    # cdef cpp_vector[int] node_list #= []
-    # node_list = []
-    # cdef int i
-    # for i in nodes_to_visit2:
-    # #     node_list.push_back(i)
-    #     node_list.append(i)
-
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
 
-    # echo(path2.size())
 
     if path2.size() == 0:
     # if len(path2) == 0:
@@ -439,34 +463,58 @@ cpdef dict base_assemble(rd):
     cdef int front = path2.front()
     cdef int back = path2.back()
 
-    node_dict = list(node_dict_r.keys())
+    # node_dict = list(node_dict_r.keys())
 
-    longest_left_sc = node_dict[front][2]
-    longest_right_sc = node_dict[back][2]
+    # longest_left_sc = node_dict[front][2]
+    # longest_right_sc = node_dict[back][2]
+
+    longest_left_sc = ndict_r2.idx_2_vec(front)[2]
+    longest_right_sc = ndict_r2.idx_2_vec(back)[2]
 
     # if longest_left_sc == 0 and longest_right_sc == 0:
     #         return {}  # No soft-clips, so not overlapping a break
 
     cdef tuple t
     cdef int item
+    cdef cpp_vector[int] v
+
+    cdef str sequence = ""
+    cdef int m
     for item in path2:
 
-        t = node_dict[item]
-        # echo(t)
-        if t[3] != 4:
-            seq += t[0].lower()
+        # t = node_dict[item]
+        # # echo(t)
+        # if t[3] != 4:
+        #     seq += t[0].lower()
+        # else:
+        #     if ref_start == -1:
+        #         ref_start = t[1]
+        #     elif t[1] > ref_end:
+        #         ref_end = t[1]
+        #     seq += t[0]
+
+        v = ndict_r2.idx_2_vec(item)
+        if v[3] != 4:
+            m = v[0]
+            sequence += basemap[m].lower()
         else:
             if ref_start == -1:
-                ref_start = t[1]
-            elif t[1] > ref_end:
-                ref_end = t[1]
-            seq += t[0]
-    # echo(time.time() - t0)
+                ref_start = v[1]
+            elif v[1] > ref_end:
+                ref_end = v[1]
+            m = v[0]
+            sequence += basemap[m]
+    # seq = sequence
+
+    # echo(seq)
+    # echo(sequence)
+    # quit()
+    # assert all([i == j for i, j in zip(seq, sequence)])
 
     # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
     # quit()
     # echo(seq)
-    return {"contig": seq,
+    return {"contig": sequence,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,
             "ref_bases": len(seq) - longest_left_sc - longest_right_sc,

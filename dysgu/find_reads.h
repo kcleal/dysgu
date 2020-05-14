@@ -27,7 +27,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     }
 
     bam_hdr_t* samHdr = sam_hdr_read(fp_in);  // read header
-    bam1_t* aln = bam_init1();  // initialize an alignment
+
     if (!samHdr) { return -1;}
 
     htsFile *f_out = hts_open(outfile, "wb0");
@@ -47,11 +47,16 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     std::vector<bam1_t*> write_queue;  // Write in blocks
     tsl::robin_set<uint64_t> read_names;
 
-    uint16_t flag;
-    uint32_t* cigar;
-    bam1_t* bam_ptr;
+    // Initialize first item in scope, set hash once read has been read
+    scope.push_back(std::make_pair(0, bam_init1()));
+//    bam1_t* aln = bam_init1();  // initialize an alignment
 
-    while (sam_read1(fp_in, samHdr, aln) >= 0) {
+//    uint16_t flag;
+//    uint32_t* cigar;
+//    bam1_t* bam_ptr;
+
+    // Read alignment into the back of scope queue
+    while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
 
         if (scope.size() > max_scope) {
             scope_item = scope[0];
@@ -78,29 +83,40 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             write_queue.clear();
         }
 
+        // Add hash to current alignment
+        bam1_t* aln = scope.back().second;
+
+
         // Process current alignment
-        flag = aln->core.flag;
-        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
+        if (aln->core.flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
 
         const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
+        scope.back().first = precalculated_hash;
 
-        bam_ptr = bam_dup1(aln);
-        scope.push_back(std::make_pair(precalculated_hash, bam_ptr));  // bam_dup1(aln)
+        // Add a new item to the queue for next iteration
+        scope.push_back(std::make_pair(0, bam_init1()));
+
+
+//        bam_ptr = bam_dup1(aln);
+//        scope.push_back(std::make_pair(precalculated_hash, bam_ptr));  // bam_dup1(aln)
+
 
         if (read_names.find(precalculated_hash, precalculated_hash) == read_names.end()) {
 
             // Check for discordant of supplementary
-            if (~flag & 2 || flag & 2048) {
+            if (~aln->core.flag & 2 || aln->core.flag & 2048) {
                 read_names.insert(precalculated_hash);
+
                 continue;
             }
             // Check for SA tag
             if (bam_aux_get(aln, "SA")) {
                 read_names.insert(precalculated_hash);
+//                scope.push_back(std::make_pair(0, bam_init1()));
                 continue;
             }
 
-            cigar = bam_get_cigar(aln);
+            const uint32_t* cigar = bam_get_cigar(aln);
 
             // Check cigar
             for (uint32_t k=0; k < aln->core.n_cigar; k++) {
@@ -110,11 +126,13 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
                 if ((op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
+//                    scope.push_back(std::make_pair(0, bam_init1()));
                     break;
                 }
 
                 if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
                     read_names.insert(precalculated_hash);
+//                    scope.push_back(std::make_pair(0, bam_init1()));
                     break;
                 }
             }
@@ -148,7 +166,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (result < 0) { return -1; };
 
     f_out = NULL;
-    bam_destroy1(aln);
+//    bam_destroy1(aln);
 
     return total;
 

@@ -27,7 +27,6 @@ from libc.stdlib cimport abs as c_abs
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 
 from pysam.libcalignedsegment cimport AlignedSegment
-
 from pysam.libchtslib cimport bam_get_qname
 
 from dysgu cimport map_set_utils

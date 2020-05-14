@@ -5,6 +5,7 @@
 #include <utility>
 #include <queue>
 #include <map>
+#include <cassert>
 #include "robin_map.h"
 #include "robin_set.h"
 #include "robin_hash.h"
@@ -378,5 +379,63 @@ class StrSet
 
     private:
         tsl::robin_set<std::string> set;
+
+};
+
+
+class TwoWayMap
+{
+    public:
+
+        TwoWayMap() {}
+        ~TwoWayMap() {}
+
+        uint64_t key_2_64(char seq, uint64_t current_pos, uint64_t offset, uint64_t code) {
+            uint64_t packed_data = 0;
+            packed_data |= seq;  // Max 4 bits set per htslib
+            packed_data |= current_pos << 4;  // 32 bits
+            packed_data |= offset << 36;  // 23 bits
+            packed_data |= code << 59;  // 4 bits
+            return packed_data;
+        }
+
+        void add_tuple_key(uint64_t packed_data, int index) {
+            assert (index == index_key.size());
+            string_key[packed_data] = index;
+            index_key_map.push_back(packed_data);
+        }
+           int has_tuple_key(uint64_t packed_data) {
+
+            tsl::robin_map<uint64_t, int>::const_iterator got = string_key.find(packed_data, packed_data);
+            if (got == string_key.end()) {
+                return 0;
+            } else {
+                last_key = got->first;
+                last_index = got->second;
+                return 1;
+            }
+        }
+
+        int get_index_prev() { return last_index; };
+        int get_key_prev() { return last_key; };
+
+        std::vector<int> idx_2_vec(int index) {
+            std::vector<int> v = {0, 0, 0, 0};
+            uint64_t packed_data = index_key_map[index];
+            v[0] = packed_data & 15;  // 4 bits set to 1
+            v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits
+            v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits
+            v[3] = (packed_data >> 59) & 15;
+
+            return v;
+        }
+
+    private:
+
+        uint64_t last_key = 0;  // Set this on call to has_tuple_key to prevent calculating twice
+        int last_index = 0;
+
+        tsl::robin_map<uint64_t, int> string_key;
+        std::vector<uint64_t> index_key_map;
 
 };
