@@ -17,7 +17,7 @@ from libcpp.pair cimport pair as cpp_pair
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport robin_set
+from dysgu.map_set_utils cimport unordered_set  # robin_set,
 from dysgu.coverage import get_insert_params
 
 from dysgu.map_set_utils cimport hash as xxhash
@@ -209,7 +209,7 @@ def config(args):
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam):
+cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam):
 
     # cdef uint32_t clip_length
     cdef int flag
@@ -225,7 +225,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
     scope = deque([])
 
     # read_names = set([])
-    cdef robin_set[long] read_names
+    cdef unordered_set[long] read_names
 
     insert_size = []
     read_length = []
@@ -243,7 +243,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
         while len(scope) > max_scope:
             qname, query = scope.popleft()
 
-            if read_names.find(qname, qname) != read_names.end():
+            if read_names.find(qname) != read_names.end():
 
             # if query.qname.__hash__() in read_names:
                 outbam.write(query)
@@ -269,11 +269,11 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
         scope.append((qname, r))
 
         # if qname not in read_names:
-        if read_names.find(qname, qname) == read_names.end():
-            if map_set_utils.cigar_clip(r, clip_length):
+        if read_names.find(qname) == read_names.end():
+            if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):
                 # read_names.add(qname)
                 read_names.insert(qname)
-            elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary
+            elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary
                 # read_names.add(qname)
                 read_names.insert(qname)
             elif r.has_tag("SA"):
@@ -285,7 +285,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
 
     while len(scope) > 0:
         qname, query = scope.popleft()
-        if read_names.find(qname, qname) != read_names.end():
+        if read_names.find(qname) != read_names.end():
         # if query.qname.__hash__() in read_names:
             outbam.write(query)
             count += 1
@@ -315,7 +315,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, ou
 
 
 cdef extern from "find_reads.h":
-    cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
+    cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length,
                                     int threads)
 
 def process(args):

@@ -11,7 +11,7 @@
         ],
         "depends": [
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/find_reads.h",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_set.h",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_hood.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/wrap_map_set2.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/xxhash64.h"
         ],
@@ -688,7 +688,7 @@ static CYTHON_INLINE float __PYX_NAN() {
 #include <string.h>
 #include <string>
 #include "xxhash64.h"
-#include "robin_set.h"
+#include "robin_hood.h"
 #include "wrap_map_set2.h"
 #include "find_reads.h"
 #ifdef _OPENMP
@@ -908,7 +908,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet;
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct__iter_bam;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_1___pyx_f_5dysgu_6sv2bam_get_reads;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_2_genexpr;
@@ -931,7 +930,7 @@ typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
  */
 typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_get_val_result;
 
-/* "map_set_utils.pxd":64
+/* "map_set_utils.pxd":82
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -945,7 +944,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "map_set_utils.pxd":93
+/* "map_set_utils.pxd":111
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -959,7 +958,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "map_set_utils.pxd":119
+/* "map_set_utils.pxd":137
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -973,7 +972,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "map_set_utils.pxd":141
+/* "map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -984,20 +983,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
   PyObject_HEAD
   struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtab;
   IntSet *thisptr;
-};
-
-
-/* "map_set_utils.pxd":160
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- *     """Fast std::string set using tsl::robin-set"""
- *     cdef StrSet *thisptr
- */
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet {
-  PyObject_HEAD
-  struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtab;
-  StrSet *thisptr;
 };
 
 
@@ -1035,7 +1020,7 @@ struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct__iter_bam {
 /* "dysgu/sv2bam.pyx":212
  * 
  * 
- * cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
+ * cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
  * 
  *     # cdef uint32_t clip_length
  */
@@ -1061,7 +1046,7 @@ struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_2_genexpr {
 
 
 
-/* "map_set_utils.pxd":64
+/* "map_set_utils.pxd":82
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1081,7 +1066,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph;
 
 
-/* "map_set_utils.pxd":93
+/* "map_set_utils.pxd":111
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1103,7 +1088,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph;
 
 
-/* "map_set_utils.pxd":119
+/* "map_set_utils.pxd":137
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1122,7 +1107,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap *__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap;
 
 
-/* "map_set_utils.pxd":141
+/* "map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1137,23 +1122,6 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet {
   int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet;
-
-
-/* "map_set_utils.pxd":160
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- *     """Fast std::string set using tsl::robin-set"""
- *     cdef StrSet *thisptr
- */
-
-struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet {
-  void (*insert)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  void (*erase)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*has_key)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *);
-};
-static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet;
 
 /* --- Runtime support code (head) --- */
 /* Refnanny.proto */
@@ -1641,9 +1609,6 @@ static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *);
 /* CIntFromPy.proto */
 static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
 
-/* CIntFromPy.proto */
-static CYTHON_INLINE uint32_t __Pyx_PyInt_As_uint32_t(PyObject *);
-
 /* FastTypeChecks.proto */
 #if CYTHON_COMPILING_IN_CPYTHON
 #define __Pyx_TypeCheck(obj, type) __Pyx_IsSubtype(Py_TYPE(obj), (PyTypeObject *)type)
@@ -1776,14 +1741,13 @@ static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = 0;
-static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = 0;
 static int (*__pyx_f_5dysgu_13map_set_utils_cigar_clip)(PyObject *, int); /*proto*/
 
 /* Module declarations from 'dysgu.sv2bam' */
 static PyTypeObject *__pyx_ptype_5dysgu_6sv2bam___pyx_scope_struct__iter_bam = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_6sv2bam___pyx_scope_struct_1___pyx_f_5dysgu_6sv2bam_get_reads = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_6sv2bam___pyx_scope_struct_2_genexpr = 0;
-static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *, PyObject *, PyObject *, uint32_t, PyObject *, PyObject *); /*proto*/
+static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(PyObject *, PyObject *, PyObject *, int, PyObject *, PyObject *); /*proto*/
 #define __Pyx_MODULE_NAME "dysgu.sv2bam"
 extern int __pyx_module_is_main_dysgu__sv2bam;
 int __pyx_module_is_main_dysgu__sv2bam = 0;
@@ -3929,12 +3893,12 @@ static PyObject *__pyx_gb_5dysgu_6sv2bam_9get_reads_2generator1(__pyx_CoroutineO
 /* "dysgu/sv2bam.pyx":212
  * 
  * 
- * cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
+ * cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
  * 
  *     # cdef uint32_t clip_length
  */
 
-static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_v_bam, PyObject *__pyx_v_bam_i, PyObject *__pyx_v_exc_tree, uint32_t __pyx_v_clip_length, PyObject *__pyx_v_send_output, PyObject *__pyx_v_outbam) {
+static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_v_bam, PyObject *__pyx_v_bam_i, PyObject *__pyx_v_exc_tree, int __pyx_v_clip_length, PyObject *__pyx_v_send_output, PyObject *__pyx_v_outbam) {
   struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_1___pyx_f_5dysgu_6sv2bam_get_reads *__pyx_cur_scope;
   int __pyx_v_flag;
   long __pyx_v_qname;
@@ -3942,7 +3906,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
   long __pyx_v_restricted;
   int __pyx_v_flag_mask;
   PyObject *__pyx_v_scope = NULL;
-  tsl::robin_set<long>  __pyx_v_read_names;
+  robin_hood::unordered_set<long>  __pyx_v_read_names;
   PyObject *__pyx_v_insert_size = NULL;
   PyObject *__pyx_v_read_length = NULL;
   int __pyx_v_max_scope;
@@ -4043,7 +4007,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
   __pyx_t_1 = 0;
 
   /* "dysgu/sv2bam.pyx":230
- *     cdef robin_set[long] read_names
+ *     cdef unordered_set[long] read_names
  * 
  *     insert_size = []             # <<<<<<<<<<<<<<
  *     read_length = []
@@ -4218,7 +4182,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
  *         while len(scope) > max_scope:
  *             qname, query = scope.popleft()             # <<<<<<<<<<<<<<
  * 
- *             if read_names.find(qname, qname) != read_names.end():
+ *             if read_names.find(qname) != read_names.end():
  */
       __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_scope, __pyx_n_s_popleft); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 244, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
@@ -4292,11 +4256,11 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       /* "dysgu/sv2bam.pyx":246
  *             qname, query = scope.popleft()
  * 
- *             if read_names.find(qname, qname) != read_names.end():             # <<<<<<<<<<<<<<
+ *             if read_names.find(qname) != read_names.end():             # <<<<<<<<<<<<<<
  * 
  *             # if query.qname.__hash__() in read_names:
  */
-      __pyx_t_8 = ((__pyx_v_read_names.find(__pyx_v_qname, __pyx_v_qname) != __pyx_v_read_names.end()) != 0);
+      __pyx_t_8 = ((__pyx_v_read_names.find(__pyx_v_qname) != __pyx_v_read_names.end()) != 0);
       if (__pyx_t_8) {
 
         /* "dysgu/sv2bam.pyx":249
@@ -4337,7 +4301,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
         /* "dysgu/sv2bam.pyx":246
  *             qname, query = scope.popleft()
  * 
- *             if read_names.find(qname, qname) != read_names.end():             # <<<<<<<<<<<<<<
+ *             if read_names.find(qname) != read_names.end():             # <<<<<<<<<<<<<<
  * 
  *             # if query.qname.__hash__() in read_names:
  */
@@ -4729,39 +4693,47 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
     /* "dysgu/sv2bam.pyx":272
  * 
  *         # if qname not in read_names:
- *         if read_names.find(qname, qname) == read_names.end():             # <<<<<<<<<<<<<<
- *             if map_set_utils.cigar_clip(r, clip_length):
+ *         if read_names.find(qname) == read_names.end():             # <<<<<<<<<<<<<<
+ *             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):
  *                 # read_names.add(qname)
  */
-    __pyx_t_18 = ((__pyx_v_read_names.find(__pyx_v_qname, __pyx_v_qname) == __pyx_v_read_names.end()) != 0);
+    __pyx_t_18 = ((__pyx_v_read_names.find(__pyx_v_qname) == __pyx_v_read_names.end()) != 0);
     if (__pyx_t_18) {
 
       /* "dysgu/sv2bam.pyx":273
  *         # if qname not in read_names:
- *         if read_names.find(qname, qname) == read_names.end():
- *             if map_set_utils.cigar_clip(r, clip_length):             # <<<<<<<<<<<<<<
+ *         if read_names.find(qname) == read_names.end():
+ *             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
+      __pyx_t_8 = ((__pyx_v_clip_length > 0) != 0);
+      if (__pyx_t_8) {
+      } else {
+        __pyx_t_18 = __pyx_t_8;
+        goto __pyx_L26_bool_binop_done;
+      }
       __pyx_t_2 = __pyx_cur_scope->__pyx_v_r;
       __Pyx_INCREF(__pyx_t_2);
-      __pyx_t_18 = (__pyx_f_5dysgu_13map_set_utils_cigar_clip(__pyx_t_2, __pyx_v_clip_length) != 0);
+      __pyx_t_8 = (__pyx_f_5dysgu_13map_set_utils_cigar_clip(__pyx_t_2, __pyx_v_clip_length) != 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_18 = __pyx_t_8;
+      __pyx_L26_bool_binop_done:;
       if (__pyx_t_18) {
 
         /* "dysgu/sv2bam.pyx":275
- *             if map_set_utils.cigar_clip(r, clip_length):
+ *             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)             # <<<<<<<<<<<<<<
- *             elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary
+ *             elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary
  *                 # read_names.add(qname)
  */
         __pyx_v_read_names.insert(__pyx_v_qname);
 
         /* "dysgu/sv2bam.pyx":273
  *         # if qname not in read_names:
- *         if read_names.find(qname, qname) == read_names.end():
- *             if map_set_utils.cigar_clip(r, clip_length):             # <<<<<<<<<<<<<<
+ *         if read_names.find(qname) == read_names.end():
+ *             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
@@ -4771,23 +4743,29 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       /* "dysgu/sv2bam.pyx":276
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary             # <<<<<<<<<<<<<<
+ *             elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
       __pyx_t_8 = (((~__pyx_v_flag) & 2) != 0);
       if (!__pyx_t_8) {
+        goto __pyx_L29_next_or;
+      } else {
+      }
+      __pyx_t_8 = ((__pyx_v_flag & 1) != 0);
+      if (!__pyx_t_8) {
       } else {
         __pyx_t_18 = __pyx_t_8;
-        goto __pyx_L26_bool_binop_done;
+        goto __pyx_L28_bool_binop_done;
       }
+      __pyx_L29_next_or:;
       __pyx_t_8 = ((__pyx_v_flag & 0x800) != 0);
       __pyx_t_18 = __pyx_t_8;
-      __pyx_L26_bool_binop_done:;
+      __pyx_L28_bool_binop_done:;
       if (__pyx_t_18) {
 
         /* "dysgu/sv2bam.pyx":278
- *             elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary
+ *             elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)             # <<<<<<<<<<<<<<
  *             elif r.has_tag("SA"):
@@ -4798,7 +4776,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
         /* "dysgu/sv2bam.pyx":276
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
- *             elif ~ flag & 2 or flag & 2048:  # Save if read is discordant or supplementary             # <<<<<<<<<<<<<<
+ *             elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary             # <<<<<<<<<<<<<<
  *                 # read_names.add(qname)
  *                 read_names.insert(qname)
  */
@@ -4890,8 +4868,8 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       /* "dysgu/sv2bam.pyx":272
  * 
  *         # if qname not in read_names:
- *         if read_names.find(qname, qname) == read_names.end():             # <<<<<<<<<<<<<<
- *             if map_set_utils.cigar_clip(r, clip_length):
+ *         if read_names.find(qname) == read_names.end():             # <<<<<<<<<<<<<<
+ *             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):
  *                 # read_names.add(qname)
  */
     }
@@ -4912,7 +4890,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
  * 
  *     while len(scope) > 0:             # <<<<<<<<<<<<<<
  *         qname, query = scope.popleft()
- *         if read_names.find(qname, qname) != read_names.end():
+ *         if read_names.find(qname) != read_names.end():
  */
   while (1) {
     __pyx_t_6 = PyObject_Length(__pyx_v_scope); if (unlikely(__pyx_t_6 == ((Py_ssize_t)-1))) __PYX_ERR(0, 286, __pyx_L1_error)
@@ -4923,7 +4901,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
  * 
  *     while len(scope) > 0:
  *         qname, query = scope.popleft()             # <<<<<<<<<<<<<<
- *         if read_names.find(qname, qname) != read_names.end():
+ *         if read_names.find(qname) != read_names.end():
  *         # if query.qname.__hash__() in read_names:
  */
     __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_scope, __pyx_n_s_popleft); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 287, __pyx_L1_error)
@@ -4974,20 +4952,20 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       __Pyx_GOTREF(__pyx_t_16);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_11 = Py_TYPE(__pyx_t_16)->tp_iternext;
-      index = 0; __pyx_t_3 = __pyx_t_11(__pyx_t_16); if (unlikely(!__pyx_t_3)) goto __pyx_L30_unpacking_failed;
+      index = 0; __pyx_t_3 = __pyx_t_11(__pyx_t_16); if (unlikely(!__pyx_t_3)) goto __pyx_L33_unpacking_failed;
       __Pyx_GOTREF(__pyx_t_3);
-      index = 1; __pyx_t_2 = __pyx_t_11(__pyx_t_16); if (unlikely(!__pyx_t_2)) goto __pyx_L30_unpacking_failed;
+      index = 1; __pyx_t_2 = __pyx_t_11(__pyx_t_16); if (unlikely(!__pyx_t_2)) goto __pyx_L33_unpacking_failed;
       __Pyx_GOTREF(__pyx_t_2);
       if (__Pyx_IternextUnpackEndCheck(__pyx_t_11(__pyx_t_16), 2) < 0) __PYX_ERR(0, 287, __pyx_L1_error)
       __pyx_t_11 = NULL;
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
-      goto __pyx_L31_unpacking_done;
-      __pyx_L30_unpacking_failed:;
+      goto __pyx_L34_unpacking_done;
+      __pyx_L33_unpacking_failed:;
       __Pyx_DECREF(__pyx_t_16); __pyx_t_16 = 0;
       __pyx_t_11 = NULL;
       if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
       __PYX_ERR(0, 287, __pyx_L1_error)
-      __pyx_L31_unpacking_done:;
+      __pyx_L34_unpacking_done:;
     }
     __pyx_t_12 = __Pyx_PyInt_As_long(__pyx_t_3); if (unlikely((__pyx_t_12 == (long)-1) && PyErr_Occurred())) __PYX_ERR(0, 287, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -4998,15 +4976,15 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
     /* "dysgu/sv2bam.pyx":288
  *     while len(scope) > 0:
  *         qname, query = scope.popleft()
- *         if read_names.find(qname, qname) != read_names.end():             # <<<<<<<<<<<<<<
+ *         if read_names.find(qname) != read_names.end():             # <<<<<<<<<<<<<<
  *         # if query.qname.__hash__() in read_names:
  *             outbam.write(query)
  */
-    __pyx_t_18 = ((__pyx_v_read_names.find(__pyx_v_qname, __pyx_v_qname) != __pyx_v_read_names.end()) != 0);
+    __pyx_t_18 = ((__pyx_v_read_names.find(__pyx_v_qname) != __pyx_v_read_names.end()) != 0);
     if (__pyx_t_18) {
 
       /* "dysgu/sv2bam.pyx":290
- *         if read_names.find(qname, qname) != read_names.end():
+ *         if read_names.find(qname) != read_names.end():
  *         # if query.qname.__hash__() in read_names:
  *             outbam.write(query)             # <<<<<<<<<<<<<<
  *             count += 1
@@ -5043,7 +5021,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       /* "dysgu/sv2bam.pyx":288
  *     while len(scope) > 0:
  *         qname, query = scope.popleft()
- *         if read_names.find(qname, qname) != read_names.end():             # <<<<<<<<<<<<<<
+ *         if read_names.find(qname) != read_names.end():             # <<<<<<<<<<<<<<
  *         # if query.qname.__hash__() in read_names:
  *             outbam.write(query)
  */
@@ -5319,7 +5297,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
  *             insert_median, insert_stdev = 300, 150  # args["insert_median"], args["insert_stdev"]
  *             click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
  */
-      goto __pyx_L36;
+      goto __pyx_L39;
     }
 
     /* "dysgu/sv2bam.pyx":308
@@ -5378,20 +5356,20 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_t_11 = Py_TYPE(__pyx_t_2)->tp_iternext;
-        index = 0; __pyx_t_3 = __pyx_t_11(__pyx_t_2); if (unlikely(!__pyx_t_3)) goto __pyx_L37_unpacking_failed;
+        index = 0; __pyx_t_3 = __pyx_t_11(__pyx_t_2); if (unlikely(!__pyx_t_3)) goto __pyx_L40_unpacking_failed;
         __Pyx_GOTREF(__pyx_t_3);
-        index = 1; __pyx_t_16 = __pyx_t_11(__pyx_t_2); if (unlikely(!__pyx_t_16)) goto __pyx_L37_unpacking_failed;
+        index = 1; __pyx_t_16 = __pyx_t_11(__pyx_t_2); if (unlikely(!__pyx_t_16)) goto __pyx_L40_unpacking_failed;
         __Pyx_GOTREF(__pyx_t_16);
         if (__Pyx_IternextUnpackEndCheck(__pyx_t_11(__pyx_t_2), 2) < 0) __PYX_ERR(0, 308, __pyx_L1_error)
         __pyx_t_11 = NULL;
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-        goto __pyx_L38_unpacking_done;
-        __pyx_L37_unpacking_failed:;
+        goto __pyx_L41_unpacking_done;
+        __pyx_L40_unpacking_failed:;
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __pyx_t_11 = NULL;
         if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
         __PYX_ERR(0, 308, __pyx_L1_error)
-        __pyx_L38_unpacking_done:;
+        __pyx_L41_unpacking_done:;
       }
       __Pyx_DECREF_SET(__pyx_v_insert_median, __pyx_t_3);
       __pyx_t_3 = 0;
@@ -5510,7 +5488,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
       __Pyx_DECREF_SET(__pyx_v_insert_stdev, __pyx_t_3);
       __pyx_t_3 = 0;
     }
-    __pyx_L36:;
+    __pyx_L39:;
 
     /* "dysgu/sv2bam.pyx":310
  *             insert_median, insert_stdev = get_insert_params(insert_size)
@@ -5659,7 +5637,7 @@ static PyObject *__pyx_f_5dysgu_6sv2bam_get_reads(CYTHON_UNUSED PyObject *__pyx_
   /* "dysgu/sv2bam.pyx":212
  * 
  * 
- * cdef tuple get_reads(bam, bam_i, exc_tree, uint32_t clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
+ * cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam):             # <<<<<<<<<<<<<<
  * 
  *     # cdef uint32_t clip_length
  */
@@ -5739,7 +5717,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
   PyObject *__pyx_t_8 = NULL;
   char *__pyx_t_9;
   char *__pyx_t_10;
-  uint32_t __pyx_t_11;
+  int __pyx_t_11;
   int __pyx_t_12;
   PyObject *__pyx_t_13 = NULL;
   PyObject *__pyx_t_14 = NULL;
@@ -6040,7 +6018,7 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
     __pyx_t_10 = __Pyx_PyBytes_AsWritableString(__pyx_v_outfile_string); if (unlikely((!__pyx_t_10) && PyErr_Occurred())) __PYX_ERR(0, 338, __pyx_L1_error)
     __pyx_t_7 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_clip_length); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 338, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_11 = __Pyx_PyInt_As_uint32_t(__pyx_t_7); if (unlikely((__pyx_t_11 == ((uint32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 338, __pyx_L1_error)
+    __pyx_t_11 = __Pyx_PyInt_As_int(__pyx_t_7); if (unlikely((__pyx_t_11 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 338, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     __pyx_t_7 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_procs); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 338, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
@@ -6410,8 +6388,8 @@ static PyObject *__pyx_pf_5dysgu_6sv2bam_7process(CYTHON_UNUSED PyObject *__pyx_
  *                                                                 )
  * 
  */
-    __pyx_t_11 = __Pyx_PyInt_As_uint32_t(__pyx_v_clip_length); if (unlikely((__pyx_t_11 == ((uint32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 351, __pyx_L1_error)
-    __pyx_t_1 = __pyx_f_5dysgu_6sv2bam_get_reads(__pyx_v_bam, __pyx_v_bam_i, __pyx_v_exc_tree, __pyx_t_11, __pyx_v_send_output, __pyx_v_outbam); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 351, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyInt_As_int(__pyx_v_clip_length); if (unlikely((__pyx_t_12 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 351, __pyx_L1_error)
+    __pyx_t_1 = __pyx_f_5dysgu_6sv2bam_get_reads(__pyx_v_bam, __pyx_v_bam_i, __pyx_v_exc_tree, __pyx_t_12, __pyx_v_send_output, __pyx_v_outbam); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 351, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     if (likely(__pyx_t_1 != Py_None)) {
       PyObject* sequence = __pyx_t_1;
@@ -7567,23 +7545,20 @@ static int __Pyx_modinit_type_import_code(void) {
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_import_code", 0);
   /*--- Type import code ---*/
-  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 64, __pyx_L1_error)
+  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_DiGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(1, 64, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(1, 64, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(1, 82, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(1, 82, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_SimpleGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(1, 93, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(1, 93, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(1, 111, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(1, 111, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_Int2IntMap", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(1, 119, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(1, 119, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(1, 137, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(1, 137, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_IntSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(1, 141, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(1, 141, __pyx_L1_error)
-  __pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_StrSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet) __PYX_ERR(1, 160, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet)) __PYX_ERR(1, 160, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(1, 159, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(1, 159, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -7934,7 +7909,7 @@ if (!__Pyx_RefNanny) {
  * 
  * from dysgu import io_funcs             # <<<<<<<<<<<<<<
  * from dysgu cimport map_set_utils
- * from dysgu.map_set_utils cimport robin_set
+ * from dysgu.map_set_utils cimport unordered_set  # robin_set,
  */
   __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 18, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -7952,7 +7927,7 @@ if (!__Pyx_RefNanny) {
 
   /* "dysgu/sv2bam.pyx":21
  * from dysgu cimport map_set_utils
- * from dysgu.map_set_utils cimport robin_set
+ * from dysgu.map_set_utils cimport unordered_set  # robin_set,
  * from dysgu.coverage import get_insert_params             # <<<<<<<<<<<<<<
  * 
  * from dysgu.map_set_utils cimport hash as xxhash
@@ -10603,195 +10578,6 @@ raise_neg_overflow:
     PyErr_SetString(PyExc_OverflowError,
         "can't convert negative value to long");
     return (long) -1;
-}
-
-/* CIntFromPy */
-static CYTHON_INLINE uint32_t __Pyx_PyInt_As_uint32_t(PyObject *x) {
-    const uint32_t neg_one = (uint32_t) ((uint32_t) 0 - (uint32_t) 1), const_zero = (uint32_t) 0;
-    const int is_unsigned = neg_one > const_zero;
-#if PY_MAJOR_VERSION < 3
-    if (likely(PyInt_Check(x))) {
-        if (sizeof(uint32_t) < sizeof(long)) {
-            __PYX_VERIFY_RETURN_INT(uint32_t, long, PyInt_AS_LONG(x))
-        } else {
-            long val = PyInt_AS_LONG(x);
-            if (is_unsigned && unlikely(val < 0)) {
-                goto raise_neg_overflow;
-            }
-            return (uint32_t) val;
-        }
-    } else
-#endif
-    if (likely(PyLong_Check(x))) {
-        if (is_unsigned) {
-#if CYTHON_USE_PYLONG_INTERNALS
-            const digit* digits = ((PyLongObject*)x)->ob_digit;
-            switch (Py_SIZE(x)) {
-                case  0: return (uint32_t) 0;
-                case  1: __PYX_VERIFY_RETURN_INT(uint32_t, digit, digits[0])
-                case 2:
-                    if (8 * sizeof(uint32_t) > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) >= 2 * PyLong_SHIFT) {
-                            return (uint32_t) (((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
-                        }
-                    }
-                    break;
-                case 3:
-                    if (8 * sizeof(uint32_t) > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) >= 3 * PyLong_SHIFT) {
-                            return (uint32_t) (((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
-                        }
-                    }
-                    break;
-                case 4:
-                    if (8 * sizeof(uint32_t) > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) >= 4 * PyLong_SHIFT) {
-                            return (uint32_t) (((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0]));
-                        }
-                    }
-                    break;
-            }
-#endif
-#if CYTHON_COMPILING_IN_CPYTHON
-            if (unlikely(Py_SIZE(x) < 0)) {
-                goto raise_neg_overflow;
-            }
-#else
-            {
-                int result = PyObject_RichCompareBool(x, Py_False, Py_LT);
-                if (unlikely(result < 0))
-                    return (uint32_t) -1;
-                if (unlikely(result == 1))
-                    goto raise_neg_overflow;
-            }
-#endif
-            if (sizeof(uint32_t) <= sizeof(unsigned long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, unsigned long, PyLong_AsUnsignedLong(x))
-#ifdef HAVE_LONG_LONG
-            } else if (sizeof(uint32_t) <= sizeof(unsigned PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, unsigned PY_LONG_LONG, PyLong_AsUnsignedLongLong(x))
-#endif
-            }
-        } else {
-#if CYTHON_USE_PYLONG_INTERNALS
-            const digit* digits = ((PyLongObject*)x)->ob_digit;
-            switch (Py_SIZE(x)) {
-                case  0: return (uint32_t) 0;
-                case -1: __PYX_VERIFY_RETURN_INT(uint32_t, sdigit, (sdigit) (-(sdigit)digits[0]))
-                case  1: __PYX_VERIFY_RETURN_INT(uint32_t,  digit, +digits[0])
-                case -2:
-                    if (8 * sizeof(uint32_t) - 1 > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
-                            return (uint32_t) (((uint32_t)-1)*(((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-                case 2:
-                    if (8 * sizeof(uint32_t) > 1 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 2 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
-                            return (uint32_t) ((((((uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-                case -3:
-                    if (8 * sizeof(uint32_t) - 1 > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
-                            return (uint32_t) (((uint32_t)-1)*(((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-                case 3:
-                    if (8 * sizeof(uint32_t) > 2 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 3 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
-                            return (uint32_t) ((((((((uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-                case -4:
-                    if (8 * sizeof(uint32_t) - 1 > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, long, -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 4 * PyLong_SHIFT) {
-                            return (uint32_t) (((uint32_t)-1)*(((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-                case 4:
-                    if (8 * sizeof(uint32_t) > 3 * PyLong_SHIFT) {
-                        if (8 * sizeof(unsigned long) > 4 * PyLong_SHIFT) {
-                            __PYX_VERIFY_RETURN_INT(uint32_t, unsigned long, (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0])))
-                        } else if (8 * sizeof(uint32_t) - 1 > 4 * PyLong_SHIFT) {
-                            return (uint32_t) ((((((((((uint32_t)digits[3]) << PyLong_SHIFT) | (uint32_t)digits[2]) << PyLong_SHIFT) | (uint32_t)digits[1]) << PyLong_SHIFT) | (uint32_t)digits[0])));
-                        }
-                    }
-                    break;
-            }
-#endif
-            if (sizeof(uint32_t) <= sizeof(long)) {
-                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, long, PyLong_AsLong(x))
-#ifdef HAVE_LONG_LONG
-            } else if (sizeof(uint32_t) <= sizeof(PY_LONG_LONG)) {
-                __PYX_VERIFY_RETURN_INT_EXC(uint32_t, PY_LONG_LONG, PyLong_AsLongLong(x))
-#endif
-            }
-        }
-        {
-#if CYTHON_COMPILING_IN_PYPY && !defined(_PyLong_AsByteArray)
-            PyErr_SetString(PyExc_RuntimeError,
-                            "_PyLong_AsByteArray() not available in PyPy, cannot convert large numbers");
-#else
-            uint32_t val;
-            PyObject *v = __Pyx_PyNumber_IntOrLong(x);
- #if PY_MAJOR_VERSION < 3
-            if (likely(v) && !PyLong_Check(v)) {
-                PyObject *tmp = v;
-                v = PyNumber_Long(tmp);
-                Py_DECREF(tmp);
-            }
- #endif
-            if (likely(v)) {
-                int one = 1; int is_little = (int)*(unsigned char *)&one;
-                unsigned char *bytes = (unsigned char *)&val;
-                int ret = _PyLong_AsByteArray((PyLongObject *)v,
-                                              bytes, sizeof(val),
-                                              is_little, !is_unsigned);
-                Py_DECREF(v);
-                if (likely(!ret))
-                    return val;
-            }
-#endif
-            return (uint32_t) -1;
-        }
-    } else {
-        uint32_t val;
-        PyObject *tmp = __Pyx_PyNumber_IntOrLong(x);
-        if (!tmp) return (uint32_t) -1;
-        val = __Pyx_PyInt_As_uint32_t(tmp);
-        Py_DECREF(tmp);
-        return val;
-    }
-raise_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "value too large to convert to uint32_t");
-    return (uint32_t) -1;
-raise_neg_overflow:
-    PyErr_SetString(PyExc_OverflowError,
-        "can't convert negative value to uint32_t");
-    return (uint32_t) -1;
 }
 
 /* FastTypeChecks */

@@ -10,7 +10,7 @@
             ]
         ],
         "depends": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_set.h",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_hood.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/wrap_map_set2.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/xxhash64.h"
         ],
@@ -687,7 +687,7 @@ static CYTHON_INLINE float __PYX_NAN() {
 #include <string>
 #include <stdint.h>
 #include "xxhash64.h"
-#include "robin_set.h"
+#include "robin_hood.h"
 #include "wrap_map_set2.h"
 #ifdef _OPENMP
 #include <omp.h>
@@ -906,7 +906,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet;
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet;
 
 /* "dysgu/map_set_utils.pxd":17
  * from libc.stdint cimport uint32_t, uint8_t, uint64_t
@@ -926,7 +925,7 @@ typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
  */
 typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_get_val_result;
 
-/* "dysgu/map_set_utils.pxd":64
+/* "dysgu/map_set_utils.pxd":82
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -940,7 +939,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":93
+/* "dysgu/map_set_utils.pxd":111
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -954,7 +953,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":119
+/* "dysgu/map_set_utils.pxd":137
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -968,7 +967,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "dysgu/map_set_utils.pxd":141
+/* "dysgu/map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -979,20 +978,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
   PyObject_HEAD
   struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtab;
   IntSet *thisptr;
-};
-
-
-/* "dysgu/map_set_utils.pxd":160
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- *     """Fast std::string set using tsl::robin-set"""
- *     cdef StrSet *thisptr
- */
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet {
-  PyObject_HEAD
-  struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtab;
-  StrSet *thisptr;
 };
 
 
@@ -1073,23 +1058,6 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet {
   int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet;
-
-
-/* "dysgu/map_set_utils.pyx":113
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- * 
- *     def __cinit__(self):
- */
-
-struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet {
-  void (*insert)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  void (*erase)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*has_key)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *);
-};
-static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet;
 
 /* --- Runtime support code (head) --- */
 /* Refnanny.proto */
@@ -1467,10 +1435,6 @@ static void __pyx_f_5dysgu_13map_set_utils_9Py_IntSet_insert(struct __pyx_obj_5d
 static void __pyx_f_5dysgu_13map_set_utils_9Py_IntSet_erase(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self, int __pyx_v_key); /* proto*/
 static int __pyx_f_5dysgu_13map_set_utils_9Py_IntSet_has_key(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self, int __pyx_v_key); /* proto*/
 static int __pyx_f_5dysgu_13map_set_utils_9Py_IntSet_size(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self); /* proto*/
-static void __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_insert(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key); /* proto*/
-static void __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_erase(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key); /* proto*/
-static int __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_has_key(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key); /* proto*/
-static int __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_size(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self); /* proto*/
 
 /* Module declarations from 'libcpp.vector' */
 
@@ -1493,7 +1457,6 @@ static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = 0;
-static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = 0;
 static std::vector<int>  __pyx_convert_vector_from_py_int(PyObject *); /*proto*/
 static PyObject *__pyx_convert_vector_to_py_int(const std::vector<int>  &); /*proto*/
 #define __Pyx_MODULE_NAME "dysgu.map_set_utils"
@@ -1519,7 +1482,6 @@ static const char __pyx_k_getstate[] = "__getstate__";
 static const char __pyx_k_setstate[] = "__setstate__";
 static const char __pyx_k_showSize[] = "showSize";
 static const char __pyx_k_Py_IntSet[] = "Py_IntSet";
-static const char __pyx_k_Py_StrSet[] = "Py_StrSet";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_edgeCount[] = "edgeCount";
 static const char __pyx_k_neighbors[] = "neighbors";
@@ -1539,7 +1501,6 @@ static PyObject *__pyx_n_s_Py_DiGraph;
 static PyObject *__pyx_n_s_Py_Int2IntMap;
 static PyObject *__pyx_n_s_Py_IntSet;
 static PyObject *__pyx_n_s_Py_SimpleGraph;
-static PyObject *__pyx_n_s_Py_StrSet;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_n_s_addEdge;
 static PyObject *__pyx_n_s_addNode;
@@ -1592,15 +1553,10 @@ static int __pyx_pf_5dysgu_13map_set_utils_9Py_IntSet___cinit__(struct __pyx_obj
 static void __pyx_pf_5dysgu_13map_set_utils_9Py_IntSet_2__dealloc__(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_IntSet_4__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_IntSet_6__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
-static int __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet___cinit__(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self); /* proto */
-static void __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_2__dealloc__(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_4__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_6__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_DiGraph(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_SimpleGraph(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_Int2IntMap(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_IntSet(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
-static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_StrSet(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_int_0;
 static PyObject *__pyx_int_4;
 static PyObject *__pyx_tuple_;
@@ -1612,8 +1568,6 @@ static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_tuple__8;
 static PyObject *__pyx_tuple__9;
-static PyObject *__pyx_tuple__10;
-static PyObject *__pyx_tuple__11;
 /* Late includes */
 
 /* "dysgu/map_set_utils.pyx":26
@@ -4497,337 +4451,6 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_IntSet_6__setstate_cython__
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":115
- * cdef class Py_StrSet:
- * 
- *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.thisptr = new StrSet()
- *     def __dealloc__(self):
- */
-
-/* Python wrapper */
-static int __pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static int __pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
-  int __pyx_r;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__cinit__ (wrapper)", 0);
-  if (unlikely(PyTuple_GET_SIZE(__pyx_args) > 0)) {
-    __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 0, 0, PyTuple_GET_SIZE(__pyx_args)); return -1;}
-  if (unlikely(__pyx_kwds) && unlikely(PyDict_Size(__pyx_kwds) > 0) && unlikely(!__Pyx_CheckKeywordStrings(__pyx_kwds, "__cinit__", 0))) return -1;
-  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet___cinit__(((struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *)__pyx_v_self));
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static int __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet___cinit__(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self) {
-  int __pyx_r;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__cinit__", 0);
-
-  /* "dysgu/map_set_utils.pyx":116
- * 
- *     def __cinit__(self):
- *         self.thisptr = new StrSet()             # <<<<<<<<<<<<<<
- *     def __dealloc__(self):
- *         del self.thisptr
- */
-  __pyx_v_self->thisptr = new StrSet();
-
-  /* "dysgu/map_set_utils.pyx":115
- * cdef class Py_StrSet:
- * 
- *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.thisptr = new StrSet()
- *     def __dealloc__(self):
- */
-
-  /* function exit code */
-  __pyx_r = 0;
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-/* "dysgu/map_set_utils.pyx":117
- *     def __cinit__(self):
- *         self.thisptr = new StrSet()
- *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         del self.thisptr
- *     cdef void insert(self, cpp_string key) nogil:
- */
-
-/* Python wrapper */
-static void __pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_3__dealloc__(PyObject *__pyx_v_self); /*proto*/
-static void __pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_3__dealloc__(PyObject *__pyx_v_self) {
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__dealloc__ (wrapper)", 0);
-  __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_2__dealloc__(((struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *)__pyx_v_self));
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-}
-
-static void __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_2__dealloc__(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self) {
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__dealloc__", 0);
-
-  /* "dysgu/map_set_utils.pyx":118
- *         self.thisptr = new StrSet()
- *     def __dealloc__(self):
- *         del self.thisptr             # <<<<<<<<<<<<<<
- *     cdef void insert(self, cpp_string key) nogil:
- *         self.thisptr.insert(key)
- */
-  delete __pyx_v_self->thisptr;
-
-  /* "dysgu/map_set_utils.pyx":117
- *     def __cinit__(self):
- *         self.thisptr = new StrSet()
- *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         del self.thisptr
- *     cdef void insert(self, cpp_string key) nogil:
- */
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-}
-
-/* "dysgu/map_set_utils.pyx":119
- *     def __dealloc__(self):
- *         del self.thisptr
- *     cdef void insert(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         self.thisptr.insert(key)
- *     cdef void erase(self, cpp_string key) nogil:
- */
-
-static void __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_insert(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key) {
-
-  /* "dysgu/map_set_utils.pyx":120
- *         del self.thisptr
- *     cdef void insert(self, cpp_string key) nogil:
- *         self.thisptr.insert(key)             # <<<<<<<<<<<<<<
- *     cdef void erase(self, cpp_string key) nogil:
- *         self.thisptr.erase(key)
- */
-  __pyx_v_self->thisptr->insert(__pyx_v_key);
-
-  /* "dysgu/map_set_utils.pyx":119
- *     def __dealloc__(self):
- *         del self.thisptr
- *     cdef void insert(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         self.thisptr.insert(key)
- *     cdef void erase(self, cpp_string key) nogil:
- */
-
-  /* function exit code */
-}
-
-/* "dysgu/map_set_utils.pyx":121
- *     cdef void insert(self, cpp_string key) nogil:
- *         self.thisptr.insert(key)
- *     cdef void erase(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         self.thisptr.erase(key)
- *     cdef int has_key(self, cpp_string key) nogil:
- */
-
-static void __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_erase(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key) {
-
-  /* "dysgu/map_set_utils.pyx":122
- *         self.thisptr.insert(key)
- *     cdef void erase(self, cpp_string key) nogil:
- *         self.thisptr.erase(key)             # <<<<<<<<<<<<<<
- *     cdef int has_key(self, cpp_string key) nogil:
- *         return self.thisptr.has_key(key)
- */
-  __pyx_v_self->thisptr->erase(__pyx_v_key);
-
-  /* "dysgu/map_set_utils.pyx":121
- *     cdef void insert(self, cpp_string key) nogil:
- *         self.thisptr.insert(key)
- *     cdef void erase(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         self.thisptr.erase(key)
- *     cdef int has_key(self, cpp_string key) nogil:
- */
-
-  /* function exit code */
-}
-
-/* "dysgu/map_set_utils.pyx":123
- *     cdef void erase(self, cpp_string key) nogil:
- *         self.thisptr.erase(key)
- *     cdef int has_key(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         return self.thisptr.has_key(key)
- *     cdef int size(self) nogil:
- */
-
-static int __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_has_key(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, std::string __pyx_v_key) {
-  int __pyx_r;
-
-  /* "dysgu/map_set_utils.pyx":124
- *         self.thisptr.erase(key)
- *     cdef int has_key(self, cpp_string key) nogil:
- *         return self.thisptr.has_key(key)             # <<<<<<<<<<<<<<
- *     cdef int size(self) nogil:
- *         return self.thisptr.size()
- */
-  __pyx_r = __pyx_v_self->thisptr->has_key(__pyx_v_key);
-  goto __pyx_L0;
-
-  /* "dysgu/map_set_utils.pyx":123
- *     cdef void erase(self, cpp_string key) nogil:
- *         self.thisptr.erase(key)
- *     cdef int has_key(self, cpp_string key) nogil:             # <<<<<<<<<<<<<<
- *         return self.thisptr.has_key(key)
- *     cdef int size(self) nogil:
- */
-
-  /* function exit code */
-  __pyx_L0:;
-  return __pyx_r;
-}
-
-/* "dysgu/map_set_utils.pyx":125
- *     cdef int has_key(self, cpp_string key) nogil:
- *         return self.thisptr.has_key(key)
- *     cdef int size(self) nogil:             # <<<<<<<<<<<<<<
- *         return self.thisptr.size()
- * 
- */
-
-static int __pyx_f_5dysgu_13map_set_utils_9Py_StrSet_size(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self) {
-  int __pyx_r;
-
-  /* "dysgu/map_set_utils.pyx":126
- *         return self.thisptr.has_key(key)
- *     cdef int size(self) nogil:
- *         return self.thisptr.size()             # <<<<<<<<<<<<<<
- * 
- * 
- */
-  __pyx_r = __pyx_v_self->thisptr->size();
-  goto __pyx_L0;
-
-  /* "dysgu/map_set_utils.pyx":125
- *     cdef int has_key(self, cpp_string key) nogil:
- *         return self.thisptr.has_key(key)
- *     cdef int size(self) nogil:             # <<<<<<<<<<<<<<
- *         return self.thisptr.size()
- * 
- */
-
-  /* function exit code */
-  __pyx_L0:;
-  return __pyx_r;
-}
-
-/* "(tree fragment)":1
- * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):
- */
-
-/* Python wrapper */
-static PyObject *__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_5__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_5__reduce_cython__(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
-  PyObject *__pyx_r = 0;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__reduce_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_4__reduce_cython__(((struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *)__pyx_v_self));
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_4__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self) {
-  PyObject *__pyx_r = NULL;
-  __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  __Pyx_RefNannySetupContext("__reduce_cython__", 0);
-
-  /* "(tree fragment)":2
- * def __reduce_cython__(self):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
- * def __setstate_cython__(self, __pyx_state):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- */
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 2, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_Raise(__pyx_t_1, 0, 0, 0);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __PYX_ERR(0, 2, __pyx_L1_error)
-
-  /* "(tree fragment)":1
- * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):
- */
-
-  /* function exit code */
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("dysgu.map_set_utils.Py_StrSet.__reduce_cython__", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = NULL;
-  __Pyx_XGIVEREF(__pyx_r);
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-/* "(tree fragment)":3
- * def __reduce_cython__(self):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- */
-
-/* Python wrapper */
-static PyObject *__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_7__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state); /*proto*/
-static PyObject *__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_7__setstate_cython__(PyObject *__pyx_v_self, PyObject *__pyx_v___pyx_state) {
-  PyObject *__pyx_r = 0;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__setstate_cython__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_6__setstate_cython__(((struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *)__pyx_v_self), ((PyObject *)__pyx_v___pyx_state));
-
-  /* function exit code */
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static PyObject *__pyx_pf_5dysgu_13map_set_utils_9Py_StrSet_6__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state) {
-  PyObject *__pyx_r = NULL;
-  __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  __Pyx_RefNannySetupContext("__setstate_cython__", 0);
-
-  /* "(tree fragment)":4
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
- */
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 4, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_Raise(__pyx_t_1, 0, 0, 0);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __PYX_ERR(0, 4, __pyx_L1_error)
-
-  /* "(tree fragment)":3
- * def __reduce_cython__(self):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- */
-
-  /* function exit code */
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __Pyx_AddTraceback("dysgu.map_set_utils.Py_StrSet.__setstate_cython__", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = NULL;
-  __Pyx_XGIVEREF(__pyx_r);
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
 /* "dysgu/map_set_utils.pyx":142
  * 
  * 
@@ -4956,8 +4579,8 @@ static PyObject *__pyx_f_5dysgu_13map_set_utils_clip_sizes(PyObject *__pyx_v_r) 
  *     cdef int left = 0
  */
     __Pyx_XDECREF(__pyx_r);
-    __Pyx_INCREF(__pyx_tuple__11);
-    __pyx_r = __pyx_tuple__11;
+    __Pyx_INCREF(__pyx_tuple__9);
+    __pyx_r = __pyx_tuple__9;
     goto __pyx_L0;
 
     /* "dysgu/map_set_utils.pyx":150
@@ -5934,117 +5557,6 @@ static PyTypeObject __pyx_type_5dysgu_13map_set_utils_Py_IntSet = {
   0, /*tp_print*/
   #endif
 };
-static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet __pyx_vtable_5dysgu_13map_set_utils_Py_StrSet;
-
-static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_Py_StrSet(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
-  struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *p;
-  PyObject *o;
-  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
-    o = (*t->tp_alloc)(t, 0);
-  } else {
-    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
-  }
-  if (unlikely(!o)) return 0;
-  p = ((struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *)o);
-  p->__pyx_vtab = __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet;
-  if (unlikely(__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_1__cinit__(o, __pyx_empty_tuple, NULL) < 0)) goto bad;
-  return o;
-  bad:
-  Py_DECREF(o); o = 0;
-  return NULL;
-}
-
-static void __pyx_tp_dealloc_5dysgu_13map_set_utils_Py_StrSet(PyObject *o) {
-  #if CYTHON_USE_TP_FINALIZE
-  if (unlikely(PyType_HasFeature(Py_TYPE(o), Py_TPFLAGS_HAVE_FINALIZE) && Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
-    if (PyObject_CallFinalizerFromDealloc(o)) return;
-  }
-  #endif
-  {
-    PyObject *etype, *eval, *etb;
-    PyErr_Fetch(&etype, &eval, &etb);
-    ++Py_REFCNT(o);
-    __pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_3__dealloc__(o);
-    --Py_REFCNT(o);
-    PyErr_Restore(etype, eval, etb);
-  }
-  (*Py_TYPE(o)->tp_free)(o);
-}
-
-static PyMethodDef __pyx_methods_5dysgu_13map_set_utils_Py_StrSet[] = {
-  {"__reduce_cython__", (PyCFunction)__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_5__reduce_cython__, METH_NOARGS, 0},
-  {"__setstate_cython__", (PyCFunction)__pyx_pw_5dysgu_13map_set_utils_9Py_StrSet_7__setstate_cython__, METH_O, 0},
-  {0, 0, 0, 0}
-};
-
-static PyTypeObject __pyx_type_5dysgu_13map_set_utils_Py_StrSet = {
-  PyVarObject_HEAD_INIT(0, 0)
-  "dysgu.map_set_utils.Py_StrSet", /*tp_name*/
-  sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet), /*tp_basicsize*/
-  0, /*tp_itemsize*/
-  __pyx_tp_dealloc_5dysgu_13map_set_utils_Py_StrSet, /*tp_dealloc*/
-  #if PY_VERSION_HEX < 0x030800b4
-  0, /*tp_print*/
-  #endif
-  #if PY_VERSION_HEX >= 0x030800b4
-  0, /*tp_vectorcall_offset*/
-  #endif
-  0, /*tp_getattr*/
-  0, /*tp_setattr*/
-  #if PY_MAJOR_VERSION < 3
-  0, /*tp_compare*/
-  #endif
-  #if PY_MAJOR_VERSION >= 3
-  0, /*tp_as_async*/
-  #endif
-  0, /*tp_repr*/
-  0, /*tp_as_number*/
-  0, /*tp_as_sequence*/
-  0, /*tp_as_mapping*/
-  0, /*tp_hash*/
-  0, /*tp_call*/
-  0, /*tp_str*/
-  0, /*tp_getattro*/
-  0, /*tp_setattro*/
-  0, /*tp_as_buffer*/
-  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
-  "Fast std::string set using tsl::robin-set", /*tp_doc*/
-  0, /*tp_traverse*/
-  0, /*tp_clear*/
-  0, /*tp_richcompare*/
-  0, /*tp_weaklistoffset*/
-  0, /*tp_iter*/
-  0, /*tp_iternext*/
-  __pyx_methods_5dysgu_13map_set_utils_Py_StrSet, /*tp_methods*/
-  0, /*tp_members*/
-  0, /*tp_getset*/
-  0, /*tp_base*/
-  0, /*tp_dict*/
-  0, /*tp_descr_get*/
-  0, /*tp_descr_set*/
-  0, /*tp_dictoffset*/
-  0, /*tp_init*/
-  0, /*tp_alloc*/
-  __pyx_tp_new_5dysgu_13map_set_utils_Py_StrSet, /*tp_new*/
-  0, /*tp_free*/
-  0, /*tp_is_gc*/
-  0, /*tp_bases*/
-  0, /*tp_mro*/
-  0, /*tp_cache*/
-  0, /*tp_subclasses*/
-  0, /*tp_weaklist*/
-  0, /*tp_del*/
-  0, /*tp_version_tag*/
-  #if PY_VERSION_HEX >= 0x030400a1
-  0, /*tp_finalize*/
-  #endif
-  #if PY_VERSION_HEX >= 0x030800b1
-  0, /*tp_vectorcall*/
-  #endif
-  #if PY_VERSION_HEX >= 0x030800b4 && PY_VERSION_HEX < 0x03090000
-  0, /*tp_print*/
-  #endif
-};
 
 static PyMethodDef __pyx_methods[] = {
   {0, 0, 0, 0}
@@ -6096,7 +5608,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_Py_Int2IntMap, __pyx_k_Py_Int2IntMap, sizeof(__pyx_k_Py_Int2IntMap), 0, 0, 1, 1},
   {&__pyx_n_s_Py_IntSet, __pyx_k_Py_IntSet, sizeof(__pyx_k_Py_IntSet), 0, 0, 1, 1},
   {&__pyx_n_s_Py_SimpleGraph, __pyx_k_Py_SimpleGraph, sizeof(__pyx_k_Py_SimpleGraph), 0, 0, 1, 1},
-  {&__pyx_n_s_Py_StrSet, __pyx_k_Py_StrSet, sizeof(__pyx_k_Py_StrSet), 0, 0, 1, 1},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_n_s_addEdge, __pyx_k_addEdge, sizeof(__pyx_k_addEdge), 0, 0, 1, 1},
   {&__pyx_n_s_addNode, __pyx_k_addNode, sizeof(__pyx_k_addNode), 0, 0, 1, 1},
@@ -6214,25 +5725,6 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "(tree fragment)":2
- * def __reduce_cython__(self):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
- * def __setstate_cython__(self, __pyx_state):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 2, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__9);
-  __Pyx_GIVEREF(__pyx_tuple__9);
-
-  /* "(tree fragment)":4
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
- * def __setstate_cython__(self, __pyx_state):
- *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
- */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 4, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__10);
-  __Pyx_GIVEREF(__pyx_tuple__10);
-
   /* "dysgu/map_set_utils.pyx":151
  *     c = r.cigartuples
  *     if not c:
@@ -6240,9 +5732,9 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * 
  *     cdef int left = 0
  */
-  __pyx_tuple__11 = PyTuple_Pack(2, __pyx_int_0, __pyx_int_0); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(1, 151, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__11);
-  __Pyx_GIVEREF(__pyx_tuple__11);
+  __pyx_tuple__9 = PyTuple_Pack(2, __pyx_int_0, __pyx_int_0); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(1, 151, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -6375,22 +5867,6 @@ static int __Pyx_modinit_type_init_code(void) {
   if (PyObject_SetAttr(__pyx_m, __pyx_n_s_Py_IntSet, (PyObject *)&__pyx_type_5dysgu_13map_set_utils_Py_IntSet) < 0) __PYX_ERR(1, 97, __pyx_L1_error)
   if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_13map_set_utils_Py_IntSet) < 0) __PYX_ERR(1, 97, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = &__pyx_type_5dysgu_13map_set_utils_Py_IntSet;
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet = &__pyx_vtable_5dysgu_13map_set_utils_Py_StrSet;
-  __pyx_vtable_5dysgu_13map_set_utils_Py_StrSet.insert = (void (*)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string))__pyx_f_5dysgu_13map_set_utils_9Py_StrSet_insert;
-  __pyx_vtable_5dysgu_13map_set_utils_Py_StrSet.erase = (void (*)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string))__pyx_f_5dysgu_13map_set_utils_9Py_StrSet_erase;
-  __pyx_vtable_5dysgu_13map_set_utils_Py_StrSet.has_key = (int (*)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string))__pyx_f_5dysgu_13map_set_utils_9Py_StrSet_has_key;
-  __pyx_vtable_5dysgu_13map_set_utils_Py_StrSet.size = (int (*)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *))__pyx_f_5dysgu_13map_set_utils_9Py_StrSet_size;
-  if (PyType_Ready(&__pyx_type_5dysgu_13map_set_utils_Py_StrSet) < 0) __PYX_ERR(1, 113, __pyx_L1_error)
-  #if PY_VERSION_HEX < 0x030800B1
-  __pyx_type_5dysgu_13map_set_utils_Py_StrSet.tp_print = 0;
-  #endif
-  if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_5dysgu_13map_set_utils_Py_StrSet.tp_dictoffset && __pyx_type_5dysgu_13map_set_utils_Py_StrSet.tp_getattro == PyObject_GenericGetAttr)) {
-    __pyx_type_5dysgu_13map_set_utils_Py_StrSet.tp_getattro = __Pyx_PyObject_GenericGetAttr;
-  }
-  if (__Pyx_SetVtable(__pyx_type_5dysgu_13map_set_utils_Py_StrSet.tp_dict, __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet) < 0) __PYX_ERR(1, 113, __pyx_L1_error)
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_Py_StrSet, (PyObject *)&__pyx_type_5dysgu_13map_set_utils_Py_StrSet) < 0) __PYX_ERR(1, 113, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_13map_set_utils_Py_StrSet) < 0) __PYX_ERR(1, 113, __pyx_L1_error)
-  __pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = &__pyx_type_5dysgu_13map_set_utils_Py_StrSet;
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;

@@ -5,9 +5,11 @@
 #include <utility>
 #include <queue>
 #include <map>
-#include "robin_map.h"
-#include "robin_set.h"
-#include "robin_hash.h"
+//#include "robin_map.h"
+//#include "robin_set.h"
+//#include "robin_hash.h"
+
+#include "robin_hood.h"
 
 #include "./htslib/htslib/sam.h"
 #include "./htslib/htslib/hfile.h"
@@ -15,8 +17,10 @@
 #include "xxhash64.h"
 
 
-int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
-                      int threads) {
+int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length,
+                          int threads) {
+
+    const int check_clips = (clip_length > 0) ? 1 : 0;
 
     int result;
     htsFile *fp_in = hts_open(infile, "r");
@@ -38,20 +42,20 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (result != 0) { return -1; }
 
     int max_scope = 100000;
-    int max_write_queue = 1000000;
+    int max_write_queue = 500000;
 
     uint64_t total = 0;
 
     std::pair<uint64_t, bam1_t*> scope_item;
     std::deque<std::pair<uint64_t, bam1_t*>> scope;
     std::vector<bam1_t*> write_queue;  // Write in blocks
-    tsl::robin_set<uint64_t> read_names;
-
+//    tsl::robin_set<uint64_t> read_names;
+    robin_hood::unordered_set<uint64_t> read_names;
     // Initialize first item in scope, set hash once read has been read
     scope.push_back(std::make_pair(0, bam_init1()));
 //    bam1_t* aln = bam_init1();  // initialize an alignment
 
-//    uint16_t flag;
+
 //    uint32_t* cigar;
 //    bam1_t* bam_ptr;
 
@@ -61,14 +65,11 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         if (scope.size() > max_scope) {
             scope_item = scope[0];
 
-            if (read_names.find(scope_item.first, scope_item.first) != read_names.end()) {
+            if (read_names.find(scope_item.first) != read_names.end()) {
                 write_queue.push_back(scope_item.second);
             } else {
                 bam_destroy1(scope_item.second);
             }
-            // free(dereference(scope_item.second).data)
-            // free(scope_item.second)
-
             scope.pop_front();
         }
 
@@ -86,9 +87,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         // Add hash to current alignment
         bam1_t* aln = scope.back().second;
 
-
+        const uint16_t flag = aln->core.flag;
         // Process current alignment
-        if (aln->core.flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
+        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
 
         const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
         scope.back().first = precalculated_hash;
@@ -101,10 +102,10 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 //        scope.push_back(std::make_pair(precalculated_hash, bam_ptr));  // bam_dup1(aln)
 
 
-        if (read_names.find(precalculated_hash, precalculated_hash) == read_names.end()) {
+        if (read_names.find(precalculated_hash) == read_names.end()) {
 
             // Check for discordant of supplementary
-            if (~aln->core.flag & 2 || aln->core.flag & 2048) {
+            if ((~flag & 2 && flag & 1) || flag & 2048) {
                 read_names.insert(precalculated_hash);
 
                 continue;
@@ -124,7 +125,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                 uint32_t op = bam_cigar_op(cigar[k]);
                 uint32_t length = bam_cigar_oplen(cigar[k]);
 
-                if ((op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
+                if ((check_clips) && (op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
 //                    scope.push_back(std::make_pair(0, bam_init1()));
                     break;
@@ -141,7 +142,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     while (scope.size() > 0) {
         scope_item = scope[0];
-        if (read_names.find(scope_item.first, scope_item.first) != read_names.end()) {
+        if (read_names.find(scope_item.first) != read_names.end()) {
             write_queue.push_back(scope_item.second);
 //            result = sam_write1(f_out, samHdr, scope_item.second);
 //            if (result < 0) { return -1; };

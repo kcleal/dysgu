@@ -16,7 +16,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 cpu_range = click.IntRange(min=1, max=cpu_count())
 
 defaults = {
-            "clip_length": 30,
+            "clip_length": -1,
             "output": "-",
             "svs_out": "-",
             "max_cov": 500,
@@ -61,7 +61,7 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
-@click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
               default=defaults["max_cov"], type=float, show_default=True)
@@ -187,7 +187,7 @@ def get_reads(ctx, **kwargs):
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
-@click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept.", default=defaults["clip_length"],
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
               default=defaults["max_cov"], type=float, show_default=True)

@@ -6,9 +6,10 @@
 #include <queue>
 #include <map>
 #include <cassert>
-#include "robin_map.h"
-#include "robin_set.h"
-#include "robin_hash.h"
+//#include "robin_map.h"
+//#include "robin_set.h"
+//#include "robin_hash.h"
+#include "robin_hood.h"
 
 typedef std::pair<int, uint8_t> PairW;  // v, weight
 typedef std::pair<int, int> PairW2;  // v, weight
@@ -332,8 +333,8 @@ class Int2IntMap
         }
 
     private:
-        tsl::robin_map<int, int> map;
-
+//        tsl::robin_map<int, int> map;
+        robin_hood::unordered_flat_map<int, int> map;
 };
 
 
@@ -355,32 +356,32 @@ class IntSet
         }
 
     private:
-        tsl::robin_set<int> set;
-
+//        tsl::robin_set<int> set;
+        robin_hood::unordered_set<int> set;
 };
 
 
-class StrSet
-{
-    public:
-
-        StrSet() {}
-        ~StrSet() {}
-
-        int size() { return set.size(); }
-
-        void insert(std::string key) { set.insert(key); }
-        void erase(std::string key) { set.erase(key); }
-
-        int has_key(std::string key) {
-            if (set.find(key) == set.end()) { return 0; }
-            else { return 1; }
-        }
-
-    private:
-        tsl::robin_set<std::string> set;
-
-};
+//class StrSet
+//{
+//    public:
+//
+//        StrSet() {}
+//        ~StrSet() {}
+//
+//        int size() { return set.size(); }
+//
+//        void insert(std::string key) { set.insert(key); }
+//        void erase(std::string key) { set.erase(key); }
+//
+//        int has_key(std::string key) {
+//            if (set.find(key) == set.end()) { return 0; }
+//            else { return 1; }
+//        }
+//
+//    private:
+//        tsl::robin_set<std::string> set;
+//
+//};
 
 
 class TwoWayMap
@@ -399,14 +400,16 @@ class TwoWayMap
             return packed_data;
         }
 
-        void add_tuple_key(uint64_t packed_data, int index) {
-            assert (index == index_key.size());
+        void insert_tuple_key(uint64_t packed_data, int index) {
+//            string_key.insert_or_assign(packed_data, index);
+//            string_key.insert(std::make_pair(packed_data, index));
             string_key[packed_data] = index;
             index_key_map.push_back(packed_data);
         }
-           int has_tuple_key(uint64_t packed_data) {
 
-            tsl::robin_map<uint64_t, int>::const_iterator got = string_key.find(packed_data, packed_data);
+        int has_tuple_key(uint64_t packed_data) {
+//            tsl::robin_map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
+            robin_hood::unordered_flat_map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
             if (got == string_key.end()) {
                 return 0;
             } else {
@@ -419,23 +422,27 @@ class TwoWayMap
         int get_index_prev() { return last_index; };
         int get_key_prev() { return last_key; };
 
-        std::vector<int> idx_2_vec(int index) {
-            std::vector<int> v = {0, 0, 0, 0};
+        void key_2_vec(uint64_t packed_data, std::vector<int>& v) {
+            v[0] = packed_data & 15;  // 4 bits set to 1
+            v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits
+            v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits
+            v[3] = (packed_data >> 59) & 15;
+        }
+
+        void idx_2_vec(int index, std::vector<int>& v) {
             uint64_t packed_data = index_key_map[index];
             v[0] = packed_data & 15;  // 4 bits set to 1
             v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits
             v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits
             v[3] = (packed_data >> 59) & 15;
-
-            return v;
         }
 
     private:
 
         uint64_t last_key = 0;  // Set this on call to has_tuple_key to prevent calculating twice
         int last_index = 0;
-
-        tsl::robin_map<uint64_t, int> string_key;
+        robin_hood::unordered_flat_map<uint64_t, int> string_key;
+//        tsl::robin_map<uint64_t, int> string_key;
         std::vector<uint64_t> index_key_map;
 
 };

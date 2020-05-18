@@ -8,6 +8,7 @@ are then overlapped and 'linked'.
 import click
 import warnings
 import array
+import time
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -21,7 +22,7 @@ from libc.math cimport exp
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport robin_set, DiGraph
+from dysgu.map_set_utils cimport DiGraph, unordered_set  # robin_set,
 
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_seqi, bam_get_seq
@@ -56,20 +57,22 @@ cdef extern from "wrap_map_set2.h" nogil:
         TwoWayMap() nogil
 
         uint64_t key_2_64(char, uint64_t, uint64_t, uint64_t) nogil
-        void add_tuple_key(uint64_t, int) nogil
+        void insert_tuple_key(uint64_t, int) nogil
         int has_tuple_key(uint64_t) nogil
         int get_index_prev() nogil
-        int get_key_prev() nogil
-        cpp_vector[int] idx_2_vec(int) nogil
+        uint64_t get_key_prev() nogil
+        void idx_2_vec(int, cpp_vector[int]) nogil
+        void key_2_vec(uint64_t, cpp_vector[int]) nogil
 
 
 basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', '.', '.', 'N'])
+lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', '.', '.', 'n'])
 
 
 cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2):
 
     cdef int i = 0
-    cdef str rseq = r.seq
+    # cdef str rseq = r.seq
 
     cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
     cdef char base
@@ -78,9 +81,10 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
     cdef list cigar = r.cigartuples
     cdef int pos = r.pos
-    cdef int current_pos = pos + 1
+    cdef uint64_t current_pos = pos + 1
+    cdef uint64_t o, key
 
-    cdef int o, begin, end, step, p, qual, opp, length
+    cdef int begin, end, step, p, qual, opp, length, n
     cdef int start = 1
 
     cdef int prev_node = -1
@@ -88,119 +92,81 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
 
+    cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
     for opp, length in cigar:
-        # echo("opp", opp, "length", length)
-        with nogil:
+        # with nogil:
 
             if opp == 4:
                 if start:
+
                     for o in range(length, 0, -1):
                         # seq = rseq[i]
                         qual = quals[i]
-
                         base = bam_seqi(char_ptr_rseq, i)
-
                         i += 1
-
                         # k = (seq, current_pos, o, 0)  # 0 = left soft clip
-                        key = ndict_r2.key_2_64(base, current_pos, o, 0)
+                        key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>0)
                         if ndict_r2.has_tuple_key(key):
                             n = ndict_r2.get_index_prev()
-
                         # if k in ndict_r:  #
                         #     n = ndict_r[k]  #
-                        #     if n2 != n:
-                        #         echo(n2, n, 0)
-                        #         quit()
-
                         else:
                             n = G.addNode()
-
                             if n >= nweight.size():
                                 nweight.push_back(0)
-
-                            # ndict_r[k] = n  #
-                            ndict_r2.add_tuple_key(key, n)
-
-
+                            # ndict_r[k] = n
+                            ndict_r2.insert_tuple_key(key, n)
                         nweight[n] += qual
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
-
                         prev_node = n
 
                 else:
                     for o in range(1, length + 1, 1):
                         # seq = rseq[i]
                         qual = quals[i]
-
                         base = bam_seqi(char_ptr_rseq, i)
-
                         i += 1
-
                         # k = (seq, current_pos, o, 1)  # 1 = right soft clip
-
-                        key = ndict_r2.key_2_64(base, current_pos, o, 1)
+                        key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>1)
                         if ndict_r2.has_tuple_key(key):
                             n = ndict_r2.get_index_prev()
                         # if k in ndict_r:
                         #     n = ndict_r[k]
-                        #     if n2 != n:
-                        #         echo(n2, n, 1)
-                        #         quit()
-
                         else:
                             n = G.addNode()
                             if n >= nweight.size():
                                 nweight.push_back(0)
-
                             # ndict_r[k] = n
-                            ndict_r2.add_tuple_key(key, n)
-
-
+                            ndict_r2.insert_tuple_key(key, n)
                         nweight[n] += qual
                         if prev_node != -1:
-
                             G.updateEdge(prev_node, n, qual)
-
                         prev_node = n
 
             elif opp == 1:  # Insertion
 
                 for o in range(1, length + 1, 1):
-
                     # seq = rseq[i]
                     qual = quals[i]
-
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
-
                     # k = (seq, current_pos, o, 2)  # 2 = insertion
-
-                    key = ndict_r2.key_2_64(base, current_pos, o, 2)
+                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>2)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
                     # if k in ndict_r:
                     #     n = ndict_r[k]
-                    #     if n2 != n:
-                    #             echo(n2, n, 2)
-                    #             quit()
-
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
-
                         # ndict_r[k] = n
-
-                        ndict_r2.add_tuple_key(key, n)
-
+                        ndict_r2.insert_tuple_key(key, n)
                     nweight[n] += qual
                     if prev_node != -1:
-
                         G.updateEdge(prev_node, n, qual)
-
                     prev_node = n
 
                 current_pos += 1  # Reference pos increases only 1
@@ -211,38 +177,26 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
 
                 for p in range(current_pos, current_pos + length):
-
-                    current_pos = p  #### + 1??
+                    current_pos = p
                     # seq = rseq[i]
                     qual = quals[i]
-
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
-
                     # k = (seq, current_pos, 0, 4)  # 4 = matched base
-
-                    key = ndict_r2.key_2_64(base, current_pos, 0, 4)
+                    key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>4)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
-
                     # if k in ndict_r:
                     #     n = ndict_r[k]
-                    #     if n2 != n:
-                    #             echo(n2, n, 4)
-                    #             quit()
-
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
-
                         # ndict_r[k] = n
-                        ndict_r2.add_tuple_key(key, n)
-
+                        ndict_r2.insert_tuple_key(key, n)
                     nweight[n] += qual
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
-
                     prev_node = n
 
             start = 0
@@ -253,8 +207,11 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
 
     # cdef Py_IntSet seen = map_set_utils.Py_IntSet()
     # cdef Py_IntSet explored = map_set_utils.Py_IntSet()
-    cdef robin_set[int] seen
-    cdef robin_set[int] explored
+    # cdef robin_set[int] seen
+    # cdef robin_set[int] explored
+
+    cdef unordered_set[int] seen
+    cdef unordered_set[int] explored
 
     cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
@@ -265,7 +222,7 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
     with nogil:
 
         for v in range(G.numberOfNodes()):  # process all vertices in G
-            if explored.find(v, v) != explored.end(): #explored.has_key(v) == 1:
+            if explored.find(v) != explored.end(): #explored.has_key(v) == 1:
                 continue
 
             fringe.clear()
@@ -274,7 +231,7 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
             while fringe.size() != 0:
 
                 w = fringe.back()  # depth first search
-                if explored.find(w, w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
+                if explored.find(w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
                     fringe.pop_back()
                     continue
 
@@ -286,10 +243,15 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
 
                 neighbors = G.neighbors(w)
                 for n in neighbors:
-                    if explored.find(n, n) == explored.end(): #explored.has_key(n) == 0:
+                    if explored.find(n) == explored.end(): #explored.has_key(n) == 0:
 
-                        if seen.find(n, n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
-                            raise ValueError("Graph contains a cycle.")
+                        if seen.find(n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
+                            order.clear()
+                            order.push_back(-1)
+                            order.push_back(n)
+                            order.push_back(w)
+                            return order
+                            #raise ValueError("Graph contains a cycle.")
                         new_nodes.push_back(n)
 
                 if new_nodes.size() > 0:   # Add new_nodes to fringe
@@ -380,7 +342,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
 
 
 cpdef dict base_assemble(rd):
-    # import time
+
     # t0 = time.time()
     # Note supplementary are included in assembly; helps link regions
     # Get reads of interest
@@ -436,7 +398,7 @@ cpdef dict base_assemble(rd):
                 "ref_end": r.reference_end,
                 "bamrname": r.rname}
 
-    # count
+
     for r in rd:
 
         if r.seq is None:
@@ -446,11 +408,21 @@ cpdef dict base_assemble(rd):
             r.query_qualities = array.array("B", [1] * len(r.seq))
 
         add_to_graph(G, r, node_weights, node_dict_r, ndict_r2)
-        # count += 1
+
         # if count == 3:
         #     break
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
+
+    if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
+        idx = nodes_to_visit2[1]
+        idx2 = nodes_to_visit2[2]
+        echo("Bad node", nodes_to_visit2[1], list(node_dict_r.keys())[idx], list(node_dict_r.keys())[idx2])
+
+        for r in rd:
+            echo(f"{r.rname}:{r.pos}   {r.qname}")
+        quit()
+
     cdef cpp_deque[int] path2
 
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
@@ -464,22 +436,29 @@ cpdef dict base_assemble(rd):
     cdef int back = path2.back()
 
     # node_dict = list(node_dict_r.keys())
-
+    #
     # longest_left_sc = node_dict[front][2]
     # longest_right_sc = node_dict[back][2]
 
-    longest_left_sc = ndict_r2.idx_2_vec(front)[2]
-    longest_right_sc = ndict_r2.idx_2_vec(back)[2]
+    cdef cpp_vector[int] vec = [0, 0, 0, 0]
+    ndict_r2.idx_2_vec(front, vec)
+    longest_left_sc = vec[2]
+    vec.assign(vec.size(), 0)
 
+    ndict_r2.idx_2_vec(back, vec)
+    longest_right_sc = vec[2]
+    vec.assign(vec.size(), 0)
     # if longest_left_sc == 0 and longest_right_sc == 0:
     #         return {}  # No soft-clips, so not overlapping a break
 
     cdef tuple t
     cdef int item
-    cdef cpp_vector[int] v
+    # cdef cpp_vector[int] v
 
     cdef str sequence = ""
     cdef int m
+
+
     for item in path2:
 
         # t = node_dict[item]
@@ -493,18 +472,21 @@ cpdef dict base_assemble(rd):
         #         ref_end = t[1]
         #     seq += t[0]
 
-        v = ndict_r2.idx_2_vec(item)
-        if v[3] != 4:
-            m = v[0]
-            sequence += basemap[m].lower()
+        ndict_r2.idx_2_vec(item, vec)
+        if vec[3] != 4:
+            m = vec[0]
+            sequence += lowermap[m]
         else:
             if ref_start == -1:
-                ref_start = v[1]
-            elif v[1] > ref_end:
-                ref_end = v[1]
-            m = v[0]
+                ref_start = vec[1]
+            elif vec[1] > ref_end:
+                ref_end = vec[1]
+            m = vec[0]
             sequence += basemap[m]
-    # seq = sequence
+
+        vec.assign(vec.size(), 0)
+
+    seq = sequence
 
     # echo(seq)
     # echo(sequence)
@@ -514,7 +496,7 @@ cpdef dict base_assemble(rd):
     # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
     # quit()
     # echo(seq)
-    return {"contig": sequence,
+    return {"contig": seq,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,
             "ref_bases": len(seq) - longest_left_sc - longest_right_sc,

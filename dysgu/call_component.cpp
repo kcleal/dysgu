@@ -10,7 +10,7 @@
             ]
         ],
         "depends": [
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_set.h",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/robin_hood.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/wrap_map_set2.h",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/xxhash64.h",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/htslib_util.h",
@@ -35,8 +35,8 @@
             "-Wno-ignored-qualifiers"
         ],
         "include_dirs": [
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
             "./dysgu",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -698,7 +698,7 @@ static CYTHON_INLINE float __PYX_NAN() {
 #include <string>
 #include <stdint.h>
 #include "xxhash64.h"
-#include "robin_set.h"
+#include "robin_hood.h"
 #include "wrap_map_set2.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -947,7 +947,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet;
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet;
 struct __pyx_obj_5pysam_10libchtslib_HTSFile;
 struct __pyx_obj_5pysam_9libcfaidx_FastaFile;
 struct __pyx_obj_5pysam_9libcfaidx_FastqProxy;
@@ -1112,7 +1111,7 @@ struct __pyx_opt_args_5pysam_18libcalignedsegment_14AlignedSegment_tostring {
   PyObject *htsfile;
 };
 
-/* "dysgu/map_set_utils.pxd":64
+/* "dysgu/map_set_utils.pxd":82
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1126,7 +1125,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":93
+/* "dysgu/map_set_utils.pxd":111
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1140,7 +1139,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":119
+/* "dysgu/map_set_utils.pxd":137
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1154,7 +1153,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "dysgu/map_set_utils.pxd":141
+/* "dysgu/map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1165,20 +1164,6 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
   PyObject_HEAD
   struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtab;
   IntSet *thisptr;
-};
-
-
-/* "dysgu/map_set_utils.pxd":160
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- *     """Fast std::string set using tsl::robin-set"""
- *     cdef StrSet *thisptr
- */
-struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet {
-  PyObject_HEAD
-  struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtab;
-  StrSet *thisptr;
 };
 
 
@@ -1703,7 +1688,7 @@ struct __pyx_obj_5dysgu_14call_component___pyx_scope_struct_5_genexpr {
 
 
 
-/* "dysgu/map_set_utils.pxd":64
+/* "dysgu/map_set_utils.pxd":82
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1723,7 +1708,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph;
 
 
-/* "dysgu/map_set_utils.pxd":93
+/* "dysgu/map_set_utils.pxd":111
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1745,7 +1730,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph;
 
 
-/* "dysgu/map_set_utils.pxd":119
+/* "dysgu/map_set_utils.pxd":137
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1764,7 +1749,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap *__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap;
 
 
-/* "dysgu/map_set_utils.pxd":141
+/* "dysgu/map_set_utils.pxd":159
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1779,23 +1764,6 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet {
   int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet *);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet;
-
-
-/* "dysgu/map_set_utils.pxd":160
- * 
- * 
- * cdef class Py_StrSet:             # <<<<<<<<<<<<<<
- *     """Fast std::string set using tsl::robin-set"""
- *     cdef StrSet *thisptr
- */
-
-struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet {
-  void (*insert)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  void (*erase)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*has_key)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *, std::string);
-  int (*size)(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet *);
-};
-static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet *__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet;
 
 
 /* "pysam/libchtslib.pxd":2601
@@ -2883,7 +2851,6 @@ static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = 0;
-static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = 0;
 
 /* Module declarations from 'libc.stdlib' */
 
@@ -34687,23 +34654,20 @@ static int __Pyx_modinit_type_import_code(void) {
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_import_code", 0);
   /*--- Type import code ---*/
-  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(3, 64, __pyx_L1_error)
+  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(3, 82, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_DiGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(3, 64, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(3, 64, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(3, 82, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(3, 82, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_SimpleGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(3, 93, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(3, 93, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(3, 111, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(3, 111, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_Int2IntMap", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(3, 119, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(3, 119, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(3, 137, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(3, 137, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_IntSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(3, 141, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(3, 141, __pyx_L1_error)
-  __pyx_ptype_5dysgu_13map_set_utils_Py_StrSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_StrSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_StrSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet) __PYX_ERR(3, 160, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_StrSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_StrSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_StrSet)) __PYX_ERR(3, 160, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(3, 159, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(3, 159, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_1 = PyImport_ImportModule("pysam.libchtslib"); if (unlikely(!__pyx_t_1)) __PYX_ERR(4, 2601, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);

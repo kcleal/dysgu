@@ -296,7 +296,7 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
 
 
 def pipe1(args, infile, kind, regions, ibam):
-    t6 = time.time()
+    # t6 = time.time()
     # inputbam, int max_cov, tree, read_threads, buffer_size
     regions_only = False if args["regions_only"] == "False" else True
 
@@ -336,7 +336,7 @@ def pipe1(args, infile, kind, regions, ibam):
     event_id = 0
     block_edge_events = []
 
-    echo("begin time", time.time() - t6)
+    # echo("begin time", time.time() - t6)
 
     min_support = args["min_support"]
     read_buffer = genome_scanner.read_buffer

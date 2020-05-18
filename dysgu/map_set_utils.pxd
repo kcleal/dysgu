@@ -28,8 +28,8 @@ cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
     cdef uint64_t hash(void* input, uint64_t length, uint64_t seed) nogil
 
 
-cdef extern from "robin_set.h" namespace "tsl" nogil:
-    cdef cppclass robin_set[T]:
+cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
+    cdef cppclass unordered_set[T]:
         cppclass iterator:
             T operator*()
             iterator operator++()
@@ -39,11 +39,29 @@ cdef extern from "robin_set.h" namespace "tsl" nogil:
         void insert(T&)
         void erase(T&)
         int size()
-        iterator find(const T&, size_t precalculated_hash)
+        iterator find(const T&)
         iterator begin()
         iterator end()
         void clear()
         bint empty()
+
+
+# cdef extern from "robin_set.h" namespace "tsl" nogil:
+#     cdef cppclass robin_set[T]:
+#         cppclass iterator:
+#             T operator*()
+#             iterator operator++()
+#             bint operator==(iterator)
+#             bint operator!=(iterator)
+#         vector()
+#         void insert(T&)
+#         void erase(T&)
+#         int size()
+#         iterator find(const T&, size_t precalculated_hash)
+#         iterator begin()
+#         iterator end()
+#         void clear()
+#         bint empty()
 
 
 cdef extern from "wrap_map_set2.h" nogil:
@@ -148,22 +166,22 @@ cdef class Py_IntSet:
     cdef int size(self) nogil
 
 
-cdef extern from "wrap_map_set2.h":
-    cdef cppclass StrSet:
-        StrSet()
-        void insert(cpp_string) nogil
-        void erase(cpp_string) nogil
-        int has_key(cpp_string) nogil
-        int size() nogil
-
-
-cdef class Py_StrSet:
-    """Fast std::string set using tsl::robin-set"""
-    cdef StrSet *thisptr
-    cdef void insert(self, cpp_string key) nogil
-    cdef void erase(self, cpp_string key) nogil
-    cdef int has_key(self, cpp_string key) nogil
-    cdef int size(self) nogil
+# cdef extern from "wrap_map_set2.h":
+#     cdef cppclass StrSet:
+#         StrSet()
+#         void insert(cpp_string) nogil
+#         void erase(cpp_string) nogil
+#         int has_key(cpp_string) nogil
+#         int size() nogil
+#
+#
+# cdef class Py_StrSet:
+#     """Fast std::string set using tsl::robin-set"""
+#     cdef StrSet *thisptr
+#     cdef void insert(self, cpp_string key) nogil
+#     cdef void erase(self, cpp_string key) nogil
+#     cdef int has_key(self, cpp_string key) nogil
+#     cdef int size(self) nogil
 
 
 # cdef extern from "wrap_map_set2.h" nogil:

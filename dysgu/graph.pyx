@@ -5,7 +5,7 @@ import time
 import click
 from collections import defaultdict, deque
 
-import mmh3
+# import mmh3
 import ncls
 
 import numpy as np
@@ -32,7 +32,7 @@ from pysam.libchtslib cimport bam_get_qname
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
 
-from dysgu.map_set_utils cimport robin_set
+from dysgu.map_set_utils cimport unordered_set
 from dysgu.map_set_utils cimport hash as xxhasher
 
 ctypedef cpp_pair[int, int] cpp_item
@@ -93,15 +93,17 @@ cdef set sliding_window_minimum(int k, int m, str s):
     cdef cpp_deque[cpp_item] window2
     cdef long int hx2
 
+    cdef bytes s_bytes = s.encode("ascii")
     # cdef cpp_set[int] seen2  # Using
     # cdef cpp_u_set[int] seen2
     seen2 = set([])
 
     # cdef cpp_item last
     for i in range(end):
-
-        hx2 = mmh3.hash(s[i:i+m], 42)
-
+        # xxhasher(bam_get_qname(r._delegate), len(qname), 42)
+        # hx2 = mmh3.hash(s[i:i+m], 42)
+        # s_bytes = s[i:i+m].encode("ascii")
+        hx2 = xxhasher(s_bytes[i:i+m], len(s_bytes), 42)
         while window2.size() != 0 and window2.back().first >= hx2:
             window2.pop_back()
 
@@ -642,7 +644,7 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
 
     cdef vector[int] other_nodes
 
-    if paired_end:
+    if paired_end or flag & 1:
 
         template_edges.add(qname, flag, node_name, r.query_alignment_start)
         # if qname == tt:
@@ -973,7 +975,7 @@ cpdef dict get_reads(infile, sub_graph_reads):
     return rd
 
 
-cdef set BFS_local(G, int source, robin_set[int]& visited ):
+cdef set BFS_local(G, int source, unordered_set[int]& visited ):
 
     # Mark all the vertices as not visited
     # visited = set([])
@@ -987,7 +989,7 @@ cdef set BFS_local(G, int source, robin_set[int]& visited ):
         u = queue.pop(0)
         for v in G.neighbors(u):
 
-            if visited.find(v, v) == visited.end(): #v not in visited:
+            if visited.find(v) == visited.end(): #v not in visited:
                 if G.weight(u, v) > 1:
 
                     if u not in nodes_found:
@@ -1004,16 +1006,16 @@ cdef set BFS_local(G, int source, robin_set[int]& visited ):
 
 cdef dict get_partitions(G, nodes):
 
-    cdef robin_set[int] seen
+    cdef unordered_set[int] seen
 
     cdef int u, v, i
     parts = []
     for u in nodes:
-        if seen.find(u, u) != seen.end(): #u in seen:
+        if seen.find(u) != seen.end(): #u in seen:
             continue
 
         for v in G.neighbors(u):
-            if seen.find(v, v) != seen.end(): #v in seen:
+            if seen.find(v) != seen.end(): #v in seen:
                 continue
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
