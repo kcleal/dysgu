@@ -93,7 +93,11 @@ cdef set sliding_window_minimum(int k, int m, str s):
     cdef cpp_deque[cpp_item] window2
     cdef long int hx2
 
-    cdef bytes s_bytes = s.encode("ascii")
+    cdef bytes s_bytes = bytes(s.encode("ascii"))
+
+    cdef char* my_ptr #= <char*>&my_view[0]
+    cdef char sub
+    cdef char* sub_ptr
     # cdef cpp_set[int] seen2  # Using
     # cdef cpp_u_set[int] seen2
     seen2 = set([])
@@ -102,8 +106,11 @@ cdef set sliding_window_minimum(int k, int m, str s):
     for i in range(end):
         # xxhasher(bam_get_qname(r._delegate), len(qname), 42)
         # hx2 = mmh3.hash(s[i:i+m], 42)
-        # s_bytes = s[i:i+m].encode("ascii")
-        hx2 = xxhasher(s_bytes[i:i+m], len(s_bytes), 42)
+
+        sub = s_bytes[i:i+m]
+        sub_ptr = &sub
+        # sub = view[i:i+m]
+        hx2 = xxhasher(sub_ptr, len(s_bytes), 42)
         while window2.size() != 0 and window2.back().first >= hx2:
             window2.pop_back()
 

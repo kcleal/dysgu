@@ -54,7 +54,7 @@ def get_extra_args():
 
     f = cpp_flag(compiler, flags)
     if not f:
-        raise RuntimeError("Invalid compiler")
+        return ['-std=c++11']  # raise RuntimeError("Invalid compiler")
     extra_compile_args.append(f)
 
     flags = ['--stdlib=libc++']

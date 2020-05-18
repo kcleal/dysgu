@@ -31,7 +31,7 @@ make -j$threads
 cd ../../
 
 echo "Installing dependencies"
-pip3 install -r requirements.txt
+pip install -r requirements.txt
 
 echo "Installing dysgu"
 python setup.py install
