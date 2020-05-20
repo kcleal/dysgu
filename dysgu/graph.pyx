@@ -95,7 +95,7 @@ cdef set sliding_window_minimum(int k, int m, str s):
 
     cdef bytes s_bytes = bytes(s.encode("ascii"))
 
-    cdef char* my_ptr #= <char*>&my_view[0]
+    # cdef char* my_ptr #= <char*>&my_view[0]
     cdef char sub
     cdef char* sub_ptr
     # cdef cpp_set[int] seen2  # Using
@@ -344,7 +344,7 @@ cdef class PairedEndScoper:
             self.local_chrom = current_chrom
             self.empty_scopes()
 
-        if not self.loci.empty():
+        if not self.loci.empty():  # Erase items out of range in local scope
 
             # local_it = forward_scope.begin()
             # while local_it != forward_scope.end():
@@ -352,7 +352,7 @@ cdef class PairedEndScoper:
             #     echo("before", vitem.first, vitem.second)
             #     preincrement(local_it)
 
-            # Erase items out of range in local scope
+
             # lowest_pos = current_pos
             # if current_chrom == chrom2 and pos2 < current_pos:  # Make sure only clear up to lowest position
             #     lowest_pos = pos2
@@ -362,7 +362,7 @@ cdef class PairedEndScoper:
                 # echo("dropping up to", dereference(local_it).first)
                 self.loci.erase(self.loci.begin(), local_it)
 
-            if current_chrom != chrom2:  # and forward scope
+            if current_chrom != chrom2:  # Erase items out of range in forward scope
                 local_it = dereference(forward_scope).lower_bound(current_pos - self.clst_dist)
                 if local_it != dereference(forward_scope).begin():
                     dereference(forward_scope).erase(dereference(forward_scope).begin(), local_it)
@@ -390,9 +390,10 @@ cdef class PairedEndScoper:
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
 
-                            if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
-                                    sep2 < self.max_dist:
-
+                            #
+                            # if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
+                            #         sep2 < self.max_dist:
+                            if sep < self.max_dist and sep2 < self.max_dist:
                                 if sep < 25 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
                                     found_exact.push_back(node_name2)
                                 else:
@@ -440,7 +441,7 @@ cdef class PairedEndScoper:
                         predecrement(local_it)
                         steps += 1
 
-        # Add tto scope
+        # Add to local and forward scope
         if current_pos == pos2 and current_chrom == chrom2:  # Update same position for insertion
             local_it = forward_scope.find(pos2)
             if local_it == forward_scope.end():
@@ -762,7 +763,8 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
 
 
             other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
-
+            # if chrom != chrom2:
+            #     echo(len(list(other_nodes)))
             # if node_name == 96:
             #     echo("OTHER NODES", other_nodes)
             # if r.cigartuples[cigar_index][0] == 1:
