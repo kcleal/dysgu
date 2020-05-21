@@ -252,10 +252,11 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam)
         if exc_tree:  # Skip exclude regions
             if io_funcs.intersecter_int_chrom(exc_tree, r.rname, r.pos, r.pos + 1):
                 continue
-
+        if r.qname == "ERR894725.225329028":
+            echo(r.flag, r.has_tag("SA"), clip_length)
         flag = r.flag
-        if flag & 1284 or r.cigartuples is None:
-            continue  # Read is duplicate or not primary alignment, or unmapped
+        if flag & 1028 or r.cigartuples is None:
+            continue  # Read is duplicate or unmapped
 
         if flag & 1 and len(insert_size) < 100000:  # read_paired
             paired_end = 1

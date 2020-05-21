@@ -88,8 +88,8 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         bam1_t* aln = scope.back().second;
 
         const uint16_t flag = aln->core.flag;
-        // Process current alignment
-        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
+        // Process current alignment. Skip if duplicate or unmapped
+        if (flag & 1028 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) { continue; }
 
         const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
         scope.back().first = precalculated_hash;

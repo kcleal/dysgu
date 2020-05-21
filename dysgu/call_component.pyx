@@ -51,20 +51,7 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
 
         a_bases = n_aligned_bases(a.cigartuples)
 
-        if flag & 2048:  # Supplementary
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("DA"):
-                r["DAsupp"].append(float(a.get_tag("DA")))
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        elif not flag & 256:  # Primary reads
+        if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
             if qname in paired_end:  # If two primary reads from same pair
                 r["pe"] += 1
@@ -77,6 +64,19 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
                     r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
                 else:
                     r["NMpri"].append(0)
+
+        elif flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("DA"):
+                r["DAsupp"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
 
         if flag & 16:
             r["minus"] += 1
@@ -102,21 +102,7 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
             r["NP"] += 1
 
         a_bases = n_aligned_bases(a.cigartuples)
-
-        if flag & 2048:  # Supplementary
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("DA"):
-                r["DAsupp"].append(float(a.get_tag("DA")))
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        elif not flag & 256:  # Primary reads
+        if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
             if qname in paired_end:  # If two primary reads from same pair
                 r["pe"] += 1
@@ -129,6 +115,19 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
                     r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
                 else:
                     r["NMpri"].append(0)
+
+        elif flag & 2304:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("DA"):
+                r["DAsupp"].append(float(a.get_tag("DA")))
+            if a.has_tag("NM"):
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
 
         if flag & 16:
             r["minus"] += 1
@@ -178,18 +177,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
         if flag & 2:
             r["NP"] += 1
 
-        if flag & 2048:  # Supplementary
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        elif not flag & 256:  # Primary reads
+        if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
             if qname in paired_end:  # If two primary reads from same pair
                 r["pe"] += 1
@@ -200,6 +188,17 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
                     r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
                 else:
                     r["NMpri"].append(0)
+
+        elif flag & 2304:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("NM"):
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
 
         if flag & 16:
             r["minus"] += 1
@@ -217,18 +216,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
         if flag & 2:
             r["NP"] += 1
 
-        if flag & 2048:  # Supplementary
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        elif not flag & 256:  # Primary reads
+        if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
             if qname in paired_end:  # If two primary reads from same pair
                 r["pe"] += 1
@@ -240,11 +228,21 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
                 else:
                     r["NMpri"].append(0)
 
+        elif flag & 2304:  # Supplementary
+            r["supp"] += 1
+            r["MAPQsupp"].append(a.mapq)
+            if a.has_tag("NM"):
+                if a_bases:
+                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
+                else:
+                    r["NMsupp"].append(0)
+            if a.has_tag("AS"):
+                r["maxASsupp"].append(float(a.get_tag("AS")))
+
         if flag & 16:
             r["minus"] += 1
         else:
             r["plus"] += 1
-
 
     cdef str k
     for k in ("NMpri", "NMsupp"):
@@ -320,7 +318,7 @@ cdef tuple guess_informative_pair(aligns):
                 pri_first = i
             else:
                 pri_second = i
-        elif i.flag & 2048:  # Supplementary
+        else: #elif i.flag & 2048:  # Supplementary, -M flag of bwa marks supplementary as not primary
             if i.flag & 64:
                 sup_first = i
             else:
@@ -380,7 +378,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
-            # echo("pair", len(l_align), pair)
+            # echo("pair", len(l_align), pair[0].flag, pair[1].flag)
             if pair is not None:
                 if len(pair) == 2:
                     u_reads.append(pair[0])
@@ -394,8 +392,8 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
                     v_item = AlignmentItem(a.rname,
                                            b.rname,
-                                           int(not a.flag & 3328),
-                                           int(not b.flag & 3328),
+                                           int(not a.flag & 2304),  # is primary
+                                           int(not b.flag & 2304),
                                            1 if a.flag & 64 else 2,
                                            1 if b.flag & 64 else 2,
                                            a.pos,
@@ -474,7 +472,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     #     echo("u", item.qname)
     # for item in v_reads:
     #     echo("v", item.qname)
-
+    # echo(attrs)
     if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
         return {}
 
@@ -1289,6 +1287,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     elif jointype == "5to5":
         main_A_break, cipos95A = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B = break_ops(positionsB, breakB_precise, -limit, median_B)
+
     # Non-canonical
     elif jointype == "3to5":
         main_A_break, cipos95A = break_ops(positionsA, breakA_precise, limit, median_A)
@@ -1296,11 +1295,12 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     else:
         main_A_break, cipos95A = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B = break_ops(positionsB, breakB_precise, limit, median_B)
-
+    # echo("--->", jointype, main_A_break, positionsA, main_B_break)
     if informative[0].chrA == informative[0].chrB:
         svlen = abs(main_B_break - main_A_break)
     else:
         svlen = 0
+
     return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
             "preciseA": True if cipos95A == 0 else False, "preciseB": True if cipos95B == 0 else False,
@@ -1447,11 +1447,11 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
             b_ct = b.cigartuples
             # Soft-clips for the chosen pair, plus template start of alignment
             left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
-
+            # echo(a.pos, a_ct, b.pos, b_ct, left_clip_a, right_clip_a, left_clip_b, right_clip_b)
             v_item = AlignmentItem(a.rname,
                                    b.rname,
-                                   int(not a.flag & 3328),
-                                   int(not b.flag & 3328),
+                                   int(not a.flag & 2304),  # Is primary
+                                   int(not b.flag & 2304),
                                    1 if a.flag & 64 else 2,
                                    1 if b.flag & 64 else 2,
                                    a.pos,

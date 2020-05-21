@@ -512,8 +512,8 @@ class GenomeScanner:
         # Calculates coverage information on fly, drops high coverage regions, buffers reads
         cdef int flag = a.flag
 
-        # PCR duplicate, fails quality check, not primary alignment, read unmapped
-        if flag & 1796 or a.cigartuples is None or a.seq is None:
+        # PCR duplicate, fails quality check, read unmapped
+        if flag & 1540 or a.cigartuples is None or a.seq is None:
             return
 
         cdef int rname = a.rname

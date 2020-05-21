@@ -25,7 +25,10 @@
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
-            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "language": "c++",
         "libraries": [
@@ -33,9 +36,15 @@
         ],
         "library_dirs": [
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
-            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include"
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
+            "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "name": "dysgu.coverage",
+        "runtime_library_dirs": [
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib"
+        ],
         "sources": [
             "dysgu/coverage.pyx"
         ]
@@ -9774,7 +9783,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
  *         # Calculates coverage information on fly, drops high coverage regions, buffers reads
  *         cdef int flag = a.flag             # <<<<<<<<<<<<<<
  * 
- *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
+ *         # PCR duplicate, fails quality check, read unmapped
  */
   __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_flag); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 513, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -9784,12 +9793,12 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
 
   /* "dysgu/coverage.pyx":516
  * 
- *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
- *         if flag & 1796 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
+ *         # PCR duplicate, fails quality check, read unmapped
+ *         if flag & 1540 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
  *             return
  * 
  */
-  __pyx_t_4 = ((__pyx_v_flag & 0x704) != 0);
+  __pyx_t_4 = ((__pyx_v_flag & 0x604) != 0);
   if (!__pyx_t_4) {
   } else {
     __pyx_t_3 = __pyx_t_4;
@@ -9815,8 +9824,8 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
   if (__pyx_t_3) {
 
     /* "dysgu/coverage.pyx":517
- *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
- *         if flag & 1796 or a.cigartuples is None or a.seq is None:
+ *         # PCR duplicate, fails quality check, read unmapped
+ *         if flag & 1540 or a.cigartuples is None or a.seq is None:
  *             return             # <<<<<<<<<<<<<<
  * 
  *         cdef int rname = a.rname
@@ -9827,8 +9836,8 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_12_add_to_bin_buffer(
 
     /* "dysgu/coverage.pyx":516
  * 
- *         # PCR duplicate, fails quality check, not primary alignment, read unmapped
- *         if flag & 1796 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
+ *         # PCR duplicate, fails quality check, read unmapped
+ *         if flag & 1540 or a.cigartuples is None or a.seq is None:             # <<<<<<<<<<<<<<
  *             return
  * 
  */
