@@ -125,6 +125,7 @@ def run_pipeline(ctx, **kwargs):
     # Call SVs
     ctx.obj["ibam"] = kwargs["bam"]
     ctx.obj["sv_aligns"] = tmp_file_name
+    ctx.obj["procs"] = 1
 
     cluster.cluster_reads(ctx.obj)
     if kwargs["keep_temp"] == "False":
