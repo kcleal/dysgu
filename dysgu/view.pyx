@@ -36,43 +36,43 @@ def open_outfile(args):
     return outfile
 
 
-def merge_df(df, tree=None, merge_within_sample=False):
+def merge_df(df, n_samples, tree=None, merge_within_sample=False):
 
     df.reset_index(inplace=True)
-    potential = []
-    for idx, r in df.iterrows():
-        r = dict(r)
-        r.update({"event_id": idx, "contig": r["contigA"], "contig2": r["contigB"],})
-        potential.append(r)
+    df["event_id"] = df.index
+    df["contig"] = df["contigA"]
+    df["contig2"] = df["contigB"]
+    potential = df.to_dict("records")
+
+    bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
 
     if not merge_within_sample:
-        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=True)
+        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,
+                                     same_sample=False)
         ff = defaultdict(list)
-
         for f in found:
-
             if "partners" not in f:
                 ff[f["event_id"]] = []
             else:
                 # Remove partners from same sample
                 current = f["table_name"]
-
                 targets = set([])
                 # others = []
                 for item in f["partners"]:  # Only merge with one row per sample
-                    t_name = df.iloc[item]["table_name"]
-                    if t_name != current and t_name not in targets:
+                    t_name = df.loc[item]["table_name"]
+                    if t_name != current and t_name not in targets and len(targets) < n_samples:
                         ff[f["event_id"]].append(item)
                         ff[item].append(f["event_id"])
-
                         targets.add(t_name)
-                # echo(f["event_id"], f["partners"], others, targets)
-                # echo(f["event_id"], f["partners"], targets)
-                #ff[f["event_id"]] = others
+                    else:  # Merged with self event. Happens with clusters of SVs with small spacing
+                        bad_i.add(item)
+
+        df = df.drop(bad_i)
         df["partners"] = [ff[i] if i in ff else [] for i in df.index]
         return df
     else:
-        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False)
+        found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False,
+                                     same_sample=True)
         return pd.DataFrame.from_records(found)
 
 
@@ -128,6 +128,91 @@ def to_csv(df, args, names, outfile):
         df[keytable].to_csv(outfile, index=False)
 
 
+def vcf_to_df(path):
+
+    # Parse sample
+    header = ""
+    with open(path, "r") as fin:
+        last = ""
+        for line in fin:
+            if line[0] == "#":
+                if last:
+                    header += last
+                last = line
+            else:
+                header += "\t".join(last.split("\t")[:9])
+                break
+        sample = last.strip().split("\t")[9]
+
+    df = pd.read_csv(path, index_col=None, comment="#", sep="\t", header=None)
+    if len(df.columns) > 10:
+        raise ValueError(f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}")
+    parsed = pd.DataFrame()
+    parsed["chrA"] = df[0]
+    parsed["posA"] = df[1]
+    parsed["id"] = df[2]
+    parsed["sample"] = [sample] * len(df)
+    info = []
+    for k in list(df[7]):
+        info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
+
+    for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
+        info[idx].update({i: j for i, j in zip(k1.split(":"), k2.split(":"))})
+
+    info_df = pd.DataFrame.from_records(info)
+    df = pd.concat([parsed, info_df], axis=1)
+
+    col_map = {"chrA": ("chrA", str),
+               "posA": ("posA", int),
+               "CHR2": ("chrB", str),
+               "END": ("posB", int),
+               "sample": ("sample", str),
+               "id": ("id", str),
+               "KIND": ("kind", str),
+               "SVTYPE": ("svtype", str),
+               "CT": ("join_type", str),
+               "CIPOS95": ("cipos95A", int),
+               "CIEND95": ("cipos95B", int),
+                "NMP": ("NMpri", float),
+               "NMS": ("NMsupp", float),
+               "MAPQP": ("MAPQpri", float),
+               "MAPQS": ("MAPQsupp", float),
+               "NP": ("NP", int),
+               "MAS": ("maxASsupp", int),
+               "SU": ("su", int),
+               "WR": ("spanning", int),
+               "PE": ("pe", int),
+               "SR": ("supp", int),
+               "SC": ("sc", int),
+               "BE": ("block_edge", int),
+               "COV": ("raw_reads_10kb", float),
+               "LNK": ("linked", int),
+               "CONTIGA": ("contigA", str),
+               "CONTIGB": ("contigB", str), "GC": ("gc", float), "NEIGH": ("neigh", int), "REP": ("rep", float),
+               "REPSC": ("rep_sc", float), "RB": ("ref_bases", int),
+               "SVLEN": ("svlen", int), "PS": ("plus", int), "MS": ("minus", int),
+               }
+    df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
+
+    for k, dtype in col_map.values():
+        if k in df:
+            if df[k].dtype != dtype:
+                if dtype == str:
+                    df[k] = df[k].fillna("")
+                else:
+                    df[k] = df[k].fillna(0)
+                df[k] = df[k].astype(dtype)
+    if "contigA" not in df:
+        df["contigA"] = [""] * len(df)
+    if "contigB" not in df:
+        df["contigB"] = [""] * len(df)
+
+    df["posA"] = df["posA"].astype(int)
+    df["posB"] = df["posB"].astype(int)
+
+    return df, header
+
+
 def view_file(args):
     t0 = time.time()
     if args["separate"] == "True":
@@ -138,8 +223,10 @@ def view_file(args):
             raise ValueError("All input files must have .csv extension")
 
     seen_names = sortedcontainers.SortedSet([])
+    name_c = defaultdict(int)
     dfs = []
 
+    header = None
     for item in args["input_files"]:
 
         if item == "-":
@@ -155,10 +242,10 @@ def view_file(args):
 
         else:
             name, ext = os.path.splitext(item)
-            if ext != ".csv":
-                raise ValueError("View accepts files with .csv extension")
-
-            df = pd.read_csv(item, index_col=None)
+            if ext != ".csv":  # assume vcf
+                df, header = vcf_to_df(item)  # header here
+            else:
+                df = pd.read_csv(item, index_col=None)
             name = list(set(df["sample"]))
 
             if len(name) > 1:
@@ -167,9 +254,15 @@ def view_file(args):
 
                 name = name[0]
                 if name in seen_names:
-                    raise IOError("Sample name is present in more than one input file {}".format(name))
-                seen_names.add(name)
-
+                    click.echo("Sample {} is present in more than one input file".format(name), err=True)
+                    bname = f"{name}_{name_c[name]}"
+                    df["sample"] = [bname] * len(df)
+                    df["table_name"] = [bname for _ in range(len(df))]
+                    seen_names.add(bname)
+                else:
+                    df["table_name"] = [name for _ in range(len(df))]
+                    seen_names.add(name)
+                name_c[name] += 1
 
         if len(set(df["sample"])) > 1:
             raise ValueError("More than one sample per input file")
@@ -185,12 +278,11 @@ def view_file(args):
             df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
             df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
 
-        df["table_name"] = [name for _ in range(len(df))]
 
         if args["merge_within"] == "True":
             l_before = len(df)
-            df = merge_df(df, {}, merge_within_sample=True)
-            click.echo("{} rows before merge {}, rows after {}".format(name, l_before, len(df)), err=True)
+            df = merge_df(df, 1, {}, merge_within_sample=True)
+            click.echo("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)), err=True)
 
         if "partners" in df:
             del df["partners"]
@@ -199,17 +291,18 @@ def view_file(args):
         dfs.append(df)
 
     df = pd.concat(dfs)
+
     # df["old_indexes"] = indexes
     if args["merge_across"] == "True":
         if len(seen_names) > 1:
-            df = merge_df(df, {}) #seen_names)
-            # echo("here", df[["chrA", "posA", "chrB", "posB", "partners"]])
+            df = merge_df(df, len(seen_names), {}) #seen_names)
 
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
     outfile = open_outfile(args)
 
     if args["out_format"] == "vcf":
-        io_funcs.to_vcf(df, args, seen_names, outfile)
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header)
+        click.echo("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count), err=True)
     else:
         to_csv(df, args, seen_names, outfile)
 

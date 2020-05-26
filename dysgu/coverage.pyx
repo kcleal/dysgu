@@ -6,7 +6,6 @@ import click
 from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
-import mmh3
 
 # from dysgu.map_set_utils cimport robin_set
 # from dysgu.map_set_utils cimport hash as xxhash
@@ -380,7 +379,7 @@ class GenomeScanner:
                 tell = -1
                 for a in self.input_bam.fetch(c, int(s), int(e)):
 
-                    name = mmh3.hash(a.qname, 42), a.flag, a.pos
+                    name = a.qname.__hash__(), a.flag, a.pos
                     if name in seen_reads:
                         continue
 

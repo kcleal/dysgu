@@ -49,22 +49,23 @@ def filter_potential(input_events, tree, regions_only):
 
 
 def compare_subset(potential, max_dist):
-    # max_dist = max_dist * 1.5
+
     interval_table = defaultdict(lambda: graph.Table())
 
     # Make a nested containment list for lookups
     for idx in range(len(potential)):
         ei = potential[idx]
 
-        interval_table[ei["chrA"]].add(ei["posA"] - max_dist, ei["posA"] + max_dist, idx)
-        interval_table[ei["chrB"]].add(ei["posB"] - max_dist, ei["posB"] + max_dist, idx)
+        interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
+        if ei["svtype"] != "INS":
+            interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
 
     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
 
     for idx in range(len(potential)):
         ei = potential[idx]
 
-        # Overlap right hand side # list(tree[chrom].find_overlap(start, end))
+        # Overlap right hand side
         ols = list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))
         for target in ols:
             jdx = target[2]
@@ -84,13 +85,13 @@ def compare_all(potential):
                 yield ei, ej, idx, jdx
 
 
-def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15):
+def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15, same_sample=True):
 
 
     if len(potential) < 3:
-        event_iter = compare_all(potential)
+        event_iter = compare_all(potential)  # N^2 compare all events to all others
     else:
-        event_iter = compare_subset(potential, max_dist)
+        event_iter = compare_subset(potential, max_dist)  # Use NCLS, generate overlap tree and perform intersections
 
     seen = set([])
 
@@ -102,19 +103,24 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
 
+        if not same_sample and "sample" in ei:
+            if ei["sample"] == ej["sample"]:
+                continue
+
         seen.add((i_id, j_id))
 
         # Check if events point to the same loci
         loci_similar = False
         loci_same = False
+
         if ei["chrA"] == ej["chrA"]:  # Try chrA matches chrA
-
             dist1 = abs(ei["posA"] - ej["posA"])
-            if dist1 < max_dist:
+            ci_a = max(ei["cipos95A"], ej["cipos95A"])
+            if dist1 < (max_dist + ci_a):
                 if ei["chrB"] == ej["chrB"]:
-
                     dist2 = abs(ei["posB"] - ej["posB"])
-                    if dist2 < max_dist:
+                    ci_b = max(ei["cipos95B"], ej["cipos95B"])
+                    if dist2 < (max_dist + ci_b):
                         loci_similar = True
                     if dist1 < 5 and dist2 < 5:
                         loci_same = True
@@ -122,10 +128,12 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         if not loci_similar:  # Try chrA matches chrB
             if ei["chrA"] == ej["chrB"]:
                 dist1 = abs(ei["posA"] - ej["posB"])
-                if dist1 < max_dist:
+                ci_a = max(ei["cipos95A"], ej["cipos95B"])
+                if dist1 < (max_dist + ci_a):
                     if ei["chrB"] == ej["chrA"]:
                         dist2 = abs(ei["posB"] - ej["posA"])
-                        if dist2 < max_dist:
+                        ci_b = max(ei["cipos95B"], ej["cipos95A"])
+                        if dist2 < (max_dist + ci_b):
                             loci_similar = True
                         if dist1 < 5 and dist2 < 5:
                             loci_same = True
@@ -147,30 +155,40 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
 
                 # Each breakpoint can have a different assembly, only check for match if contigs overlap
                 if assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx)
+                    G.add_edge(idx, jdx, loci_same=loci_same)
                     continue
 
                 if assembler.check_contig_match(ci2, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx)
+                    G.add_edge(idx, jdx, loci_same=loci_same)
                     continue
 
                 if assembler.check_contig_match(ci, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx)
+                    G.add_edge(idx, jdx, loci_same=loci_same)
                     continue
 
             # No contigs to match, merge anyway
             elif not any_ci and not any_cj and loci_same:
-                G.add_edge(idx, jdx)  #G.add_edge(i_id, j_id)
+                G.add_edge(idx, jdx, loci_same=loci_same)
 
             # Only merge loci if they are not both within --include regions. chrA:posA only needs checking
             elif not (io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and
                       io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)):
-                G.add_edge(idx, jdx)
+                G.add_edge(idx, jdx, loci_same=loci_same)
     return G
 
 
+def cut_components(G):
+    e = G.edges(data=True)
+    G2 = nx.Graph([i for i in e if i[2]["loci_same"] == True])
+    for u in G.nodes():
+        if u not in G2:
+            e0 = next(G.edges(u).__iter__())  # Use first edge out of u to connect
+            G2.add_edge(*e0)
+    return nx.algorithms.components.connected_components(G2)
+
+
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
-                 rel_diffs=False, diffs=15):
+                 rel_diffs=False, diffs=15, same_sample=True):
     """Try and merge similar events, use overlap of both breaks points
     """
 
@@ -178,25 +196,32 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
         return potential
 
     G = nx.Graph()
-    enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs)
+    G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample)  # Cluster events on graph
 
     found = []
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item["event_id"]):
             found.append(item)
 
-    for grp in nx.algorithms.components.connected_components(G):
+    # discard = set([])  # event_id's that were merged, delete these later
+
+    # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
+    # over merging SVs that are close together
+
+    components = cut_components(G)
+    # Only keep edges with loci_same==False if removing the edge leads to an isolated node
+    for grp in components:
 
         c = [potential[n] for n in grp]
 
-        best = sorted(c, key=lambda x: sum([x["pe"], x["supp"]]), reverse=True)
-        w0 = best[0]["pe"] + best[0]["supp"]  # Weighting for base result
+        best = sorted(c, key=lambda x: sum([x["su"]]), reverse=True)
+        w0 = best[0]["su"]  # Weighting for base result
 
         if not pick_best:
             for k in range(1, len(best)):
 
                 # Sum these
-                for t in ["pe", "supp", "sc", "NP", "block_edge", "joinA", "joinB"]:
+                for t in ["pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning"]:
                     best[0][t] += best[k][t]
 
                 if best[k]["maxASsupp"] > best[0]["maxASsupp"]:
@@ -204,17 +229,17 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
                 # Average these
                 for t in ["DN", "MAPQsupp", "MAPQpri", "DApri", "DAsupp", "DP", "NMpri", "NMsupp"]:
-                    w = best[k]["pe"] + best[k]["supp"]
-                    denom = w0 + w
-                    if denom == 0:
-                        weighted_av = 0
-                    else:
-                        weighted_av = ((best[0][t] * w0) + (best[k][t] * w)) / denom
-                    best[0][t] = weighted_av
-                w0 = best[0]["pe"] + best[0]["supp"]
+                    if t in best[0]:
+                        w = best[k][t]
+                        denom = w0 + w
+                        if denom == 0:
+                            weighted_av = 0
+                        else:
+                            weighted_av = ((best[0][t] * w0) + (best[k][t] * w)) / denom
+                        best[0][t] = weighted_av
+                        w0 = best[0][t]
 
         if add_partners:
-
             best[0]["partners"] = [i["event_id"] for i in best[1:]]
 
         found.append(best[0])
@@ -328,7 +353,7 @@ def pipe1(args, infile, kind, regions, ibam):
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
 
     else:
-        max_dist, max_clust_dist = 25, 500000
+        max_dist, max_clust_dist = 35, 500000
         if args["merge_dist"] is None:
             args["merge_dist"] = 50
 

@@ -209,7 +209,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 
     samp = r["sample"]
 
-    if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:
+    if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
         chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
         r["chrA"] = r["chrB"]
         r["posA"] = r["posB"]
@@ -237,8 +237,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         info_extras += [f"KIND={r['kind']}"]
 
     info_extras += [f"GC={gc}",
-                    f"REP={'%.3f' % rep}",
-                    f"REPSC={'%.3f' % repsc}",
+                    f"REP={'%.3f' % float(rep)}",
+                    f"REPSC={'%.3f' % float(repsc)}",
                     f"SU={su}",
                     f"WR={wr}",
                     f"PE={pe}",
@@ -328,10 +328,10 @@ def gen_format_fields(r, df, names, extended):
 
 
 
-def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False):
-
-    if extended_tags:
-        HEADER = """##fileformat=VCFv4.2
+def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None):
+    if header is None:
+        if extended_tags:
+            HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
@@ -381,8 +381,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-    else:
-        HEADER = """##fileformat=VCFv4.2
+        else:
+            HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
@@ -431,6 +431,9 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
 # ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
 
+    else:
+        HEADER = header
+
     outfile.write(HEADER.format(contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
@@ -451,7 +454,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
         cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
 
     for col in cnames:
-        dm[col] = dm[col].round(2)
+        dm[col] = dm[col].astype(float).round(2)
 
     for col in ['maxASsupp', 'neigh']:
         dm[col] = [int(i) for i in dm[col]]
@@ -467,13 +470,16 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
             continue
 
         format_f, df_rows = gen_format_fields(r, df, names, extended_tags)
-
+        # click.echo(format_f, err=True)
         if "partners" in r:
             seen_idx |= set(r["partners"])
 
         r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags)
+        # click.echo(r_main, err=True)
+        # quit()
         recs.append(r_main)
         count += 1
 
     for rec in sorted(recs, key=lambda x: (x[0], x[1])):
         outfile.write("\t".join(list(map(str, rec))) + "\n")
+    return count
