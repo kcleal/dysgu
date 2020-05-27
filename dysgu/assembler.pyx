@@ -19,7 +19,8 @@ from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 
 from libc.math cimport exp
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t
+from libc.stdlib cimport abs as c_abs
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t, int64_t
 
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport DiGraph, unordered_set  # robin_set,
@@ -69,7 +70,8 @@ basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.',
 lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', '.', '.', 'n'])
 
 
-cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2):
+cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2,
+                       int32_t approx_position, int32_t max_distance):
 
     cdef int i = 0
     # cdef str rseq = r.seq
@@ -91,16 +93,27 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
-
+    cdef bint done = 0
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
     for opp, length in cigar:
         # with nogil:
+            if done:
+                break
 
             if opp == 4:
                 if start:
 
                     for o in range(length, 0, -1):
+
+                        # Limit contig length to abs(approx_position - max_distance)
+                        if abs(current_pos - o - approx_position) > max_distance:
+                            if abs(<int32_t>current_pos - approx_position) > max_distance:
+                                i += length
+                                break
+                            i += 1
+                            continue
+
                         # seq = rseq[i]
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -124,6 +137,11 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
                 else:
                     for o in range(1, length + 1, 1):
+
+                        if abs(<int32_t>current_pos + o - approx_position) > max_distance:
+                            done = 1
+                            break
+
                         # seq = rseq[i]
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -148,6 +166,11 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
             elif opp == 1:  # Insertion
 
                 for o in range(1, length + 1, 1):
+
+                    if abs(<int32_t>current_pos - approx_position) > max_distance:
+                        i += length
+                        current_pos += 1
+                        break
                     # seq = rseq[i]
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
@@ -169,7 +192,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
 
-                current_pos += 1  # Reference pos increases only 1
+                current_pos += 1  # <-- Reference pos increases 1
 
             elif opp == 2 or opp == 5:  # Hard clip or deletion
                 current_pos += length + 1
@@ -178,6 +201,18 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
                 for p in range(current_pos, current_pos + length):
                     current_pos = p
+                    # echo(r.qname, opp, length, current_pos, approx_position, length, <int32_t>current_pos - approx_position, max_distance)
+                    if abs(<int32_t>current_pos - approx_position) > max_distance:
+                        if current_pos > approx_position:
+                            done = 1
+                            break
+                        elif approx_position - current_pos + length > max_distance:
+                            i += length
+                            current_pos += length
+                            break
+                        i += 1
+                        continue
+
                     # seq = rseq[i]
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
@@ -341,7 +376,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
     return path
 
 
-cpdef dict base_assemble(rd):
+cpdef dict base_assemble(rd, int position, int max_distance):
 
     # t0 = time.time()
     # Note supplementary are included in assembly; helps link regions
@@ -407,7 +442,7 @@ cpdef dict base_assemble(rd):
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
 
-        add_to_graph(G, r, node_weights, node_dict_r, ndict_r2)
+        add_to_graph(G, r, node_weights, node_dict_r, ndict_r2, position, max_distance)
 
         # if count == 3:
         #     break

@@ -156,7 +156,10 @@ def vcf_to_df(path):
     for k in list(df[7]):
         info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
 
+    n_fields = None
     for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
+        if n_fields is None:
+            n_fields = len(k1.split(":"))
         info[idx].update({i: j for i, j in zip(k1.split(":"), k2.split(":"))})
 
     info_df = pd.DataFrame.from_records(info)
@@ -191,6 +194,7 @@ def vcf_to_df(path):
                "CONTIGB": ("contigB", str), "GC": ("gc", float), "NEIGH": ("neigh", int), "REP": ("rep", float),
                "REPSC": ("rep_sc", float), "RB": ("ref_bases", int),
                "SVLEN": ("svlen", int), "PS": ("plus", int), "MS": ("minus", int),
+               "PROB": ("prob", float)
                }
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
 
@@ -210,7 +214,7 @@ def vcf_to_df(path):
     df["posA"] = df["posA"].astype(int)
     df["posB"] = df["posB"].astype(int)
 
-    return df, header
+    return df, header, n_fields
 
 
 def view_file(args):
@@ -227,6 +231,7 @@ def view_file(args):
     dfs = []
 
     header = None
+    n_fields = 19
     for item in args["input_files"]:
 
         if item == "-":
@@ -243,7 +248,7 @@ def view_file(args):
         else:
             name, ext = os.path.splitext(item)
             if ext != ".csv":  # assume vcf
-                df, header = vcf_to_df(item)  # header here
+                df, header, n_fields = vcf_to_df(item)  # header here, assume all input has same number of fields
             else:
                 df = pd.read_csv(item, index_col=None)
             name = list(set(df["sample"]))
@@ -301,7 +306,7 @@ def view_file(args):
     outfile = open_outfile(args)
 
     if args["out_format"] == "vcf":
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header)
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, n_fields, header=header)
         click.echo("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count), err=True)
     else:
         to_csv(df, args, seen_names, outfile)

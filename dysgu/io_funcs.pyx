@@ -248,8 +248,12 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 
     if extended:
         fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        if "prob" in r:
+            fmt_keys += ":PROB"
     else:
         fmt_keys = "GT:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        if "prob" in r:
+            fmt_keys += ":PROB"
 
     rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", ".",
            # INFO line
@@ -271,20 +275,61 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
     return rec
 
 
-def gen_format_fields(r, df, names, extended):
+def get_fmt(r, extended):
+    if extended:
+
+        v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+                                      r['ref_bases'], r["plus"], r["minus"]]
+        if "prob" in r:
+            v.append(r["prob"])
+        return v
+
+    else:
+        v = ["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+                                  r['ref_bases'], r["plus"], r["minus"]]
+        if "prob" in r:
+            v.append(r["prob"])
+        return v
+
+
+
+
+def gen_format_fields(r, df, names, extended, n_fields):
 
     if len(names) == 1:
-        if extended:
-
-            return {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                  r['ref_bases'], r["plus"], r["minus"]])}, {}
-        else:
-            return {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                  r['ref_bases'], r["plus"], r["minus"]])}, {}
+        return {0: get_fmt(r, extended)}, {}
+        # if extended:
+        #     if "prob" in r:
+        #         d = {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+        #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+        #                               r['ref_bases'], r["plus"], r["minus"], r["prob"]])}
+        #
+        #     else:
+        #         d = {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+        #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+        #                               r['ref_bases'], r["plus"], r["minus"]])}
+        #
+        #     return d, {}
+        # else:
+        #     if "prob" in r:
+        #         d = {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+        #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+        #                           r['ref_bases'], r["plus"], r["minus"], r["prob"]])}
+        #
+        #     else:
+        #         d = {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+        #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+        #                           r['ref_bases'], r["plus"], r["minus"]])}
+        #
+        #     return d, {}
 
     cols = {}
     if "partners" in r:
@@ -306,29 +351,30 @@ def gen_format_fields(r, df, names, extended):
     for name in names:
 
         if name in cols:
-            if extended:
-
-                format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                      r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
-            else:
-                format_fields[name] = (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                      r['ref_bases'], r["plus"], r["minus"]])
+            format_fields[name] = get_fmt(r, extended)
+            # if extended:
+            #
+            #     format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+            #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+            #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+            #                           r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
+            # else:
+            #     if "prob" in r:
+            #
+            #     else:
+            #         format_fields[name] = (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+            #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+            #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
+            #                               r['ref_bases'], r["plus"], r["minus"]])
 
         else:
-            if extended:
-                format_fields[name] = [0] * 24
-            else:
-                format_fields[name] = [0] * 20
+            format_fields[name] = [0] * n_fields
 
     return format_fields, cols
 
 
 
-def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None):
+def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names="", extended_tags=False, header=None):
     if header is None:
         if extended_tags:
             HEADER = """##fileformat=VCFv4.2
@@ -469,7 +515,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
         if idx in seen_idx:
             continue
 
-        format_f, df_rows = gen_format_fields(r, df, names, extended_tags)
+        format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields)
         # click.echo(format_f, err=True)
         if "partners" in r:
             seen_idx |= set(r["partners"])

@@ -517,10 +517,10 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
     if to_assemble:  # or len(spanning_alignments) > 0:
         if info["preciseA"]:
-            as1 = assembler.base_assemble(u_reads)
+            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
 
         if info["preciseB"]:
-            as2 = assembler.base_assemble(v_reads)
+            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
 
     info["linked"] = 0
     info["block_edge"] = 0
@@ -1600,10 +1600,10 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
     if assemble:
 
         if info["preciseA"]:
-            as1 = assembler.base_assemble(u_reads)
+            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
 
         if info["preciseB"]:
-            as2 = assembler.base_assemble(v_reads)
+            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
 
     info["linked"] = 0
     info["block_edge"] = block_edge

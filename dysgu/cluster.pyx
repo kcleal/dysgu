@@ -187,6 +187,12 @@ def cut_components(G):
     return nx.algorithms.components.connected_components(G2)
 
 
+cpdef srt_func(c):
+    if "su" in c:
+        return c["su"]
+    return c["pe"] + c["supp"] + c["spanning"]
+
+
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
                  rel_diffs=False, diffs=15, same_sample=True):
     """Try and merge similar events, use overlap of both breaks points
@@ -209,33 +215,38 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
     # over merging SVs that are close together
 
     components = cut_components(G)
+
+    cdef int k
     # Only keep edges with loci_same==False if removing the edge leads to an isolated node
     for grp in components:
 
         c = [potential[n] for n in grp]
-
-        best = sorted(c, key=lambda x: sum([x["su"]]), reverse=True)
-        w0 = best[0]["su"]  # Weighting for base result
+        best = sorted(c, key=srt_func, reverse=True)
 
         if not pick_best:
+
+            w0 = best[0]  # Weighting for base result
+            weight = w0["pe"] + w0["supp"] + w0["spanning"]
             for k in range(1, len(best)):
 
+                item = best[k]
                 # Sum these
-                for t in ["pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning"]:
-                    best[0][t] += best[k][t]
+                for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning"):
+                    best[0][t] += item[t]
 
-                if best[k]["maxASsupp"] > best[0]["maxASsupp"]:
-                    best[0]["maxASsupp"] = best[k]["maxASsupp"]
+                if item["maxASsupp"] > w0["maxASsupp"]:
+                    best[0][t]["maxASsupp"] = item["maxASsupp"]
 
-                # Average these
-                for t in ["DN", "MAPQsupp", "MAPQpri", "DApri", "DAsupp", "DP", "NMpri", "NMsupp"]:
+                # Average weight these
+                wt = item["pe"] + item["supp"] + item["spanning"]
+                for t in ("DN", "MAPQsupp", "MAPQpri", "DApri", "DAsupp", "DP", "NMpri", "NMsupp"):
                     if t in best[0]:
-                        w = best[k][t]
-                        denom = w0 + w
+                        w = item[t]
+                        denom = w0 + wt
                         if denom == 0:
                             weighted_av = 0
                         else:
-                            weighted_av = ((best[0][t] * w0) + (best[k][t] * w)) / denom
+                            weighted_av = ((w0[t] * w0) + (item[t] * w)) / denom
                         best[0][t] = weighted_av
                         w0 = best[0][t]
 
