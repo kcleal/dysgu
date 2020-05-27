@@ -90,27 +90,29 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
     cdef int start = 1
 
     cdef int prev_node = -1
-
+    cdef int ref_bases = 0
+    cdef int target_bases = 2*max_distance
     cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
     cdef tuple k
     cdef bint done = 0
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
     for opp, length in cigar:
-        # with nogil:
+        with nogil:
             if done:
                 break
 
             if opp == 4:
                 if start:
 
+                    if c_abs(<int32_t>current_pos - approx_position) > max_distance:
+                         i += length
+                         continue
+
                     for o in range(length, 0, -1):
 
                         # Limit contig length to abs(approx_position - max_distance)
-                        if abs(current_pos - o - approx_position) > max_distance:
-                            if abs(<int32_t>current_pos - approx_position) > max_distance:
-                                i += length
-                                break
+                        if c_abs(<int32_t>current_pos - <int32_t>o - approx_position) > max_distance:
                             i += 1
                             continue
 
@@ -138,7 +140,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                 else:
                     for o in range(1, length + 1, 1):
 
-                        if abs(<int32_t>current_pos + o - approx_position) > max_distance:
+                        if c_abs(<int32_t>current_pos + <int32_t>o - approx_position) > max_distance:
                             done = 1
                             break
 
@@ -165,12 +167,13 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
             elif opp == 1:  # Insertion
 
+                if c_abs(<int32_t>current_pos - approx_position) > max_distance:
+                    i += length
+                    current_pos += 1
+                    continue
+
                 for o in range(1, length + 1, 1):
 
-                    if abs(<int32_t>current_pos - approx_position) > max_distance:
-                        i += length
-                        current_pos += 1
-                        break
                     # seq = rseq[i]
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
@@ -199,19 +202,21 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
 
+                if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
+                    i += length
+                    current_pos += length
+                    continue
+
                 for p in range(current_pos, current_pos + length):
                     current_pos = p
-                    # echo(r.qname, opp, length, current_pos, approx_position, length, <int32_t>current_pos - approx_position, max_distance)
-                    if abs(<int32_t>current_pos - approx_position) > max_distance:
-                        if current_pos > approx_position:
-                            done = 1
-                            break
-                        elif approx_position - current_pos + length > max_distance:
-                            i += length
-                            current_pos += length
-                            break
+                    if current_pos < approx_position and approx_position - current_pos > max_distance:
                         i += 1
                         continue
+
+                    ref_bases += 1
+                    if ref_bases > target_bases:
+                        done = 1
+                        break
 
                     # seq = rseq[i]
                     qual = quals[i]
