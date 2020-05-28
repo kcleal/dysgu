@@ -341,7 +341,9 @@ def pipe1(args, infile, kind, regions, ibam):
 
     genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
                                             args["buffer_size"], regions_only,
-                                            kind == "stdin")
+                                            kind == "stdin",
+                                            clip_length=args["clip_length"],
+                                            min_within_size=args["min_size"])
     insert_median, insert_stdev, read_len = -1, -1, -1
     if args["template_size"] != "":
         try:
@@ -390,6 +392,7 @@ def pipe1(args, infile, kind, regions, ibam):
                                             k=21,
                                             m=10,
                                             clip_l=args["clip_length"],
+                                            min_sv_size=args["min_size"],
                                             min_support=min_support,
                                             procs=args["procs"],
                                             mapq_thresh=args["mq"],

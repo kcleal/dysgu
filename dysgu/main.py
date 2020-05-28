@@ -22,12 +22,14 @@ defaults = {
             "max_cov": 500,
             "buffer_size": 0,
             "min_support": 4,
+            "min_size": 30,
             "model": None,
             "max_tlen": 800,
             "z_depth": 2,
             "z_breadth": 3,
             "regions_only": "False",
             "soft_search": "True"
+
             }
 
 version = pkg_resources.require("dysgu")[0].version
@@ -69,6 +71,8 @@ def cli():
               default=defaults["max_tlen"], type=int, show_default=True)
 @click.option('--min-support', help="Minimum number of reads per SV",
               default=defaults["min_support"], type=int, show_default=True)
+@click.option('--min-size', help="Minimum size of SV to report",
+              default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
 @click.option('--z-depth', help="Minimum minimizer depth across alignments",
@@ -150,8 +154,10 @@ def run_pipeline(ctx, **kwargs):
                                     "output an interleaved fq/fasta", default="stdout", type=str, show_default=True)
 @click.option("-r2", "--reads2", help="Output read2 for fq/fasta output only", default="None", type=str,
               show_default=True)
-@click.option('--clip-length', help="Minimum soft-clip length, > threshold are kept", default=defaults["clip_length"],
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
+@click.option('--min-size', help="Minimum size of SV to report",
+              default=defaults["min_size"], type=int, show_default=True)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
@@ -196,6 +202,8 @@ def get_reads(ctx, **kwargs):
               default=defaults["max_tlen"], type=int, show_default=True)
 @click.option('--min-support', help="Minimum number of reads per SV",
               default=defaults["min_support"], type=int, show_default=True)
+@click.option('--min-size', help="Minimum size of SV to report",
+              default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
 @click.option('--z-depth', help="Minimum minimizer depth across alignments",

@@ -209,7 +209,7 @@ def config(args):
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam):
+cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size):
 
     # cdef uint32_t clip_length
     cdef int flag
@@ -280,7 +280,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam)
             elif r.has_tag("SA"):
                 # read_names.add(qname)
                 read_names.insert(qname)
-            elif any((j == 1 or j == 2) and k >= 30 for j, k in r.cigartuples):
+            elif any((j == 1 or j == 2) and k >= min_sv_size for j, k in r.cigartuples):
                 # read_names.add(qname)
                 read_names.insert(qname)
 
@@ -336,7 +336,7 @@ def process(args):
 
     if ("reads" not in args or args["reads"] == "None") and exc_tree is None:  # and paired_end:
 
-        count = search_hts_alignments(infile_string, outfile_string, 30, args["clip_length"], args["procs"])
+        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["procs"])
         if count < 0:
             click.echo("Error reading input file", err=True)
             quit()
@@ -350,7 +350,7 @@ def process(args):
         click.echo("Fetching with pysam", err=True)
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                )
+                                                                args["min_size"])
 
     click.echo("dysgu fetch {} complete, n={}, time={} h:m:s".format(args["bam"],
                                                             count,
