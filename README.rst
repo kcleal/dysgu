@@ -11,18 +11,18 @@ For convenience use the install script::
 
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu
-    bash INSTALL.sh
+    bash INSTALL.sh -j4
 
 To build from source::
 
-    git clone --recursive https://github.com/kcleal/dysgu.git;
-    cd dysgu/dysgu/htslib;
-    autoheader;
-    autoconf;
-    ./configure;
-    make;
-    cd ../../;
-    pip install -r requirements.txt;
+    git clone --recursive https://github.com/kcleal/dysgu.git
+    cd dysgu/dysgu/htslib
+    autoheader
+    autoconf
+    ./configure
+    make
+    cd ../../
+    pip install -r requirements.txt
     pip install .
 
 Run tests::

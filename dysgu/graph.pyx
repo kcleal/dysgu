@@ -97,17 +97,8 @@ cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, uint8_t clip_o
 
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
     # Insertions have same x1/y1 position
-    # echo("XY", x1, x2, y1, y2)
-    if x1 == x2:
+    if x1 == x2 or y1 == y2:
         return True
-        # if x1 == y1 or x1 == y2:
-        #     return True
-        # return False
-    if y1 == y2:
-        return True
-        # if y1 == x1 or y1 == x2:
-        #     return True
-        # return False
 
     cdef int temp_v
     if x2 < x1:
@@ -119,8 +110,6 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
         y2 = y1
         y1 = temp_v
     cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
-    # echo(x1, x2, y1, y2)
-    # echo((overlap, float(c_abs(x2 - x1))), (overlap, float(c_abs(y2 - y1))))
     if overlap == 0:
         return False
     if (overlap / float(c_abs(x2 - x1))) > 0.1 and (overlap / float(c_abs(y2 - y1))) > 0.1:
@@ -129,7 +118,7 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
-    cdef int span1, span2
+    cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
     if x1 == x2:
         span1 = 1
@@ -143,10 +132,13 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
     else:
         span2 = c_abs(y2 - y1)
         center2 = (y1 + y2) / 2
+    max_span = max(span1, span2)
     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
-    span_distance = <float>c_abs(span1 - span2) / max(span1, span2)
+    span_distance = <float>c_abs(span1 - span2) / max_span
     # echo("pd", position_distance, center1, center2)
-    if position_distance < 100 and span_distance < 0.08:
+    # echo((position_distance / max_span), span_distance, center1, center2 )
+    if (position_distance / max_span) < 0.2 and span_distance < 0.3:
+    # if position_distance < 100 and span_distance < 0.08:
         return 1
     return 0
 

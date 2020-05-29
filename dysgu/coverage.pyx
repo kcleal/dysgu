@@ -520,7 +520,7 @@ class GenomeScanner:
         cdef int bin_pos = int(apos / 100)
         cdef int ref_length
         cdef str reference_name = ""
-        cdef int aend = a.infer_query_length() + apos
+        cdef int aend = a.reference_end #a.infer_query_length() + apos
         cdef float current_coverage
 
         if rname not in self.depth_d:
@@ -541,40 +541,33 @@ class GenomeScanner:
         current_cov = add_coverage(apos, aend, self.current_cov_array)
 
         in_roi = False
-
         if self.overlap_regions:
             in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
 
         if rname == self.current_chrom and bin_pos == self.current_pos:
-
             if current_cov >= self.max_cov and not in_roi:
                 if len(self.current_bin) > 0:
                     self.current_bin = []
                     self.reads_dropped += len(self.current_bin)
                 self.reads_dropped += 1
                 return
-
             self.current_bin.append((a, tell))  # Add to staging area
 
         else:  # New staged bin
-
             if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
                 self.staged_reads.append(self.current_bin)  # Send for further processing
-
             self.current_chrom = rname
             self.current_pos = bin_pos
             self.current_bin = [(a, tell)]
 
 
-cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
+cdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
 
     # Round start and end to get index
     cdef float fs = start / 100
     cdef float fe = end / 100
-
     cdef int bin_start = <int> fs  # Cast to int
-    cdef int bin_end = <int > fe
-
+    cdef int bin_end = <int> fe
     if bin_start < 0:
         bin_start = 0
     if bin_end > <int> len(chrom_depth) - 1:
@@ -582,15 +575,11 @@ cpdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
 
     # Fraction overlapping start and end bins
     cdef float ol_start = <float> bin_start + 1 - fs
-
     chrom_depth[bin_start] += ol_start
-
     cdef float ol_end = 0
     if bin_start != bin_end:  # Read spans more than one bin
         ol_end = fe - (<float> bin_end)
-
         chrom_depth[bin_end] += ol_end
-
         if bin_end - bin_start > 1:
             # Fill in between
             for i in range(bin_start + 1, bin_end):

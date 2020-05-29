@@ -5,15 +5,10 @@
 #include <utility>
 #include <queue>
 #include <map>
-//#include "robin_map.h"
-//#include "robin_set.h"
-//#include "robin_hash.h"
 
 #include "robin_hood.h"
-
 #include "./htslib/htslib/sam.h"
 #include "./htslib/htslib/hfile.h"
-
 #include "xxhash64.h"
 
 
@@ -49,15 +44,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     std::pair<uint64_t, bam1_t*> scope_item;
     std::deque<std::pair<uint64_t, bam1_t*>> scope;
     std::vector<bam1_t*> write_queue;  // Write in blocks
-//    tsl::robin_set<uint64_t> read_names;
     robin_hood::unordered_set<uint64_t> read_names;
     // Initialize first item in scope, set hash once read has been read
     scope.push_back(std::make_pair(0, bam_init1()));
-//    bam1_t* aln = bam_init1();  // initialize an alignment
-
-
-//    uint32_t* cigar;
-//    bam1_t* bam_ptr;
 
     // Read alignment into the back of scope queue
     while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
@@ -97,11 +86,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         // Add a new item to the queue for next iteration
         scope.push_back(std::make_pair(0, bam_init1()));
 
-
-//        bam_ptr = bam_dup1(aln);
-//        scope.push_back(std::make_pair(precalculated_hash, bam_ptr));  // bam_dup1(aln)
-
-
         if (read_names.find(precalculated_hash) == read_names.end()) {
 
             // Check for discordant of supplementary
@@ -113,7 +97,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             // Check for SA tag
             if (bam_aux_get(aln, "SA")) {
                 read_names.insert(precalculated_hash);
-//                scope.push_back(std::make_pair(0, bam_init1()));
                 continue;
             }
 
@@ -127,13 +110,12 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
                 if ((check_clips) && (op == BAM_CSOFT_CLIP ) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
-//                    scope.push_back(std::make_pair(0, bam_init1()));
+
                     break;
                 }
 
                 if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
                     read_names.insert(precalculated_hash);
-//                    scope.push_back(std::make_pair(0, bam_init1()));
                     break;
                 }
             }
@@ -144,9 +126,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         scope_item = scope[0];
         if (read_names.find(scope_item.first) != read_names.end()) {
             write_queue.push_back(scope_item.second);
-//            result = sam_write1(f_out, samHdr, scope_item.second);
-//            if (result < 0) { return -1; };
-//            total += 1;
         } else {
             bam_destroy1(scope_item.second);
         }
@@ -167,7 +146,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (result < 0) { return -1; };
 
     f_out = NULL;
-//    bam_destroy1(aln);
 
     return total;
 
