@@ -79,174 +79,6 @@ cdef class Table:
         return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
-cdef set sliding_window_minimum(int k, int m, str s):
-    """End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
-    `li`. Then returns an iterator such that the ith element yielded is equal
-    to min(list(li)[max(i - k + 1, 0):i+1]).
-    Each yield takes amortized O(1) time, and overall the generator takes O(k)
-    space.
-    https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
-
-    # Cpp version
-    cdef int i = 0
-    cdef int end = len(s) - m + 1
-    cdef cpp_deque[cpp_item] window2
-    cdef long int hx2
-
-    cdef bytes s_bytes = bytes(s.encode("ascii"))
-
-    # cdef char* my_ptr #= <char*>&my_view[0]
-    cdef char sub
-    cdef char* sub_ptr
-    # cdef cpp_set[int] seen2  # Using
-    # cdef cpp_u_set[int] seen2
-    seen2 = set([])
-
-    # cdef cpp_item last
-    for i in range(end):
-        # xxhasher(bam_get_qname(r._delegate), len(qname), 42)
-        # hx2 = mmh3.hash(s[i:i+m], 42)
-
-        sub = s_bytes[i:i+m]
-        sub_ptr = &sub
-        # sub = view[i:i+m]
-        hx2 = xxhasher(sub_ptr, len(s_bytes), 42)
-        while window2.size() != 0 and window2.back().first >= hx2:
-            window2.pop_back()
-
-        window2.push_back(cpp_item(hx2, i))
-        while window2.front().second <= i - k:
-            window2.pop_front()
-
-        i += 1
-
-        minimizer_i = window2.front().first
-
-        #if minimizer_i not in seen2:
-        seen2.add(minimizer_i)
-        # if seen2.find(minimizer_i) == seen2.end():
-        #     seen2.insert(minimizer_i)
-
-    return seen2  #set(seen2)
-
-
-cdef str left_soft_clips(str seq, int code_length):
-    return seq[0:code_length]
-
-
-cdef str right_soft_clips(str seq, int code_length):
-    return seq[len(seq) - code_length:]
-
-
-class ClipScoper:
-    """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
-    def __init__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,
-                 int minimizer_breadth):
-        self.max_dist = max_dist
-        self.k = k
-        self.m = m
-        self.clip_length = clip_length
-        self.scope = deque([])
-        self.minimizer_table = defaultdict(set) # For left and right clips, reference counter
-        self.read_minimizers = defaultdict(set)
-        self.current_chrom = 0
-        self.minimizer_support_thresh = minimizer_support_thresh
-        self.minimizer_matches = minimizer_breadth
-
-    def _add_m_find_candidates(self, clip_set, int name, int idx):
-        # idx 0 is for left clips, 1 is for right clips
-        target_counts = defaultdict(int)
-        cdef int find_candidate = 1
-        cdef int m
-        cdef int item
-        res = set([])
-        for m in clip_set:
-
-            min_id = (m, idx)
-            self.read_minimizers[name].add(min_id)
-
-            if min_id not in self.minimizer_table:
-                self.minimizer_table[min_id].add(name)
-                continue
-
-            elif find_candidate:  # Look for suitable partners
-                targets = self.minimizer_table[min_id]
-                for item in targets:
-                    target_counts[item] += 1
-                    if target_counts[item] >= self.minimizer_matches and \
-                            len(target_counts) >= self.minimizer_support_thresh:
-                        res.add(item)
-                    if len(res) >= 3:  # Maximum of 3 edges for each read
-                        find_candidate = 0
-                        break
-
-            self.minimizer_table[min_id].add(name)
-        # Return best 3 edges, stop graph getting too dense
-        return res
-
-    def _insert(self, str seq, int cigar_start, int cigar_end, int input_read):
-        # Find soft-clips of interest
-        cdef set clip_set
-        cdef str clip_seq
-        targets = set([])
-        if cigar_start >= self.clip_length:
-            clip_seq = left_soft_clips(seq, cigar_start)
-            clip_set = sliding_window_minimum(self.k, self.m, clip_seq)
-            targets |= self._add_m_find_candidates(clip_set, input_read, 0)
-        if cigar_end >= self.clip_length:
-            clip_seq = right_soft_clips(seq, cigar_end)
-            clip_set = sliding_window_minimum(self.k, self.m, clip_seq)
-            targets |= self._add_m_find_candidates(clip_set, input_read, 1)
-        return targets
-
-    def _pop_minimizers(self):
-        cdef tuple name_pos = self.scope.popleft()
-        cdef int name = name_pos[0]
-        cdef set t
-        try:  # Read with same name was already processed, very rare but can happen
-            t = self.read_minimizers[name]
-        except KeyError:
-            return
-        cdef tuple item
-        for item in self.read_minimizers[name]:
-            try:
-                self.minimizer_table[item].remove(name)
-                if len(self.minimizer_table[item]) == 0:
-                    del self.minimizer_table[item]
-            except KeyError:
-                pass
-        del self.read_minimizers[name]
-
-    def update(self, int input_read, str seq, int cigar_start, int cigar_end, int chrom, int position):
-
-        if len(self.scope) == 0:
-            self.scope.append((input_read, position))
-            self.current_chrom = chrom
-            self._insert(seq, cigar_start, cigar_end, input_read)  # Add minimizers
-            return
-
-        elif chrom != self.current_chrom:
-            self.scope = deque([(input_read, position)])  # Empty scope on new chromosome
-            self.minimizer_table = defaultdict(set)
-            self.read_minimizers = defaultdict(set)
-            self.current_chrom = chrom
-            self._insert(seq, cigar_start, cigar_end, input_read)
-            return
-
-        # Remove out of scope reads and minimizers
-        while True:
-            if len(self.scope) == 0:
-                break
-            if abs(self.scope[0][1] - position) > self.max_dist:
-                self._pop_minimizers()
-            else:
-                break
-        self.scope.append((input_read, position))
-        cdef set d = self._insert(seq, cigar_start, cigar_end, input_read)
-        if len(d) > 0:
-            return d  # max(d, key=d.get)  # Best candidate with most overlapping minimizers
-
-
 cdef struct LocalVal:
     int chrom2
     int pos2
@@ -265,14 +97,17 @@ cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, uint8_t clip_o
 
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
     # Insertions have same x1/y1 position
+    # echo("XY", x1, x2, y1, y2)
     if x1 == x2:
-        if x1 == y1 or x1 == y2:
-            return True
-        return False
+        return True
+        # if x1 == y1 or x1 == y2:
+        #     return True
+        # return False
     if y1 == y2:
-        if y1 == x1 or y1 == x2:
-            return True
-        return False
+        return True
+        # if y1 == x1 or y1 == x2:
+        #     return True
+        # return False
 
     cdef int temp_v
     if x2 < x1:
@@ -339,8 +174,8 @@ cdef class PairedEndScoper:
                 self.chrom_scope[idx].clear()
         self.loci.clear()
 
-    cdef vector[int] update(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                            int clip_or_wr): # nogil:
+    cdef vector[int] find_other_nodes(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
+                            int clip_or_wr) nogil:
 
         cdef int idx, i, count_back, steps, node_name2 #, lowest_pos
         cdef int sep = 0
@@ -394,15 +229,17 @@ cdef class PairedEndScoper:
                     vitem = dereference(local_it)
 
                     if (clip_or_wr == 2 and vitem.second.clip_or_wr == 3) or (clip_or_wr == 3 and vitem.second.clip_or_wr == 2):
+                        steps += 1
                         continue  # Dont connect insertions to deletions
+
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # echo("1", is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                        # echo("1", current_pos, pos2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
                         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
-
+                            # echo(sep, sep2, self.max_dist, vitem.second.clip_or_wr)
                             if sep < self.max_dist and sep2 < self.max_dist:
                                 if sep < 35 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
                                     found_exact.push_back(node_name2)
@@ -429,6 +266,7 @@ cdef class PairedEndScoper:
                     while steps < 4:
                         vitem = dereference(local_it)
                         if (clip_or_wr == 2 and vitem.second.clip_or_wr == 3) or (clip_or_wr == 3 and vitem.second.clip_or_wr == 2):
+                            steps += 1
                             continue  # Dont connect insertions to deletions
                         node_name2 = vitem.second.node_name
                         if node_name2 != node_name:
@@ -451,26 +289,18 @@ cdef class PairedEndScoper:
                         predecrement(local_it)
                         steps += 1
 
-        # Add to local and forward scope
-        # if current_pos == pos2 and current_chrom == chrom2:  # Update same position for insertion
-        #     # Add to local scope
-        #     local_it = self.loci.find(current_pos)
-        #     if local_it == self.loci.end():
-        #         self.loci[current_pos] = make_local_val(chrom2, pos2, node_name, clip_or_wr)
-        #     else:
-        #         dereference(local_it).second = make_local_val(chrom2, pos2, node_name, clip_or_wr)
-        #     # Add to forward
-        #     local_it = forward_scope.find(pos2)
-        #     if local_it == forward_scope.end():
-        #         dereference(forward_scope)[pos2] = make_local_val(current_chrom, current_pos, node_name, clip_or_wr)
-        #     else:
-        #         dereference(local_it).second = make_local_val(current_chrom, current_pos, node_name, clip_or_wr)
-        # else:
+        if not found_exact.empty():
+            return found_exact
+        else:
+            return found2
+
+    cdef void add_item(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
+                            int clip_or_wr) nogil:
 
         # Add to scopes, if event is within read, add two references to forward scope. Otherwise when the
         # first break point drops from the local scope, the forward scope break will not connect with other
         # events that are added later. This is a fix for long read deletions mainly
-
+        cdef cpp_map[int, LocalVal]* forward_scope = &self.chrom_scope[chrom2]
         # Add to local scope
         local_it = self.loci.find(current_pos)
         if local_it == self.loci.end():
@@ -491,14 +321,6 @@ cdef class PairedEndScoper:
                 dereference(forward_scope)[current_pos] = make_local_val(chrom2, pos2, node_name, clip_or_wr)
             else:
                 dereference(local_it).second = make_local_val(chrom2, pos2, node_name, clip_or_wr)
-
-        # echo(found_exact, found2)
-        # if node_name == 96:
-        #     quit()
-        if not found_exact.empty():
-            return found_exact
-        else:
-            return found2
 
 
 cdef class TemplateEdges:
@@ -601,7 +423,7 @@ cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges te
 
 
 cdef class NodeToName:
-
+    # Index these vectors to get the unique 'template_name'
     cdef vector[uint64_t] h
     cdef vector[uint16_t] f
     cdef vector[uint32_t] p
@@ -646,7 +468,7 @@ cpdef tuple get_query_pos_from_cigarstring(cigar, pos):
             ref_end += slen
         elif opp == "I":
             end += slen
-            ref_end += 1
+        i = 1
     return start, end, pos, ref_end
 
 
@@ -657,19 +479,23 @@ cpdef tuple get_query_pos_from_cigartuples(r):
     cdef bint i = 0
     cdef int ref_end = r.pos
     cdef int opp, slen
+
     for opp, slen in r.cigartuples:
-        if not i and (opp == 4 or opp == 5):
-            start += slen
-            end += slen
-            i = 1
-        elif opp == 0:
+        if opp == 0:
             ref_end += slen
             end += slen
+        elif opp == 4 or opp == 5:
+            if not i:
+                start += slen
+                end += slen
+                i = 1
+            else:
+                break
         elif opp == 1:
             end += slen
-            ref_end += 1
         elif opp == 2:  # deletion
             ref_end += slen
+        i = 1
     return start, end, r.pos, ref_end, r.rname, 0
 
 
@@ -677,6 +503,7 @@ cdef alignments_from_sa_tag(r, gettid):
     # Puts other alignments in order of query position, gets index of the current alignment
     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
     cdef int chrom2, start_pos2, query_start, query_end, ref_start, ref_end, start_temp
+
     current_strand = "-" if r.flag & 16 else "+"
     query_aligns = [get_query_pos_from_cigartuples(r)]
 
@@ -703,7 +530,9 @@ cdef alignments_from_sa_tag(r, gettid):
     for index in range(len(query_aligns)):
         if len(query_aligns[index]) == 6:
             break
-
+    # if r.qname == "m64004_190803_004451/6359627/ccs":
+    #     echo(query_aligns, index)
+    #     quit()
     return query_aligns, index
 
 
@@ -723,51 +552,93 @@ cdef connect_left(a, b):
     return event_pos, chrom, pos2, chrom2
 
 
-cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
-                       overlap_regions, int clustering_dist, clip_scope, PairedEndScoper_t pe_scope,
-                       int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
-                       TemplateEdges_t template_edges, NodeToName node_to_name):
+cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
+                       NodeToName node_to_name, genome_scanner,
+                       int flag, int chrom, long tell, int cigar_index, int event_pos,
+                       int chrom2, int pos2, int clip_or_wr):
 
-    cdef int other_node, clip_left, clip_right
-    cdef int current_overlaps_roi, next_overlaps_roi
-    cdef bint add_primark_link
+    # Adds relevant information to graph and other data structures for further processing
 
-    cdef int chrom = r.rname
-    cdef int chrom2
-    cdef int pos2
-    cdef int pos = event_pos #r.pos
-    cdef int flag = r.flag
-    cdef str qname = r.qname
-    cdef uint64_t v
-
-    cdef uint16_t clip_or_wr = 0
-    if cigar_index == 0 or cigar_index == len(r.cigartuples) - 1:
-        clip_or_wr = 1
-    elif 0 < cigar_index < len(r.cigartuples) - 1:
-        if r.cigartuples[cigar_index] == 2:
-            clip_or_wr = 2  # Deletion type
-        else:
-            clip_or_wr = 3  # Insertion type
-
-    if paired_end and clip_or_wr <=1 and flag & 8:  # clip event, or whole read, but mate is unmapped
-        return
-
+    cdef vector[int] other_nodes  # Other alignments to add edges between
     cdef int node_name = G.addNode()
-    v = xxhasher(bam_get_qname(r._delegate), len(qname), 42)  # Hash qname to save mem
+    cdef uint64_t v = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)  # Hash qname to save mem
+
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
 
     genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
 
-    cdef vector[int] other_nodes  # Other alignments to add edges between
+    if clip_or_wr < 2:  # Prevents joining up within-read svs within between-read svs
+        template_edges.add(r.qname, flag, node_name, r.query_alignment_start)
 
+    other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+
+    pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+
+    # echo(r.qname, node_name, event_pos, pos2)
+    # if r.qname == "m64004_190803_004451/6359627/ccs":
+    #       echo("@", node_name, event_pos, pos2, list(other_nodes), cigar_index)
+
+    if not other_nodes.empty():
+        for other_node in other_nodes:
+            if not G.hasEdge(node_name, other_node):
+                # 2 signifies that this is a local edge as opposed to a template edge
+                G.addEdge(node_name, other_node, 2)
+        return 1
+
+    return 0
+
+
+cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
+                       overlap_regions, int clustering_dist, PairedEndScoper_t pe_scope,
+                       int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
+                       TemplateEdges_t template_edges, NodeToName node_to_name):
+
+    # Determines where the break point on the alignment is before adding to the graph
+    cdef int other_node, clip_left, clip_right
+    cdef int current_overlaps_roi, next_overlaps_roi
+    cdef bint add_primark_link
+    cdef int chrom = r.rname
+    cdef int chrom2
+    cdef int pos2
+    # cdef int pos = event_pos #r.pos
+    # cdef int event_pos = r.pos
+    cdef int flag = r.flag
+    cdef str qname = r.qname
+    cdef uint64_t v
+
+    cdef uint16_t clip_or_wr = 0  # clip-event or within-read event
+    if cigar_index <= 0 or cigar_index == len(r.cigartuples) - 1:
+        clip_or_wr = 1  # Soft-clip or SA event
+    elif 0 < cigar_index < len(r.cigartuples) - 1:
+
+        if r.cigartuples[cigar_index][0] == 2:
+            clip_or_wr = 2  # Deletion type
+        else:
+            clip_or_wr = 3  # Insertion type
+
+    # echo(r.qname)
+    # if r.qname == "m64004_190803_004451/44630072/ccs":
+    #     echo("CLIP or WR", clip_or_wr, cigar_index, r.cigartuples[:4])
+    #     echo(r.cigartuples[cigar_index][0])
+    #     quit()
+
+    if paired_end and clip_or_wr == 1 and flag & 8:  # clip event, or whole read, but mate is unmapped
+        return
+
+    # cdef int node_name = G.addNode()
+    # v = xxhasher(bam_get_qname(r._delegate), len(qname), 42)  # Hash qname to save mem
+    # node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)
+    # genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
+
+    cdef bint success
+
+    # if r.qname == "m64004_190803_004451/69861888/ccs":
+    #      echo("here", clip_or_wr, "cigar index", cigar_index, r.cigartuples)
     if paired_end or flag & 1:
-
-        template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
         # Cluster paired-end mates
         pnext = r.pnext
         rnext = r.rnext
-
         chrom2 = rnext
         pos2 = pnext
 
@@ -775,27 +646,10 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
         # Either use the rnext:pnext or a site(s) listed in the SA tag: The rnext:pext can often be at the
         # same loci as the read which leads to problems when linking w=2 edges
 
-        add_primark_link = 1
+        add_primary_link = 1
+        current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
 
-        current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, pos, pos+1)
-
-        if current_overlaps_roi:
-            # Cluster soft-clips
-            clip_left, clip_right = map_set_utils.clip_sizes(r)
-            if clip_left > clip_l:
-                best_candidates = clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos)
-                if best_candidates is not None:
-                    for node_name2 in best_candidates:
-                        if not G.hasEdge(node_name, node_name2):
-                            G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
-            if clip_right > clip_l:
-                best_candidates = clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, r.reference_end)
-                if best_candidates is not None:
-                    for node_name2 in best_candidates:
-                        if not G.hasEdge(node_name, node_name2):
-                            G.addEdge(node_name, node_name2, 3)  # weight 3 for black edge
-
-        if clip_or_wr == 1 and chrom == rnext and abs(pnext - pos) < loci_dist:  # Same loci
+        if clip_or_wr == 1 and chrom == rnext and abs(pnext - event_pos) < loci_dist:  # Same loci
 
             # Parse SA tag. For paired reads
             if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
@@ -806,27 +660,35 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                 if len(all_aligns) == 1:
                     return  # shouldnt happen
 
-                add_primark_link = 0
+                add_primary_link = 0
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2 = connect_right(all_aligns[index], all_aligns[index + 1])
-                    other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    cigar_index = len(r.cigartuples) - 1
+                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                           tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-                    if not other_nodes.empty():
-                        for other_node in other_nodes:
-                            if not G.hasEdge(node_name, other_node):
-                                G.addEdge(node_name, other_node, 2)
+                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    #
+                    # if not other_nodes.empty():
+                    #     for other_node in other_nodes:
+                    #         if not G.hasEdge(node_name, other_node):
+                    #             G.addEdge(node_name, other_node, 2)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
-
+                    cigar_index = 0
                     # next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
-                    other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
 
-                    if not other_nodes.empty():
-                        for other_node in other_nodes:
-                            if not G.hasEdge(node_name, other_node):
-                                G.addEdge(node_name, other_node, 2)
+                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                           tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+
+                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    #
+                    # if not other_nodes.empty():
+                    #     for other_node in other_nodes:
+                    #         if not G.hasEdge(node_name, other_node):
+                    #             G.addEdge(node_name, other_node, 2)
 
 
                 # query_length = r.infer_query_length()  # har clips not counted
@@ -871,7 +733,7 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                 #             other_nodes.clear()
 
 
-        if add_primark_link: # and paired_end:
+        if add_primary_link: # and paired_end:
 
             # Use mate information to generate cluster
             if clip_or_wr >= 2:  # within read  ==2
@@ -881,9 +743,9 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                 else:
                     pos2 = event_pos
 
-            elif not clip_or_wr and not flag & 16 and (r.cigartuples[0][0] != 4 or r.cigartuples[0][0] != 5):  # Read on forward strand
-                # Use end of read alignment if event likely to be at right side
-                pos = r.reference_end
+            # elif not clip_or_wr and not flag & 16 and (r.cigartuples[0][0] != 4 or r.cigartuples[0][0] != 5):  # Read on forward strand
+            #     Use end of read alignment if event likely to be at right side
+                # event_pos = r.reference_end
 
             if current_overlaps_roi and io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1):
                 # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
@@ -893,19 +755,22 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                 if abs(r.tlen) < clustering_dist and clip_or_wr < 2:  # != 2
                     return
 
-            other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
+            success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                   tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-            if not other_nodes.empty():
-                for other_node in other_nodes:
-
-                    if not G.hasEdge(node_name, other_node):
-                        G.addEdge(node_name, other_node, 2)
+            # other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
+            #
+            # if not other_nodes.empty():
+            #     for other_node in other_nodes:
+            #
+            #         if not G.hasEdge(node_name, other_node):
+            #             G.addEdge(node_name, other_node, 2)
 
     else:  # Single end
 
         if clip_or_wr == 1:
 
-            template_edges.add(qname, flag, node_name, r.query_alignment_start)
+            # template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
             # Use SA tag to get chrom2 and pos2
             if r.has_tag("SA"):
@@ -915,27 +780,38 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
 
                 if len(all_aligns) == 1:
                     return  # shouldnt happen
+                # if r.qname == "m64004_190803_004451/132972876/ccs":
+                #     echo("INDEX", index, all_aligns, index < len(all_aligns) - 1, index > 0)
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2 = connect_right(all_aligns[index], all_aligns[index + 1])
-                    other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    cigar_index = 0  #len(r.cigartuples) - 1
 
-                    if not other_nodes.empty():
-                        for other_node in other_nodes:
-                            if not G.hasEdge(node_name, other_node):
-                                G.addEdge(node_name, other_node, 2)
+                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                   tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+
+                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    # if r.qname == "m64004_190803_004451/132972876/ccs":
+                    #     echo("A", node_name, event_pos, pos2, list(other_nodes))
+                    # if not other_nodes.empty():
+                    #     for other_node in other_nodes:
+                    #         if not G.hasEdge(node_name, other_node):
+                    #             G.addEdge(node_name, other_node, 2)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
-                    other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    cigar_index = len(r.cigartuples) - 1
 
-                    if not other_nodes.empty():
-                        for other_node in other_nodes:
-                            if not G.hasEdge(node_name, other_node):
-                                G.addEdge(node_name, other_node, 2)
+                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                           tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-
-
+                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+                    # if r.qname == "m64004_190803_004451/132972876/ccs":
+                    #     echo("@", node_name, event_pos, pos2, list(other_nodes))
+                    # if not other_nodes.empty():
+                    #     for other_node in other_nodes:
+                    #         if not G.hasEdge(node_name, other_node):
+                    #             G.addEdge(node_name, other_node, 2)
 
                 #
                 # echo(all_aligns)
@@ -980,12 +856,16 @@ cdef void update_graph(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
             else:
                 pos2 = event_pos
 
-            other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+            success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                   tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-            if not other_nodes.empty():
-                for other_node in other_nodes:
-                    if not G.hasEdge(node_name, other_node):
-                        G.addEdge(node_name, other_node, 2)
+            # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+            # # if r.qname == "m64004_190803_004451/25493972/ccs":
+            # #     echo(r.qname, node_name, event_pos, pos2, list(other_nodes))
+            # if not other_nodes.empty():
+            #     for other_node in other_nodes:
+            #         if not G.hasEdge(node_name, other_node):
+            #             G.addEdge(node_name, other_node, 2)
 
 
 cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
@@ -999,72 +879,59 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                err=True)
 
     cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
-    # cdef unordered_map[int, vector[long_int]] node_to_name
     cdef int event_pos, cigar_index, opp, length, added
-
     node_to_name = NodeToName()  # Map of nodes -> read ids
 
-    clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
-                       minimizer_support_thresh=minimizer_support_thresh,
-                       minimizer_breadth=minimizer_breadth)
 
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences)
-    cdef int loci_dist = max_dist #int(max_dist * 1.5)
     cdef long tell
-    # cdef Py_SimpleGraph_t G = map_set_utils.Py_SimpleGraph()
     G = map_set_utils.Py_SimpleGraph()
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
-
     gettid = infile.gettid
 
-    # debug = "HISEQ1:12:H8GVUADXX:2:2109:12037:62696"
-
-    debug_nodes = set([])
-
-    cdef bint sa_parsed = 0
     cdef bint keep_clips = 0
+
     if clip_l > 0:
         keep_clips = 1
 
     for chunk in genome_scanner.iter_genome():
-
         for r, tell in chunk:
-
             if r.mapq < mapq_thresh:
                 continue
 
             event_pos = r.pos
             added = 0
-            sa_parsed = 0
-            if len(r.cigartuples) > 1:
-                # echo("---")
-                for cigar_index, (opp, length) in enumerate(r.cigartuples):
-                    # if r.qname == "m64004_190803_004451/33424921/ccs":
-                    #     echo(event_pos, opp, length)
-                    # if r.qname == "m64004_190803_004451/33424921/ccs" and opp == 2 and length == 75:
-                    #     echo("Hi", opp, length)
-                    if not sa_parsed and r.has_tag("SA"):
-                    # if (opp == 4 or opp == 5) and (r.has_tag("SA") or (keep_clips and length >= min_sv_size)):
-                        update_graph(G, r, clip_l, loci_dist, gettid,
-                           overlap_regions, clustering_dist, clip_scope, pe_scope,
-                           cigar_index, event_pos, paired_end, tell, genome_scanner,
-                           template_edges, node_to_name)
-                        added += 1
-                        sa_parsed = 1
 
-                    elif opp == 1:
+            if len(r.cigartuples) > 1:
+                # if r.qname == "m64004_190803_004451/132972876/ccs":
+                #     echo(r.qname, r.has_tag("SA"), r.cigartuples)
+
+                if r.has_tag("SA"):
+                    # if (opp == 4 or opp == 5) and (r.has_tag("SA") or (keep_clips and length >= min_sv_size)):
+
+                    # Set cigar-index to -1 means it is unset, needs to be determined during SA parsing
+                    cigar_index = -1
+                    process_alignment(G, r, clip_l, max_dist, gettid,
+                       overlap_regions, clustering_dist, pe_scope,
+                       cigar_index, event_pos, paired_end, tell, genome_scanner,
+                       template_edges, node_to_name)
+                    added += 1
+
+                for cigar_index, (opp, length) in enumerate(r.cigartuples):
+
+                    if opp == 1:
                         if length >= min_sv_size:
-                            update_graph(G, r, clip_l, loci_dist, gettid,
-                               overlap_regions, clustering_dist, clip_scope, pe_scope,
+                            process_alignment(G, r, clip_l, max_dist, gettid,
+                               overlap_regions, clustering_dist, pe_scope,
                                cigar_index, event_pos, paired_end, tell, genome_scanner,
                                template_edges, node_to_name)
                             added += 1
 
                     elif opp == 2:
                         if length >= min_sv_size:
-                            update_graph(G, r, clip_l, loci_dist, gettid,
-                               overlap_regions, clustering_dist, clip_scope, pe_scope,
+                            process_alignment(G, r, clip_l, max_dist, gettid,
+                               overlap_regions, clustering_dist, pe_scope,
                                cigar_index, event_pos, paired_end, tell, genome_scanner,
                                template_edges, node_to_name)
                             added += 1
@@ -1077,8 +944,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             if not added:
                 # -1 means whole alignment
                 cigar_index = -1
-                update_graph(G, r, clip_l, loci_dist, gettid,
-                           overlap_regions, clustering_dist, clip_scope, pe_scope,
+                process_alignment(G, r, clip_l, max_dist, gettid,
+                           overlap_regions, clustering_dist, pe_scope,
                            cigar_index, event_pos, paired_end, tell, genome_scanner,
                            template_edges, node_to_name)
 
@@ -1331,7 +1198,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
                 del partitions[block_node]
         else:
             del partitions[block_node]
-
+    #
     # echo("parts", partitions)
     # echo("s_between", sb)
     # echo("s_within", support_within)

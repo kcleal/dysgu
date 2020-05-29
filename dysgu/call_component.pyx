@@ -347,8 +347,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     # Make sure at least one read is worth calling
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for _, i in rds]))
-    # if n_templates < min_support:
-    #     return {}
+
 
     if n_templates == 1:
         # Filter for paired ends, will also remove single end reads though
@@ -369,7 +368,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     for cigar_info, align in rds:
         tmp[align.qname].append((cigar_info, align))
 
-    # echo([(k, len(v)) for k, v in tmp.items()])
     cdef AlignmentItem v_item, itm
     cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
 
@@ -426,7 +424,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
                         precise_a.append(v_item.breakA)
                     if v_item.breakB_precise:
                         precise_b.append(v_item.breakB)
-
                     informative.append(v_item)
                     informative_reads += [item[1] for item in l_align]
 
@@ -439,8 +436,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             cigar_index = cigar_info[5]
 
             if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
-                # echo(a.cigartuples)
-                # echo(cigar_index)
                 event_pos = cigar_info[6]
                 ci = a.cigartuples[cigar_index]
                 spanning_alignments.append((ci[0],
@@ -457,30 +452,16 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
     info = {}
     cdef str svtype, jointype
-
     if len(spanning_alignments) > 0:
         svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
 
-    # count read attributes
-    # echo(informative_reads)
     attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], min_support, extended_tags)
-    # attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], min_support, extended_tags)
-
-    # echo(attrs)
-    # for item in u_reads:
-    #     echo("u", item.qname)
-    # for item in v_reads:
-    #     echo("v", item.qname)
-    # echo(attrs)
     if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
         return {}
 
-
     # make call from spanning alignments if possible
     if len(spanning_alignments) > 0:
-        # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
-        # info.update(attrs)
 
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
@@ -489,7 +470,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         posB = int(np.median(posB_arr))
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
-
         svlen = int(np.mean([i[4] for i in spanning_alignments]))
 
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
@@ -497,16 +477,13 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
                      "preciseA": True, "preciseB": True, "svlen": svlen,
                      })
-
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
 
     else:
-
         call_informative = Counter([(itm.svtype, itm.join_type) for itm in informative]).most_common()
         svtype, jointype = call_informative[0][0]
         info.update(make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
-
         if len(info) < 2:
             return {}
 
@@ -514,11 +491,9 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
     as1 = None
     as2 = None
-
     if to_assemble:  # or len(spanning_alignments) > 0:
         if info["preciseA"]:
             as1 = assembler.base_assemble(u_reads, info["posA"], 500)
-
         if info["preciseB"]:
             as2 = assembler.base_assemble(v_reads, info["posB"], 500)
 
@@ -530,7 +505,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     if as1 is not None and "contig" in as1:
         info["contig"] = as1["contig"]
         rbases += as1["ref_bases"]
-
     if as2 is not None and "contig" in as2:
         info["contig2"] = as2["contig"]
         rbases += as2["ref_bases"]
@@ -1581,18 +1555,6 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
         if len(info) < 2:
             return {}
 
-        ####
-
-
-    # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
-    # if attrs["pe"] + attrs["supp"] < min_support:
-    #     return {}
-    #
-    # info = call_from_reads(u_reads, v_reads, insert_size, insert_stdev)
-    #
-    # if not info:
-    #     return {}
-
     info.update(attrs)
 
     as1 = None
@@ -1622,24 +1584,6 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
     return info
 
 
-# cdef dict fetch_reads(data, d, bam):
-#
-#     input_reads = data["reads"]
-#     dta_n2n = data["n2n"]
-#     if len(dta_n2n) > 0:  # Might need to collect reads from file
-#         n2n = {}  # Subset
-#         for block in d:  # .values()
-#
-#             n2n.update({v: dta_n2n[v] for v in block if v in dta_n2n})
-#             # for v in block:
-#             #     if v in dta_n2n:
-#             #         n2n[v] = dta_n2n[v]  # Needs collecting
-#
-#         input_reads.update(graph.get_reads(bam, n2n))
-#
-#     return input_reads
-
-
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
 
     cdef int j, int_node
@@ -1657,6 +1601,7 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         p = n[4]
         node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
         infile.seek(p)
+
         a = next(infile)
         v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
         if (v, a.flag, a.pos, a.rname, p) == node:
@@ -1761,10 +1706,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags,
                                  assemble_contigs):
-
-
     n_parts = len(data["parts"])
-
     events = []
     if n_parts >= 1:
         # Processed single edges and break apart connected
@@ -1773,27 +1715,12 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
-
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
         if len(rds) < min_support:
             return []
-        # quit()
-        # rds = {}
-        # to_collect = {}
-        # for v in data["reads"]:
-        #     try:
-        #         rds[v] = data["reads"][v]  # May have been collected already
-        #     except KeyError:
-        #         to_collect[v] = data["n2n"][v]
-        #
-        # rds.update(graph.get_reads(bam, to_collect))
-        #
-        # if len(rds) < min_support:
-        #     return []
 
         e = single(bam, rds, insert_size, insert_stdev, clip_length, min_support,
                    assemble_contigs, extended_tags)
-
         if e:
             events.append(e)
 
@@ -1806,13 +1733,11 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
     ar = False  # c_io_funcs.intersecter_int_chrom
     if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
         ar = True
-
     br = False
     if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
         br = True
 
     kind = "extra-regional"
-
     if not ar and not br:
         if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
             switch = True
@@ -1828,17 +1753,14 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
             switch = True
 
     if ar and br:
-
         if r["chrA"] == r["chrB"]:
             rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
             rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
-
             if rA[0] == rB[0] and rA[1] == rB[1]:
                 kind = "intra_regional"
                 # Put posA first
                 if r["posA"] > r["posB"]:
                     switch = True
-
             else:
                 kind = "inter-regional"
                 if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
@@ -1872,14 +1794,12 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
             reads_10kb_left = round(reads_10kb_left, 3)
         else:
             reads_10kb_left = 0
-
         chrom_i = infile.get_tid(r["chrB"])
         if chrom_i in regions_depth:
             reads_10kb_right = coverage.calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
             reads_10kb_right = round(reads_10kb_right, 3)
         else:
             reads_10kb_right = 0
-
         if reads_10kb_left > reads_10kb_right:
             reads_10kb = reads_10kb_left
         else:
@@ -1889,6 +1809,5 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
     r["raw_reads_10kb"] = reads_10kb
     if r["chrA"] != r["chrB"]:
         r["svlen"] = 1000000
-
     r["su"] = r["pe"] + r["supp"] + r["spanning"]
     return r

@@ -302,7 +302,6 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                   merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs):
 
     potential_events = []
-
     for event in call_component.call_from_block_model(infile,
                                                       component,
                                                       clip_length,
@@ -317,25 +316,21 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                 event["chrA"] = infile.get_reference_name(event["chrA"])
             if event["chrB"] is not None:
                 event["chrB"] = infile.get_reference_name(event["chrB"])
-
             potential_events.append(event)
             event_id += 1
     if not potential_events:
         return potential_events, event_id
 
     potential_events = filter_potential(potential_events, regions, regions_only)
-
     potential_events = merge_events(potential_events, merge_dist, regions,
                                     try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
-    # echo("final potential events", potential_events)
+
     return potential_events, event_id
 
 
 def pipe1(args, infile, kind, regions, ibam):
-    # t6 = time.time()
-    # inputbam, int max_cov, tree, read_threads, buffer_size
-    regions_only = False if args["regions_only"] == "False" else True
 
+    regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
 
@@ -357,12 +352,8 @@ def pipe1(args, infile, kind, regions, ibam):
 
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
-
-        # clustering_dist = max_clust_dist * 5
-
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
-
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
 
     else:
@@ -370,16 +361,10 @@ def pipe1(args, infile, kind, regions, ibam):
         if args["merge_dist"] is None:
             args["merge_dist"] = 50
 
-
     event_id = 0
     block_edge_events = []
-
-    # echo("begin time", time.time() - t6)
-
     min_support = args["min_support"]
     read_buffer = genome_scanner.read_buffer
-
-
 
     t5 = time.time()
     G, node_to_name = graph.construct_graph(genome_scanner,
@@ -424,11 +409,9 @@ def pipe1(args, infile, kind, regions, ibam):
             component = list(cmp[start_i: end_i])
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, min_support)
-
             if res:
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-
                 potential_events, event_id = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
                                                  insert_median,
                                                  insert_stdev,
@@ -438,17 +421,14 @@ def pipe1(args, infile, kind, regions, ibam):
                                                  extended_tags,
                                                  assemble_contigs,
                                                  rel_diffs=rel_diffs, diffs=diffs)
-
                 if potential_events:
                     block_edge_events += potential_events
 
     echo("components", time.time() - t0)
-
     t3 = time.time()
     preliminaries = []
 
     # Merge across calls
-    # echo("-----------")
     if args["merge_within"] == "True":
         merged = merge_events(block_edge_events, args["merge_dist"], regions,
                                 try_rev=False, pick_best=True)
@@ -461,7 +441,6 @@ def pipe1(args, infile, kind, regions, ibam):
             if event_dict:
                 preliminaries.append(event_dict)
 
-
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = sample_level_density(preliminaries, regions)
     echo("time3", time.time() - t3)
@@ -472,7 +451,6 @@ def cluster_reads(args):
     t0 = time.time()
     np.random.seed(1)
     random.seed(1)
-
     kind = args["sv_aligns"].split(".")[-1]
     kind = "stdin" if kind == "-" else kind
     opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
@@ -481,7 +459,6 @@ def cluster_reads(args):
     # if args["procs"] > 1:
     #     raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
-
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
 
     ibam = None
@@ -490,7 +467,6 @@ def cluster_reads(args):
         if kind == "stdin" or kind == "-" or kind not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=args["procs"])
-
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
@@ -510,7 +486,6 @@ def cluster_reads(args):
         args["insert_median"] = im
         args["insert_stdev"] = istd
 
-    #
     if args["svs_out"] == "-" or args["svs_out"] is None:
         click.echo("SVs output to stdout", err=True)
         outfile = sys.stdout
@@ -522,29 +497,22 @@ def cluster_reads(args):
     regions = io_funcs.overlap_regions(args["include"])
 
     # Run dysgu here:
-
     t4 = time.time()
     events, extended_tags = pipe1(args, infile, kind, regions, ibam)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
-
-
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])
-
         df["sample"] = [sample_name] * len(df)
         df["id"] = range(len(df))
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
-
         if args["out_format"] == "csv":
             df[io_funcs.col_names()].to_csv(outfile, index=False)
         else:
-
             contig_header_lines = ""
             for item in infile.header["SQ"]:
                 contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
-
             args["add_kind"] = "True"
             args["sample_name"] = sample_name
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
