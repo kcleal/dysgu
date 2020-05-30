@@ -63,6 +63,9 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
+@click.option('--mode', help="Read type. Multiple parameters are set unless other options are set. "
+                             "long: --mq 20 --paired False --min-support 2 --max-cov 150", default="paired",
+              type=click.Choice(["paired", "long"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
@@ -75,10 +78,10 @@ def cli():
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
-@click.option('--z-depth', help="Minimum minimizer depth across alignments",
-              default=defaults["z_depth"], type=int, show_default=True)
-@click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
-              default=defaults["z_breadth"], type=int, show_default=True)
+# @click.option('--z-depth', help="Minimum minimizer depth across alignments",
+#               default=defaults["z_depth"], type=int, show_default=True)
+# @click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
+#               default=defaults["z_breadth"], type=int, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
@@ -92,8 +95,8 @@ def cli():
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 1000bp for single-end reads",
+@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
+                                   "reads, or 50 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
@@ -194,6 +197,9 @@ def get_reads(ctx, **kwargs):
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
+@click.option('--mode', help="Read type. Multiple parameters are set unless other options are set. "
+                             "long: --mq 20 --paired False --min-support 2 --max-cov 150", default="paired",
+              type=click.Choice(["paired", "long"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
@@ -206,10 +212,10 @@ def get_reads(ctx, **kwargs):
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
-@click.option('--z-depth', help="Minimum minimizer depth across alignments",
-              default=defaults["z_depth"], type=int, show_default=True)
-@click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
-              default=defaults["z_breadth"], type=int, show_default=True)
+# @click.option('--z-depth', help="Minimum minimizer depth across alignments",
+#               default=defaults["z_depth"], type=int, show_default=True)
+# @click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
+#               default=defaults["z_breadth"], type=int, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
@@ -223,8 +229,8 @@ def get_reads(ctx, **kwargs):
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--merge-dist", help="Distance threshold for merging, default is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 1000bp for single-end reads",
+@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
+                                   "reads, or 50 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
