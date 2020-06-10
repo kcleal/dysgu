@@ -4899,6 +4899,7 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
  *         return 1
  *     return 0             # <<<<<<<<<<<<<<
  * 
+ * 
  */
   __pyx_r = 0;
   goto __pyx_L0;
@@ -4921,6 +4922,57 @@ static int __pyx_f_5dysgu_13map_set_utils_cigar_clip(PyObject *__pyx_v_r, int __
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_v_c);
   __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "dysgu/map_set_utils.pyx":168
+ * 
+ * 
+ * cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:             # <<<<<<<<<<<<<<
+ *     return int(max(x1, y1) <= min(x2, y2))
+ * 
+ */
+
+static int __pyx_f_5dysgu_13map_set_utils_is_overlapping(int __pyx_v_x1, int __pyx_v_x2, int __pyx_v_y1, int __pyx_v_y2) {
+  int __pyx_r;
+  int __pyx_t_1;
+  int __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+
+  /* "dysgu/map_set_utils.pyx":169
+ * 
+ * cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
+ *     return int(max(x1, y1) <= min(x2, y2))             # <<<<<<<<<<<<<<
+ * 
+ */
+  __pyx_t_1 = __pyx_v_y1;
+  __pyx_t_2 = __pyx_v_x1;
+  if (((__pyx_t_1 > __pyx_t_2) != 0)) {
+    __pyx_t_3 = __pyx_t_1;
+  } else {
+    __pyx_t_3 = __pyx_t_2;
+  }
+  __pyx_t_1 = __pyx_v_y2;
+  __pyx_t_2 = __pyx_v_x2;
+  if (((__pyx_t_1 < __pyx_t_2) != 0)) {
+    __pyx_t_4 = __pyx_t_1;
+  } else {
+    __pyx_t_4 = __pyx_t_2;
+  }
+  __pyx_r = ((int)(__pyx_t_3 <= __pyx_t_4));
+  goto __pyx_L0;
+
+  /* "dysgu/map_set_utils.pyx":168
+ * 
+ * 
+ * cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:             # <<<<<<<<<<<<<<
+ *     return int(max(x1, y1) <= min(x2, y2))
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L0:;
   return __pyx_r;
 }
 
@@ -5782,6 +5834,7 @@ static int __Pyx_modinit_function_export_code(void) {
   if (__Pyx_ExportFunction("cigar_exists", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_cigar_exists, "int (PyObject *)") < 0) __PYX_ERR(1, 1, __pyx_L1_error)
   if (__Pyx_ExportFunction("clip_sizes", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_clip_sizes, "PyObject *(PyObject *)") < 0) __PYX_ERR(1, 1, __pyx_L1_error)
   if (__Pyx_ExportFunction("cigar_clip", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_cigar_clip, "int (PyObject *, int)") < 0) __PYX_ERR(1, 1, __pyx_L1_error)
+  if (__Pyx_ExportFunction("is_overlapping", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_is_overlapping, "int (int, int, int, int)") < 0) __PYX_ERR(1, 1, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;

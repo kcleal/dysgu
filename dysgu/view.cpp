@@ -1215,6 +1215,30 @@ static CYTHON_INLINE PyObject* __Pyx_PyFrozenSet_New(PyObject* it);
 /* PySetContains.proto */
 static CYTHON_INLINE int __Pyx_PySet_ContainsTF(PyObject* key, PyObject* set, int eq);
 
+/* ListCompAppend.proto */
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE int __Pyx_ListComp_Append(PyObject* list, PyObject* x) {
+    PyListObject* L = (PyListObject*) list;
+    Py_ssize_t len = Py_SIZE(list);
+    if (likely(L->allocated > len)) {
+        Py_INCREF(x);
+        PyList_SET_ITEM(list, len, x);
+        Py_SIZE(list) = len+1;
+        return 0;
+    }
+    return PyList_Append(list, x);
+}
+#else
+#define __Pyx_ListComp_Append(L,x) PyList_Append(L,x)
+#endif
+
+/* PyObjectCallNoArg.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
+#else
+#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
+#endif
+
 /* ListAppend.proto */
 #if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
 static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
@@ -1240,30 +1264,6 @@ static PyObject* __Pyx_PyObject_CallMethod1(PyObject* obj, PyObject* method_name
 
 /* append.proto */
 static CYTHON_INLINE int __Pyx_PyObject_Append(PyObject* L, PyObject* x);
-
-/* ListCompAppend.proto */
-#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
-static CYTHON_INLINE int __Pyx_ListComp_Append(PyObject* list, PyObject* x) {
-    PyListObject* L = (PyListObject*) list;
-    Py_ssize_t len = Py_SIZE(list);
-    if (likely(L->allocated > len)) {
-        Py_INCREF(x);
-        PyList_SET_ITEM(list, len, x);
-        Py_SIZE(list) = len+1;
-        return 0;
-    }
-    return PyList_Append(list, x);
-}
-#else
-#define __Pyx_ListComp_Append(L,x) PyList_Append(L,x)
-#endif
-
-/* PyObjectCallNoArg.proto */
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
-#else
-#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
-#endif
 
 /* None.proto */
 static CYTHON_INLINE void __Pyx_RaiseClosureNameError(const char *varname);
@@ -2813,7 +2813,9 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
   PyObject *(*__pyx_t_10)(PyObject *);
   int __pyx_t_11;
   Py_ssize_t __pyx_t_12;
-  int __pyx_t_13;
+  PyObject *__pyx_t_13 = NULL;
+  PyObject *__pyx_t_14 = NULL;
+  int __pyx_t_15;
   __Pyx_RefNannySetupContext("merge_df", 0);
   __Pyx_INCREF(__pyx_v_df);
 
@@ -2926,7 +2928,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *     if not merge_within_sample:
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,             # <<<<<<<<<<<<<<
  *                                      same_sample=False)
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  */
     __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_cluster); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
@@ -2954,7 +2956,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *     if not merge_within_sample:
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,
  *                                      same_sample=False)             # <<<<<<<<<<<<<<
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  *         for f in found:
  */
     if (PyDict_SetItem(__pyx_t_1, __pyx_n_s_same_sample, Py_False) < 0) __PYX_ERR(0, 50, __pyx_L1_error)
@@ -2964,7 +2966,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *     if not merge_within_sample:
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,             # <<<<<<<<<<<<<<
  *                                      same_sample=False)
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  */
     __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 50, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
@@ -2977,7 +2979,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
     /* "dysgu/view.pyx":52
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,
  *                                      same_sample=False)
- *         ff = defaultdict(list)             # <<<<<<<<<<<<<<
+ *         ff = defaultdict(set)             # <<<<<<<<<<<<<<
  *         for f in found:
  *             if "partners" not in f:
  */
@@ -2993,7 +2995,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
         __Pyx_DECREF_SET(__pyx_t_1, function);
       }
     }
-    __pyx_t_6 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_3, ((PyObject *)(&PyList_Type))) : __Pyx_PyObject_CallOneArg(__pyx_t_1, ((PyObject *)(&PyList_Type)));
+    __pyx_t_6 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_3, ((PyObject *)(&PySet_Type))) : __Pyx_PyObject_CallOneArg(__pyx_t_1, ((PyObject *)(&PySet_Type)));
     __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
     if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 52, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
@@ -3003,7 +3005,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
 
     /* "dysgu/view.pyx":53
  *                                      same_sample=False)
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  *         for f in found:             # <<<<<<<<<<<<<<
  *             if "partners" not in f:
  *                 ff[f["event_id"]] = []
@@ -3051,7 +3053,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
       __pyx_t_1 = 0;
 
       /* "dysgu/view.pyx":54
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  *         for f in found:
  *             if "partners" not in f:             # <<<<<<<<<<<<<<
  *                 ff[f["event_id"]] = []
@@ -3077,7 +3079,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
         /* "dysgu/view.pyx":54
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  *         for f in found:
  *             if "partners" not in f:             # <<<<<<<<<<<<<<
  *                 ff[f["event_id"]] = []
@@ -3168,7 +3170,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *                 for item in f["partners"]:  # Only merge with one row per sample
  *                     t_name = df.loc[item]["table_name"]             # <<<<<<<<<<<<<<
  *                     if t_name != current and t_name not in targets and len(targets) < n_samples:
- *                         ff[f["event_id"]].append(item)
+ *                         ff[f["event_id"]].add(item)
  */
           __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_loc); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 62, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
@@ -3185,8 +3187,8 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *                 for item in f["partners"]:  # Only merge with one row per sample
  *                     t_name = df.loc[item]["table_name"]
  *                     if t_name != current and t_name not in targets and len(targets) < n_samples:             # <<<<<<<<<<<<<<
- *                         ff[f["event_id"]].append(item)
- *                         ff[item].append(f["event_id"])
+ *                         ff[f["event_id"]].add(item)
+ *                         ff[item].add(f["event_id"])
  */
           __pyx_t_1 = PyObject_RichCompare(__pyx_v_t_name, __pyx_v_current, Py_NE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 63, __pyx_L1_error)
           __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 63, __pyx_L1_error)
@@ -3217,48 +3219,82 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
             /* "dysgu/view.pyx":64
  *                     t_name = df.loc[item]["table_name"]
  *                     if t_name != current and t_name not in targets and len(targets) < n_samples:
- *                         ff[f["event_id"]].append(item)             # <<<<<<<<<<<<<<
- *                         ff[item].append(f["event_id"])
+ *                         ff[f["event_id"]].add(item)             # <<<<<<<<<<<<<<
+ *                         ff[item].add(f["event_id"])
  *                         targets.add(t_name)
  */
-            __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_f, __pyx_n_u_event_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 64, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_ff, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
+            __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_f, __pyx_n_u_event_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-            __pyx_t_13 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_v_item); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 64, __pyx_L1_error)
+            __pyx_t_13 = __Pyx_PyObject_GetItem(__pyx_v_ff, __pyx_t_1); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 64, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_13);
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_13, __pyx_n_s_add); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 64, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+            __pyx_t_13 = NULL;
+            if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_1))) {
+              __pyx_t_13 = PyMethod_GET_SELF(__pyx_t_1);
+              if (likely(__pyx_t_13)) {
+                PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+                __Pyx_INCREF(__pyx_t_13);
+                __Pyx_INCREF(function);
+                __Pyx_DECREF_SET(__pyx_t_1, function);
+              }
+            }
+            __pyx_t_2 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_v_item) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_v_item);
+            __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
+            if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 64, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_2);
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
             /* "dysgu/view.pyx":65
  *                     if t_name != current and t_name not in targets and len(targets) < n_samples:
- *                         ff[f["event_id"]].append(item)
- *                         ff[item].append(f["event_id"])             # <<<<<<<<<<<<<<
+ *                         ff[f["event_id"]].add(item)
+ *                         ff[item].add(f["event_id"])             # <<<<<<<<<<<<<<
  *                         targets.add(t_name)
  *                     else:  # Merged with self event. Happens with clusters of SVs with small spacing
  */
             __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_ff, __pyx_v_item); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 65, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_f, __pyx_n_u_event_id); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_13 = __Pyx_PyObject_Append(__pyx_t_1, __pyx_t_2); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 65, __pyx_L1_error)
+            __pyx_t_13 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_add); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 65, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_13);
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_f, __pyx_n_u_event_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 65, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_1);
+            __pyx_t_14 = NULL;
+            if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_13))) {
+              __pyx_t_14 = PyMethod_GET_SELF(__pyx_t_13);
+              if (likely(__pyx_t_14)) {
+                PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
+                __Pyx_INCREF(__pyx_t_14);
+                __Pyx_INCREF(function);
+                __Pyx_DECREF_SET(__pyx_t_13, function);
+              }
+            }
+            __pyx_t_2 = (__pyx_t_14) ? __Pyx_PyObject_Call2Args(__pyx_t_13, __pyx_t_14, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_t_1);
+            __Pyx_XDECREF(__pyx_t_14); __pyx_t_14 = 0;
+            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+            if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_2);
+            __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
             __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
             /* "dysgu/view.pyx":66
- *                         ff[f["event_id"]].append(item)
- *                         ff[item].append(f["event_id"])
+ *                         ff[f["event_id"]].add(item)
+ *                         ff[item].add(f["event_id"])
  *                         targets.add(t_name)             # <<<<<<<<<<<<<<
  *                     else:  # Merged with self event. Happens with clusters of SVs with small spacing
  *                         bad_i.add(item)
  */
-            __pyx_t_13 = PySet_Add(__pyx_v_targets, __pyx_v_t_name); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 66, __pyx_L1_error)
+            __pyx_t_15 = PySet_Add(__pyx_v_targets, __pyx_v_t_name); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 66, __pyx_L1_error)
 
             /* "dysgu/view.pyx":63
  *                 for item in f["partners"]:  # Only merge with one row per sample
  *                     t_name = df.loc[item]["table_name"]
  *                     if t_name != current and t_name not in targets and len(targets) < n_samples:             # <<<<<<<<<<<<<<
- *                         ff[f["event_id"]].append(item)
- *                         ff[item].append(f["event_id"])
+ *                         ff[f["event_id"]].add(item)
+ *                         ff[item].add(f["event_id"])
  */
             goto __pyx_L9;
           }
@@ -3271,7 +3307,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *         df = df.drop(bad_i)
  */
           /*else*/ {
-            __pyx_t_13 = PySet_Add(__pyx_v_bad_i, __pyx_v_item); if (unlikely(__pyx_t_13 == ((int)-1))) __PYX_ERR(0, 68, __pyx_L1_error)
+            __pyx_t_15 = PySet_Add(__pyx_v_bad_i, __pyx_v_item); if (unlikely(__pyx_t_15 == ((int)-1))) __PYX_ERR(0, 68, __pyx_L1_error)
           }
           __pyx_L9:;
 
@@ -3289,7 +3325,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
 
       /* "dysgu/view.pyx":53
  *                                      same_sample=False)
- *         ff = defaultdict(list)
+ *         ff = defaultdict(set)
  *         for f in found:             # <<<<<<<<<<<<<<
  *             if "partners" not in f:
  *                 ff[f["event_id"]] = []
@@ -3301,7 +3337,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *                         bad_i.add(item)
  * 
  *         df = df.drop(bad_i)             # <<<<<<<<<<<<<<
- *         df["partners"] = [ff[i] if i in ff else [] for i in df.index]
+ *         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
  *         return df
  */
     __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_df, __pyx_n_s_drop); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 70, __pyx_L1_error)
@@ -3327,7 +3363,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
     /* "dysgu/view.pyx":71
  * 
  *         df = df.drop(bad_i)
- *         df["partners"] = [ff[i] if i in ff else [] for i in df.index]             # <<<<<<<<<<<<<<
+ *         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]             # <<<<<<<<<<<<<<
  *         return df
  *     else:
  */
@@ -3380,15 +3416,15 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
         __pyx_t_3 = 0;
         __pyx_t_4 = (__Pyx_PySequence_ContainsTF(__pyx_7genexpr__pyx_v_i, __pyx_v_ff, Py_EQ)); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 71, __pyx_L15_error)
         if ((__pyx_t_4 != 0)) {
-          __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_ff, __pyx_7genexpr__pyx_v_i); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 71, __pyx_L15_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_3 = __pyx_t_1;
-          __pyx_t_1 = 0;
+          __pyx_t_13 = __Pyx_PyObject_GetItem(__pyx_v_ff, __pyx_7genexpr__pyx_v_i); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 71, __pyx_L15_error)
+          __Pyx_GOTREF(__pyx_t_13);
+          __pyx_t_3 = __pyx_t_13;
+          __pyx_t_13 = 0;
         } else {
-          __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 71, __pyx_L15_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_3 = __pyx_t_1;
-          __pyx_t_1 = 0;
+          __pyx_t_13 = PySet_New(0); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 71, __pyx_L15_error)
+          __Pyx_GOTREF(__pyx_t_13);
+          __pyx_t_3 = __pyx_t_13;
+          __pyx_t_13 = 0;
         }
         if (unlikely(__Pyx_ListComp_Append(__pyx_t_6, (PyObject*)__pyx_t_3))) __PYX_ERR(0, 71, __pyx_L15_error)
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -3406,7 +3442,7 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
 
     /* "dysgu/view.pyx":72
  *         df = df.drop(bad_i)
- *         df["partners"] = [ff[i] if i in ff else [] for i in df.index]
+ *         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
  *         return df             # <<<<<<<<<<<<<<
  *     else:
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False,
@@ -3471,13 +3507,13 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
  *                                      same_sample=True)
  *         return pd.DataFrame.from_records(found)
  */
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_6, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 74, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
+    __pyx_t_13 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_6, __pyx_t_3); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 74, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_13);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_v_found = __pyx_t_1;
-    __pyx_t_1 = 0;
+    __pyx_v_found = __pyx_t_13;
+    __pyx_t_13 = 0;
 
     /* "dysgu/view.pyx":76
  *         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False,
@@ -3505,13 +3541,13 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
         __Pyx_DECREF_SET(__pyx_t_3, function);
       }
     }
-    __pyx_t_1 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_6, __pyx_v_found) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_found);
+    __pyx_t_13 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_6, __pyx_v_found) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_found);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 76, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
+    if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 76, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_13);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_r = __pyx_t_1;
-    __pyx_t_1 = 0;
+    __pyx_r = __pyx_t_13;
+    __pyx_t_13 = 0;
     goto __pyx_L0;
   }
 
@@ -3529,6 +3565,8 @@ static PyObject *__pyx_pf_5dysgu_4view_4merge_df(CYTHON_UNUSED PyObject *__pyx_s
   __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3);
   __Pyx_XDECREF(__pyx_t_6);
+  __Pyx_XDECREF(__pyx_t_13);
+  __Pyx_XDECREF(__pyx_t_14);
   __Pyx_AddTraceback("dysgu.view.merge_df", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -12167,6 +12205,28 @@ static CYTHON_INLINE int __Pyx_PySet_ContainsTF(PyObject* key, PyObject* set, in
     return unlikely(result < 0) ? result : (result == (eq == Py_EQ));
 }
 
+/* PyObjectCallNoArg */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
+#if CYTHON_FAST_PYCALL
+    if (PyFunction_Check(func)) {
+        return __Pyx_PyFunction_FastCall(func, NULL, 0);
+    }
+#endif
+#ifdef __Pyx_CyFunction_USED
+    if (likely(PyCFunction_Check(func) || __Pyx_CyFunction_Check(func)))
+#else
+    if (likely(PyCFunction_Check(func)))
+#endif
+    {
+        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
+            return __Pyx_PyObject_CallMethO(func, NULL);
+        }
+    }
+    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
+}
+#endif
+
 /* PyObjectGetMethod */
 static int __Pyx_PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method) {
     PyObject *attr;
@@ -12293,28 +12353,6 @@ static CYTHON_INLINE int __Pyx_PyObject_Append(PyObject* L, PyObject* x) {
     }
     return 0;
 }
-
-/* PyObjectCallNoArg */
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
-#if CYTHON_FAST_PYCALL
-    if (PyFunction_Check(func)) {
-        return __Pyx_PyFunction_FastCall(func, NULL, 0);
-    }
-#endif
-#ifdef __Pyx_CyFunction_USED
-    if (likely(PyCFunction_Check(func) || __Pyx_CyFunction_Check(func)))
-#else
-    if (likely(PyCFunction_Check(func)))
-#endif
-    {
-        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
-            return __Pyx_PyObject_CallMethO(func, NULL);
-        }
-    }
-    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
-}
-#endif
 
 /* None */
 static CYTHON_INLINE void __Pyx_RaiseClosureNameError(const char *varname) {

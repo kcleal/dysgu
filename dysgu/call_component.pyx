@@ -7,6 +7,7 @@ import numpy as np
 import itertools
 from dysgu import io_funcs, assembler, coverage
 from dysgu.map_set_utils cimport hash as xxhasher
+from dysgu.map_set_utils cimport is_overlapping
 import warnings
 from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint64_t
@@ -20,19 +21,30 @@ def echo(*args):
     click.echo(args, err=True)
 
 
-cdef float n_aligned_bases(ct):
-    cdef int opp, l
-    return float(sum(l for opp, l in ct if opp == 0))
+cdef n_aligned_bases(ct):
+    cdef int opp, l, aligned, large_gaps, n_small_gaps
+    aligned, large_gaps, n_small_gaps = 0, 0, 0
+    for opp, l in ct:
+        if opp == 0:
+            aligned += l
+        elif opp == 1 or opp == 2:
+            if l >= 30:
+                large_gaps += l
+            else:
+                n_small_gaps += 1
+
+    # return float(sum(l for opp, l in ct if opp == 0))
+    return float(aligned), float(large_gaps), float(n_small_gaps)
 
 
 cdef dict extended_attrs(reads1, reads2, spanning, min_support):
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning)}
+         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": []}
     paired_end = set([])
     seen = set([])
 
     cdef int flag
-    cdef float a_bases
+    cdef float a_bases, large_gaps, n_small_gaps
     # cdef list reads
     # for reads in (reads1, reads2):
     for a in itertools.chain(reads1, reads2):
@@ -49,7 +61,8 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
         if flag & 2:
             r["NP"] += 1
 
-        a_bases = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+        r["n_gaps"].append(n_small_gaps / a_bases)
 
         if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
@@ -61,7 +74,9 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
                 r["DApri"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                    nm = float(a.get_tag("NM"))
+                    r["NMpri"].append(nm / a_bases)
+                    r["NMbase"].append((nm - large_gaps) / a_bases)
                 else:
                     r["NMpri"].append(0)
 
@@ -101,7 +116,8 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
         if flag & 2:
             r["NP"] += 1
 
-        a_bases = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+        r["n_gaps"].append(n_small_gaps / a_bases)
         if not flag & 256:  # Primary reads
             r["MAPQpri"].append(a.mapq)
             if qname in paired_end:  # If two primary reads from same pair
@@ -112,7 +128,9 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
                 r["DApri"].append(float(a.get_tag("DA")))
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                    nm = float(a.get_tag("NM"))
+                    r["NMpri"].append(nm / a_bases)
+                    r["NMbase"].append((nm - large_gaps) / a_bases)
                 else:
                     r["NMpri"].append(0)
 
@@ -134,12 +152,11 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support):
         else:
             r["plus"] += 1
 
-
     if r["pe"] + r["supp"] < min_support:
         return {}
 
     cdef str k
-    for k in ("NMpri", "NMsupp"):
+    for k in ("NMpri", "NMsupp", "NMbase", "n_gaps"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k]) * 100
         else:
@@ -162,18 +179,19 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
 
     r = {"pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
-         "spanning": len(spanning)}
+         "spanning": len(spanning), "NMbase": [], "n_gaps": []}
 
     paired_end = set([])
     seen = set([])
 
     cdef int flag
-    cdef float a_bases
+    cdef float a_bases, large_gaps, n_small_gaps
 
     for a in itertools.chain(reads1, reads2):
         qname = a.qname
         flag = a.flag
-        a_bases = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+        r["n_gaps"].append(n_small_gaps / a_bases)
         if flag & 2:
             r["NP"] += 1
 
@@ -185,7 +203,9 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
                 paired_end.add(qname)
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                    nm = float(a.get_tag("NM"))
+                    r["NMpri"].append(nm / a_bases)
+                    r["NMbase"].append((nm - large_gaps) / a_bases)
                 else:
                     r["NMpri"].append(0)
 
@@ -212,7 +232,9 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
     for a in spanning:  # Same but dont count softclip
         qname = a.qname
         flag = a.flag
-        a_bases = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+
+        r["n_gaps"].append(n_small_gaps / a_bases)
         if flag & 2:
             r["NP"] += 1
 
@@ -224,7 +246,9 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
                 paired_end.add(qname)
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMpri"].append(float(a.get_tag("NM")) / a_bases)
+                    nm = float(a.get_tag("NM"))
+                    r["NMpri"].append(nm / a_bases)
+                    r["NMbase"].append((nm - large_gaps) / a_bases)
                 else:
                     r["NMpri"].append(0)
 
@@ -245,7 +269,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support):
             r["plus"] += 1
 
     cdef str k
-    for k in ("NMpri", "NMsupp"):
+    for k in ("NMpri", "NMsupp", "NMbase", "n_gaps"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k]) * 100
         else:
@@ -270,6 +294,51 @@ cdef dict count_attributes(reads1, reads2, spanning, int min_support, int extend
 
     else:
         return normal_attrs(reads1, reads2, spanning, min_support)
+
+
+cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
+    # If a deletion has a poorly aligned section at the end of pos2, merge nearby events until target matches
+    cdef int i, end, idx, opp, length, cigar_skip, n_aligned_bases, target_bases
+    if svtype == 1:  # insertion (or other e.g. duplication/inversion within read)
+        return event_pos + 1
+    else:  # deletion type
+        end = event_pos + cigartuples[cigar_index][1]
+        return end
+
+    #     original_end = end
+    #     cigar_skip = 0
+    #     idx = cigar_index + 1
+    #     n_aligned_bases = 0
+    #     target_bases = target_bases = min(150, max(100, int((end - event_pos) / 2)))
+    #
+    #     for idx in range(cigar_index + 1, len(cigartuples)):
+    #     #while idx < len(cigartuples):
+    #
+    #         opp, length = cigartuples[idx]
+    #         # echo(opp, length, n_aligned_bases, target_bases)
+    #         if opp == 1:  # insertion
+    #             if length >= 30:
+    #                 break
+    #             # idx += 1
+    #
+    #         elif opp == 2:
+    #             if length >= 30:
+    #                 target_bases = min(150, max(100, int(length / 2)))
+    #                 n_aligned_bases = 0
+    #                 cigar_skip = 1
+    #             # idx += 1
+    #             end += length
+    #
+    #         elif opp == 0:
+    #             n_aligned_bases += length
+    #             if n_aligned_bases > target_bases:
+    #                 break
+    #             end += length
+    #             # idx += 1
+    # if cigar_skip == 1:
+    #     return end
+    # else:
+    #     return original_end  # use original cigar end point
 
 
 cdef tuple guess_informative_pair(aligns):
@@ -300,7 +369,7 @@ cdef tuple guess_informative_pair(aligns):
                     event_pos + 1 if ci[0] == 1 else event_pos + b.cigartuples[cigar_index][1] + 1,
                     b.cigartuples[cigar_index][1],
                     b)
-        # echo("closeness", a.qname, abs(a.pos - b.pos) < 25 or abs(a.reference_end - b.reference_end) < 25)
+
         if abs(a.pos - b.pos) < 25 or abs(a.reference_end - b.reference_end) < 25:
             return
         if a.pos < b.pos:  # a and b will be same on same chrom
@@ -441,7 +510,8 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
                 spanning_alignments.append((ci[0],
                                             a.rname,
                                             event_pos,
-                                            event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
+                                            within_read_end_position(event_pos, ci[0], a.cigartuples, cigar_index),
+                                            # event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
                                             a.cigartuples[cigar_index][1],
                                             a))
                 u_reads.append(a)
@@ -456,13 +526,8 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
 
-    attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], min_support, extended_tags)
-    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
-        return {}
-
     # make call from spanning alignments if possible
     if len(spanning_alignments) > 0:
-
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
         posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
@@ -471,11 +536,11 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
         svlen = int(np.mean([i[4] for i in spanning_alignments]))
-
+        ab = abs(posB - posA)
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "preciseA": True, "preciseB": True, "svlen": svlen,
+                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab,
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
@@ -486,6 +551,10 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         info.update(make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
         if len(info) < 2:
             return {}
+
+    attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], min_support, extended_tags)
+    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
+        return {}
 
     info.update(attrs)
 
@@ -1160,8 +1229,8 @@ cdef void translocation(AlignmentItem v):
     v.join_type = f"{v.strandA}to{v.strandB}"
 
 
-cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
-    return int(max(x1, y1) <= min(x2, y2))
+# cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
+#     return int(max(x1, y1) <= min(x2, y2))
 
 
 cdef void classify_d(AlignmentItem v):
@@ -1518,18 +1587,8 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
         svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
 
-    # echo(len(spanning_alignments), len(u_reads), len(v_reads))
-    # count read attributes
-    attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], min_support, extended_tags)
-    # echo("attrs", attrs)
-    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
-        return {}
-
     # make call from spanning alignments if possible
     if len(spanning_alignments) > 0:
-        # attrs = count_attributes(u_reads, v_reads, min_support, extended_tags)
-        # info.update(attrs)
-
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
         posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
@@ -1538,22 +1597,24 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
         svlen = int(np.mean([i[4] for i in spanning_alignments]))
-
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
                      "preciseA": True, "preciseB": True, "svlen": svlen,
                      })
-
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
 
     else:
-
         info.update(call_from_reads(u_reads, v_reads, insert_size, insert_stdev))
-
         if len(info) < 2:
             return {}
+
+    # count read attributes
+    attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], min_support, extended_tags)
+
+    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
+        return {}
 
     info.update(attrs)
 

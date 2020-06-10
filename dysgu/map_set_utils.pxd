@@ -205,6 +205,9 @@ cdef tuple clip_sizes(r)
 cdef int cigar_clip(r, int clip_length)
 
 
+cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
+
+
 
 
 

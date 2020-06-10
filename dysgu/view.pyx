@@ -49,7 +49,7 @@ def merge_df(df, n_samples, tree=None, merge_within_sample=False):
     if not merge_within_sample:
         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,
                                      same_sample=False)
-        ff = defaultdict(list)
+        ff = defaultdict(set)
         for f in found:
             if "partners" not in f:
                 ff[f["event_id"]] = []
@@ -61,14 +61,14 @@ def merge_df(df, n_samples, tree=None, merge_within_sample=False):
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
                     if t_name != current and t_name not in targets and len(targets) < n_samples:
-                        ff[f["event_id"]].append(item)
-                        ff[item].append(f["event_id"])
+                        ff[f["event_id"]].add(item)
+                        ff[item].add(f["event_id"])
                         targets.add(t_name)
                     else:  # Merged with self event. Happens with clusters of SVs with small spacing
                         bad_i.add(item)
 
         df = df.drop(bad_i)
-        df["partners"] = [ff[i] if i in ff else [] for i in df.index]
+        df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
         return df
     else:
         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=True, add_partners=False,

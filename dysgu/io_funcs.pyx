@@ -160,18 +160,20 @@ def get_include_reads(include_regions, bam):
 
 cpdef list col_names(extended):
     if extended:
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
-         "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
+        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
+         "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus",
+          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "ref_bases", "svlen", "plus",
+                "minus", "n_gaps"
             ]
     else:
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "svtype", "join_type", "cipos95A", "cipos95B",
-          "NMpri", "NMsupp", "MAPQpri", "MAPQsupp", "NP",
+        return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
+          "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "rep", "rep_sc", "ref_bases", "svlen", "plus", "minus",
+          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "ref_bases", "svlen", "plus",
+                "minus", "n_gaps"
             ]
 
 
@@ -185,6 +187,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         gc = r["gc"]
         rep = r["rep"]
         repsc = r["rep_sc"]
+
         su, pe, sr, sc, wr = 0, 0, 0, 0, 0
         # probs = []
         for row in df_rows.values():
@@ -208,6 +211,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         repsc = r["rep_sc"]
 
     samp = r["sample"]
+    read_kind = r["type"]
 
     if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
         chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
@@ -226,7 +230,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         if 'svlen' in r:
             info_extras.append(f"SVLEN={r['svlen']}")
         else:
-            info_extras.append(f"SVLEN=NA")
+            info_extras.append(f"SVLEN=0")
 
     if r["contigA"]:
         info_extras.append(f"CONTIGA={r['contigA']}")
@@ -243,15 +247,15 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"WR={wr}",
                     f"PE={pe}",
                     f"SR={sr}",
-                    f"SC={sc}",]
-                    #f"MPROB={probs}"]
+                    f"SC={sc}",
+                    f"RT={read_kind}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:NMP:NMS:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:RB:PS:MS"
+        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -278,62 +282,32 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 def get_fmt(r, extended):
     if extended:
 
-        v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                      r['ref_bases'], r["plus"], r["minus"]]
+                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
+                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps']]
         if "prob" in r:
             v.append(r["prob"])
         return v
 
     else:
-        v = ["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
+        v = ["./.", r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-                                  r['ref_bases'], r["plus"], r["minus"]]
+                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
+                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps']]
         if "prob" in r:
             v.append(r["prob"])
         return v
-
-
 
 
 def gen_format_fields(r, df, names, extended, n_fields):
 
     if len(names) == 1:
         return {0: get_fmt(r, extended)}, {}
-        # if extended:
-        #     if "prob" in r:
-        #         d = {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-        #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-        #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-        #                               r['ref_bases'], r["plus"], r["minus"], r["prob"]])}
-        #
-        #     else:
-        #         d = {0: (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-        #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-        #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-        #                               r['ref_bases'], r["plus"], r["minus"]])}
-        #
-        #     return d, {}
-        # else:
-        #     if "prob" in r:
-        #         d = {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-        #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-        #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-        #                           r['ref_bases'], r["plus"], r["minus"], r["prob"]])}
-        #
-        #     else:
-        #         d = {0: (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-        #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-        #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-        #                           r['ref_bases'], r["plus"], r["minus"]])}
-        #
-        #     return d, {}
 
     cols = {}
     if "partners" in r:
-        if not isinstance(r["partners"], list):
+        if not isinstance(r["partners"], set):
             if len(r["partners"]) == 0 or pd.isna(r["partners"]):
                 r["partners"] = []
             else:
@@ -347,26 +321,10 @@ def gen_format_fields(r, df, names, extended, n_fields):
         cols[r["table_name"]] = r
 
     format_fields = sortedcontainers.SortedDict()
-
     for name in names:
-
         if name in cols:
-            format_fields[name] = get_fmt(r, extended)
-            # if extended:
-            #
-            #     format_fields[name] = (["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['MAPQpri'],
-            #                           r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-            #                           r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-            #                           r['ref_bases'], r["plus"], r["minus"]])  # r['Prob']
-            # else:
-            #     if "prob" in r:
-            #
-            #     else:
-            #         format_fields[name] = (["./.", r['NMpri'], r['NMsupp'], r['MAPQpri'],
-            #                               r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-            #                               r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'],
-            #                               r['ref_bases'], r["plus"], r["minus"]])
-
+            row = cols[name]
+            format_fields[name] = get_fmt(row, extended)
         else:
             format_fields[name] = [0] * n_fields
 
@@ -383,6 +341,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=RT,Number=1,Type=String,Description="Type of input reads, 1=paired-end, 2=pacbio, 3=nanopore">
 ##INFO=<ID=CT,Number=1,Type=String,Description="Paired-end signature induced connection type">
 ##INFO=<ID=CIPOS95,Number=1,Type=Integer,Description="Confidence interval size (95%) around POS for imprecise variants">
 ##INFO=<ID=CIEND95,Number=1,Type=Integer,Description="Confidence interval size (95%) around END for imprecise variants">
@@ -409,6 +368,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=DAS,Number=1,Type=Float,Description="Mean distance-to-alignment metric for supplementary alignments">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
 ##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
+##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
 ##FORMAT=<ID=MAPQP,Number=1,Type=Float,Description="Mean MAPQ for primary reads supporting the variant">
 ##FORMAT=<ID=MAPQS,Number=1,Type=Float,Description="Mean MAPQ for supplementary reads supporting the variant">
 ##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
@@ -421,10 +381,12 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
-##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other beak points within 100 bp or break sites">
+##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other break points within 1 bp of break site">
+##FORMAT=<ID=NEIGH10,Number=1,Type=Integer,Description="Number of other break points within 10 kp of break site">
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
-##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">{}
+##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
+##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
         else:
@@ -434,6 +396,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=RT,Number=1,Type=String,Description="Type of input reads, 1=paired-end, 2=pacbio, 3=nanopore">
 ##INFO=<ID=CT,Number=1,Type=String,Description="Paired-end signature induced connection type">
 ##INFO=<ID=CIPOS95,Number=1,Type=Integer,Description="Confidence interval size (95%) around POS for imprecise variants">
 ##INFO=<ID=CIEND95,Number=1,Type=Integer,Description="Confidence interval size (95%) around END for imprecise variants">
@@ -456,6 +419,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
 ##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
+##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
 ##FORMAT=<ID=MAPQP,Number=1,Type=Float,Description="Mean MAPQ for primary reads supporting the variant">
 ##FORMAT=<ID=MAPQS,Number=1,Type=Float,Description="Mean MAPQ for supplementary reads supporting the variant">
 ##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
@@ -468,10 +432,12 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
-##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other beak points within 100 bp or break sites">
+##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other break points within 1 bp of break site">
+##FORMAT=<ID=NEIGH10,Number=1,Type=Integer,Description="Number of other break points within 10 kp of break site">
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
-##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">{}
+##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
+##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
@@ -487,30 +453,30 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 
     version = pkg_resources.require("dysgu")[0].version
 
-    if len(names) > 1:
-        dm = df.sort_values(["partners"], ascending=False)
-    else:
-        dm = df
+    # if len(names) > 1:
+    #     dm = df.sort_values(["partners"], ascending=False)
+    # else:
+    #     dm = df
 
     seen_idx = set([])
 
+    cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp', "NMbase", "n_gaps"]
     if extended_tags:
-        cnames = ['raw_reads_10kb', 'DP', 'DN', 'DApri', 'DAsupp', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
-    else:
-        cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
+        # cnames = ['raw_reads_10kb',  'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp']
+        cnames += ['DP', 'DN', 'DApri', 'DAsupp',]
 
     for col in cnames:
-        dm[col] = dm[col].astype(float).round(2)
+        df[col] = df[col].astype(float).round(2)
 
-    for col in ['maxASsupp', 'neigh']:
-        dm[col] = [int(i) for i in dm[col]]
+    for col in ['maxASsupp', 'neigh', 'neigh10kb']:
+        df[col] = [int(i) for i in df[col]]
 
     count = 0
     recs = []
     jobs = []
 
     add_kind = args["add_kind"] == "True"
-    for idx, r in dm.iterrows():
+    for idx, r in df.iterrows():
 
         if idx in seen_idx:
             continue

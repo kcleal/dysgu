@@ -164,3 +164,7 @@ cdef int cigar_clip(r, int clip_length):
         return 1
     return 0
 
+
+cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
+    return int(max(x1, y1) <= min(x2, y2))
+

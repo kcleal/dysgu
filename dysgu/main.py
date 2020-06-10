@@ -63,9 +63,9 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Read type. Multiple parameters are set unless other options are set. "
-                             "long: --mq 20 --paired False --min-support 2 --max-cov 150", default="paired",
-              type=click.Choice(["paired", "long"]), show_default=True)
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+                             "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
@@ -123,6 +123,13 @@ def run_pipeline(ctx, **kwargs):
         click.echo(f"Destination: {dest}", err=True)
         bname = os.path.splitext(os.path.basename(kwargs["bam"]))[0]
         tmp_file_name = f"{dest}/{bname}.{pfix}.bam"
+
+    # Switch to different read mode if provided
+    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+        ctx.obj["paired"] = "False"
+        ctx.obj["mq"] = 20
+        ctx.obj["max_cov"] = 150
+        ctx.obj["min_support"] = 2
 
     # Get SV reads
     ctx.obj["output"] = tmp_file_name
@@ -197,9 +204,9 @@ def get_reads(ctx, **kwargs):
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
-@click.option('--mode', help="Read type. Multiple parameters are set unless other options are set. "
-                             "long: --mq 20 --paired False --min-support 2 --max-cov 150", default="paired",
-              type=click.Choice(["paired", "long"]), show_default=True)
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+                             "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
@@ -241,6 +248,12 @@ def call_events(ctx, **kwargs):
     """Call structural vaiants"""
     # Create dest in not done so already
     ctx = apply_ctx(ctx, kwargs)
+    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+        ctx.obj["paired"] = "False"
+        ctx.obj["mq"] = 20
+        ctx.obj["max_cov"] = 150
+        ctx.obj["min_support"] = 2
+
     cluster.cluster_reads(ctx.obj)
 
 

@@ -583,7 +583,8 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                        overlap_regions, int clustering_dist, PairedEndScoper_t pe_scope,
                        int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
-                       TemplateEdges_t template_edges, NodeToName node_to_name):
+                       TemplateEdges_t template_edges, NodeToName node_to_name,
+                            int clip_or_wr, int cigar_pos2):
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
@@ -592,40 +593,15 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
     cdef int chrom = r.rname
     cdef int chrom2
     cdef int pos2
-    # cdef int pos = event_pos #r.pos
-    # cdef int event_pos = r.pos
     cdef int flag = r.flag
     cdef str qname = r.qname
     cdef uint64_t v
 
-    cdef uint16_t clip_or_wr = 0  # clip-event or within-read event
-    if cigar_index <= 0 or cigar_index == len(r.cigartuples) - 1:
-        clip_or_wr = 1  # Soft-clip or SA event
-    elif 0 < cigar_index < len(r.cigartuples) - 1:
-
-        if r.cigartuples[cigar_index][0] == 2:
-            clip_or_wr = 2  # Deletion type
-        else:
-            clip_or_wr = 3  # Insertion type
-
-    # echo(r.qname)
-    # if r.qname == "m64004_190803_004451/44630072/ccs":
-    #     echo("CLIP or WR", clip_or_wr, cigar_index, r.cigartuples[:4])
-    #     echo(r.cigartuples[cigar_index][0])
-    #     quit()
-
     if paired_end and clip_or_wr == 1 and flag & 8:  # clip event, or whole read, but mate is unmapped
         return
 
-    # cdef int node_name = G.addNode()
-    # v = xxhasher(bam_get_qname(r._delegate), len(qname), 42)  # Hash qname to save mem
-    # node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)
-    # genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
-
     cdef bint success
 
-    # if r.qname == "m64004_190803_004451/69861888/ccs":
-    #      echo("here", clip_or_wr, "cigar index", cigar_index, r.cigartuples)
     if paired_end or flag & 1:
 
         # Cluster paired-end mates
@@ -660,70 +636,12 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-                    #
-                    # if not other_nodes.empty():
-                    #     for other_node in other_nodes:
-                    #         if not G.hasEdge(node_name, other_node):
-                    #             G.addEdge(node_name, other_node, 2)
-
                 if index > 0:
                     event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
                     cigar_index = 0
                     # next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
-
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
-
-                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-                    #
-                    # if not other_nodes.empty():
-                    #     for other_node in other_nodes:
-                    #         if not G.hasEdge(node_name, other_node):
-                    #             G.addEdge(node_name, other_node, 2)
-
-
-                # query_length = r.infer_query_length()  # har clips not counted
-                #
-                # for sa_block in r.get_tag("SA").split(";"):  #.split(",", 4)
-                #     if sa_block == "":
-                #         break  # End
-                #     sa = sa_block.split(",", 4)
-                #     chrom2 = gettid(sa[0])
-                #     start_pos2 = int(sa[1])
-                #     cigar = sa[3]
-                #     matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
-                #
-                #     # Match the current alignment to the SA soft/hard clip
-                #     diff_left = 10000000000
-                #     if matches[0][1] in "SH":
-                #         diff_left = abs(query_length - matches[0][0] - 1)
-                #     diff_right = 10000000000
-                #     if matches[len(matches)-1][1] in "SH":
-                #         diff_right = abs(query_length - matches[len(matches)-1][0] - 1)
-                #
-                #     if diff_left < diff_right:
-                #         # Use left hand side of SA cigar as break point
-                #         # if (strand == "-" and flag & 16) or (strand == "+" and not flag & 16):
-                #         pos2 = start_pos2
-                #     else:
-                #         pos2 = start_pos2 + sum(slen for slen, opp in matches if opp == "M" or opp == "D") # todo check inversions
-                #
-                #     add_primark_link = 0
-                #     next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
-                #
-                #     if current_overlaps_roi and next_overlaps_roi:
-                #         continue
-                #     else:
-                #
-                #         other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
-                #
-                #         if not other_nodes.empty():
-                #             for other_node in other_nodes:
-                #                 if not G.hasEdge(node_name, other_node):
-                #                     G.addEdge(node_name, other_node, 2)
-                #             other_nodes.clear()
-
 
         if add_primary_link: # and paired_end:
 
@@ -731,13 +649,9 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             if clip_or_wr >= 2:  # within read  ==2
                 chrom2 = chrom
                 if r.cigartuples[cigar_index][0] != 1:  # not insertion, use length of cigar event
-                    pos2 = event_pos + r.cigartuples[cigar_index][1]
+                    pos2 = cigar_pos2 #event_pos + r.cigartuples[cigar_index][1]
                 else:
                     pos2 = event_pos
-
-            # elif not clip_or_wr and not flag & 16 and (r.cigartuples[0][0] != 4 or r.cigartuples[0][0] != 5):  # Read on forward strand
-            #     Use end of read alignment if event likely to be at right side
-                # event_pos = r.reference_end
 
             if current_overlaps_roi and io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1):
                 # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
@@ -750,19 +664,9 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-            # other_nodes = pe_scope.update(node_name, chrom, pos, chrom2, pos2, clip_or_wr)
-            #
-            # if not other_nodes.empty():
-            #     for other_node in other_nodes:
-            #
-            #         if not G.hasEdge(node_name, other_node):
-            #             G.addEdge(node_name, other_node, 2)
-
     else:  # Single end
 
         if clip_or_wr == 1:
-
-            # template_edges.add(qname, flag, node_name, r.query_alignment_start)
 
             # Use SA tag to get chrom2 and pos2
             if r.has_tag("SA"):
@@ -772,8 +676,6 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
                 if len(all_aligns) == 1:
                     return  # shouldnt happen
-                # if r.qname == "m64004_190803_004451/132972876/ccs":
-                #     echo("INDEX", index, all_aligns, index < len(all_aligns) - 1, index > 0)
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2 = connect_right(all_aligns[index], all_aligns[index + 1])
@@ -782,14 +684,6 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-                    # if r.qname == "m64004_190803_004451/132972876/ccs":
-                    #     echo("A", node_name, event_pos, pos2, list(other_nodes))
-                    # if not other_nodes.empty():
-                    #     for other_node in other_nodes:
-                    #         if not G.hasEdge(node_name, other_node):
-                    #             G.addEdge(node_name, other_node, 2)
-
                 if index > 0:
                     event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
                     cigar_index = len(r.cigartuples) - 1
@@ -797,67 +691,37 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-                    # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-                    # if r.qname == "m64004_190803_004451/132972876/ccs":
-                    #     echo("@", node_name, event_pos, pos2, list(other_nodes))
-                    # if not other_nodes.empty():
-                    #     for other_node in other_nodes:
-                    #         if not G.hasEdge(node_name, other_node):
-                    #             G.addEdge(node_name, other_node, 2)
-
-                #
-                # echo(all_aligns)
-                # echo(event_pos)
-                # echo(index)
-                # quit()
-                # query_length = r.infer_query_length()  # har clips not counted
-                #
-                # for sa_block in r.get_tag("SA").split(";"):  #.split(",", 4)
-                #     if sa_block == "":
-                #         break  # End
-                #     sa = sa_block.split(",", 4)
-                #     chrom2 = gettid(sa[0])
-                #     start_pos2 = int(sa[1])
-                #     cigar = sa[3]
-                #     matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
-                #
-                #     diff_left = 10000000000
-                #     if matches[0][1] in "SH":
-                #         diff_left = abs(query_length - matches[0][0] - 1)
-                #     diff_right = 10000000000
-                #     if matches[len(matches)-1][1] in "SH":
-                #         diff_right = abs(query_length - matches[len(matches)-1][0] - 1)
-                #
-                #     if diff_left < diff_right:
-                #         pos2 = start_pos2
-                #     else:
-                #         pos2 = start_pos2 + sum(slen for slen, opp in matches if opp == "M" or opp == "D")
-                #
-                #     # Find position on reference
-                #     other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-                #     echo("hi", r.qname, r.flag, event_pos, chrom2, pos2, start_pos2, list(other_nodes))
-                #     if not other_nodes.empty():
-                #         for other_node in other_nodes:
-                #             if not G.hasEdge(node_name, other_node):
-                #                 G.addEdge(node_name, other_node, 2)
-
         elif clip_or_wr >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
-                pos2 = event_pos + r.cigartuples[cigar_index][1]
+                pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
             else:
                 pos2 = event_pos
 
             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-            # other_nodes = pe_scope.update(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
-            # # if r.qname == "m64004_190803_004451/25493972/ccs":
-            # #     echo(r.qname, node_name, event_pos, pos2, list(other_nodes))
-            # if not other_nodes.empty():
-            #     for other_node in other_nodes:
-            #         if not G.hasEdge(node_name, other_node):
-            #             G.addEdge(node_name, other_node, 2)
+
+cdef struct CigarEvent:
+    int opp
+    int cigar_index
+    int event_pos
+    int clip_or_wr
+    int pos2
+    int length
+    bint cigar_skip
+
+
+cdef CigarEvent make_cigar_event(int opp, int cigar_index, int event_pos, int clip_or_wr, int pos2, int length) nogil:
+    cdef CigarEvent item
+    item.opp = opp
+    item.cigar_index = cigar_index
+    item.event_pos = event_pos
+    item.clip_or_wr = clip_or_wr
+    item.pos2 = pos2
+    item.length = length
+    item.cigar_skip = 0
+    return item
 
 
 cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
@@ -882,64 +746,115 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
     gettid = infile.gettid
 
-    cdef bint keep_clips = 0
+    cdef int pos2, clip_or_wr #, n_aligned_bases
+    # cdef bint del_was_last
 
-    if clip_l > 0:
-        keep_clips = 1
+    cdef vector[CigarEvent] events_to_add
+    cdef vector[CigarEvent].iterator itr_events
+    cdef CigarEvent v
 
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
             if r.mapq < mapq_thresh:
                 continue
 
+            pos2 = -1
             event_pos = r.pos
             added = 0
 
+            # n_aligned_bases = 0
+            # target_bases = 0
+            # del_was_last = 0
+
+            events_to_add.clear()
             if len(r.cigartuples) > 1:
-                # if r.qname == "m64004_190803_004451/132972876/ccs":
-                #     echo(r.qname, r.has_tag("SA"), r.cigartuples)
 
                 if r.has_tag("SA"):
-                    # if (opp == 4 or opp == 5) and (r.has_tag("SA") or (keep_clips and length >= min_sv_size)):
 
-                    # Set cigar-index to -1 means it is unset, needs to be determined during SA parsing
+                    # Set cigar-index to -1 means it is unset, will be determined during SA parsing
                     cigar_index = -1
+                    clip_or_wr = 1  # Soft-clip or SA event
                     process_alignment(G, r, clip_l, max_dist, gettid,
                        overlap_regions, clustering_dist, pe_scope,
                        cigar_index, event_pos, paired_end, tell, genome_scanner,
-                       template_edges, node_to_name)
+                       template_edges, node_to_name,
+                                      clip_or_wr, pos2)
                     added += 1
 
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
 
                     if opp == 1:
                         if length >= min_sv_size:
-                            process_alignment(G, r, clip_l, max_dist, gettid,
-                               overlap_regions, clustering_dist, pe_scope,
-                               cigar_index, event_pos, paired_end, tell, genome_scanner,
-                               template_edges, node_to_name)
+                            clip_or_wr = 3  # Insertion type
+                            pos2 = event_pos + length
+                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, clip_or_wr, pos2, length))
                             added += 1
 
+                            # del_was_last = 0
+
                     elif opp == 2:
-                        if length >= min_sv_size:
-                            process_alignment(G, r, clip_l, max_dist, gettid,
-                               overlap_regions, clustering_dist, pe_scope,
-                               cigar_index, event_pos, paired_end, tell, genome_scanner,
-                               template_edges, node_to_name)
+                        # Legacy code. Keep until nanopore has been tested
+                        # Check if last deletion should be extended, short alignment block are merged with the del
+                        # this only occurs until dist_to_last_sv has been reached
+                        # if del_was_last and n_aligned_bases <= target_bases:
+                        #
+                        #     if length >= min_sv_size:
+                        #         target_bases = min(150, max(100, int(length / 2)))
+                        #
+                        #         n_aligned_bases = 0
+                        #         events_to_add.back().cigar_skip = 1
+                        #
+                        #     pos2 = event_pos + length
+                        #     events_to_add.back().pos2 = pos2
+
+                        if length >= min_sv_size:  # elif!
+                            clip_or_wr = 2
+                            pos2 = event_pos + length
+                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, clip_or_wr, pos2, length))
+
+                            # target_bases = min(150, max(100, int(length / 2)))
+                            # n_aligned_bases = 0
+
                             added += 1
+                            # del_was_last = 1
+
                         event_pos += length
 
                     else:
                         if opp != 4 and opp != 5:
+                            # if opp == 0:
+                            #     n_aligned_bases += length
                             event_pos += length
 
             if not added:
-                # -1 means whole alignment
+                # Whole alignment will be used if mate information is available
                 cigar_index = -1
+                clip_or_wr = 1
+                pos2 = -1
                 process_alignment(G, r, clip_l, max_dist, gettid,
                            overlap_regions, clustering_dist, pe_scope,
                            cigar_index, event_pos, paired_end, tell, genome_scanner,
-                           template_edges, node_to_name)
+                           template_edges, node_to_name,
+                                  clip_or_wr, pos2)
+
+            if not events_to_add.empty():
+                itr_events = events_to_add.begin()
+
+                while itr_events != events_to_add.end():
+                    v = dereference(itr_events)
+                    if v.cigar_skip:
+                        pos2 = v.pos2
+                    else:
+                        pos2 = v.event_pos + v.length  # fall back on original cigar event length
+                    # echo(f"{v.event_pos}-{v.pos2}", v.cigar_index)
+                    process_alignment(G, r, clip_l, max_dist, gettid,
+                               overlap_regions, clustering_dist, pe_scope,
+                               v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
+                               template_edges, node_to_name,
+                                      v.clip_or_wr, v.pos2)
+
+                    preincrement(itr_events)
+            # echo("---")
 
     add_template_edges(G, template_edges)
 

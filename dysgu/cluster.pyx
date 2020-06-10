@@ -15,6 +15,7 @@ import pickle
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
+from dysgu.map_set_utils cimport is_overlapping
 
 
 def echo(*args):
@@ -241,14 +242,12 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                 wt = item["pe"] + item["supp"] + item["spanning"]
                 for t in ("DN", "MAPQsupp", "MAPQpri", "DApri", "DAsupp", "DP", "NMpri", "NMsupp"):
                     if t in best[0]:
-                        w = item[t]
-                        denom = w0 + wt
+                        denom = weight + wt
                         if denom == 0:
                             weighted_av = 0
                         else:
-                            weighted_av = ((w0[t] * w0) + (item[t] * w)) / denom
+                            weighted_av = ((w0[t] * weight) + (item[t] * wt)) / denom
                         best[0][t] = weighted_av
-                        w0 = best[0][t]
 
         if add_partners:
             best[0]["partners"] = [i["event_id"] for i in best[1:]]
@@ -267,10 +266,10 @@ def sample_level_density(potential, regions, max_dist=50):
         ei = potential[idx]
 
         # Only find density for non-region calls, otherwise too dense to be meaningful
-        if not io_funcs.intersecter_int_chrom(regions, ei["posA"], ei["posA"], ei["posA"] + 1):
+        if not io_funcs.intersecter_str_chrom(regions, ei["chrA"], ei["posA"], ei["posA"] + 1):
             interval_table[ei["chrA"]].add(ei["posA"] - max_dist, ei["posA"] + max_dist, idx)
 
-        if not io_funcs.intersecter_int_chrom(regions, ei["posB"], ei["posB"], ei["posB"] + 1):
+        if not io_funcs.intersecter_str_chrom(regions, ei["chrB"], ei["posB"], ei["posB"] + 1):
             interval_table[ei["chrB"]].add(ei["posB"] - max_dist, ei["posB"] + max_dist, idx)
 
     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
@@ -281,13 +280,28 @@ def sample_level_density(potential, regions, max_dist=50):
         # Overlap right hand side # list(tree[chrom].find_overlap(start, end))
         neighbors = 0.
         count = 0.
-        if not io_funcs.intersecter_int_chrom(regions, ei["posA"], ei["posA"], ei["posA"] + 1):
-            neighbors += len(list(nc[ei["chrA"]].find_overlap(ei["posA"], ei["posA"] + 1))) - 1
+        if ei["chrA"] == ei["chrB"] and abs(ei["posB"] - ei["posA"]) < 2:
+            expected = 2
+        else:
+            expected = 1
+        if not io_funcs.intersecter_str_chrom(regions, ei["chrA"], ei["posA"], ei["posA"] + 1):
+            neighbors += len(list(nc[ei["chrA"]].find_overlap(ei["posA"], ei["posA"] + 1))) - expected
             count += 1
 
-        if not io_funcs.intersecter_int_chrom(regions, ei["posB"], ei["posB"], ei["posB"] + 1):
-            neighbors += len(list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))) - 1
+        if not io_funcs.intersecter_str_chrom(regions, ei["chrB"], ei["posB"], ei["posB"] + 1):
+            neighbors += len(list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))) - expected
             count += 1
+
+        # Merge overlapping intervals
+        neighbors_10kb = 0.
+        count_10kb = 0
+        large_itv = coverage.merge_intervals(((ei["chrA"], ei["posA"], ei["posA"] + 1),
+                                              (ei["chrB"], ei["posB"], ei["posB"] + 1)), pad=10000)
+
+        for c, s, e in large_itv:
+            if not io_funcs.intersecter_str_chrom(regions, c, s, e):
+                neighbors_10kb += len(list(nc[c].find_overlap(s, e))) - len(large_itv)
+                count_10kb += 1
 
         if neighbors < 0:
             neighbors = 0
@@ -295,6 +309,11 @@ def sample_level_density(potential, regions, max_dist=50):
             ei["neigh"] = neighbors / count
         else:
             ei["neigh"] = 0
+        if count_10kb > 0:
+            ei["neigh10kb"] = neighbors_10kb / count_10kb
+        else:
+            ei["neigh10kb"] = 0
+
     return potential
 
 
@@ -506,6 +525,8 @@ def cluster_reads(args):
         df = df.sort_values(["kind", "chrA", "posA"])
         df["sample"] = [sample_name] * len(df)
         df["id"] = range(len(df))
+        m = {"pe": 1, "pacbio": 2, "nanopore": 3}
+        df["type"] = [m[args["mode"]]] * len(df)
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
             df[io_funcs.col_names()].to_csv(outfile, index=False)
