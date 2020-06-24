@@ -3,8 +3,6 @@
 from __future__ import absolute_import
 import time
 import click
-from collections import defaultdict, deque
-
 import ncls
 
 import numpy as np
@@ -32,7 +30,7 @@ from pysam.libchtslib cimport bam_get_qname
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
 
-from dysgu.map_set_utils cimport unordered_set
+from dysgu.map_set_utils cimport unordered_set, clip_sizes, is_reciprocal_overlapping, span_position_distance, position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 
 ctypedef cpp_pair[int, int] cpp_item
@@ -49,6 +47,7 @@ ctypedef PairedEndScoper PairedEndScoper_t
 ctypedef TemplateEdges TemplateEdges_t
 
 ctypedef NodeToName NodeToName_t
+
 
 def echo(*args):
     click.echo(args, err=True)
@@ -95,54 +94,6 @@ cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, uint8_t clip_o
     return item
 
 
-cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
-    # Insertions have same x1/y1 position
-    if x1 == x2 or y1 == y2:
-        return True
-
-    cdef int temp_v
-    if x2 < x1:
-        temp_v = x2
-        x2 = x1
-        x1 = temp_v
-    if y2 < y1:
-        temp_v = y2
-        y2 = y1
-        y1 = temp_v
-    cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
-    if overlap == 0:
-        return False
-    if (overlap / float(c_abs(x2 - x1))) > 0.1 and (overlap / float(c_abs(y2 - y1))) > 0.1:
-        return True
-
-
-cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
-    # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
-    cdef int span1, span2, max_span
-    cdef float span_distance, position_distance, center1, center2
-    if x1 == x2:
-        span1 = 1
-        center1 = x1
-    else:
-        span1 = c_abs(x2 - x1)
-        center1 = (x1 + x2) / 2
-    if y1 == y2:
-        span2 = 1
-        center2 = y2
-    else:
-        span2 = c_abs(y2 - y1)
-        center2 = (y1 + y2) / 2
-    max_span = max(span1, span2)
-    position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
-    span_distance = <float>c_abs(span1 - span2) / max_span
-    # echo("pd", position_distance, center1, center2)
-    # echo((position_distance / max_span), span_distance, center1, center2 )
-    if (position_distance / max_span) < 0.2 and span_distance < 0.3:
-    # if position_distance < 100 and span_distance < 0.08:
-        return 1
-    return 0
-
-
 cdef class PairedEndScoper:
 
     cdef int clst_dist
@@ -157,7 +108,7 @@ cdef class PairedEndScoper:
         self.local_chrom = -1
 
         cdef cpp_map[int, LocalVal] scope
-        for n in range(n_references):
+        for n in range(n_references + 1):  # Add one for special 'insertion chromosome'
             self.chrom_scope.push_back(scope)
 
     cdef void empty_scopes(self) nogil:
@@ -167,7 +118,7 @@ cdef class PairedEndScoper:
         self.loci.clear()
 
     cdef vector[int] find_other_nodes(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                            int clip_or_wr) nogil:
+                            int clip_or_wr): # nogil:
 
         cdef int idx, i, count_back, steps, node_name2 #, lowest_pos
         cdef int sep = 0
@@ -175,6 +126,10 @@ cdef class PairedEndScoper:
         cdef vector[int] found2
         cdef vector[int] found_exact
         cdef cpp_map[int, LocalVal]* forward_scope = &self.chrom_scope[chrom2]
+        # if chrom2 == 10000000:
+        #     forward_scope = &self.chrom_scope.back()#[self.end_index]
+        # else:
+        #     forward_scope = &self.chrom_scope[chrom2]
         cdef cpp_map[int, LocalVal].iterator itr
         cdef cpp_pair[int, LocalVal] vitem
 
@@ -226,16 +181,17 @@ cdef class PairedEndScoper:
 
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # echo("1", current_pos, pos2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                        # echo("1", node_name, node_name2, current_pos, pos2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
                         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
                             # echo(sep, sep2, self.max_dist, vitem.second.clip_or_wr)
                             if sep < self.max_dist and sep2 < self.max_dist:
-                                if sep < 35 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
+                                if sep < 35 and (clip_or_wr or vitem.second.clip_or_wr):
                                     found_exact.push_back(node_name2)
-                                else:
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                                # else:
                                     found2.push_back(node_name2)
                             elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
                                 found2.push_back(node_name2)
@@ -257,22 +213,30 @@ cdef class PairedEndScoper:
                     steps = 0
                     while steps < 4:
                         vitem = dereference(local_it)
-                        if (clip_or_wr == 2 and vitem.second.clip_or_wr == 3) or (clip_or_wr == 3 and vitem.second.clip_or_wr == 2):
+                        if (clip_or_wr == 2 and vitem.second.clip_or_wr >= 3) or (clip_or_wr >= 3 and vitem.second.clip_or_wr == 2):
                             steps += 1
                             continue  # Dont connect insertions to deletions
                         node_name2 = vitem.second.node_name
+
                         if node_name2 != node_name:
-                            # echo("2", is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2))
-                            if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2): # is_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
+                            # echo("2", node_name, node_name2, clip_or_wr, vitem.second.clip_or_wr, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                            # if node_name == 10:
+                            #     echo(current_pos, pos2, vitem.first, vitem.second.pos2)
+                            if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
                                 sep = c_abs(vitem.first - pos2)
                                 sep2 = c_abs(vitem.second.pos2 - current_pos)
+                                # echo(sep, sep2, self.max_dist, vitem.second.chrom2, vitem.second.clip_or_wr, span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                                # echo(sep < self.max_dist, vitem.second.chrom2 == chrom2, sep2 < self.max_dist, sep < 35, (clip_or_wr > 0 or vitem.second.clip_or_wr))
 
                                 if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
                                         sep2 < self.max_dist:
-                                    if sep < 35 and (clip_or_wr > 0 or vitem.second.clip_or_wr):
+                                    if sep < 35 and (clip_or_wr or vitem.second.clip_or_wr):
                                         found_exact.push_back(node_name2)
-                                    else:
+
+                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                                    # else:
                                         found2.push_back(node_name2)
+
                                 elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
                                     found2.push_back(node_name2)
 
@@ -292,7 +256,12 @@ cdef class PairedEndScoper:
         # Add to scopes, if event is within read, add two references to forward scope. Otherwise when the
         # first break point drops from the local scope, the forward scope break will not connect with other
         # events that are added later. This is a fix for long read deletions mainly
-        cdef cpp_map[int, LocalVal]* forward_scope = &self.chrom_scope[chrom2]
+        cdef cpp_map[int, LocalVal]* forward_scope  # = &self.chrom_scope[chrom2]
+        if chrom2 == 10000000:
+            forward_scope = &self.chrom_scope.back()#[self.end_index]
+        else:
+            forward_scope = &self.chrom_scope[chrom2]
+
         # Add to local scope
         local_it = self.loci.find(current_pos)
         if local_it == self.loci.end():
@@ -488,25 +457,31 @@ cpdef tuple get_query_pos_from_cigartuples(r):
         elif opp == 2:  # deletion
             ref_end += slen
         i = 1
-    return start, end, r.pos, ref_end, r.rname, 0
+    return start, end, r.pos, ref_end, r.rname, r.mapq, 0
 
 
-cdef alignments_from_sa_tag(r, gettid):
+cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
     # Puts other alignments in order of query position, gets index of the current alignment
     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
-    cdef int chrom2, start_pos2, query_start, query_end, ref_start, ref_end, start_temp
+    cdef int chrom2, start_pos2, query_start, query_end, ref_start, ref_end, start_temp, aln_start, aln_end
 
     current_strand = "-" if r.flag & 16 else "+"
     query_aligns = [get_query_pos_from_cigartuples(r)]
+    aln_start = query_aligns[0][2]
+    aln_end = query_aligns[0][3]
+    aln_chrom = r.rname
 
     for sa_block in r.get_tag("SA").split(";"):
         if sa_block == "":
             break  # End
-        sa = sa_block.split(",", 4)
+        sa = sa_block.split(",", 5)
+        mq = int(sa[4])  # filter by mapq at later stage
+
         chrom2 = gettid(sa[0])
         start_pos2 = int(sa[1])
         strand = sa[2]
         cigar = sa[3]
+
         matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
         query_start, query_end, ref_start, ref_end = get_query_pos_from_cigarstring(matches, start_pos2)
 
@@ -515,33 +490,56 @@ cdef alignments_from_sa_tag(r, gettid):
             query_end = start_temp + query_end - query_start
             query_start = start_temp
 
-        query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2))
+        # If another local alignment is found use only this, usually corresponds to the other side of an insertion/dup
+        if aln_chrom == chrom2 and position_distance(aln_start, aln_end, ref_start, ref_end) < thresh:
+            query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq)]
+            break
+
+        query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq))
 
     query_aligns = sorted(query_aligns)
     cdef int index = 0
     for index in range(len(query_aligns)):
-        if len(query_aligns[index]) == 6:
+        if len(query_aligns[index]) == 7:
             break
-    # if r.qname == "m64004_190803_004451/6359627/ccs":
-    #     echo(query_aligns, index)
-    #     quit()
+
     return query_aligns, index
 
 
-cdef connect_right(a, b):
+cdef connect_right(a, b, r, paired, max_dist, mq_thresh):
     event_pos = a[3]
     chrom = a[4]
     pos2 = b[2]
     chrom2 = b[4]
-    return event_pos, chrom, pos2, chrom2
+    pos2_mq = b[5]
+    if pos2_mq < mq_thresh:
+        return event_pos, chrom, event_pos, chrom, 4  # 4 means clip_or_wr becomes 4 - inferred insertion
+    if paired:
+        # If paired, and SA block fits between two normal primary alignments, and block is not local, then
+        # ignore block and try and call insertion
+        if not r.flag & 2304 and \
+            r.flag & 2 and r.pnext >= event_pos and \
+            (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):  # is primary, is proper pair. Use primary mate info, not SA
+            return event_pos, chrom, event_pos, chrom, 4
+
+    return event_pos, chrom, pos2, chrom2, None
 
 
-cdef connect_left(a, b):
+cdef connect_left(a, b, r, paired, max_dist, mq_thresh):
     event_pos = a[2]
     chrom = a[4]
     pos2 = b[3]
     chrom2 = b[4]
-    return event_pos, chrom, pos2, chrom2
+    pos2_mq = b[5]
+    if pos2_mq < mq_thresh:
+        return event_pos, chrom, event_pos, chrom, 4
+    if paired:
+        if not r.flag & 2304 and \
+            r.flag & 2 and r.pnext <= event_pos and \
+            (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):
+            return event_pos, chrom, event_pos, chrom, 4
+
+    return event_pos, chrom, pos2, chrom2, None
 
 
 cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
@@ -556,20 +554,20 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     cdef uint64_t v = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)  # Hash qname to save mem
 
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
-
     genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
 
     if clip_or_wr < 2:  # Prevents joining up within-read svs within between-read svs
         template_edges.add(r.qname, flag, node_name, r.query_alignment_start)
 
+
     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
 
     pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
+    # echo("---", r.qname, node_name, clip_or_wr, node_name, event_pos, pos2, list(other_nodes))
 
-    # echo(r.qname, node_name, event_pos, pos2)
-    # if r.qname == "m64004_190803_004451/6359627/ccs":
-    #       echo("@", node_name, event_pos, pos2, list(other_nodes), cigar_index)
-
+    # if r.qname == "D00360:18:H8VC6ADXX:2:2201:15754:91548" or r.qname == "D00360:19:H8VDAADXX:2:2208:17532:61383":
+    #     echo("@", r.flag, node_name, clip_or_wr, event_pos, pos2, list(other_nodes), cigar_index)
+    #     quit()
     if not other_nodes.empty():
         for other_node in other_nodes:
             if not G.hasEdge(node_name, other_node):
@@ -580,20 +578,72 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     return 0
 
 
+cdef int good_quality_clip(r, clip_length):
+    # Use sliding window to check that soft-clip has at least n good bases over qual 20
+    cdef const unsigned char[:] quals = r.query_qualities
+    cdef int i, length, w_sum
+    cdef int window_length = 5
+    cdef float avg_qual
+    cdef total_good = window_length - 1
+
+    if r.flag & 2304:  # supplementary, usually hard-clipped, assume good clipping
+        return 1
+    ct = r.cigartuples
+    # Cant work with hard clip, assume good clip
+    # if ct[0][0] == 5 and not ct[-1][0] == 4 or ct[-1][0] == 5 and not ct[0][0] == 4:
+    #     return 1
+
+    if ct[0][0] == 4:
+        length = r.cigartuples[0][1]
+        if length >= window_length and length >= clip_length:
+            for i in range(length - window_length, -1, -1):
+                # average of current window by counting leftwards
+                w_sum = 0
+                for j in range(i, i + window_length):
+                    w_sum += quals[j]
+                avg_qual = w_sum / float(window_length)
+                if avg_qual > 20:
+                    total_good += 1
+                else:
+                    break
+            if total_good >= clip_length:
+                return 1
+
+    total_good = window_length - 1
+    if ct[-1][0] == 4:
+        length = r.cigartuples[-1][1]
+        if length >= window_length and length >= clip_length:
+            for i in range(len(r.query_qualities) - length, len(r.query_qualities) - window_length):
+                # average of current window by counting rightwards
+                w_sum = 0
+                for j in range(i, i + window_length):
+                    w_sum += quals[j]
+                avg_qual = w_sum / float(window_length)
+                if avg_qual > 20:
+                    total_good += 1
+                else:
+                    break
+            if total_good >= clip_length:
+                return 1
+
+    return 0
+
+
 cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                        overlap_regions, int clustering_dist, PairedEndScoper_t pe_scope,
                        int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                        TemplateEdges_t template_edges, NodeToName node_to_name,
-                            int clip_or_wr, int cigar_pos2):
+                            int clip_or_wr, int cigar_pos2, int mapq_thresh):
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
     cdef int current_overlaps_roi, next_overlaps_roi
-    cdef bint add_primark_link
+    cdef bint add_primark_link, add_insertion_link
     cdef int chrom = r.rname
     cdef int chrom2
     cdef int pos2
     cdef int flag = r.flag
+    cdef int left_clip, right_clip
     cdef str qname = r.qname
     cdef uint64_t v
 
@@ -615,38 +665,48 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         # same loci as the read which leads to problems when linking w=2 edges
 
         add_primary_link = 1
+        add_insertion_link = 0
+
         current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
 
-        if clip_or_wr == 1 and chrom == rnext and abs(pnext - event_pos) < loci_dist:  # Same loci
-
+        if clip_or_wr == 1:  # and chrom == rnext and abs(pnext - event_pos) < loci_dist:  # Same loci
             # Parse SA tag. For paired reads
-            if r.has_tag("SA"):  # Parse SA, first alignment is the other read primary line
 
-                all_aligns, index = alignments_from_sa_tag(r, gettid)
+            if r.has_tag("SA") and good_quality_clip(r, 15):  # Parse SA, first alignment is the other read primary line
+
+                all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
                 event = all_aligns[index]
-
                 if len(all_aligns) == 1:
-                    return  # shouldnt happen
+                    return  # should'nt happen
 
                 add_primary_link = 0
 
                 if index < len(all_aligns) - 1:  # connect to next
-                    event_pos, chrom, pos2, chrom2 = connect_right(all_aligns[index], all_aligns[index + 1])
+                    event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
                     cigar_index = len(r.cigartuples) - 1
-                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                           tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+                    if inferred_clip_type == 4:
+                        clip_or_wr = 4
+                    # success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                    #                        tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
                 if index > 0:
-                    event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
+                    event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
+
                     cigar_index = 0
+                    if inferred_clip_type == 4:
+                        clip_or_wr = 4
                     # next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pos2+1)
-                    success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                           tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+                success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+                                       tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
-        if add_primary_link: # and paired_end:
+        if add_primary_link:
 
-            # Use mate information to generate cluster
-            if clip_or_wr >= 2:  # within read  ==2
+            # Use mate information to generate cluster, or if unmapped use current position and try call insertion
+            if clip_or_wr == 4:
+                chrom2 = chrom
+                pos2 = event_pos
+
+            elif clip_or_wr >= 2:  # within read  ==2
                 chrom2 = chrom
                 if r.cigartuples[cigar_index][0] != 1:  # not insertion, use length of cigar event
                     pos2 = cigar_pos2 #event_pos + r.cigartuples[cigar_index][1]
@@ -657,12 +717,34 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
                 return
 
-            if flag & 2 and not flag & 2048:  # Skip non-discordant/non-split that are same loci
-                if abs(r.tlen) < clustering_dist and clip_or_wr < 2:  # != 2
-                    return
+            # Non-discordant/non-split that are same loci, might be insertion --> goto add_insertion_link
+            if (flag & 2 and not flag & 2048) and (abs(r.tlen) < clustering_dist and clip_or_wr < 2):
+                add_insertion_link = 1  # todo is this if block nessasary?
 
-            success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+            else:
+                success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+
+        # if add_insertion_link:
+        #     # If soft-clipped try and find other insertion break points
+        #     left_clip, right_clip = clip_sizes(r)
+        #
+        #     if left_clip >= clip_l:
+        #         cigar_index = 0
+        #         event_pos = r.pos
+        #         chrom2 = 10000000
+        #         pos2 = event_pos
+        #         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+        #                            tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+        #
+        #     if right_clip >= clip_l:
+        #         cigar_index = len(r.cigartuples)
+        #         event_pos = r.reference_end
+        #         chrom2 = 10000000
+        #         pos2 = event_pos
+        #         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
+        #                            tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
+
 
     else:  # Single end
 
@@ -671,21 +753,21 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             # Use SA tag to get chrom2 and pos2
             if r.has_tag("SA"):
 
-                all_aligns, index = alignments_from_sa_tag(r, gettid)
+                all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
                 event = all_aligns[index]
 
                 if len(all_aligns) == 1:
                     return  # shouldnt happen
 
                 if index < len(all_aligns) - 1:  # connect to next
-                    event_pos, chrom, pos2, chrom2 = connect_right(all_aligns[index], all_aligns[index + 1])
-                    cigar_index = 0  #len(r.cigartuples) - 1
+                    event_pos, chrom, pos2, chrom2, _ = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
+                    cigar_index = 0
 
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_or_wr)
 
                 if index > 0:
-                    event_pos, chrom, pos2, chrom2 = connect_left(all_aligns[index], all_aligns[index -1])
+                    event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
                     cigar_index = len(r.cigartuples) - 1
 
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
@@ -747,6 +829,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     gettid = infile.gettid
 
     cdef int pos2, clip_or_wr #, n_aligned_bases
+    cdef bint clipped
     # cdef bint del_was_last
 
     cdef vector[CigarEvent] events_to_add
@@ -761,7 +844,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             pos2 = -1
             event_pos = r.pos
             added = 0
-
+            clipped = 0
             # n_aligned_bases = 0
             # target_bases = 0
             # del_was_last = 0
@@ -777,8 +860,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     process_alignment(G, r, clip_l, max_dist, gettid,
                        overlap_regions, clustering_dist, pe_scope,
                        cigar_index, event_pos, paired_end, tell, genome_scanner,
-                       template_edges, node_to_name,
-                                      clip_or_wr, pos2)
+                       template_edges, node_to_name, clip_or_wr, pos2, mapq_thresh)
+                    # echo(r.flag)
                     added += 1
 
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
@@ -808,6 +891,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                         #     events_to_add.back().pos2 = pos2
 
                         if length >= min_sv_size:  # elif!
+
                             clip_or_wr = 2
                             pos2 = event_pos + length
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, clip_or_wr, pos2, length))
@@ -825,17 +909,29 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             # if opp == 0:
                             #     n_aligned_bases += length
                             event_pos += length
+                        elif opp == 4:
+                            clipped = 1
 
             if not added:
                 # Whole alignment will be used if mate information is available
                 cigar_index = -1
-                clip_or_wr = 1
                 pos2 = -1
-                process_alignment(G, r, clip_l, max_dist, gettid,
-                           overlap_regions, clustering_dist, pe_scope,
-                           cigar_index, event_pos, paired_end, tell, genome_scanner,
-                           template_edges, node_to_name,
-                                  clip_or_wr, pos2)
+
+                if r.flag & 8 and clipped and good_quality_clip(r, 20):
+
+                    clip_or_wr = 4  # Mate is unmapped, insertion type. Only add if soft-clip is available
+                    process_alignment(G, r, clip_l, max_dist, gettid,
+                               overlap_regions, clustering_dist, pe_scope,
+                               cigar_index, event_pos, paired_end, tell, genome_scanner,
+                               template_edges, node_to_name,
+                                      clip_or_wr, pos2, mapq_thresh)
+                else:
+                    clip_or_wr = 1  # Use whole read
+                    process_alignment(G, r, clip_l, max_dist, gettid,
+                               overlap_regions, clustering_dist, pe_scope,
+                               cigar_index, event_pos, paired_end, tell, genome_scanner,
+                               template_edges, node_to_name,
+                                      clip_or_wr, pos2, mapq_thresh)
 
             if not events_to_add.empty():
                 itr_events = events_to_add.begin()
@@ -851,10 +947,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                overlap_regions, clustering_dist, pe_scope,
                                v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
                                template_edges, node_to_name,
-                                      v.clip_or_wr, v.pos2)
+                                      v.clip_or_wr, v.pos2, mapq_thresh)
 
                     preincrement(itr_events)
-            # echo("---")
 
     add_template_edges(G, template_edges)
 

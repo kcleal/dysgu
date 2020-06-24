@@ -1,11 +1,16 @@
 #cython: language_level=3
 
+import click
+
 from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.string cimport string as cpp_string
 
 import cython
+
+from libc.stdlib cimport abs as c_abs
+from libc.math cimport fabs as c_fabs
 
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
@@ -18,6 +23,10 @@ from libc.stdint cimport uint32_t
 
 # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
+
+
+def echo(*args):
+    click.echo(args, err=True)
 
 
 cdef class Py_DiGraph:
@@ -168,3 +177,72 @@ cdef int cigar_clip(r, int clip_length):
 cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
     return int(max(x1, y1) <= min(x2, y2))
 
+
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
+    # Insertions have same x1/y1 position, use another measure
+    if x1 == x2 or y1 == y2:
+        return True
+
+    cdef int temp_v
+    if x2 < x1:
+        temp_v = x2
+        x2 = x1
+        x1 = temp_v
+    if y2 < y1:
+        temp_v = y2
+        y2 = y1
+        y1 = temp_v
+    cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
+    if overlap == 0:
+        return False
+    if (overlap / float(c_abs(x2 - x1))) > 0.1 and (overlap / float(c_abs(y2 - y1))) > 0.1:
+        return True
+
+
+cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
+    # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+    cdef int span1, span2, max_span
+    cdef float span_distance, position_distance, center1, center2
+    if x1 == x2:
+        span1 = 1
+        center1 = x1
+    else:
+        span1 = c_abs(x2 - x1)
+        center1 = (x1 + x2) / 2
+    if y1 == y2:
+        span2 = 1
+        center2 = y2
+    else:
+        span2 = c_abs(y2 - y1)
+        center2 = (y1 + y2) / 2
+
+    position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+    if position_distance > 2000:
+        return 0
+    max_span = max(span1, span2)
+    span_distance = <float>c_abs(span1 - span2) / max_span
+    # echo("pd", position_distance, center1, center2)
+    # echo((position_distance / max_span), span_distance, center1, center2 )
+    if (position_distance / max_span) < 0.2 and span_distance < 0.3:
+    # if position_distance < 100 and span_distance < 0.08:
+        return 1
+    return 0
+
+
+cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
+    # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+    cdef int span1, span2
+    cdef float center1, center2
+    if x1 == x2:
+        span1 = 1
+        center1 = x1
+    else:
+        span1 = c_abs(x2 - x1)
+        center1 = (x1 + x2) / 2
+    if y1 == y2:
+        span2 = 1
+        center2 = y2
+    else:
+        span2 = c_abs(y2 - y1)
+        center2 = (y1 + y2) / 2
+    return c_fabs(center1 - center2)

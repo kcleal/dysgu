@@ -66,8 +66,8 @@ cdef extern from "wrap_map_set2.h" nogil:
         void key_2_vec(uint64_t, cpp_vector[int]) nogil
 
 
-basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', '.', '.', 'N'])
-lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', '.', '.', 'n'])
+basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', 'N', 'N', 'N'])
+lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', 'n', 'n', 'n'])
 
 
 cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2,
@@ -527,6 +527,9 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         vec.assign(vec.size(), 0)
 
     seq = sequence
+
+    if len(seq) < 50:
+        return
 
     # echo(seq)
     # echo(sequence)

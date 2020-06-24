@@ -208,6 +208,10 @@ cdef int cigar_clip(r, int clip_length)
 cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
+cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil
 
+
+cdef float position_distance(int x1, int x2, int y1, int y2) nogil

@@ -15,7 +15,8 @@ import pickle
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
-from dysgu.map_set_utils cimport is_overlapping
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance, position_distance
+import itertools
 
 
 def echo(*args):
@@ -26,10 +27,11 @@ def filter_potential(input_events, tree, regions_only):
     potential = []
 
     for i in input_events:
+
         if "posB" not in i:  # Skip events for which no posB was identified
             continue
-        if i["chrA"] == i["chrB"] and i["posA"] == i["posB"]:
-            continue
+        # if i["chrA"] == i["chrB"] and i["posA"] == i["posB"]:
+        #     continue
         if "contig" not in i or i["contig"] == "":
             i["contig"] = None
 
@@ -59,7 +61,13 @@ def compare_subset(potential, max_dist):
 
         interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
         if ei["svtype"] != "INS":
-            interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
+            if ei["chrA"] != ei["chrB"]:
+                interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
+            else:
+                dist1 = abs(ei["posB"] - ei["posA"])
+                ci_a = max(ei["cipos95A"], ei["cipos95A"])
+                if dist1 + ci_a > max_dist:
+                    interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
 
     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
 
@@ -76,21 +84,15 @@ def compare_subset(potential, max_dist):
 
 def compare_all(potential):
     # Quadratic run time but fast for a hand full of events
-    for idx in range(len(potential)):
-        ei = potential[idx]
-
-        for jdx in range(len(potential)):
-            if idx != jdx:
-                ej = potential[jdx]
-
-                yield ei, ej, idx, jdx
+    for idx, jdx in itertools.product(range(len(potential)), range(len(potential))):
+        yield potential[idx], potential[jdx], idx, jdx
 
 
-def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15, same_sample=True):
-
+def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15, same_sample=True, debug=False):
 
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
+        # echo("compare all")
     else:
         event_iter = compare_subset(potential, max_dist)  # Use NCLS, generate overlap tree and perform intersections
 
@@ -104,40 +106,97 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
 
+        seen.add((i_id, j_id))
+
+        if ei["svtype"] != ej["svtype"]:
+            continue
+
         if not same_sample and "sample" in ei:
             if ei["sample"] == ej["sample"]:
                 continue
-
-        seen.add((i_id, j_id))
 
         # Check if events point to the same loci
         loci_similar = False
         loci_same = False
 
-        if ei["chrA"] == ej["chrA"]:  # Try chrA matches chrA
-            dist1 = abs(ei["posA"] - ej["posA"])
-            ci_a = max(ei["cipos95A"], ej["cipos95A"])
-            if dist1 < (max_dist + ci_a):
-                if ei["chrB"] == ej["chrB"]:
-                    dist2 = abs(ei["posB"] - ej["posB"])
-                    ci_b = max(ei["cipos95B"], ej["cipos95B"])
-                    if dist2 < (max_dist + ci_b):
-                        loci_similar = True
-                    if dist1 < 5 and dist2 < 5:
-                        loci_same = True
+        if ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
+
+            # if ei["svtype"] != "INS":
+                if is_reciprocal_overlapping(ei["posA"] - ei["cipos95A"] - 5,
+                                             ei["posB"] + ei["cipos95B"] + 5,
+                                             ej["posA"] - ej["cipos95A"] - 5,
+                                             ej["posB"] + ej["cipos95B"] + 5):
+                    loci_similar = True
+
+                dist1 = abs(ei["posA"] - ej["posA"])
+                dist2 = abs(ei["posB"] - ej["posB"])
+                if dist1 < 5 and dist2 < 5:
+                    loci_same = True
+
+            # else:
+            #     dist1 = abs(ei["posA"] - ej["posA"])
+            #     dist2 = abs(ei["posB"] - ej["posB"])
+            #     echo(ei, ej)
+            #     if dist1 < 5 and dist2 < 5:
+            #         loci_same = True
+
+            # ci_a = max(ei["cipos95A"], ej["cipos95A"])
+            # if dist1 < max_dist:
+            #     if ei["chrB"] == ej["chrB"]:
+            #         dist2 = abs(ei["posB"] - ej["posB"])
+            #         # ci_b = max(ei["cipos95B"], ej["cipos95B"])
+            #         # if dist2 < (max_dist + ci_b):
+            #         if ei["svtype"] != "INS":
+            #             echo(is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]))
+            #             if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
+            #                 loci_similar = True
+            #         if dist1 < 5 and dist2 < 5:
+            #             loci_same = True
 
         if not loci_similar:  # Try chrA matches chrB
-            if ei["chrA"] == ej["chrB"]:
+
+            if ei["chrA"] == ej["chrB"] and ei["chrB"] == ej["chrA"]:  # Try chrA matches chrA
+
+                if is_reciprocal_overlapping(ei["posA"] - ei["cipos95A"] - 5,
+                                             ei["posB"] + ei["cipos95B"] + 5,
+                                             ej["posA"] - ej["cipos95A"] - 5,
+                                             ej["posB"] + ej["cipos95B"] + 5):
+                    loci_similar = True
+
                 dist1 = abs(ei["posA"] - ej["posB"])
-                ci_a = max(ei["cipos95A"], ej["cipos95B"])
-                if dist1 < (max_dist + ci_a):
-                    if ei["chrB"] == ej["chrA"]:
-                        dist2 = abs(ei["posB"] - ej["posA"])
-                        ci_b = max(ei["cipos95B"], ej["cipos95A"])
-                        if dist2 < (max_dist + ci_b):
-                            loci_similar = True
-                        if dist1 < 5 and dist2 < 5:
-                            loci_same = True
+                dist2 = abs(ei["posB"] - ej["posA"])
+                if dist1 < 5 and dist2 < 5:
+                    loci_same = True
+
+                # if ei["svtype"] != "INS":
+                #     if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
+                #         loci_similar = True
+                # else:
+                #     dist1 = abs(ei["posA"] - ej["posB"])
+                #     dist2 = abs(ei["posB"] - ej["posA"])
+                #     if dist1 < 5 and dist2 < 5:
+                #         loci_same = True
+                #         loci_similar = True
+
+
+            # if ei["chrA"] == ej["chrB"]:
+            #
+            #
+            #     dist1 = abs(ei["posA"] - ej["posB"])
+            #     # ci_a = max(ei["cipos95A"], ej["cipos95B"])
+            #     if dist1 < max_dist:
+            #         if ei["chrB"] == ej["chrA"]:
+            #             dist2 = abs(ei["posB"] - ej["posA"])
+            #             # ci_b = max(ei["cipos95B"], ej["cipos95A"])
+            #             if ei["svtype"] != "INS":
+            #                 if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
+            #                     loci_similar = True
+            #
+            #             # if dist2 < (max_dist + ci_b):
+            #             #     loci_similar = True
+            #             if dist1 < 5 and dist2 < 5:
+            #                 loci_same = True
+
 
         if "contig" not in ei or "contig" not in ej:
             continue
@@ -147,34 +206,39 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         cj = "" if ej["contig"] is None else ej["contig"]
         cj2 = "" if ej["contig2"] is None else ej["contig2"]
 
-        any_ci = bool(ei["contig"] or ei["contig2"])
-        any_cj = bool(ej["contig"] or ej["contig2"])
+        if ei["svtype"] != "INS":
+            any_contigs_to_check = ei["contig"] or ei["contig2"] and (ej["contig"] or ej["contig2"])
+        else:
+            # No guarentee contigs or in reference order
+            any_contigs_to_check = ei["contig"] and ej["contig"] and ((ei["contig2"] and ej["contig2"]) or (not ei["contig2"] and not ej["contig2"]))
 
-        if loci_similar:
+        # echo(ei["posA"], ej["posA"], loci_same, loci_similar, assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True),
+        #      any_contigs_to_check)
+        if loci_similar or loci_same:
 
-            if any_ci and any_cj and loci_same:  # Try and match contigs
+            if any_contigs_to_check and loci_same:  # Try and match contigs
 
                 # Each breakpoint can have a different assembly, only check for match if contigs overlap
                 if assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx, loci_same=loci_same)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
 
                 if assembler.check_contig_match(ci2, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx, loci_same=loci_same)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
 
                 if assembler.check_contig_match(ci, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(idx, jdx, loci_same=loci_same)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
 
             # No contigs to match, merge anyway
-            elif not any_ci and not any_cj and loci_same:
-                G.add_edge(idx, jdx, loci_same=loci_same)
+            elif not any_contigs_to_check and loci_same:
+                G.add_edge(i_id, j_id, loci_same=loci_same)
 
             # Only merge loci if they are not both within --include regions. chrA:posA only needs checking
             elif not (io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and
                       io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)):
-                G.add_edge(idx, jdx, loci_same=loci_same)
+                G.add_edge(i_id, j_id, loci_same=loci_same)
     return G
 
 
@@ -191,19 +255,20 @@ def cut_components(G):
 cpdef srt_func(c):
     if "su" in c:
         return c["su"]
-    return c["pe"] + c["supp"] + c["spanning"]
+    # over weight spanning
+    return c["pe"] + c["supp"] + (c["spanning"] * 10) + c["sc"]
 
 
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
-                 rel_diffs=False, diffs=15, same_sample=True):
+                 rel_diffs=False, diffs=15, same_sample=True, debug=False):
     """Try and merge similar events, use overlap of both breaks points
     """
-
+    max_dist = max_dist / 2
     if len(potential) <= 1:
         return potential
 
     G = nx.Graph()
-    G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample)  # Cluster events on graph
+    G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample, debug=debug)  # Cluster events on graph
 
     found = []
     for item in potential:  # Add singletons, non-merged
@@ -216,12 +281,12 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
     # over merging SVs that are close together
 
     components = cut_components(G)
-
+    node_to_event = {i["event_id"]: i for i in potential}
     cdef int k
     # Only keep edges with loci_same==False if removing the edge leads to an isolated node
     for grp in components:
 
-        c = [potential[n] for n in grp]
+        c = [node_to_event[n] for n in grp]
         best = sorted(c, key=srt_func, reverse=True)
 
         if not pick_best:
@@ -231,12 +296,14 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
             for k in range(1, len(best)):
 
                 item = best[k]
+
                 # Sum these
                 for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning"):
-                    best[0][t] += item[t]
+                    if t in item:
+                        best[0][t] += item[t]
 
                 if item["maxASsupp"] > w0["maxASsupp"]:
-                    best[0][t]["maxASsupp"] = item["maxASsupp"]
+                    best[0]["maxASsupp"] = item["maxASsupp"]
 
                 # Average weight these
                 wt = item["pe"] + item["supp"] + item["spanning"]
@@ -329,6 +396,8 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                                                       min_supp,
                                                       extended_tags,
                                                       assemble_contigs):
+        # echo(event["chrA"], event["posA"])
+
         if event:
             event["event_id"] = event_id
             if event["chrA"] is not None:
@@ -339,8 +408,9 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
             event_id += 1
     if not potential_events:
         return potential_events, event_id
-
+    # echo(potential_events)
     potential_events = filter_potential(potential_events, regions, regions_only)
+
     potential_events = merge_events(potential_events, merge_dist, regions,
                                     try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
 
@@ -449,8 +519,10 @@ def pipe1(args, infile, kind, regions, ibam):
 
     # Merge across calls
     if args["merge_within"] == "True":
-        merged = merge_events(block_edge_events, args["merge_dist"], regions,
-                                try_rev=False, pick_best=True)
+        tmr = time.time()
+        block_edge_events = merge_events(block_edge_events, args["merge_dist"], regions, try_rev=False, pick_best=False,
+                                         debug=True)
+        echo("merging all", time.time() - tmr)
     merged = block_edge_events
     if merged:
         for event in merged:

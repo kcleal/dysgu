@@ -327,6 +327,7 @@ class GenomeScanner:
 
             tell = 0 if self.no_tell else self.input_bam.tell()
             for aln in self.input_bam:
+
             # for tmp in input_iter: #self.input_bam:
 
                 # if update_tel:
