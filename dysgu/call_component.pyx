@@ -4,10 +4,11 @@ from __future__ import absolute_import
 from collections import Counter, defaultdict
 import click
 import numpy as np
+from numpy.random import normal
 import itertools
 from dysgu import io_funcs, assembler, coverage
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, cigar_clip
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes
 import warnings
 from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint64_t
@@ -15,6 +16,8 @@ from pysam.libchtslib cimport bam_get_qname
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+np.random.seed(1)
 
 
 def echo(*args):
@@ -25,7 +28,7 @@ cdef class AlignmentItem:
     """Data holder for classifying alignments into SV types"""
     cdef public int chrA, chrB, priA, priB, rA, rB, posA, endA, posB, endB, strandA, strandB, left_clipA, right_clipA,\
         left_clipB, right_clipB, breakA_precise, breakB_precise, breakA, breakB, a_qstart, a_qend, b_qstart, b_qend,\
-        query_gap, read_overlaps_mate
+        query_gap, read_overlaps_mate, size_inferred
     cdef public str svtype, join_type
     def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,
                   int strandA, int strandB, int left_clipA, int right_clipA, int left_clipB, int right_clipB,
@@ -60,6 +63,7 @@ cdef class AlignmentItem:
         self.svtype = ""
         self.join_type = ""
         self.query_gap = -1  # used to infer insertions in split reads
+        self.size_inferred = 0  # set to 1 if insertion size was inferred
 
 
 cdef n_aligned_bases(ct):
@@ -80,7 +84,7 @@ cdef n_aligned_bases(ct):
 cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
-         "n_sa": []}
+         "n_sa": [], "double_clips": 0}
     paired_end = set([])
     seen = set([])
 
@@ -103,6 +107,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
         flag = a.flag
         if flag & 2:
             r["NP"] += 1
+
+        left_clip, right_clip = clip_sizes(a)
+        if left_clip > 0 and right_clip > 0:
+            r["double_clips"] += 1
 
         has_sa = a.has_tag("SA")
         if has_sa:
@@ -169,6 +177,10 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
         flag = a.flag
         if flag & 2:
             r["NP"] += 1
+
+        left_clip, right_clip = clip_sizes(a)
+        if left_clip > 0 and right_clip > 0:
+            r["double_clips"] += 1
 
         if a.has_tag("SA"):
             r["n_sa"].append(a.get_tag("SA").count(";"))
@@ -237,7 +249,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
 
     r = {"pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
-         "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": []}
+         "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0}
 
     paired_end = set([])
     seen = set([])
@@ -250,6 +262,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
         flag = a.flag
         has_sa = a.has_tag("SA")
         pe_support = 0
+
+        left_clip, right_clip = clip_sizes(a)
+        if left_clip > 0 and right_clip > 0:
+            r["double_clips"] += 1
 
         if has_sa:
             r["n_sa"].append(a.get_tag("SA").count(";"))
@@ -306,6 +322,10 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
         qname = a.qname
         flag = a.flag
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+
+        left_clip, right_clip = clip_sizes(a)
+        if left_clip > 0 and right_clip > 0:
+            r["double_clips"] += 1
 
         if a.has_tag("SA"):
             r["n_sa"].append(a.get_tag("SA").count(";"))
@@ -499,10 +519,10 @@ cdef tuple guess_informative_pair(aligns):
 
 
 cdef int same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b):
+    # If data is paired-end, check if one supplementary overlaps the other primary read
     aflag = a.flag
     bflag = b.flag
     # echo(aflag, bflag, is_overlapping(a_start, a_end, a.pnext, a.pnext + 150), is_overlapping(b_start, b_end, a.pnext, b.pnext + 150))
-    # If data is paired-end, check if one supplementary overlaps the other primary read
     if aflag & 1 and not aflag & 8 and a_chrom == b_chrom and aflag & 64 == bflag & 64:  # same read, one is supplementary
 
         if is_overlapping(b_start, b_end, a_start, a_end):
@@ -576,6 +596,54 @@ cdef make_sv_alignment_item(a, b):
     return v_item
 
 
+cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
+
+    if aln.flag & 2304:  # skip supplementary
+        return None
+    v_item = make_sv_alignment_item(aln, aln)
+    v_item.read_overlaps_mate = 0
+
+    cdef int dist_to_break = 0
+    cdef int rand_insert_pos = 0
+    if v_item.left_clipA:  # use clip to guess break point
+        v_item.breakA = aln.pos
+        v_item.breakB = aln.pos
+        v_item.breakA_precise = 1
+        v_item.breakB_precise = 1
+        v_item.join_type = "5to3"
+
+    elif v_item.right_clipA:
+        v_item.breakA = aln.reference_end
+        v_item.breakB = aln.reference_end
+        v_item.breakA_precise = 1
+        v_item.breakB_precise = 1
+        v_item.join_type = "3to5"
+
+    else:
+        if aln.flag & 1 and aln.flag & 2: # paired and normal primary pairing
+            if aln.flag & 16:  # guess left
+                v_item.breakA = aln.pos
+                v_item.breakB = aln.pos
+                v_item.join_type = "5to3"
+            else:
+                v_item.breakA = aln.reference_end
+                v_item.breakB = aln.reference_end
+                v_item.join_type = "3to5"
+        else:
+            return None
+
+    v_item.svtype = "INS"
+
+    # Try and guess the insertion size using insert size and distance to break
+    dist_to_break = aln.reference_end - aln.pos
+    v_item.size_inferred = 1
+    # use a random draw to make cipos95 more accurate
+    rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
+    v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
+
+    return v_item
+
+
 cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
     # Infer the other breakpoint from a single group
@@ -590,7 +658,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
                    for node_info, i in rds):
             return {}
 
-    # Groupby template name to check for split reads
+    # Group by template name to check for split reads
     precise_a = []
     precise_b = []
     informative = []  # make call from these
@@ -610,10 +678,8 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
     for temp_name, alignments in tmp.items():
         l_align = list(alignments)
-        # echo(temp_name, len(l_align))
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
-            # echo("pair", pair)
             if pair is not None:
                 if len(pair) == 2:
                     a, b = pair
@@ -638,7 +704,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         else:  # Single alignment, check spanning
             cigar_info, a = alignments[0]
             cigar_index = cigar_info[5]
-
+            # echo(a.qname, a.pos, 0 < cigar_index < len(a.cigartuples) - 1)
             if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
                 event_pos = cigar_info[6]
                 ci = a.cigartuples[cigar_index]
@@ -654,59 +720,22 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             else:  # generic insertion
                 generic_insertions.append(a)
 
-    # echo(len(informative_reads), "generic", len(generic_insertions))
     if len(informative_reads) + (2*len(spanning_alignments)) < min_support:
-
         for aln in generic_insertions:
-            if not aln.flag & 2304:  # skip supplementary
-                v_item = make_sv_alignment_item(aln, aln)
-
-                if v_item.left_clipA:
-                    v_item.breakA = aln.pos
-                    v_item.breakB = aln.pos
-                    v_item.breakA_precise = 1
-                    v_item.breakB_precise = 1
-                    v_item.join_type = "5to3"
-                    # echo("left y", aln.pos)
-
-                elif v_item.right_clipA:
-                    v_item.breakA = aln.reference_end
-                    v_item.breakB = aln.reference_end
-                    v_item.breakA_precise = 1
-                    v_item.breakB_precise = 1
-                    v_item.join_type = "3to5"
-                    # echo("right y", aln.reference_end)
-                else:
-                    if aln.flag & 1 and aln.flag & 2: # bool(aln.flag & 16) != bool(aln.flag & 32):  # paired and opposing strand
-                        if aln.flag & 16:  # guess left
-                            v_item.breakA = aln.pos
-                            v_item.breakB = aln.pos
-                            v_item.join_type = "5to3"
-                            # echo("left", aln.pos)
-                        else:
-                            v_item.breakA = aln.reference_end
-                            v_item.breakB = aln.reference_end
-                            v_item.join_type = "3to5"
-                            # echo("right", aln.reference_end)
-                    else:
-                        continue
-
-                v_item.svtype = "INS"
-                # echo(v_item.breakA, v_item.breakB, v_item.breakA_precise)
-
+            gi = make_generic_insertion_item(aln, insert_size, insert_stdev)
+            if gi is not None:
+                v_item = gi
                 if v_item.left_clipA:
                     u_reads.append(aln)
                 elif v_item.right_clipA:
                     v_reads.append(aln)
-
                 if v_item.breakA_precise:
                     precise_a.append(v_item.breakA)
                 elif v_item.breakB_precise:
                     precise_b.append(v_item.breakB)
-
                 informative.append(v_item)
 
-    # echo("--->", len(informative), len(spanning_alignments), len(u_reads), len(v_reads))
+    # echo("--->", len(informative), len(spanning_alignments), len(u_reads), len(v_reads), "generic", len(generic_insertions))
     if len(informative) == 0 and len(spanning_alignments) == 0:
         return {}
 
@@ -750,14 +779,14 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], min_support, extended_tags,
                              info["svtype"])
 
+    # Assume generic break ends also match the spanning alignment
+    if len(spanning_alignments) > 0 and len(generic_insertions) > 0:
+        min_found_support += len(generic_insertions)
+
     # hack to prevent count_attribute missing single reads that support an insertion
     if min_found_support > attrs["pe"] + attrs["supp"] + (2*attrs["spanning"]):
         attrs["pe"] = min_found_support
 
-    # echo(call_informative)
-    # quit()
-    # echo(info)
-    # echo(attrs)
     # Remove low support calls
     if not attrs:
         return {}
@@ -769,7 +798,9 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             return {}
 
     info.update(attrs)
-
+    # echo(call_informative)
+    # echo(info["svlen"])
+    # quit()
     as1 = None
     as2 = None
 
@@ -1036,14 +1067,18 @@ cdef void same_read(AlignmentItem v):
                     v.breakB_precise = 1
                 else:
                     v.breakB = v.endB
+
+                v.svtype = "INS"
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qstart - v.a_qend  # as A is first
-                ref_gap = v.breakB - v.breakA
-                if ref_gap < query_gap:
-                    v.svtype = "INS"
-                    v.query_gap = query_gap
+                query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
+                ref_gap = abs(v.breakB - v.breakA)
+                if ref_gap > query_gap:
+                #     v.svtype = "INS"
+                    v.query_gap = ref_gap
                 else:
-                    v.svtype = "DUP"
+                    v.query_gap = query_gap
+                # else:
+                #     v.svtype = "DUP"
                 v.join_type = "5to3"
 
             elif not v.left_clipA and not v.right_clipB:
@@ -1055,8 +1090,8 @@ cdef void same_read(AlignmentItem v):
                     v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qstart - v.a_qend  # as A is first
-                ref_gap = v.breakB - v.breakA
+                query_gap = abs(v.b_qstart - v.a_qend)  # as A is first
+                ref_gap = abs(v.breakB - v.breakA)
                 # echo(ref_gap, query_gap, v.breakA, v.breakB, v.read_overlaps_mate)
                 if ref_gap < query_gap:
                     v.svtype = "INS"
@@ -1134,7 +1169,7 @@ cdef void same_read(AlignmentItem v):
                 v.breakB = v.endB
                 if v.right_clipB:
                     v.breakB_precise = 1
-                v.svtype = "INV:DUP"
+                v.svtype = "DUP"
                 v.join_type = "5to3"
 
             elif v.right_clipA and v.left_clipB:
@@ -1200,14 +1235,18 @@ cdef void same_read(AlignmentItem v):
                 else:
                     v.breakB = v.endB
 
+                v.svtype = "INS"
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qend - v.a_qstart  # as B is first
-                ref_gap = v.breakB - v.breakA
-                if ref_gap < query_gap:
-                    v.svtype = "INS"
+                query_gap = abs(v.b_qend - v.a_qstart) + 1  # as B is first
+                ref_gap = abs(v.breakB - v.breakA)
+                if ref_gap > query_gap:
+                #     v.svtype = "INS"
                     v.query_gap = query_gap
                 else:
-                    v.svtype = "DUP"
+                    v.query_gap = query_gap
+
+                # else:
+                #     v.svtype = "DUP"
 
                 v.join_type = "5to3"
 
@@ -1218,8 +1257,8 @@ cdef void same_read(AlignmentItem v):
                 v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qstart - v.a_qend  # as B is first
-                ref_gap = v.breakA - v.breakB
+                query_gap = abs(v.b_qstart - v.a_qend)  # as B is first
+                ref_gap = abs(v.breakA - v.breakB)
                 if ref_gap < query_gap:
                     v.svtype = "INS"
                     v.join_type = "3to5"
@@ -1582,7 +1621,6 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
     # A or B break pay be in accurate, try and infer svlen and a more accurate break point(s)
     cdef int svlen = 0
     cdef int mid
-    # echo(main_A_break, main_B_break, preciseA, preciseB)
     if not preciseA and not preciseB:
         # Make break at mid point
         sep = abs(main_B_break - main_A_break)
@@ -1604,7 +1642,7 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
         else:
             main_B_break = main_A_break - 1
         svlen = int(cipos95B / 2)
-    # echo(main_A_break, main_B_break, svlen)
+
     return main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen
 
 
@@ -1614,7 +1652,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     # Inspired by mosdepth algorithm +1 for start -1 for end using intervals where break site could occur
     # Use insert size to set a limit on where break site could occur
     cdef int limit = insert_size + insert_stdev
-
+    cdef AlignmentItem i
     # get bulk call
     positionsA = [i.breakA for i in informative]
     positionsB = [i.breakB for i in informative]
@@ -1660,9 +1698,20 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
 
     if informative[0].chrA == informative[0].chrB:
         if svtype == "INS":  # use inferred query gap to call svlen
-            q_gaps = [i.query_gap for i in informative if i.query_gap != -1]
+            q_gaps = []
+            inferred_q_gaps = []
+            for i in informative:
+                if i.query_gap != -1:
+                    if i.size_inferred == 1:
+                        inferred_q_gaps.append(i.query_gap)
+                    else:
+                        q_gaps.append(i.query_gap)
+            # echo("inferred", inferred_q_gaps)
+            # echo("qgaps", q_gaps)
             if len(q_gaps) > 0:
                 svlen = int(np.mean(q_gaps))
+            elif len(inferred_q_gaps) > 0:
+                svlen = int(np.mean(inferred_q_gaps))
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
@@ -1825,7 +1874,12 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
             # Soft-clips for the chosen pair, plus template start of alignment
             left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
 
-            # echo(a.pos, a_ct, b.pos, b_ct, left_clip_a, right_clip_a, left_clip_b, right_clip_b)
+            a_chrom, b_chrom = a.rname, b.rname
+            a_start, a_end = a.pos, a.reference_end
+            b_start, b_end = b.pos, b.reference_end
+            read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
+
+            # echo(a.pos, a_ct, b.pos, b_ct, left_clip_a, right_clip_a, left_clip_b, right_clip_b, read_overlaps_mate)
             v_item = AlignmentItem(a.rname,
                                    b.rname,
                                    int(not a.flag & 2304),  # Is primary
@@ -1843,7 +1897,7 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
                                    left_clip_b,
                                    right_clip_b,
                                    a_qstart, a_qend, b_qstart, b_qend,
-                                   0  # Read overlaps mate, 0 by inference
+                                   read_overlaps_mate
                                    )
 
             if v_item.left_clipA and v_item.right_clipA:
@@ -1956,7 +2010,8 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
         return {}
 
     info.update(attrs)
-
+    # echo(info)
+    # quit()
     as1 = None
     as2 = None
     if assemble:

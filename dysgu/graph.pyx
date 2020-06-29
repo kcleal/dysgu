@@ -917,14 +917,18 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                 cigar_index = -1
                 pos2 = -1
 
-                if r.flag & 8 and clipped and good_quality_clip(r, 20):
+                if r.flag & 8 and clipped:
+                    left_clip_size, right_clip_size = clip_sizes(r)
+                    # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
+                    if not (left_clip_size and right_clip_size) and good_quality_clip(r, 20):
+                        left_clip_size, right_clip_size = clip_sizes(r)
 
-                    clip_or_wr = 4  # Mate is unmapped, insertion type. Only add if soft-clip is available
-                    process_alignment(G, r, clip_l, max_dist, gettid,
-                               overlap_regions, clustering_dist, pe_scope,
-                               cigar_index, event_pos, paired_end, tell, genome_scanner,
-                               template_edges, node_to_name,
-                                      clip_or_wr, pos2, mapq_thresh)
+                        clip_or_wr = 4  # Mate is unmapped, insertion type. Only add if soft-clip is available
+                        process_alignment(G, r, clip_l, max_dist, gettid,
+                                   overlap_regions, clustering_dist, pe_scope,
+                                   cigar_index, event_pos, paired_end, tell, genome_scanner,
+                                   template_edges, node_to_name,
+                                          clip_or_wr, pos2, mapq_thresh)
                 else:
                     clip_or_wr = 1  # Use whole read
                     process_alignment(G, r, clip_l, max_dist, gettid,

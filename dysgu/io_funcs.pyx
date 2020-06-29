@@ -251,11 +251,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"RT={read_kind}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG"
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NDC"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG"
+        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NDC"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -285,7 +285,7 @@ def get_fmt(r, extended):
         v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                       r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
-                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps']]
+                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], r["n_sa"], r["double_clips"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -294,7 +294,7 @@ def get_fmt(r, extended):
         v = ["./.", r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
-                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps']]
+                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], r["n_sa"], r["double_clips"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -386,7 +386,9 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
-##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">{}
+##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">
+##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA alignments per read">
+##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
         else:
@@ -437,7 +439,9 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
-##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">{}
+##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">
+##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA alignments per read">
+##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
