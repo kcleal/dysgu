@@ -637,7 +637,6 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     # Try and guess the insertion size using insert size and distance to break
     dist_to_break = aln.reference_end - aln.pos
     v_item.size_inferred = 1
-    # use a random draw to make cipos95 more accurate
     rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
     v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
 
@@ -666,7 +665,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     u_reads = []
     v_reads = []
     spanning_alignments = []  # make call from these if available (and count attributes)
-
     generic_insertions = []
 
     tmp = defaultdict(list)  # group by template name
@@ -770,7 +768,7 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         call_informative = Counter([(itm.svtype, itm.join_type) for itm in informative]).most_common()
         svtype, jointype = call_informative[0][0]
         info.update(make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
-
+        # echo(call_informative)
         if len(info) < 2:
             return {}
 
@@ -1072,6 +1070,7 @@ cdef void same_read(AlignmentItem v):
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
                 query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
                 ref_gap = abs(v.breakB - v.breakA)
+                # echo("query gap", query_gap, ref_gap)
                 if ref_gap > query_gap:
                 #     v.svtype = "INS"
                     v.query_gap = ref_gap
@@ -1090,9 +1089,9 @@ cdef void same_read(AlignmentItem v):
                     v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = abs(v.b_qstart - v.a_qend)  # as A is first
+                query_gap = v.b_qstart - v.a_qend  # as A is first
                 ref_gap = abs(v.breakB - v.breakA)
-                # echo(ref_gap, query_gap, v.breakA, v.breakB, v.read_overlaps_mate)
+                # echo(ref_gap, query_gap, v.breakA, v.breakB, v.read_overlaps_mate, v.b_qstart - v.a_qend)
                 if ref_gap < query_gap:
                     v.svtype = "INS"
                     v.join_type = "3to5"
@@ -1239,9 +1238,10 @@ cdef void same_read(AlignmentItem v):
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
                 query_gap = abs(v.b_qend - v.a_qstart) + 1  # as B is first
                 ref_gap = abs(v.breakB - v.breakA)
+                # echo("query gap", query_gap, ref_gap, v.b_qend - v.a_qstart)
                 if ref_gap > query_gap:
                 #     v.svtype = "INS"
-                    v.query_gap = query_gap
+                    v.query_gap = ref_gap
                 else:
                     v.query_gap = query_gap
 
@@ -1257,8 +1257,10 @@ cdef void same_read(AlignmentItem v):
                 v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = abs(v.b_qstart - v.a_qend)  # as B is first
+                # echo(v.a_qstart, v.a_qend, v.b_qstart, v.b_qend)
+                query_gap = v.b_qend - v.a_qstart  # as B is first
                 ref_gap = abs(v.breakA - v.breakB)
+                # echo(query_gap, ref_gap, v.read_overlaps_mate)
                 if ref_gap < query_gap:
                     v.svtype = "INS"
                     v.join_type = "3to5"
