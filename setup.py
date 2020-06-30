@@ -106,7 +106,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.7.6',
+    version='0.7.7',
     python_requires='>=3.7',
     install_requires=[
             'cython',

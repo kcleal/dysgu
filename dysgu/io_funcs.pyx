@@ -164,16 +164,16 @@ cpdef list col_names(extended):
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps"
+          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
+                "minus", "n_gaps", "n_sa", "n_xa", "double_clips"
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
           "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
          "raw_reads_10kb",
-          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps"
+          "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
+                "minus", "n_gaps", "n_sa", "n_xa", "double_clips"
             ]
 
 
@@ -187,6 +187,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         gc = r["gc"]
         rep = r["rep"]
         repsc = r["rep_sc"]
+        lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
 
         su, pe, sr, sc, wr = 0, 0, 0, 0, 0
         # probs = []
@@ -209,6 +210,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         gc = r["gc"]
         rep = r["rep"]
         repsc = r["rep_sc"]
+        lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
 
     samp = r["sample"]
     read_kind = r["type"]
@@ -243,6 +245,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
     info_extras += [f"GC={gc}",
                     f"REP={'%.3f' % float(rep)}",
                     f"REPSC={'%.3f' % float(repsc)}",
+                    f"LPREC={lenprec}",
                     f"SU={su}",
                     f"WR={wr}",
                     f"PE={pe}",
@@ -251,11 +254,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"RT={read_kind}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NDC"
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NDC"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NDC"
+        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NDC"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -285,7 +288,7 @@ def get_fmt(r, extended):
         v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                       r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
-                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], r["n_sa"], r["double_clips"]]
+                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2), r["double_clips"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -294,7 +297,7 @@ def get_fmt(r, extended):
         v = ["./.", r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                   r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
-                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], r["n_sa"], r["double_clips"]]
+                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2), r["double_clips"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -357,6 +360,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
 ##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
 ##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
+##INFO=<ID=LPREC,Number=1,Type=Integer,Description="SV length precise=1, inferred=0">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
@@ -387,7 +391,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
 ##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">
-##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA alignments per read">
+##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA tags per read">
+##FORMAT=<ID=NXA,Number=1,Type=Integer,Description="Mean number of XA tags per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
@@ -414,6 +419,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
 ##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
 ##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
+##INFO=<ID=LPREC,Number=1,Type=Integer,Description="SV length precise=1, inferred=0">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
@@ -440,7 +446,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
 ##FORMAT=<ID=NG,Number=1,Type=Integer,Description="Mean number of small gaps < 30 bp">
-##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA alignments per read">
+##FORMAT=<ID=NSA,Number=1,Type=Integer,Description="Mean number of SA tags per read">
+##FORMAT=<ID=NXA,Number=1,Type=Integer,Description="Mean number of XA tags per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 

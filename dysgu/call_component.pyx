@@ -8,7 +8,7 @@ from numpy.random import normal
 import itertools
 from dysgu import io_funcs, assembler, coverage
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard
 import warnings
 from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint64_t
@@ -84,7 +84,7 @@ cdef n_aligned_bases(ct):
 cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
     r = {"pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
-         "n_sa": [], "double_clips": 0}
+         "n_sa": [], "double_clips": 0, "n_xa": []}
     paired_end = set([])
     seen = set([])
 
@@ -108,13 +108,15 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
         if flag & 2:
             r["NP"] += 1
 
-        left_clip, right_clip = clip_sizes(a)
+        left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
             r["double_clips"] += 1
 
         has_sa = a.has_tag("SA")
         if has_sa:
             r["n_sa"].append(a.get_tag("SA").count(";"))
+        if a.has_tag("XA"):
+            r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         r["n_gaps"].append(n_small_gaps / a_bases)
@@ -178,12 +180,14 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
         if flag & 2:
             r["NP"] += 1
 
-        left_clip, right_clip = clip_sizes(a)
+        left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
             r["double_clips"] += 1
 
         if a.has_tag("SA"):
             r["n_sa"].append(a.get_tag("SA").count(";"))
+        if a.has_tag("XA"):
+            r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         r["n_gaps"].append(n_small_gaps / a_bases)
@@ -231,7 +235,7 @@ cdef dict extended_attrs(reads1, reads2, spanning, min_support, svtype):
             r[k] = np.mean(r[k]) * 100
         else:
             r[k] = 0
-    for k in ("DP", "DApri", "DN", "DAsupp", "MAPQpri", "MAPQsupp", "n_sa"):
+    for k in ("DP", "DApri", "DN", "DAsupp", "MAPQpri", "MAPQsupp", "n_sa", "n_xa"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k])
         else:
@@ -249,7 +253,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
 
     r = {"pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
-         "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0}
+         "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0, "n_xa": []}
 
     paired_end = set([])
     seen = set([])
@@ -263,12 +267,14 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
         has_sa = a.has_tag("SA")
         pe_support = 0
 
-        left_clip, right_clip = clip_sizes(a)
+        left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
             r["double_clips"] += 1
 
         if has_sa:
             r["n_sa"].append(a.get_tag("SA").count(";"))
+        if a.has_tag("XA"):
+            r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         r["n_gaps"].append(n_small_gaps / a_bases)
@@ -323,12 +329,14 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
         flag = a.flag
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
 
-        left_clip, right_clip = clip_sizes(a)
+        left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
             r["double_clips"] += 1
 
         if a.has_tag("SA"):
             r["n_sa"].append(a.get_tag("SA").count(";"))
+        if a.has_tag("XA"):
+            r["n_xa"].append(a.get_tag("XA").count(";"))
 
         r["n_gaps"].append(n_small_gaps / a_bases)
         if flag & 2:
@@ -370,7 +378,7 @@ cdef dict normal_attrs(reads1, reads2, spanning, min_support, svtype):
             r[k] = np.mean(r[k]) * 100
         else:
             r[k] = 0
-    for k in ("MAPQpri", "MAPQsupp", "n_sa"):
+    for k in ("MAPQpri", "MAPQsupp", "n_sa", "n_xa"):
         if len(r[k]) > 0:
             r[k] = np.mean(r[k])
         else:
@@ -511,7 +519,6 @@ cdef tuple guess_informative_pair(aligns):
         a = pri_first
         b = pri_second
     if a is None:
-        # echo("4")
         return None
     if a.pos < b.pos:
         return a, b
@@ -666,7 +673,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
     v_reads = []
     spanning_alignments = []  # make call from these if available (and count attributes)
     generic_insertions = []
-
     tmp = defaultdict(list)  # group by template name
     for cigar_info, align in rds:
         tmp[align.qname].append((cigar_info, align))
@@ -681,13 +687,11 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             if pair is not None:
                 if len(pair) == 2:
                     a, b = pair
-
                     u_reads.append(a)
                     v_reads.append(b)
                     v_item = make_sv_alignment_item(a, b)
                     classify_d(v_item)
-                    # if a.qname == "D00360:19:H8VDAADXX:2:2213:10408:33721":
-                    # echo(a.qname, a.pos, b.pos, v_item.svtype)
+
                     if v_item.breakA_precise:
                         precise_a.append(v_item.breakA)
                     if v_item.breakB_precise:
@@ -702,7 +706,6 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
         else:  # Single alignment, check spanning
             cigar_info, a = alignments[0]
             cigar_index = cigar_info[5]
-            # echo(a.qname, a.pos, 0 < cigar_index < len(a.cigartuples) - 1)
             if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
                 event_pos = cigar_info[6]
                 ci = a.cigartuples[cigar_index]
@@ -710,12 +713,11 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
                                             a.rname,
                                             event_pos,
                                             within_read_end_position(event_pos, ci[0], a.cigartuples, cigar_index),
-                                            # event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
                                             a.cigartuples[cigar_index][1],
                                             a))
                 u_reads.append(a)
 
-            else:  # generic insertion
+            else:
                 generic_insertions.append(a)
 
     if len(informative_reads) + (2*len(spanning_alignments)) < min_support:
@@ -774,12 +776,14 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
 
         min_found_support = call_informative[0][1]
 
+    # Assume generic break ends also match a spanning alignment, if spanning is absent assume informative
+    if len(generic_insertions) > 0:
+        if len(spanning_alignments) > 0 or len(informative_reads) == 0:
+            min_found_support += len(generic_insertions)
+            informative_reads += generic_insertions
+
     attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], min_support, extended_tags,
                              info["svtype"])
-
-    # Assume generic break ends also match the spanning alignment
-    if len(spanning_alignments) > 0 and len(generic_insertions) > 0:
-        min_found_support += len(generic_insertions)
 
     # hack to prevent count_attribute missing single reads that support an insertion
     if min_found_support > attrs["pe"] + attrs["supp"] + (2*attrs["spanning"]):
@@ -796,8 +800,12 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             return {}
 
     info.update(attrs)
+    # echo(len(generic_insertions))
+    # echo(len(informative_reads))
     # echo(call_informative)
     # echo(info["svlen"])
+    # echo(info)
+    # echo(attrs)
     # quit()
     as1 = None
     as2 = None
@@ -1697,7 +1705,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B, preciseB = break_ops(positionsB, breakB_precise, limit, median_B)
 
-
+    svlen_precise = 1
     if informative[0].chrA == informative[0].chrB:
         if svtype == "INS":  # use inferred query gap to call svlen
             q_gaps = []
@@ -1714,6 +1722,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                 svlen = int(np.mean(q_gaps))
             elif len(inferred_q_gaps) > 0:
                 svlen = int(np.mean(inferred_q_gaps))
+                svlen_precise = 0
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
@@ -1724,7 +1733,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
 
     return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
-            "preciseA": preciseA, "preciseB": preciseB,
+            "preciseA": preciseA, "preciseB": preciseB, "svlen_precise": svlen_precise,
             "svlen": svlen}
 
 

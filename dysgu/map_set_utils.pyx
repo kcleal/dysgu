@@ -164,6 +164,22 @@ cdef tuple clip_sizes(r):
     return left, right
 
 
+cdef tuple clip_sizes_hard(r):
+    c = r.cigartuples
+    if not c:
+        return 0, 0
+
+    cdef int left = 0
+    cdef int right = 0
+    c1 = c[0][0]
+    if c1 == 4 or c1 == 5:
+        left = c[0][1]
+    c1 = c[-1][0]
+    if c1 == 4 or c1 == 5:
+        right = c[-1][1]
+    return left, right
+
+
 cdef int cigar_clip(r, int clip_length):
 
     c = r.cigartuples

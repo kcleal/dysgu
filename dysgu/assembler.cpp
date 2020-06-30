@@ -36,8 +36,8 @@
         ],
         "include_dirs": [
             "dysgu",
-            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",

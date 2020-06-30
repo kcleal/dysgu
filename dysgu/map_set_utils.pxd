@@ -202,6 +202,9 @@ cdef int cigar_exists(r)
 cdef tuple clip_sizes(r)
 
 
+cdef tuple clip_sizes_hard(r)
+
+
 cdef int cigar_clip(r, int clip_length)
 
 

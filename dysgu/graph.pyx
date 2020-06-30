@@ -565,7 +565,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, clip_or_wr)
     # echo("---", r.qname, node_name, clip_or_wr, node_name, event_pos, pos2, list(other_nodes))
 
-    # if r.qname == "D00360:18:H8VC6ADXX:2:2201:15754:91548" or r.qname == "D00360:19:H8VDAADXX:2:2208:17532:61383":
+    # if r.qname == "D00360:18:H8VC6ADXX:1:1212:18186:82462":
     #     echo("@", r.flag, node_name, clip_or_wr, event_pos, pos2, list(other_nodes), cigar_index)
     #     quit()
     if not other_nodes.empty():
