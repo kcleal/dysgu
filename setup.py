@@ -98,6 +98,7 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
+
 print("Found packages", find_packages(where="."))
 setup(
     name="dysgu",
@@ -106,7 +107,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.7.7',
+    version='0.7.8',
     python_requires='>=3.7',
     install_requires=[
             'cython',

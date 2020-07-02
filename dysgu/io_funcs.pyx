@@ -188,6 +188,10 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         rep = r["rep"]
         repsc = r["rep_sc"]
         lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
+        n_expansion = r["n_expansion"]
+        stride = r["stride"]
+        exp_seq = r["exp_seq"]
+        ref_poly = r["ref_poly_bases"]
 
         su, pe, sr, sc, wr = 0, 0, 0, 0, 0
         # probs = []
@@ -211,6 +215,10 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
         rep = r["rep"]
         repsc = r["rep_sc"]
         lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
+        n_expansion = r["n_expansion"]
+        stride = r["stride"]
+        exp_seq = r["exp_seq"]
+        ref_poly = r["ref_poly_bases"]
 
     samp = r["sample"]
     read_kind = r["type"]
@@ -246,6 +254,10 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"REP={'%.3f' % float(rep)}",
                     f"REPSC={'%.3f' % float(repsc)}",
                     f"LPREC={lenprec}",
+                    f"NEXP={n_expansion}",
+                    f"STRIDE={stride}",
+                    f"EXPSEQ={exp_seq}",
+                    f"RPOLY={ref_poly}",
                     f"SU={su}",
                     f"WR={wr}",
                     f"PE={pe}",
@@ -361,6 +373,10 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
 ##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
 ##INFO=<ID=LPREC,Number=1,Type=Integer,Description="SV length precise=1, inferred=0">
+##INFO=<ID=NEXP,Number=1,Type=Integer,Description="Number of expanded repeat bases at break">
+##INFO=<ID=STRIDE,Number=1,Type=Integer,Description="Repeat expansion stride or period">
+##INFO=<ID=EXPSEQ,Number=1,Type=Integer,Description="Expansion sequence">
+##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
@@ -420,6 +436,10 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
 ##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
 ##INFO=<ID=LPREC,Number=1,Type=Integer,Description="SV length precise=1, inferred=0">
+##INFO=<ID=NEXP,Number=1,Type=Integer,Description="Number of expanded repeat bases at break">
+##INFO=<ID=STRIDE,Number=1,Type=Integer,Description="Repeat expansion stride or period">
+##INFO=<ID=EXPSEQ,Number=1,Type=Integer,Description="Expansion sequence">
+##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">

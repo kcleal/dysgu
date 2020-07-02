@@ -14,6 +14,9 @@ from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint64_t
 from pysam.libchtslib cimport bam_get_qname
 
+from cpython.ref cimport PyObject
+
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -644,8 +647,12 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     # Try and guess the insertion size using insert size and distance to break
     dist_to_break = aln.reference_end - aln.pos
     v_item.size_inferred = 1
-    rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
-    v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
+
+    if aln.flag & 2:
+        v_item.query_gap = insert_size - abs(aln.tlen)
+    else:
+        rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
+        v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
 
     return v_item
 
@@ -815,12 +822,15 @@ cdef dict single(infile, rds, int insert_size, int insert_stdev, int clip_length
             as1 = assembler.base_assemble(u_reads, info["posA"], 500)
         if info["preciseB"]:
             as2 = assembler.base_assemble(v_reads, info["posB"], 500)
+        if not as1 and len(generic_insertions) > 0:
+            as1 = assembler.base_assemble(generic_insertions, info["posA"], 500)
 
     info["linked"] = 0
     info["block_edge"] = 0
     info["contig"] = None
     info["contig2"] = None
     rbases = 0
+
     if as1 is not None and "contig" in as1:
         if as1["left_clips"] or as1["right_clips"] or len(spanning_alignments) > 0:
             info["contig"] = as1["contig"]

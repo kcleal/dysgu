@@ -218,3 +218,6 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil
+
+
+# cdef list search_ssr_kc(str seq)

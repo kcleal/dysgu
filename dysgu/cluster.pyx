@@ -384,6 +384,140 @@ def sample_level_density(potential, regions, max_dist=50):
     return potential
 
 
+cdef bint poly_kmer(k):
+    cdef int len_k = len(k)
+    if len_k == 1:
+        return False
+    sk = set(k)
+    if len(sk) == 1:
+        return True
+    elif len_k == 4:
+        if k[:2] == k[2:]:
+            return True
+    elif len_k == 6:
+        if k[:3] == k[3:]:
+            return True
+    return False
+
+
+cdef dict search_ssr_kc(ori):
+
+    seq = ori.upper()
+    cdef const unsigned char[:] string_view = bytes(seq.encode("ascii"))  # use for indexing
+
+    cdef int str_len = len(seq)
+    cdef int rep_len = min(7, str_len)
+    cdef int i = 0
+    cdef int t, start, count, mm, good_i, successive_bad, size, finish
+
+    cdef int n_ref_repeat_bases = 0
+    cdef int n_expansion = 0
+    cdef int stride = 0
+    expansion_seq = ""
+
+    while i < str_len:
+
+        if seq[i] == b"N":
+            i += 1
+            continue
+
+        for t in range(1, rep_len):
+
+            start = i
+            if start + t >= str_len:
+                break
+
+            starting_base = seq[i]
+            starting_kmer = seq[start:start + t]
+
+            if poly_kmer(starting_kmer):
+                continue
+
+            count = 1
+            mm = 0
+            good_i = 0
+            successive_bad = 0
+            finish = 0
+            while start + t < str_len and (starting_base == seq[start+t] or mm < 2):
+                start += t
+                if seq[start: start + t] != starting_kmer:
+                    successive_bad += 1
+                    mm += 1
+                    if mm > 3 or successive_bad > 1 or count < 2:
+                        finish = good_i
+                        break
+                else:
+                    good_i = start
+                    finish = good_i
+                    successive_bad = 0
+                    count += 1
+
+            if count >= 3 and (finish - i) + t > 10:
+
+                # check for lowercase to uppercase transition; determines repeat expansion length
+                lowercase = []
+                uppercase = []
+                expansion_index = -1
+                for j in range(i, finish, t):  # only check first base of repeat motif
+                    if ori[j].islower():
+                        if not lowercase:  # finds first block of repeats
+                            lowercase.append([j, j + t])
+                            if uppercase and abs(uppercase[-1][1] - j) < 3:
+                                expansion_index = 0
+                        elif lowercase[-1][1] == j:
+                            lowercase[-1][1] += t
+                    else:  # finds all reference blocks
+                        if not uppercase:  # finds first block of repeats
+                            uppercase.append([j, j + t])
+                            if lowercase and abs(lowercase[-1][1] - j) < 3:
+                                expansion_index = len(lowercase) - 1
+
+                        elif uppercase[-1][1] == j:
+                            uppercase[-1][1] += t
+
+                        else:
+                            uppercase.append([j, j + t])
+
+                if expansion_index != -1:
+                    e = lowercase[expansion_index]
+                    size = e[1] - e[0]
+                    if size >= 10:
+                        n_expansion = size
+                        expansion_seq = ori[e[0]:e[1]]
+                        stride = t
+
+                for begin, end in uppercase:
+                    n_ref_repeat_bases += end - begin
+
+                i = finish + t
+        i += 1
+
+    return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
+
+
+cdef find_repeat_expansions(events, insert_stdev):
+    for e in events:
+        res = {"n_expansion": 0, "stride": 0, "exp_seq": "", "ref_poly_bases": 0}
+        if "contig" in e and e["contig"] is not None:
+            res.update(search_ssr_kc(e["contig"]))
+        if "contig2" in e and e["contig2"] is not None:
+            r = search_ssr_kc(e["contig2"])
+            if res["n_expansion"] < r["n_expansion"]:
+                res["n_expansion"] = r["n_expansion"]
+                res["stride"] = r["stride"]
+                res["exp_seq"] = r["exp_seq"]
+            res["ref_poly_bases"] += r["ref_poly_bases"]
+        e.update(res)
+
+        if "svlen_precise" not in e:
+            e['svlen_precise'] = 1
+        if e["svtype"] == "INS" and e["n_expansion"] > 0 and e['svlen_precise'] == 0:
+            if abs(e["svlen"]) - insert_stdev < 0:
+                e["svlen"] = e["n_expansion"]
+
+    return events
+
+
 def component_job(infile, component, regions, event_id, max_dist, clip_length, insert_med, insert_stdev, min_supp,
                   merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs):
 
@@ -396,8 +530,6 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
                                                       min_supp,
                                                       extended_tags,
                                                       assemble_contigs):
-        # echo(event["chrA"], event["posA"])
-
         if event:
             event["event_id"] = event_id
             if event["chrA"] is not None:
@@ -408,9 +540,8 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
             event_id += 1
     if not potential_events:
         return potential_events, event_id
-    # echo(potential_events)
-    potential_events = filter_potential(potential_events, regions, regions_only)
 
+    potential_events = filter_potential(potential_events, regions, regions_only)
     potential_events = merge_events(potential_events, merge_dist, regions,
                                     try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
 
@@ -534,6 +665,8 @@ def pipe1(args, infile, kind, regions, ibam):
 
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = sample_level_density(preliminaries, regions)
+    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+
     echo("time3", time.time() - t3)
     return preliminaries, extended_tags
 
