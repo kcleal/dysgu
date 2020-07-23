@@ -16,17 +16,17 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 cpu_range = click.IntRange(min=1, max=cpu_count())
 
 defaults = {
-            "clip_length": -1,
+            "clip_length": 15,
             "output": "-",
             "svs_out": "-",
-            "max_cov": 500,
+            "max_cov": 200,
             "buffer_size": 0,
-            "min_support": 4,
+            "min_support": 3,
             "min_size": 30,
             "model": None,
-            "max_tlen": 800,
+            "max_tlen": 1000,
             "z_depth": 2,
-            "z_breadth": 3,
+            "z_breadth": 2,
             "regions_only": "False",
             "soft_search": "True"
 
@@ -53,6 +53,7 @@ def cli():
 
 
 @cli.command("run")
+@click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('bam', required=True, type=click.Path(exists=True))
 @click.option('--dest', help="Folder to use/create for temp file and saving results. Defaults to current directory",
               default=None, type=click.Path())
@@ -151,7 +152,7 @@ def run_pipeline(ctx, **kwargs):
 
 
 @cli.command("fetch")
-@click.argument('bam', required=True, type=click.Path(exists=True))
+@click.argument('bam', required=True, type=click.Path(exists=False))
 @click.option("-f", "--out-format", help="Output format. 'bam' output maintains sort order, "
                                          "'fq' output is collated by name",
               default="bam", type=click.Choice(["bam", "fq", "fasta"]),
@@ -198,6 +199,7 @@ def get_reads(ctx, **kwargs):
 
 
 @cli.command("call")
+@click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('sv-aligns', required=True, type=click.Path(exists=False))
 @click.option("-b", "--ibam", help="Original input file usef with 'fetch' command, used for calculating insert size parameters",
               show_default=True, default=None, required=False, type=click.Path())

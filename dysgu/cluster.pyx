@@ -15,8 +15,11 @@ import pickle
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance, position_distance
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance, position_distance, is_overlapping
 import itertools
+from operator import mul
+from math import pow
+from skbio.alignment import StripedSmithWaterman
 
 
 def echo(*args):
@@ -29,6 +32,9 @@ def filter_potential(input_events, tree, regions_only):
     for i in input_events:
 
         if "posB" not in i:  # Skip events for which no posB was identified
+            continue
+
+        if i["svtype"] == "INS" and "svlen_precise" in i and i["svlen_precise"] == 0 and not i["contig"] and not i["contig2"]:
             continue
         # if i["chrA"] == i["chrB"] and i["posA"] == i["posB"]:
         #     continue
@@ -55,11 +61,11 @@ def compare_subset(potential, max_dist):
 
     interval_table = defaultdict(lambda: graph.Table())
 
-    # Make a nested containment list for lookups
+    # Make a nested containment list for interval intersection
     for idx in range(len(potential)):
         ei = potential[idx]
-
         interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
+        # Add another interval for large events, or translocations
         if ei["svtype"] != "INS":
             if ei["chrA"] != ei["chrB"]:
                 interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
@@ -88,7 +94,8 @@ def compare_all(potential):
         yield potential[idx], potential[jdx], idx, jdx
 
 
-def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15, same_sample=True, debug=False):
+def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, diffs=15, same_sample=True,
+                     debug=False):
 
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
@@ -97,18 +104,20 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         event_iter = compare_subset(potential, max_dist)  # Use NCLS, generate overlap tree and perform intersections
 
     seen = set([])
-
+    pad = 100
     for ei, ej, idx, jdx in event_iter:
 
         i_id = ei["event_id"]
         j_id = ej["event_id"]
-
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
 
         seen.add((i_id, j_id))
 
+        fail = False
         if ei["svtype"] != ej["svtype"]:
+            fail = True
+        if fail:
             continue
 
         if not same_sample and "sample" in ei:
@@ -120,83 +129,22 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         loci_same = False
 
         if ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
-
-            # if ei["svtype"] != "INS":
-                if is_reciprocal_overlapping(ei["posA"] - ei["cipos95A"] - 5,
-                                             ei["posB"] + ei["cipos95B"] + 5,
-                                             ej["posA"] - ej["cipos95A"] - 5,
-                                             ej["posB"] + ej["cipos95B"] + 5):
-                    loci_similar = True
-
-                dist1 = abs(ei["posA"] - ej["posA"])
-                dist2 = abs(ei["posB"] - ej["posB"])
-                if dist1 < 5 and dist2 < 5:
-                    loci_same = True
-
-            # else:
-            #     dist1 = abs(ei["posA"] - ej["posA"])
-            #     dist2 = abs(ei["posB"] - ej["posB"])
-            #     echo(ei, ej)
-            #     if dist1 < 5 and dist2 < 5:
-            #         loci_same = True
-
-            # ci_a = max(ei["cipos95A"], ej["cipos95A"])
-            # if dist1 < max_dist:
-            #     if ei["chrB"] == ej["chrB"]:
-            #         dist2 = abs(ei["posB"] - ej["posB"])
-            #         # ci_b = max(ei["cipos95B"], ej["cipos95B"])
-            #         # if dist2 < (max_dist + ci_b):
-            #         if ei["svtype"] != "INS":
-            #             echo(is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]))
-            #             if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
-            #                 loci_similar = True
-            #         if dist1 < 5 and dist2 < 5:
-            #             loci_same = True
+            dist1 = abs(ei["posA"] - ej["posA"])
+            dist2 = abs(ei["posB"] - ej["posB"])
+            if dist1 < 250 and dist2 < 250 and is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
+                loci_similar = True
+            if dist1 < 5 and dist2 < 5:
+                loci_same = True
 
         if not loci_similar:  # Try chrA matches chrB
-
             if ei["chrA"] == ej["chrB"] and ei["chrB"] == ej["chrA"]:  # Try chrA matches chrA
-
-                if is_reciprocal_overlapping(ei["posA"] - ei["cipos95A"] - 5,
-                                             ei["posB"] + ei["cipos95B"] + 5,
-                                             ej["posA"] - ej["cipos95A"] - 5,
-                                             ej["posB"] + ej["cipos95B"] + 5):
-                    loci_similar = True
-
                 dist1 = abs(ei["posA"] - ej["posB"])
                 dist2 = abs(ei["posB"] - ej["posA"])
+                if dist1 < 250 and dist2 < 250 and is_reciprocal_overlapping(ei["posA"], ei["posB"],
+                                                                             ej["posA"], ej["posB"]):
+                    loci_similar = True
                 if dist1 < 5 and dist2 < 5:
                     loci_same = True
-
-                # if ei["svtype"] != "INS":
-                #     if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
-                #         loci_similar = True
-                # else:
-                #     dist1 = abs(ei["posA"] - ej["posB"])
-                #     dist2 = abs(ei["posB"] - ej["posA"])
-                #     if dist1 < 5 and dist2 < 5:
-                #         loci_same = True
-                #         loci_similar = True
-
-
-            # if ei["chrA"] == ej["chrB"]:
-            #
-            #
-            #     dist1 = abs(ei["posA"] - ej["posB"])
-            #     # ci_a = max(ei["cipos95A"], ej["cipos95B"])
-            #     if dist1 < max_dist:
-            #         if ei["chrB"] == ej["chrA"]:
-            #             dist2 = abs(ei["posB"] - ej["posA"])
-            #             # ci_b = max(ei["cipos95B"], ej["cipos95A"])
-            #             if ei["svtype"] != "INS":
-            #                 if is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
-            #                     loci_similar = True
-            #
-            #             # if dist2 < (max_dist + ci_b):
-            #             #     loci_similar = True
-            #             if dist1 < 5 and dist2 < 5:
-            #                 loci_same = True
-
 
         if "contig" not in ei or "contig" not in ej:
             continue
@@ -205,40 +153,28 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         ci2 = "" if ei["contig2"] is None else ei["contig2"]
         cj = "" if ej["contig"] is None else ej["contig"]
         cj2 = "" if ej["contig2"] is None else ej["contig2"]
+        any_contigs_to_check = any((ei["contig"], ei["contig2"])) and any((ej["contig"], ej["contig2"]))
+        # echo("loci", loci_similar, loci_same, any_contigs_to_check, ei["posA"], ei["posB"], ej["posA"], ej["posB"])
 
-        if ei["svtype"] != "INS":
-            any_contigs_to_check = ei["contig"] or ei["contig2"] and (ej["contig"] or ej["contig2"])
-        else:
-            # No guarentee contigs or in reference order
-            any_contigs_to_check = ei["contig"] and ej["contig"] and ((ei["contig2"] and ej["contig2"]) or (not ei["contig2"] and not ej["contig2"]))
-
-        # echo(ei["posA"], ej["posA"], loci_same, loci_similar, assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True),
-        #      any_contigs_to_check)
         if loci_similar or loci_same:
-
             if any_contigs_to_check and loci_same:  # Try and match contigs
-
-                # Each breakpoint can have a different assembly, only check for match if contigs overlap
-                if assembler.check_contig_match(ci, cj, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(i_id, j_id, loci_same=loci_same)
-                    continue
-
-                if assembler.check_contig_match(ci2, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(i_id, j_id, loci_same=loci_same)
-                    continue
-
-                if assembler.check_contig_match(ci, cj2, rel_diffs, diffs=diffs, return_int=True) == 1:
-                    G.add_edge(i_id, j_id, loci_same=loci_same)
-                    continue
+                G.add_edge(i_id, j_id, loci_same=loci_same)
+                # echo(i_id, j_id)
+                # echo("loci same", ei["posA"], ei["posB"], ej["posA"], ej["posB"])
 
             # No contigs to match, merge anyway
             elif not any_contigs_to_check and loci_same:
                 G.add_edge(i_id, j_id, loci_same=loci_same)
-
+                # echo("2", i_id, j_id)
             # Only merge loci if they are not both within --include regions. chrA:posA only needs checking
             elif not (io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and
                       io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)):
                 G.add_edge(i_id, j_id, loci_same=loci_same)
+                # echo("3", i_id, j_id)
+
+            # echo(io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1),
+            #           io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1))
+        # echo("len g nodes", len(G.nodes()))
     return G
 
 
@@ -263,19 +199,20 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                  rel_diffs=False, diffs=15, same_sample=True, debug=False):
     """Try and merge similar events, use overlap of both breaks points
     """
+
     max_dist = max_dist / 2
     if len(potential) <= 1:
         return potential
 
+    # Cluster events on graph
     G = nx.Graph()
-    G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample, debug=debug)  # Cluster events on graph
+    G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample,
+                         debug=debug)
 
     found = []
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item["event_id"]):
             found.append(item)
-
-    # discard = set([])  # event_id's that were merged, delete these later
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
@@ -293,6 +230,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
             w0 = best[0]  # Weighting for base result
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
+            svlen = w0["svlen"]
             for k in range(1, len(best)):
 
                 item = best[k]
@@ -304,6 +242,10 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
                 if item["maxASsupp"] > w0["maxASsupp"]:
                     best[0]["maxASsupp"] = item["maxASsupp"]
+
+                if item["svtype"] == "DEL" and item["svlen"] > svlen:
+                    svlen = item["svlen"]
+                    best[0]["svlen"] = svlen
 
                 # Average weight these
                 wt = item["pe"] + item["supp"] + item["spanning"]
@@ -322,6 +264,47 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
         found.append(best[0])
 
     return found
+
+
+def elide_insertions(events, max_dist=150):
+    return events
+    # If an imprecise insertion overlaps the edge of a deletion; remove the insertion
+
+    interval_table = defaultdict(lambda: graph.Table())
+    # to_check = []
+    # Make a nested containment list for lookups
+    for idx in range(len(events)):
+        ei = events[idx]
+        if ei["svtype"] == "INS" and ei["svlen_precise"] == 0:
+            interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
+            if ei["posA"] != ei["posB"]:
+                dist1 = abs(ei["posB"] - ei["posA"])
+                ci_a = max(ei["cipos95A"], ei["cipos95A"])
+                if dist1 + ci_a > max_dist:
+                    interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
+        # else:
+        #     to_check.append(idx)
+
+    nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
+    if not nc:
+        return events
+    bad_ids = set([])
+
+    for idx in events:
+        ei = events[idx]
+        ols = []
+
+        if ei["chrA"] in nc:
+            ols += list(nc[ei["chrA"]].find_overlap(ei["posA"], ei["posA"] + 1))
+        if ei["chrB"] in nc:
+            ols += list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))
+
+        for target in ols:
+            other = events[target[2]]
+            echo(other)
+            bad_ids.add(other["event_id"])
+
+    return [i for i in events if i["event_id"] not in bad_ids]
 
 
 def sample_level_density(potential, regions, max_dist=50):
@@ -509,11 +492,9 @@ cdef find_repeat_expansions(events, insert_stdev):
             res["ref_poly_bases"] += r["ref_poly_bases"]
         e.update(res)
 
-        if "svlen_precise" not in e:
-            e['svlen_precise'] = 1
-        if e["svtype"] == "INS" and e["n_expansion"] > 0 and e['svlen_precise'] == 0:
-            if abs(e["svlen"]) - insert_stdev < 0:
-                e["svlen"] = e["n_expansion"]
+        # if e["svtype"] == "INS" and e["n_expansion"] > 0 and e['svlen_precise'] == 0:
+        #     if abs(e["svlen"]) - insert_stdev < 0:
+        #         e["svlen"] = e["n_expansion"]
 
     return events
 
@@ -548,7 +529,311 @@ def component_job(infile, component, regions, event_id, max_dist, clip_length, i
     return potential_events, event_id
 
 
-def pipe1(args, infile, kind, regions, ibam):
+def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
+    if cont:
+        if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+            left_clip = ""
+            if cont[0].islower():
+                end_i = 1
+                while cont[end_i].islower():
+                    end_i += 1
+                    if end_i == len(cont):
+                        break
+                left_clip = cont[:end_i - 1]
+
+                return left_clip, 0
+            # yield cont[:end_i - 1], 0
+        else:
+            right_clip = ""
+            if cont[-1].islower():
+                end_i = len(cont) - 1
+                while cont[end_i].islower():
+                    end_i -= 1
+                    if end_i < 0:
+                        break
+                right_clip = cont[end_i + 1:]#, 1
+
+                return right_clip, 1
+
+
+def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):
+    pos = event["pos" + idx]
+    score = align['optimal_alignment_score']
+    span = align["query_end"] - align["query_begin"] + 1
+    seq1 = align['aligned_query_sequence']
+    seq2 = align['aligned_target_sequence']
+
+    if not seq1 or not seq2:
+        return -1
+    if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:
+        return -1
+
+    distance_to_break = min(abs(begin - break_position), abs(end - break_position))
+    large_gap_penalty = 24
+    gapped_score = score
+    if distance_to_break > 200:
+        gapped_score = score - large_gap_penalty
+
+    # echo(distance_to_break)
+    # Calculate the probability of a sequence match
+    # prob_match = 0.25
+    # matches = [prob_match for i, j in zip(seq1, seq2) if i == j]
+    # chances = max((len(align['query_sequence']), len(align['target_sequence']))) - len(matches)
+    # prob = np.prod(matches) * chances
+    # echo(event)
+    # echo("alignment score:", score, "gapped_score", gapped_score, "is_overlapping: ", is_overlapping(begin - 1, end + 1, pos, pos + 1),
+    #      "span: ", span, "match pct: ", float(score) / (1e-6 + span * 2), "align", align, "break_position", break_position)
+    # echo(event["contig_left_weight"])
+    # if "contig_left_weight" not in event:
+    #     echo(event)
+    #     quit()
+
+    # echo(seq1)
+    # echo(seq2)
+    if gapped_score > 12:
+        if is_overlapping(begin - 1, end + 1, pos, pos + 1):
+            # echo("was overlapping")
+            return 1
+        elif gapped_score > 20:
+            expected = span * 2  # 2 x match score
+            # if gaps at both ends of alignment increase stringency
+            if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:
+                expected = span * 4
+            # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
+            if span > 12 and float(score) / expected > 0.7:
+                return 1
+    return -1
+
+
+def remap_soft_clips(events, ref_genome, min_sv_len):
+
+    new_events = []
+    for e in events:
+        # echo(e)
+        e["remapped"] = 0
+        e["switched"] = 0
+        if 'svlen_precise' not in e:
+            e['svlen_precise'] = 1
+        try_remap = False
+
+        if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):
+
+            if not e['svlen_precise']:
+                try_remap = True
+
+            # if e["svtype"] == "DEL" and e["svlen"] < 100 and e["spanning"] == 0:
+            #     try_remap = True
+
+        #
+        #
+        # if "svlen_precise" not in e:
+        #     e['svlen_precise'] = 1
+        #     new_events.append(e)
+        #     continue
+        #
+        # if (not e["contig"] and not e["contig2"]) or (e["svlen"] > 1000):
+        #     e["modified"] = 0
+        #     new_events.append(e)
+        #     continue
+        # if (e["svtype"] != "INS") or (e['svlen_precise'])
+
+        if not try_remap:
+            e["modified"] = 0
+            new_events.append(e)
+            continue
+
+        if e["svlen"] != 0:
+            svlen = abs(e["svlen"]) * 2
+        else:
+            svlen = 250
+
+        added = 0
+        passed = False
+        high_quality_clip = False
+        ref_seq = ""
+        for cont, idx in (("contig", "A"), ("contig2", "B")):
+            if cont in e and e[cont]:
+
+                # if clip_side == 0:
+
+                # else:
+                #     if event["contig_right_weight"] > 150:
+                #         match_pct = 0.5
+
+                break_position = e["pos" + idx]
+                clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
+                if not clip_res:
+                    continue
+                clip_seq, clip_side = clip_res
+
+                if clip_side == 0:
+                    w = e[cont + "_left_weight"]
+                    if not w > 40:  # todo set as a parameter option
+                        continue
+                    elif w > 400:
+                        high_quality_clip = True
+                else:
+                    w = e[cont + "_right_weight"]
+                    if not w > 40:
+                        continue
+                    elif w > 400:
+                        high_quality_clip = True
+                # echo("clip weight", w)
+                ref_start = break_position - svlen
+                ref_end = break_position + svlen
+
+                try:
+                    ref_seq = ref_genome.fetch(e["chrA"], ref_start if ref_start > 0 else 0, ref_end)
+                except ValueError:
+                    continue
+
+                if not ref_seq or ref_seq[0] in "nN" or ref_seq[-1] in "nN":
+                    continue
+
+                # Large alignment region
+                aln = StripedSmithWaterman(ref_seq, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
+                a = aln(clip_seq)
+
+                aln_q_end = a.query_end
+                aln_q_begin = a.query_begin
+                aln_t_begin = a.target_begin
+                target_end_optimal = a.target_end_optimal
+
+                q_begin = ref_start + aln_q_begin
+                q_end = break_point = ref_start + aln_q_end
+
+                f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position)
+                # if e['event_id'] == 6:
+                # echo("FILTER", f, "clip side: ", clip_side, q_begin, q_end, e["pos" + idx], "aln ref_start: aln refend", ref_start, ref_end)
+                # echo(clip_seq)
+                # echo(e["contig"])
+                # echo(e["contig2"])
+
+                if f == -1:
+                    # trim ref seq to smaller region around break to try and find smaller insertions
+                    mid_point = int(len(ref_seq) / 2)
+                    ref_seq_trim = ref_seq[mid_point - len(clip_seq) - 1: mid_point + len(clip_seq) + 1]
+                    aln_trim = StripedSmithWaterman(ref_seq_trim, match_score=2, mismatch_score=-4, gap_open_penalty=18, gap_extend_penalty=1)
+                    a2 = aln_trim(clip_seq)
+                    ref_start += mid_point + 1 - len(clip_seq)
+
+                    q_begin = ref_start + a2.query_begin
+                    q_end = break_point = ref_start + a2.query_end
+                    f = filter_bad_alignment(a2, e, idx, clip_side, q_begin, q_end, break_position)
+                    # echo("FILTER2", f, "clip side: ", clip_side, q_begin, q_end)
+                    aln_q_end = a2.query_end
+                    aln_q_begin = a2.query_begin
+                    aln_t_begin = a2.target_begin
+                    target_end_optimal = a2.target_end_optimal
+                # echo(f)
+                if f != -1:
+                    if clip_side == 0:
+                        break_point = ref_start + aln_q_end
+                    else:
+                        break_point = ref_start + aln_q_begin
+
+                    pos = e["pos" + idx]
+                    target_gap = None
+                    ref_gap = None
+                    if clip_side == 0:
+                        if q_end + 1 >= pos:
+                            kind = "INS"
+                            break_point = pos
+                            break_point2 = pos
+                            overlap = q_end - pos
+                            svlen = len(clip_seq) - target_end_optimal + overlap
+                        else:
+                            ref_gap = pos - q_end
+                            target_gap = len(clip_seq) - target_end_optimal
+
+                            if target_gap > ref_gap:
+                                kind = "INS"
+                                break_point = pos
+                                break_point2 = pos
+                                svlen = target_gap
+
+                            else:
+                                kind = "DEL"
+                                break_point = pos
+                                break_point2 = q_end
+                                svlen = ref_gap #break_point2 - break_point
+                        # if e['event_id'] == 6:
+                        #     echo("CLIPSIDE 0", q_begin, q_end, ref_start, ref_end, "t_gap:", target_gap, "r_gap: ", ref_gap, "kind", kind,
+                        #      "pos: ", pos, "passed fail: ", aln_t_begin > svlen, "breakpoint: ", break_point, "breakpoint2: ", break_point2, "svlen", svlen, "align_t_begin", aln_t_begin, "align_t_end", target_end_optimal)
+                        # discard alignments with large unmapped overhang
+                        if aln_t_begin > svlen:
+                            passed = False
+                            continue
+                    else:
+
+                        if q_begin - 1 <= pos:
+                            kind = "INS"
+                            break_point = pos
+                            break_point2 = pos
+                            if q_end > pos:
+                                svlen = pos - q_begin + aln_t_begin
+                            else:
+                                svlen = max(q_end, pos) -  min(q_begin, pos)
+
+                        else:
+                            ref_gap = q_begin - pos
+                            target_gap = aln_t_begin
+                            if target_gap > ref_gap:
+                                kind = "INS"
+                                break_point = pos
+                                break_point2 = pos
+                                svlen = target_gap
+                            else:
+                                kind = "DEL"
+                                break_point = pos
+                                break_point2 = q_begin
+                                svlen = break_point2 - break_point
+
+                        # echo("CLIPSIDE 0", q_begin, q_end, ref_start, ref_end, "t_gap:", target_gap, "r_gap: ", ref_gap, "kind", kind,
+                        #       "pos: ", pos, "passed fail: ", aln_t_begin > svlen, "breakpoint: ", break_point, "breakpoint2: ", break_point2, "svlen", svlen, "align_t_begin", aln_t_begin, "align_t_end", target_end_optimal)
+
+                        if len(clip_seq) - target_end_optimal > svlen:
+                            passed = False
+                            continue
+
+                    e["remapped"] = 1
+                    if e['svtype'] != kind:
+                        e["switched"] = 1
+
+                    if svlen < min_sv_len:
+                        continue
+
+                    if abs(svlen - e['svlen']) > 20:
+                        e['svtype'] = kind
+                        e['svlen'] = svlen
+                        e['pos' + idx] = break_point
+                        if idx == "A":
+                            other = "B"
+                        else:
+                            other = "A"
+                        e['pos' + other] = break_point2
+                        e['cipos95A'] = 0
+                        e['cipos95B'] = 0
+                        new_events.append(e)
+                        added = 1
+                        break  # dont analyse contig2
+
+                else:
+                    passed = False
+
+            if added:
+                break
+
+        if not added and high_quality_clip:
+            new_events.append(e)
+
+    # for e in new_events:
+    #     if e['event_id'] == 6:
+    #         echo("here", e)
+    return new_events
+
+
+def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
@@ -569,7 +854,7 @@ def pipe1(args, infile, kind, regions, ibam):
     if paired_end:
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
                                                                      read_len, ibam)
-
+        read_len = genome_scanner.approx_read_length
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
         if args["merge_dist"] is None:
@@ -591,18 +876,19 @@ def pipe1(args, infile, kind, regions, ibam):
                                             infile,
                                             max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
-                                            minimizer_dist=8,
+                                            minimizer_dist=150,
                                             minimizer_support_thresh=args["z_depth"],
                                             minimizer_breadth=args["z_breadth"],
-                                            k=21,
-                                            m=10,
+                                            k=10,
+                                            m=7,
                                             clip_l=args["clip_length"],
                                             min_sv_size=args["min_size"],
                                             min_support=min_support,
                                             procs=args["procs"],
                                             mapq_thresh=args["mq"],
                                             debug=None,
-                                            paired_end=paired_end
+                                            paired_end=paired_end,
+                                            read_length=read_len,
                                             )
     echo("graph time", time.time() - t5)
     click.echo("graph time, mem={} Mb, time={} h:m:s".format(
@@ -612,7 +898,7 @@ def pipe1(args, infile, kind, regions, ibam):
     cdef int cnt = 0
 
     t0 = time.time()
-    cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer, min_support)
+    cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer)
 
     extended_tags = genome_scanner.extended_tags
 
@@ -643,18 +929,32 @@ def pipe1(args, infile, kind, regions, ibam):
                                                  rel_diffs=rel_diffs, diffs=diffs)
                 if potential_events:
                     block_edge_events += potential_events
+                    # echo(potential_events)
 
     echo("components", time.time() - t0)
     t3 = time.time()
     preliminaries = []
 
+    tremap = time.time()
+    block_edge_events = remap_soft_clips(block_edge_events, ref_genome, args["min_size"])
+    echo("remapping", time.time() - tremap)
+    # for item in block_edge_events:
+    #     echo(item)
     # Merge across calls
     if args["merge_within"] == "True":
         tmr = time.time()
-        block_edge_events = merge_events(block_edge_events, args["merge_dist"], regions, try_rev=False, pick_best=False,
+        merged = merge_events(block_edge_events, args["merge_dist"], regions, try_rev=False, pick_best=False,
                                          debug=True)
         echo("merging all", time.time() - tmr)
-    merged = block_edge_events
+    else:
+        merged = block_edge_events
+
+    merged = elide_insertions(merged)
+
+    merged = [event for event in merged if event["svlen"] >= args["min_size"] and event["su"] >= args["min_support"]]
+    # for e in merged:
+    #     if e["event_id"] == 6:
+    #         echo(e)
     if merged:
         for event in merged:
             # Collect coverage information
@@ -667,6 +967,9 @@ def pipe1(args, infile, kind, regions, ibam):
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
 
+    if len(preliminaries) == 0:
+        click.echo("No events found", err=True)
+        quit()
     echo("time3", time.time() - t3)
     return preliminaries, extended_tags
 
@@ -684,6 +987,8 @@ def cluster_reads(args):
     #     raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
     infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
+
+    ref_genome = pysam.FastaFile(args["reference"])
 
     ibam = None
     if args["ibam"] is not None:
@@ -722,7 +1027,7 @@ def cluster_reads(args):
 
     # Run dysgu here:
     t4 = time.time()
-    events, extended_tags = pipe1(args, infile, kind, regions, ibam)
+    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
@@ -745,6 +1050,8 @@ def cluster_reads(args):
                             extended_tags=extended_tags)
 
     infile.close()
+    ref_genome.close()
+
     echo(time.time() - t0)
     click.echo("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],

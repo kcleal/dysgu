@@ -1063,6 +1063,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph {
   int (*numberOfNodes)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *);
   std::vector<std::pair<int,int> >  (*forInEdgesOf)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int);
   std::vector<int>  (*neighbors)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int);
+  float (*node_path_quality)(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph *, int, int, int);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph;
 

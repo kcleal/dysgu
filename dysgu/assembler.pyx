@@ -148,6 +148,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
                         i += 1
+
                         # k = (seq, current_pos, o, 1)  # 1 = right soft clip
                         key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>1)
                         if ndict_r2.has_tuple_key(key):
@@ -164,6 +165,8 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
                         prev_node = n
+                        # if current_pos == 25158703 and o >= 20 and o <= 30:
+                        #     echo(basemap[base], current_pos, o, qual, "node", n, "nweight", nweight[n])
 
             elif opp == 1:  # Insertion
 
@@ -308,7 +311,7 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
 
 cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
 
-    cdef cpp_vector[int] node_scores = n_weights  # Copy
+    cdef cpp_vector[int] node_scores = n_weights  # Copy; total base quality at each node
     cdef Py_Int2IntMap pred_trace2 = map_set_utils.Py_Int2IntMap()
 
     cdef int best_score = -1
@@ -350,18 +353,18 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
                 pred_score = node_scores[pred.first]
                 score = node_weight + pred_score
                 node_scores[u] = score
+
                 if score >= best_score:
                     best_score = score
                     best_node = u
 
-                local_score = G.weight(u, pred.first) #n_weights[pred.first]
+                local_score = G.weight(pred.first, u) #n_weights[pred.first]
                 if local_score > best_local_score:
                     best_local_score = local_score
                     best_local_i = pred.first
 
             if best_local_i != -1:
                 pred_trace2.insert(u, best_local_i)
-
 
     if best_node == -1:
         return path #[]
@@ -370,7 +373,6 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
 
     u = best_node
     while True:
-
         path.push_front(u)
         # path.appendleft(u)
         # path2.push_back(u)
@@ -419,12 +421,12 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         for opp, length in ct:
             if opp == 4 or opp == 1:
                 seq += rseq[begin:begin + length].lower()
-                begin += length
                 if opp == 4:
                     if begin == 0:
                         longest_left_sc = length
                     else:
                         longest_right_sc = length
+                begin += length
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
                 seq += rseq[begin:begin + length]
@@ -436,21 +438,16 @@ cpdef dict base_assemble(rd, int position, int max_distance):
                 "ref_bases": len(seq) - longest_left_sc - longest_right_sc,
                 "ref_start": r.pos,
                 "ref_end": r.reference_end,
-                "bamrname": r.rname}
-
+                "bamrname": r.rname,
+                "left_weight": 0,
+                "right_weight": 0}
 
     for r in rd:
-
         if r.seq is None:
             continue
-
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
-
         add_to_graph(G, r, node_weights, node_dict_r, ndict_r2, position, max_distance)
-
-        # if count == 3:
-        #     break
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
 
@@ -467,40 +464,42 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
 
-
-    if path2.size() == 0:
-    # if len(path2) == 0:
+    if path2.size() < 50:
         return {}
 
     cdef int front = path2.front()
     cdef int back = path2.back()
 
     # node_dict = list(node_dict_r.keys())
-    #
     # longest_left_sc = node_dict[front][2]
     # longest_right_sc = node_dict[back][2]
 
+    # vec has the form base, current_pos, offset, base-type (left-clip/right-clip/insertion)
     cdef cpp_vector[int] vec = [0, 0, 0, 0]
     ndict_r2.idx_2_vec(front, vec)
+
     longest_left_sc = vec[2]
     vec.assign(vec.size(), 0)
 
     ndict_r2.idx_2_vec(back, vec)
+
     longest_right_sc = vec[2]
     vec.assign(vec.size(), 0)
-    # if longest_left_sc == 0 and longest_right_sc == 0:
-    #         return {}  # No soft-clips, so not overlapping a break
 
     cdef tuple t
     cdef int item
     # cdef cpp_vector[int] v
 
     cdef str sequence = ""
-    cdef int m
+    cdef int m, u, w
 
+    cdef int count = 0
+    cdef int finish = path2.size()
+
+    cdef cpp_vector[float] path_qual = [1] * path2.size()
 
     for item in path2:
-
+        # echo(item)
         # t = node_dict[item]
         # # echo(t)
         # if t[3] != 4:
@@ -513,6 +512,18 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         #     seq += t[0]
 
         ndict_r2.idx_2_vec(item, vec)
+
+        if count == 0:
+            u = -1
+        else:
+            u = path2[count - 1]
+        if count == finish - 1:
+            w = -1
+        else:
+            w = path2[count + 1]
+
+        path_qual[count] = G.node_path_quality(u, item, w)
+
         if vec[3] != 4:
             m = vec[0]
             sequence += lowermap[m]
@@ -526,26 +537,65 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 
         vec.assign(vec.size(), 0)
 
+        count += 1
+
     seq = sequence
 
-    if len(seq) < 50:
-        return
+    # Trim off bad sequence
+    cdef int i, start_seq, end_seq
+    cdef int original_right_sc = longest_right_sc
+    end_seq = len(seq)
+    if longest_right_sc > 0:
+        for i in range(len(seq), len(seq) - longest_right_sc, -1):
+            if path_qual[i] < 0.5:
+                end_seq = i
+        longest_right_sc -= len(seq) - end_seq
 
+    start_seq = 0
+    if longest_left_sc > 0:
+        for i in range(longest_left_sc):
+            if path_qual[i] < 0.5:
+                start_seq = i
+        longest_left_sc -= start_seq
+
+    # Average quality weight over soft-clip portion
+    cdef float left_clip_weight = 0
+    if longest_left_sc > 0:
+        for i in range(start_seq, start_seq + longest_left_sc):
+            left_clip_weight += node_weights[i]
+        left_clip_weight = left_clip_weight / longest_left_sc
+
+    cdef float right_clip_weight = 0
+    if longest_right_sc > 0:
+        for i in range(len(seq) - original_right_sc, end_seq):
+            right_clip_weight += node_weights[i]
+        right_clip_weight = right_clip_weight / longest_right_sc
+
+    # echo(list(zip(list(path_qual), seq)))
     # echo(seq)
+    # echo(left_clip_weight)
+    # echo(right_clip_weight)
+
+    if start_seq != 0 or end_seq != len(seq):
+        seq = seq[start_seq:end_seq]
+
+    # echo(longest_left_sc, longest_right_sc)
     # echo(sequence)
     # quit()
     # assert all([i == j for i, j in zip(seq, sequence)])
 
     # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
     # quit()
-    # echo(seq)
+
     return {"contig": seq,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,
             "ref_bases": len(seq) - longest_left_sc - longest_right_sc,
             "ref_start": ref_start,
             "ref_end": ref_end,
-            "bamrname": rd[0].rname}
+            "bamrname": rd[0].rname,
+            "left_weight": left_clip_weight,
+            "right_weight": right_clip_weight}
 
 
 cdef float compute_rep(seq):

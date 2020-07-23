@@ -76,7 +76,7 @@ cdef extern from "wrap_map_set2.h" nogil:
         int numberOfNodes() nogil
         cpp_vector[cpp_pair[int, int]] forInEdgesOf(int) nogil
         cpp_vector[int] neighbors(int) nogil
-
+        float node_path_quality(int, int, int) nogil
 
 
 cdef class Py_DiGraph:
@@ -90,7 +90,7 @@ cdef class Py_DiGraph:
     cdef int numberOfNodes(self) nogil
     cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
     cdef cpp_vector[int] neighbors(self, int u) nogil
-
+    cdef float node_path_quality(self, int u, int v, int w) nogil
 
 cdef extern from "wrap_map_set2.h":
     cdef cppclass SimpleGraph:
@@ -221,3 +221,5 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil
 
 
 # cdef list search_ssr_kc(str seq)
+
+cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found)

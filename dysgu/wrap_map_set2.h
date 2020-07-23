@@ -6,6 +6,7 @@
 #include <queue>
 #include <map>
 #include <cassert>
+#include <cmath>
 //#include "robin_map.h"
 //#include "robin_set.h"
 //#include "robin_hash.h"
@@ -70,16 +71,45 @@ class DiGraph {
                 return;
             }
 
+//            for (auto& val: outList[u]) {
+//                if (val.first == v) {
+//                    val.second += w;
+//                    return;
+//                }
+//            }
+//
+//            outList[u].push_back(std::make_pair(v, w));
+//            inList[v].push_back(std::make_pair(u, w));
+//            n_edges += 1;
+
+            bool updated = false;
             for (auto& val: outList[u]) {
                 if (val.first == v) {
                     val.second += w;
-                    return;
+                    //return;
+                    updated = true;
                 }
             }
 
-            outList[u].push_back(std::make_pair(v, w));
-            inList[v].push_back(std::make_pair(u, w));
-            n_edges += 1;
+            if (updated == false) {
+                outList[u].push_back(std::make_pair(v, w));
+                n_edges += 1;
+            }
+
+            updated = false;
+
+            for (auto& vali: inList[v]) {
+                if (vali.first == u) {
+                    vali.second += w;
+                    //return;
+                    updated = true;
+                }
+            }
+
+            if (updated == false) {
+                inList[v].push_back(std::make_pair(u, w));
+            }
+
         }
 
         int weight(int u, int v) {
@@ -120,6 +150,41 @@ class DiGraph {
             }
 
             return inEdges;
+
+        }
+
+        float node_path_quality(int u, int v, int w) {
+
+//            std::cerr << u << "u " << v << "v " << w << "w " << std::endl;
+
+            int sum_in = 0;
+            float q_in = 1;
+            if (u != -1) {
+                float in_weight = (float)weight(u, v);
+                for (const auto& val: inList[v]) {
+                    sum_in += val.second;
+                }
+                float other_in = sum_in - in_weight;
+                if (other_in > 0) {
+                    q_in = in_weight / sum_in;
+                }
+            }
+
+            int sum_out = 0;
+            float q_out = 1;
+            if (w != -1) {
+                float out_weight = (float)weight(v, w);
+                for (const auto& val: outList[v]) {
+                    sum_out += val.second;
+                }
+                float other_out = sum_out - out_weight;
+                if (other_out > 0) {
+                    q_out = out_weight / sum_out;
+                }
+            }
+
+            if (q_out < q_in) { return q_out; };
+            return q_in;
 
         }
 
