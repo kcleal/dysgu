@@ -511,3 +511,58 @@ class TwoWayMap
         std::vector<uint64_t> index_key_map;
 
 };
+
+
+typedef robin_hood::unordered_set<long> set_of_long_t;
+typedef robin_hood::unordered_map<int, set_of_long_t> mm_map_t;
+
+class MinimizerTable
+{
+    public:
+
+        MinimizerTable() {}
+        ~MinimizerTable() {}
+
+        int size() { return mm_map.size(); }
+
+        void insert(int key, long value) { mm_map[key].insert(value); }
+
+        void erase(int key) { mm_map.erase(key); }
+
+        void erase_lower(int key, long value) { mm_map[key].erase(value); }
+
+        int has_key(int key) {
+            itr = mm_map.find(key);
+            if (itr == mm_map.end()) { return 0; }
+            else { return 1; }
+        }
+
+        set_of_long_t::iterator get_iterator_begin () {
+            return itr->second.begin();
+//            return set_itr;
+        }
+        set_of_long_t::iterator get_iterator_end () {
+            return itr->second.end();
+        }
+
+        int has_lower_key(long key2) {
+            set_itr = itr->second.find(key2);
+            if (set_itr == itr->second.end()) { return 0; }
+            else { return 1; }
+        }
+
+        long get_lower() {
+            return *set_itr;
+        }
+
+        set_of_long_t::iterator get_iterator() {
+            return set_itr;
+        }
+
+
+    private:
+        mm_map_t mm_map;
+        mm_map_t::iterator itr;
+        set_of_long_t::iterator set_itr;
+
+};

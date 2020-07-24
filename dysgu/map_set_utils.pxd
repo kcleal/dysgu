@@ -3,6 +3,7 @@
 from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
+from libcpp.utility cimport pair
 from libcpp.string cimport string as cpp_string
 
 import cython
@@ -46,22 +47,27 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         bint empty()
 
 
-# cdef extern from "robin_set.h" namespace "tsl" nogil:
-#     cdef cppclass robin_set[T]:
-#         cppclass iterator:
-#             T operator*()
-#             iterator operator++()
-#             bint operator==(iterator)
-#             bint operator!=(iterator)
-#         vector()
-#         void insert(T&)
-#         void erase(T&)
-#         int size()
-#         iterator find(const T&, size_t precalculated_hash)
-#         iterator begin()
-#         iterator end()
-#         void clear()
-#         bint empty()
+cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
+    cdef cppclass unordered_map[T, U, HASH=*]:
+        ctypedef T key_type
+        ctypedef U mapped_type
+        ctypedef pair[const T, U] value_type
+        cppclass iterator:
+            pair[T, U]& operator*()
+            iterator operator++()
+            iterator operator--()
+            bint operator==(iterator)
+            bint operator!=(iterator)
+        unordered_map() except +
+        unordered_map(unordered_map&) except +
+        U& operator[](T&)
+        pair[iterator, bint] insert(pair[T, U])
+        iterator find(const T&)
+        iterator end()
+        int erase(T&)
+        int size()
+        void clear()
+        bint empty()
 
 
 cdef extern from "wrap_map_set2.h" nogil:
@@ -79,6 +85,22 @@ cdef extern from "wrap_map_set2.h" nogil:
         float node_path_quality(int, int, int) nogil
 
 
+cdef extern from "wrap_map_set2.h" nogil:
+    cdef cppclass MinimizerTable:
+        MinimizerTable() nogil
+
+        int size()
+        void insert(int key, long value1)
+        void erase(int key)
+        void erase_lower(int key, long value)
+        int has_key(int key)
+        int has_lower_key(long key2)
+        long get_lower()
+        unordered_set[long].iterator get_iterator()
+        unordered_set[long].iterator get_iterator_begin()
+        unordered_set[long].iterator get_iterator_end()
+
+
 cdef class Py_DiGraph:
     """DiGraph, no weight"""
     cdef DiGraph *thisptr
@@ -91,6 +113,7 @@ cdef class Py_DiGraph:
     cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
     cdef cpp_vector[int] neighbors(self, int u) nogil
     cdef float node_path_quality(self, int u, int v, int w) nogil
+
 
 cdef extern from "wrap_map_set2.h":
     cdef cppclass SimpleGraph:
@@ -105,7 +128,6 @@ cdef extern from "wrap_map_set2.h":
         void removeNode(int)
         cpp_vector[int] connectedComponents()
         int showSize()
-
 
 
 cdef class Py_SimpleGraph:
@@ -166,34 +188,15 @@ cdef class Py_IntSet:
     cdef int size(self) nogil
 
 
-# cdef extern from "wrap_map_set2.h":
-#     cdef cppclass StrSet:
-#         StrSet()
-#         void insert(cpp_string) nogil
-#         void erase(cpp_string) nogil
-#         int has_key(cpp_string) nogil
-#         int size() nogil
+# cdef class ClipScoper:
+#     cdef void update(self, int input_read, str seq, int cigar_start, int cigar_end, int chrom, int position,
+#                unordered_set[int]& other_nodes)
 #
-#
-# cdef class Py_StrSet:
-#     """Fast std::string set using tsl::robin-set"""
-#     cdef StrSet *thisptr
-#     cdef void insert(self, cpp_string key) nogil
-#     cdef void erase(self, cpp_string key) nogil
-#     cdef int has_key(self, cpp_string key) nogil
-#     cdef int size(self) nogil
-
-
-# cdef extern from "wrap_map_set2.h" nogil:
-#     cdef cppclass PairScope:
-#         PairScope() nogil
-#         void add_params(int, int)
-#         cpp_vector[int] update(int, int, int, int, int)
-#
-# cdef class Py_PairScope:
-#     cpdef PairScope * thisptr
-#     cpdef void add_params(self, int, int)
-#     cpdef cpp_vector[int] update(self, int, int, int, int, int)
+#     cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position, minimize_table,
+#                                unordered_set[int]& res)
+#     cdef void _refresh_scope(self, cpp_deque[cpp_item]& scope, int position, MinimizerTable& mm_table, clip_table)
+#     cdef void _insert(self, str seq, int cigar_start, int cigar_end, int input_read, int position,
+#                 unordered_set[int]& other_nodes)
 
 
 cdef int cigar_exists(r)
@@ -222,4 +225,6 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil
 
 # cdef list search_ssr_kc(str seq)
 
-cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found)
+# cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found)
+
+
