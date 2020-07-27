@@ -517,6 +517,7 @@ typedef robin_hood::unordered_set<long> set_of_long_t;
 typedef robin_hood::unordered_map<int, set_of_long_t> mm_map_t;
 
 class MinimizerTable
+// Key's are read-names (integer), the table value is a set with each item a minimizer (long)
 {
     public:
 

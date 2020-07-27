@@ -27,7 +27,6 @@ from dysgu.map_set_utils cimport hash as xxhasher
 # ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
-import mmh3
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
