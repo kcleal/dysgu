@@ -4795,7 +4795,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_5Table_2get_val(CYTHON_UNUSED struct __p
 static PyObject *__pyx_pf_5dysgu_5graph_5Table_4containment_list(struct __pyx_obj_5dysgu_5graph_Table *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_5Table_6__reduce_cython__(struct __pyx_obj_5dysgu_5graph_Table *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_5Table_8__setstate_cython__(struct __pyx_obj_5dysgu_5graph_Table *__pyx_v_self, PyObject *__pyx_v___pyx_state); /* proto */
-static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self, CYTHON_UNUSED int __pyx_v_max_dist, int __pyx_v_k, int __pyx_v_m, int __pyx_v_clip_length, int __pyx_v_minimizer_support_thresh, int __pyx_v_minimizer_breadth, int __pyx_v_read_length); /* proto */
+static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self, int __pyx_v_max_dist, int __pyx_v_k, int __pyx_v_m, int __pyx_v_clip_length, int __pyx_v_minimizer_support_thresh, int __pyx_v_minimizer_breadth, int __pyx_v_read_length); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_10ClipScoper_2__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_10ClipScoper_4__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static int __pyx_pf_5dysgu_5graph_15PairedEndScoper___init__(struct __pyx_obj_5dysgu_5graph_PairedEndScoper *__pyx_v_self, PyObject *__pyx_v_max_dist, PyObject *__pyx_v_clst_dist, PyObject *__pyx_v_n_references); /* proto */
@@ -6439,13 +6439,13 @@ static PyObject *__pyx_f_5dysgu_5graph_right_soft_clips(PyObject *__pyx_v_seq, i
  *     """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
  *     def __cinit__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,             # <<<<<<<<<<<<<<
  *                  int minimizer_breadth, int read_length):
- *         self.max_dist = 10 #max_dist
+ *         self.max_dist = max_dist
  */
 
 /* Python wrapper */
 static int __pyx_pw_5dysgu_5graph_10ClipScoper_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
 static int __pyx_pw_5dysgu_5graph_10ClipScoper_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
-  CYTHON_UNUSED int __pyx_v_max_dist;
+  int __pyx_v_max_dist;
   int __pyx_v_k;
   int __pyx_v_m;
   int __pyx_v_clip_length;
@@ -6558,7 +6558,7 @@ static int __pyx_pw_5dysgu_5graph_10ClipScoper_1__cinit__(PyObject *__pyx_v_self
   return __pyx_r;
 }
 
-static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self, CYTHON_UNUSED int __pyx_v_max_dist, int __pyx_v_k, int __pyx_v_m, int __pyx_v_clip_length, int __pyx_v_minimizer_support_thresh, int __pyx_v_minimizer_breadth, int __pyx_v_read_length) {
+static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu_5graph_ClipScoper *__pyx_v_self, int __pyx_v_max_dist, int __pyx_v_k, int __pyx_v_m, int __pyx_v_clip_length, int __pyx_v_minimizer_support_thresh, int __pyx_v_minimizer_breadth, int __pyx_v_read_length) {
   int __pyx_r;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -6570,15 +6570,15 @@ static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu
   /* "dysgu/graph.pyx":154
  *     def __cinit__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,
  *                  int minimizer_breadth, int read_length):
- *         self.max_dist = 10 #max_dist             # <<<<<<<<<<<<<<
+ *         self.max_dist = max_dist             # <<<<<<<<<<<<<<
  *         self.k = k
  *         self.w = m
  */
-  __pyx_v_self->max_dist = 10;
+  __pyx_v_self->max_dist = __pyx_v_max_dist;
 
   /* "dysgu/graph.pyx":155
  *                  int minimizer_breadth, int read_length):
- *         self.max_dist = 10 #max_dist
+ *         self.max_dist = max_dist
  *         self.k = k             # <<<<<<<<<<<<<<
  *         self.w = m
  *         self.clip_length = clip_length
@@ -6586,7 +6586,7 @@ static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu
   __pyx_v_self->k = __pyx_v_k;
 
   /* "dysgu/graph.pyx":156
- *         self.max_dist = 10 #max_dist
+ *         self.max_dist = max_dist
  *         self.k = k
  *         self.w = m             # <<<<<<<<<<<<<<
  *         self.clip_length = clip_length
@@ -6718,7 +6718,7 @@ static int __pyx_pf_5dysgu_5graph_10ClipScoper___cinit__(struct __pyx_obj_5dysgu
  *     """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
  *     def __cinit__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,             # <<<<<<<<<<<<<<
  *                  int minimizer_breadth, int read_length):
- *         self.max_dist = 10 #max_dist
+ *         self.max_dist = max_dist
  */
 
   /* function exit code */

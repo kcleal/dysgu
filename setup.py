@@ -86,7 +86,7 @@ print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:
+             "map_set_utils", "cluster", "sv2fq", "view", "remapping"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -107,7 +107,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.8.4',
+    version='0.8.5',
     python_requires='>=3.7',
     install_requires=[
             'cython',

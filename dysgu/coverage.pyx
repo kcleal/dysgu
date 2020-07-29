@@ -72,34 +72,49 @@ def echo(*args):
 #         return getattr(self, f"has_{tag}", None)
 
 
-def merge_intervals(intervals, srt=True, pad=0):
+def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
     """
     >>> merge_intervals( [('chr1', 1, 4), ('chr1', 2, 5), ('chr2', 3, 5)] )
     >>> [['chr1', 1, 5], ['chr2', 3, 5]]
     """
     if srt:
-        sorted_by_lower_bound = sorted(intervals, key=lambda tup: (tup[0], tup[1]))  # by chrom, start, end
+        sorted_by_lower_bound = sorted(intervals, key=lambda tup: (tup[0], tup[1]))  # by chrom, start, end (index)
     else:
         sorted_by_lower_bound = intervals
 
     if pad:
-        sorted_by_lower_bound = [(c, 0 if i - pad < 0 else i - pad, j + pad) for c, i, j in intervals]
+        if not add_indexes:
+            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad] for c, i, j in sorted_by_lower_bound]
+        else:
+            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad, k] for c, i, j, k in sorted_by_lower_bound]
 
     merged = []
     for higher in sorted_by_lower_bound:
         if not merged:
-            merged.append(higher)
+            if not add_indexes:
+                merged.append(higher)
+            else:
+                merged.append(list(higher)[:3] + [[higher[3]]])
             continue
         elif higher[0] != merged[-1][0]:  # Dont merge intervals on different chroms
-            merged.append(higher)
+            if not add_indexes:
+                merged.append(higher)
+            else:
+                merged.append(list(higher)[:3] + [[higher[3]]])
         else:
             lower = merged[-1]  # Last item on merged (end of interval)
             # test for intersection between lower and higher:
             # we know via sorting that lower[0] <= higher[0]
             if higher[1] <= lower[2]:
-                merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]))
+                if not add_indexes:
+                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]))
+                else:
+                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]), lower[3] + [higher[3]])
             else:
-                merged.append(higher)
+                if not add_indexes:
+                    merged.append(higher)
+                else:
+                    merged.append(list(higher)[:3] + [[higher[3]]])
     return merged
 
 
