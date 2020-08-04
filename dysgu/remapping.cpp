@@ -1203,17 +1203,6 @@ static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[],\
     PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args,\
     const char* function_name);
 
-/* py_abs.proto */
-#if CYTHON_USE_PYLONG_INTERNALS
-static PyObject *__Pyx_PyLong_AbsNeg(PyObject *num);
-#define __Pyx_PyNumber_Absolute(x)\
-    ((likely(PyLong_CheckExact(x))) ?\
-         (likely(Py_SIZE(x) >= 0) ? (Py_INCREF(x), (x)) : __Pyx_PyLong_AbsNeg(x)) :\
-         PyNumber_Absolute(x))
-#else
-#define __Pyx_PyNumber_Absolute(x)  PyNumber_Absolute(x)
-#endif
-
 /* GetItemInt.proto */
 #define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
     (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
@@ -1235,6 +1224,13 @@ static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize
 static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
 static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
                                                      int is_list, int wraparound, int boundscheck);
+
+/* ObjectGetItem.proto */
+#if CYTHON_USE_TYPE_SLOTS
+static CYTHON_INLINE PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key);
+#else
+#define __Pyx_PyObject_GetItem(obj, key)  PyObject_GetItem(obj, key)
+#endif
 
 /* PyFunctionFastCall.proto */
 #if CYTHON_FAST_PYCALL
@@ -1281,13 +1277,6 @@ static CYTHON_INLINE PyObject *__Pyx_PyCFunction_FastCall(PyObject *func, PyObje
 /* PyObjectCallOneArg.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
 
-/* ObjectGetItem.proto */
-#if CYTHON_USE_TYPE_SLOTS
-static CYTHON_INLINE PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key);
-#else
-#define __Pyx_PyObject_GetItem(obj, key)  PyObject_GetItem(obj, key)
-#endif
-
 /* PyIntBinop.proto */
 #if !CYTHON_COMPILING_IN_PYPY
 static PyObject* __Pyx_PyInt_AddObjC(PyObject *op1, PyObject *op2, long intval, int inplace, int zerodivision_check);
@@ -1302,6 +1291,17 @@ static PyObject* __Pyx_PyInt_SubtractObjC(PyObject *op1, PyObject *op2, long int
 #else
 #define __Pyx_PyInt_SubtractObjC(op1, op2, intval, inplace, zerodivision_check)\
     (inplace ? PyNumber_InPlaceSubtract(op1, op2) : PyNumber_Subtract(op1, op2))
+#endif
+
+/* py_abs.proto */
+#if CYTHON_USE_PYLONG_INTERNALS
+static PyObject *__Pyx_PyLong_AbsNeg(PyObject *num);
+#define __Pyx_PyNumber_Absolute(x)\
+    ((likely(PyLong_CheckExact(x))) ?\
+         (likely(Py_SIZE(x) >= 0) ? (Py_INCREF(x), (x)) : __Pyx_PyLong_AbsNeg(x)) :\
+         PyNumber_Absolute(x))
+#else
+#define __Pyx_PyNumber_Absolute(x)  PyNumber_Absolute(x)
 #endif
 
 /* SliceObject.proto */
@@ -1589,8 +1589,6 @@ static const char __pyx_k_err[] = "err";
 static const char __pyx_k_idx[] = "idx";
 static const char __pyx_k_pad[] = "pad";
 static const char __pyx_k_pos[] = "pos";
-static const char __pyx_k_tel[] = "tel";
-static const char __pyx_k_tsm[] = "tsm";
 static const char __pyx_k_args[] = "args";
 static const char __pyx_k_chrA[] = "chrA";
 static const char __pyx_k_chrB[] = "chrB";
@@ -1611,7 +1609,6 @@ static const char __pyx_k_seq2[] = "seq2";
 static const char __pyx_k_span[] = "span";
 static const char __pyx_k_task[] = "task";
 static const char __pyx_k_test[] = "__test__";
-static const char __pyx_k_time[] = "time";
 static const char __pyx_k_added[] = "added";
 static const char __pyx_k_align[] = "align";
 static const char __pyx_k_begin[] = "begin";
@@ -1644,6 +1641,7 @@ static const char __pyx_k_overlap[] = "overlap";
 static const char __pyx_k_q_begin[] = "q_begin";
 static const char __pyx_k_ref_end[] = "_ref_end";
 static const char __pyx_k_ref_gap[] = "ref_gap";
+static const char __pyx_k_start_i[] = "start_i";
 static const char __pyx_k_cipos95A[] = "cipos95A";
 static const char __pyx_k_cipos95B[] = "cipos95B";
 static const char __pyx_k_clip_res[] = "clip_res";
@@ -1656,13 +1654,13 @@ static const char __pyx_k_ref_end2[] = "ref_end2";
 static const char __pyx_k_ref_locs[] = "ref_locs";
 static const char __pyx_k_ref_seq2[] = "ref_seq2";
 static const char __pyx_k_remapped[] = "remapped";
-static const char __pyx_k_switched[] = "switched";
 static const char __pyx_k_aln_q_end[] = "aln_q_end";
 static const char __pyx_k_clip_side[] = "clip_side";
 static const char __pyx_k_enumerate[] = "enumerate";
 static const char __pyx_k_left_clip[] = "left_clip";
 static const char __pyx_k_locations[] = "locations";
 static const char __pyx_k_query_end[] = "query_end";
+static const char __pyx_k_ref_bases[] = "ref_bases";
 static const char __pyx_k_ref_end_2[] = "ref_end";
 static const char __pyx_k_ref_start[] = "_ref_start";
 static const char __pyx_k_start_idx[] = "start_idx";
@@ -1687,6 +1685,7 @@ static const char __pyx_k_query_begin[] = "query_begin";
 static const char __pyx_k_ref_seq_big[] = "ref_seq_big";
 static const char __pyx_k_ref_seq_end[] = "ref_seq_end";
 static const char __pyx_k_ref_start_2[] = "ref_start";
+static const char __pyx_k_remap_score[] = "remap_score";
 static const char __pyx_k_break_point2[] = "break_point2";
 static const char __pyx_k_cont_ref_end[] = "cont_ref_end";
 static const char __pyx_k_gapped_score[] = "gapped_score";
@@ -1710,6 +1709,7 @@ static const char __pyx_k_try_remap_events[] = "try_remap_events";
 static const char __pyx_k_distance_to_break[] = "distance_to_break";
 static const char __pyx_k_high_quality_clip[] = "high_quality_clip";
 static const char __pyx_k_large_gap_penalty[] = "large_gap_penalty";
+static const char __pyx_k_length_other_clip[] = "length_other_clip";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_gap_extend_penalty[] = "gap_extend_penalty";
 static const char __pyx_k_target_end_optimal[] = "target_end_optimal";
@@ -1799,6 +1799,7 @@ static PyObject *__pyx_n_s_large_gap_penalty;
 static PyObject *__pyx_n_s_last;
 static PyObject *__pyx_n_s_left_clip;
 static PyObject *__pyx_n_u_left_weight;
+static PyObject *__pyx_n_s_length_other_clip;
 static PyObject *__pyx_n_s_locations;
 static PyObject *__pyx_n_u_locations;
 static PyObject *__pyx_n_s_locs;
@@ -1834,6 +1835,7 @@ static PyObject *__pyx_n_s_query_begin;
 static PyObject *__pyx_n_u_query_begin;
 static PyObject *__pyx_n_s_query_end;
 static PyObject *__pyx_n_u_query_end;
+static PyObject *__pyx_n_u_ref_bases;
 static PyObject *__pyx_n_u_ref_end;
 static PyObject *__pyx_n_s_ref_end2;
 static PyObject *__pyx_n_s_ref_end_2;
@@ -1848,6 +1850,7 @@ static PyObject *__pyx_n_s_ref_seq_start;
 static PyObject *__pyx_n_u_ref_start;
 static PyObject *__pyx_n_s_ref_start2;
 static PyObject *__pyx_n_s_ref_start_2;
+static PyObject *__pyx_n_u_remap_score;
 static PyObject *__pyx_n_s_remap_soft_clips;
 static PyObject *__pyx_n_u_remapped;
 static PyObject *__pyx_n_s_right_clip;
@@ -1858,40 +1861,39 @@ static PyObject *__pyx_n_s_seq1;
 static PyObject *__pyx_n_s_seq2;
 static PyObject *__pyx_n_s_skbio_alignment;
 static PyObject *__pyx_n_s_span;
+static PyObject *__pyx_n_s_start_i;
 static PyObject *__pyx_n_s_start_idx;
 static PyObject *__pyx_n_s_svlen;
 static PyObject *__pyx_n_u_svlen;
 static PyObject *__pyx_n_u_svlen_precise;
 static PyObject *__pyx_n_u_svtype;
-static PyObject *__pyx_n_u_switched;
 static PyObject *__pyx_n_s_target_begin;
 static PyObject *__pyx_n_s_target_end_optimal;
 static PyObject *__pyx_n_s_target_gap;
 static PyObject *__pyx_n_s_target_sequence;
 static PyObject *__pyx_n_s_task;
-static PyObject *__pyx_n_s_tel;
 static PyObject *__pyx_n_s_test;
-static PyObject *__pyx_n_s_time;
 static PyObject *__pyx_n_s_try_remap;
 static PyObject *__pyx_n_s_try_remap_events;
-static PyObject *__pyx_n_s_tsm;
 static PyObject *__pyx_n_s_upper;
 static PyObject *__pyx_n_s_w;
 static PyObject *__pyx_pf_5dysgu_9remapping_echo(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_args); /* proto */
 static PyObject *__pyx_pf_5dysgu_9remapping_2get_clipped_seq(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_cont, PyObject *__pyx_v_position, PyObject *__pyx_v_cont_ref_start, PyObject *__pyx_v_cont_ref_end); /* proto */
-static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_align, PyObject *__pyx_v_event, PyObject *__pyx_v_idx, CYTHON_UNUSED PyObject *__pyx_v_clip_side, PyObject *__pyx_v_begin, PyObject *__pyx_v_end, PyObject *__pyx_v_break_position); /* proto */
+static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_align, PyObject *__pyx_v_event, PyObject *__pyx_v_idx, CYTHON_UNUSED PyObject *__pyx_v_clip_side, PyObject *__pyx_v_begin, PyObject *__pyx_v_end, PyObject *__pyx_v_break_position, CYTHON_UNUSED PyObject *__pyx_v_clip_seq); /* proto */
 static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_locations); /* proto */
 static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events, PyObject *__pyx_v_ref_genome, PyObject *__pyx_v_min_sv_len); /* proto */
 static PyObject *__pyx_float_0_7;
 static PyObject *__pyx_int_0;
 static PyObject *__pyx_int_1;
 static PyObject *__pyx_int_2;
+static PyObject *__pyx_int_3;
 static PyObject *__pyx_int_4;
 static PyObject *__pyx_int_8;
+static PyObject *__pyx_int_10;
 static PyObject *__pyx_int_12;
 static PyObject *__pyx_int_20;
 static PyObject *__pyx_int_24;
-static PyObject *__pyx_int_40;
+static PyObject *__pyx_int_50;
 static PyObject *__pyx_int_200;
 static PyObject *__pyx_int_400;
 static PyObject *__pyx_int_500;
@@ -1914,7 +1916,7 @@ static PyObject *__pyx_codeobj__12;
 static PyObject *__pyx_codeobj__14;
 /* Late includes */
 
-/* "dysgu/remapping.pyx":12
+/* "dysgu/remapping.pyx":11
  * 
  * 
  * def echo(*args):             # <<<<<<<<<<<<<<
@@ -1950,34 +1952,34 @@ static PyObject *__pyx_pf_5dysgu_9remapping_echo(CYTHON_UNUSED PyObject *__pyx_s
   PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("echo", 0);
 
-  /* "dysgu/remapping.pyx":13
+  /* "dysgu/remapping.pyx":12
  * 
  * def echo(*args):
  *     click.echo(args, err=True)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_click); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_click); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_echo); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_echo); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_v_args);
   __Pyx_GIVEREF(__pyx_v_args);
   PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_v_args);
-  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 13, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_3, __pyx_n_s_err, Py_True) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "dysgu/remapping.pyx":12
+  /* "dysgu/remapping.pyx":11
  * 
  * 
  * def echo(*args):             # <<<<<<<<<<<<<<
@@ -2001,12 +2003,12 @@ static PyObject *__pyx_pf_5dysgu_9remapping_echo(CYTHON_UNUSED PyObject *__pyx_s
   return __pyx_r;
 }
 
-/* "dysgu/remapping.pyx":16
+/* "dysgu/remapping.pyx":15
  * 
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):             # <<<<<<<<<<<<<<
  *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+ *         start_i = 1
  */
 
 /* Python wrapper */
@@ -2047,23 +2049,23 @@ static PyObject *__pyx_pw_5dysgu_9remapping_3get_clipped_seq(PyObject *__pyx_sel
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_position)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 1); __PYX_ERR(0, 16, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 1); __PYX_ERR(0, 15, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cont_ref_start)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 2); __PYX_ERR(0, 16, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 2); __PYX_ERR(0, 15, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_cont_ref_end)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 3); __PYX_ERR(0, 16, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, 3); __PYX_ERR(0, 15, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "get_clipped_seq") < 0)) __PYX_ERR(0, 16, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "get_clipped_seq") < 0)) __PYX_ERR(0, 15, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -2080,7 +2082,7 @@ static PyObject *__pyx_pw_5dysgu_9remapping_3get_clipped_seq(PyObject *__pyx_sel
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 16, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("get_clipped_seq", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 15, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.remapping.get_clipped_seq", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -2094,8 +2096,9 @@ static PyObject *__pyx_pw_5dysgu_9remapping_3get_clipped_seq(PyObject *__pyx_sel
 }
 
 static PyObject *__pyx_pf_5dysgu_9remapping_2get_clipped_seq(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_cont, PyObject *__pyx_v_position, PyObject *__pyx_v_cont_ref_start, PyObject *__pyx_v_cont_ref_end) {
-  PyObject *__pyx_v_left_clip = NULL;
+  PyObject *__pyx_v_start_i = NULL;
   PyObject *__pyx_v_end_i = NULL;
+  PyObject *__pyx_v_left_clip = NULL;
   PyObject *__pyx_v_right_clip = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -2106,466 +2109,398 @@ static PyObject *__pyx_pf_5dysgu_9remapping_2get_clipped_seq(CYTHON_UNUSED PyObj
   Py_ssize_t __pyx_t_5;
   __Pyx_RefNannySetupContext("get_clipped_seq", 0);
 
-  /* "dysgu/remapping.pyx":17
+  /* "dysgu/remapping.pyx":16
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
  *     if cont:             # <<<<<<<<<<<<<<
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
- *             left_clip = ""
+ *         start_i = 1
+ *         while cont[start_i].islower():
  */
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_cont); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 17, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_cont); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 16, __pyx_L1_error)
   if (__pyx_t_1) {
 
-    /* "dysgu/remapping.pyx":18
+    /* "dysgu/remapping.pyx":17
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
  *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):             # <<<<<<<<<<<<<<
- *             left_clip = ""
- *             if cont[0].islower():
+ *         start_i = 1             # <<<<<<<<<<<<<<
+ *         while cont[start_i].islower():
+ *             start_i += 1
  */
-    __pyx_t_2 = PyNumber_Subtract(__pyx_v_cont_ref_start, __pyx_v_position); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = __Pyx_PyNumber_Absolute(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyNumber_Subtract(__pyx_v_cont_ref_end, __pyx_v_position); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = __Pyx_PyNumber_Absolute(__pyx_t_2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = PyObject_RichCompare(__pyx_t_3, __pyx_t_4, Py_LT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 18, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    if (__pyx_t_1) {
+    __Pyx_INCREF(__pyx_int_1);
+    __pyx_v_start_i = __pyx_int_1;
+
+    /* "dysgu/remapping.pyx":18
+ *     if cont:
+ *         start_i = 1
+ *         while cont[start_i].islower():             # <<<<<<<<<<<<<<
+ *             start_i += 1
+ *             if start_i == len(cont):
+ */
+    while (1) {
+      __pyx_t_3 = __Pyx_PyObject_GetItem(__pyx_v_cont, __pyx_v_start_i); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_islower); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __pyx_t_3 = NULL;
+      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
+        __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_4);
+        if (likely(__pyx_t_3)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
+          __Pyx_INCREF(__pyx_t_3);
+          __Pyx_INCREF(function);
+          __Pyx_DECREF_SET(__pyx_t_4, function);
+        }
+      }
+      __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
+      __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 18, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      if (!__pyx_t_1) break;
 
       /* "dysgu/remapping.pyx":19
- *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
- *             left_clip = ""             # <<<<<<<<<<<<<<
- *             if cont[0].islower():
- *                 end_i = 1
+ *         start_i = 1
+ *         while cont[start_i].islower():
+ *             start_i += 1             # <<<<<<<<<<<<<<
+ *             if start_i == len(cont):
+ *                 break
  */
-      __Pyx_INCREF(__pyx_kp_u_);
-      __pyx_v_left_clip = __pyx_kp_u_;
+      __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_start_i, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 19, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __Pyx_DECREF_SET(__pyx_v_start_i, __pyx_t_2);
+      __pyx_t_2 = 0;
 
       /* "dysgu/remapping.pyx":20
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
- *             left_clip = ""
- *             if cont[0].islower():             # <<<<<<<<<<<<<<
- *                 end_i = 1
- *                 while cont[end_i].islower():
+ *         while cont[start_i].islower():
+ *             start_i += 1
+ *             if start_i == len(cont):             # <<<<<<<<<<<<<<
+ *                 break
+ *         end_i = len(cont) - 1
  */
-      __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_cont, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 20, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_islower); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 20, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 20, __pyx_L1_error)
+      __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 20, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_4 = PyObject_RichCompare(__pyx_v_start_i, __pyx_t_2, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 20, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 20, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_4 = NULL;
+      if (__pyx_t_1) {
+
+        /* "dysgu/remapping.pyx":21
+ *             start_i += 1
+ *             if start_i == len(cont):
+ *                 break             # <<<<<<<<<<<<<<
+ *         end_i = len(cont) - 1
+ *         while cont[end_i].islower():
+ */
+        goto __pyx_L5_break;
+
+        /* "dysgu/remapping.pyx":20
+ *         while cont[start_i].islower():
+ *             start_i += 1
+ *             if start_i == len(cont):             # <<<<<<<<<<<<<<
+ *                 break
+ *         end_i = len(cont) - 1
+ */
+      }
+    }
+    __pyx_L5_break:;
+
+    /* "dysgu/remapping.pyx":22
+ *             if start_i == len(cont):
+ *                 break
+ *         end_i = len(cont) - 1             # <<<<<<<<<<<<<<
+ *         while cont[end_i].islower():
+ *             end_i -= 1
+ */
+    __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 22, __pyx_L1_error)
+    __pyx_t_4 = PyInt_FromSsize_t((__pyx_t_5 - 1)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 22, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_v_end_i = __pyx_t_4;
+    __pyx_t_4 = 0;
+
+    /* "dysgu/remapping.pyx":23
+ *                 break
+ *         end_i = len(cont) - 1
+ *         while cont[end_i].islower():             # <<<<<<<<<<<<<<
+ *             end_i -= 1
+ *             if end_i < 0:
+ */
+    while (1) {
+      __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_cont, __pyx_v_end_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_islower); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 23, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_2 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
-        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
-        if (likely(__pyx_t_4)) {
+        __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
+        if (likely(__pyx_t_2)) {
           PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-          __Pyx_INCREF(__pyx_t_4);
+          __Pyx_INCREF(__pyx_t_2);
           __Pyx_INCREF(function);
           __Pyx_DECREF_SET(__pyx_t_3, function);
         }
       }
-      __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
-      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 20, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_4 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
+      __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 23, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 20, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 23, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      if (!__pyx_t_1) break;
+
+      /* "dysgu/remapping.pyx":24
+ *         end_i = len(cont) - 1
+ *         while cont[end_i].islower():
+ *             end_i -= 1             # <<<<<<<<<<<<<<
+ *             if end_i < 0:
+ *                 break
+ */
+      __pyx_t_4 = __Pyx_PyInt_SubtractObjC(__pyx_v_end_i, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 24, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF_SET(__pyx_v_end_i, __pyx_t_4);
+      __pyx_t_4 = 0;
+
+      /* "dysgu/remapping.pyx":25
+ *         while cont[end_i].islower():
+ *             end_i -= 1
+ *             if end_i < 0:             # <<<<<<<<<<<<<<
+ *                 break
+ * 
+ */
+      __pyx_t_4 = PyObject_RichCompare(__pyx_v_end_i, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 25, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 25, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       if (__pyx_t_1) {
 
-        /* "dysgu/remapping.pyx":21
- *             left_clip = ""
- *             if cont[0].islower():
- *                 end_i = 1             # <<<<<<<<<<<<<<
- *                 while cont[end_i].islower():
- *                     end_i += 1
- */
-        __Pyx_INCREF(__pyx_int_1);
-        __pyx_v_end_i = __pyx_int_1;
-
-        /* "dysgu/remapping.pyx":22
- *             if cont[0].islower():
- *                 end_i = 1
- *                 while cont[end_i].islower():             # <<<<<<<<<<<<<<
- *                     end_i += 1
- *                     if end_i == len(cont):
- */
-        while (1) {
-          __pyx_t_3 = __Pyx_PyObject_GetItem(__pyx_v_cont, __pyx_v_end_i); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 22, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_islower); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 22, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __pyx_t_3 = NULL;
-          if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
-            __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_4);
-            if (likely(__pyx_t_3)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-              __Pyx_INCREF(__pyx_t_3);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_4, function);
-            }
-          }
-          __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
-          __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 22, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 22, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (!__pyx_t_1) break;
-
-          /* "dysgu/remapping.pyx":23
- *                 end_i = 1
- *                 while cont[end_i].islower():
- *                     end_i += 1             # <<<<<<<<<<<<<<
- *                     if end_i == len(cont):
- *                         break
- */
-          __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_end_i, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 23, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF_SET(__pyx_v_end_i, __pyx_t_2);
-          __pyx_t_2 = 0;
-
-          /* "dysgu/remapping.pyx":24
- *                 while cont[end_i].islower():
- *                     end_i += 1
- *                     if end_i == len(cont):             # <<<<<<<<<<<<<<
- *                         break
- *                 if end_i > 8:
- */
-          __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 24, __pyx_L1_error)
-          __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 24, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_4 = PyObject_RichCompare(__pyx_v_end_i, __pyx_t_2, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 24, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 24, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          if (__pyx_t_1) {
-
-            /* "dysgu/remapping.pyx":25
- *                     end_i += 1
- *                     if end_i == len(cont):
- *                         break             # <<<<<<<<<<<<<<
- *                 if end_i > 8:
- *                     left_clip = cont[:end_i - 1]
- */
-            goto __pyx_L7_break;
-
-            /* "dysgu/remapping.pyx":24
- *                 while cont[end_i].islower():
- *                     end_i += 1
- *                     if end_i == len(cont):             # <<<<<<<<<<<<<<
- *                         break
- *                 if end_i > 8:
- */
-          }
-        }
-        __pyx_L7_break:;
-
         /* "dysgu/remapping.pyx":26
- *                     if end_i == len(cont):
- *                         break
- *                 if end_i > 8:             # <<<<<<<<<<<<<<
- *                     left_clip = cont[:end_i - 1]
- *                     return left_clip, 0
+ *             end_i -= 1
+ *             if end_i < 0:
+ *                 break             # <<<<<<<<<<<<<<
+ * 
+ *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
  */
-        __pyx_t_4 = PyObject_RichCompare(__pyx_v_end_i, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 26, __pyx_L1_error)
-        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 26, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        if (__pyx_t_1) {
+        goto __pyx_L8_break;
 
-          /* "dysgu/remapping.pyx":27
- *                         break
- *                 if end_i > 8:
- *                     left_clip = cont[:end_i - 1]             # <<<<<<<<<<<<<<
- *                     return left_clip, 0
+        /* "dysgu/remapping.pyx":25
+ *         while cont[end_i].islower():
+ *             end_i -= 1
+ *             if end_i < 0:             # <<<<<<<<<<<<<<
+ *                 break
+ * 
+ */
+      }
+    }
+    __pyx_L8_break:;
+
+    /* "dysgu/remapping.pyx":28
+ *                 break
+ * 
+ *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):             # <<<<<<<<<<<<<<
+ *             left_clip = ""
+ *             # if cont[0].islower():
+ */
+    __pyx_t_4 = PyNumber_Subtract(__pyx_v_cont_ref_start, __pyx_v_position); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_3 = __Pyx_PyNumber_Absolute(__pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_4 = PyNumber_Subtract(__pyx_v_cont_ref_end, __pyx_v_position); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __pyx_t_2 = __Pyx_PyNumber_Absolute(__pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_4 = PyObject_RichCompare(__pyx_t_3, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 28, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    if (__pyx_t_1) {
+
+      /* "dysgu/remapping.pyx":29
+ * 
+ *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+ *             left_clip = ""             # <<<<<<<<<<<<<<
+ *             # if cont[0].islower():
+ *             #     start_i = 1
+ */
+      __Pyx_INCREF(__pyx_kp_u_);
+      __pyx_v_left_clip = __pyx_kp_u_;
+
+      /* "dysgu/remapping.pyx":32
+ *             # if cont[0].islower():
+ *             #     start_i = 1
+ *             if start_i > 8:             # <<<<<<<<<<<<<<
+ *                 left_clip = cont[:start_i - 1]
+ *                 return left_clip, 0, len(cont) - end_i
+ */
+      __pyx_t_4 = PyObject_RichCompare(__pyx_v_start_i, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 32, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 32, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      if (__pyx_t_1) {
+
+        /* "dysgu/remapping.pyx":33
+ *             #     start_i = 1
+ *             if start_i > 8:
+ *                 left_clip = cont[:start_i - 1]             # <<<<<<<<<<<<<<
+ *                 return left_clip, 0, len(cont) - end_i
  *         else:
  */
-          __pyx_t_4 = __Pyx_PyInt_SubtractObjC(__pyx_v_end_i, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 27, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_v_cont, 0, 0, NULL, &__pyx_t_4, NULL, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 27, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __Pyx_DECREF_SET(__pyx_v_left_clip, __pyx_t_2);
-          __pyx_t_2 = 0;
+        __pyx_t_4 = __Pyx_PyInt_SubtractObjC(__pyx_v_start_i, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 33, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_v_cont, 0, 0, NULL, &__pyx_t_4, NULL, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 33, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_DECREF_SET(__pyx_v_left_clip, __pyx_t_2);
+        __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":28
- *                 if end_i > 8:
- *                     left_clip = cont[:end_i - 1]
- *                     return left_clip, 0             # <<<<<<<<<<<<<<
+        /* "dysgu/remapping.pyx":34
+ *             if start_i > 8:
+ *                 left_clip = cont[:start_i - 1]
+ *                 return left_clip, 0, len(cont) - end_i             # <<<<<<<<<<<<<<
  *         else:
  *             right_clip = ""
  */
-          __Pyx_XDECREF(__pyx_r);
-          __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 28, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_INCREF(__pyx_v_left_clip);
-          __Pyx_GIVEREF(__pyx_v_left_clip);
-          PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_left_clip);
-          __Pyx_INCREF(__pyx_int_0);
-          __Pyx_GIVEREF(__pyx_int_0);
-          PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_0);
-          __pyx_r = __pyx_t_2;
-          __pyx_t_2 = 0;
-          goto __pyx_L0;
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 34, __pyx_L1_error)
+        __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 34, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_t_4 = PyNumber_Subtract(__pyx_t_2, __pyx_v_end_i); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 34, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+        __pyx_t_2 = PyTuple_New(3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 34, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __Pyx_INCREF(__pyx_v_left_clip);
+        __Pyx_GIVEREF(__pyx_v_left_clip);
+        PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_left_clip);
+        __Pyx_INCREF(__pyx_int_0);
+        __Pyx_GIVEREF(__pyx_int_0);
+        PyTuple_SET_ITEM(__pyx_t_2, 1, __pyx_int_0);
+        __Pyx_GIVEREF(__pyx_t_4);
+        PyTuple_SET_ITEM(__pyx_t_2, 2, __pyx_t_4);
+        __pyx_t_4 = 0;
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
 
-          /* "dysgu/remapping.pyx":26
- *                     if end_i == len(cont):
- *                         break
- *                 if end_i > 8:             # <<<<<<<<<<<<<<
- *                     left_clip = cont[:end_i - 1]
- *                     return left_clip, 0
- */
-        }
-
-        /* "dysgu/remapping.pyx":20
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
- *             left_clip = ""
- *             if cont[0].islower():             # <<<<<<<<<<<<<<
- *                 end_i = 1
- *                 while cont[end_i].islower():
+        /* "dysgu/remapping.pyx":32
+ *             # if cont[0].islower():
+ *             #     start_i = 1
+ *             if start_i > 8:             # <<<<<<<<<<<<<<
+ *                 left_clip = cont[:start_i - 1]
+ *                 return left_clip, 0, len(cont) - end_i
  */
       }
 
-      /* "dysgu/remapping.pyx":18
- * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
- *     if cont:
+      /* "dysgu/remapping.pyx":28
+ *                 break
+ * 
  *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):             # <<<<<<<<<<<<<<
  *             left_clip = ""
- *             if cont[0].islower():
+ *             # if cont[0].islower():
  */
-      goto __pyx_L4;
+      goto __pyx_L10;
     }
 
-    /* "dysgu/remapping.pyx":30
- *                     return left_clip, 0
+    /* "dysgu/remapping.pyx":36
+ *                 return left_clip, 0, len(cont) - end_i
  *         else:
  *             right_clip = ""             # <<<<<<<<<<<<<<
- *             if cont[-1].islower():
- *                 end_i = len(cont) - 1
+ *             # if cont[-1].islower():
+ * 
  */
     /*else*/ {
       __Pyx_INCREF(__pyx_kp_u_);
       __pyx_v_right_clip = __pyx_kp_u_;
 
-      /* "dysgu/remapping.pyx":31
- *         else:
- *             right_clip = ""
- *             if cont[-1].islower():             # <<<<<<<<<<<<<<
- *                 end_i = len(cont) - 1
- *                 while cont[end_i].islower():
+      /* "dysgu/remapping.pyx":39
+ *             # if cont[-1].islower():
+ * 
+ *             if len(cont) - end_i > 8:             # <<<<<<<<<<<<<<
+ *                 right_clip = cont[end_i + 1:]#, 1
+ *                 return right_clip, 1, start_i
  */
-      __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_cont, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 31, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_islower); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 31, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_4 = NULL;
-      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
-        __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
-        if (likely(__pyx_t_4)) {
-          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-          __Pyx_INCREF(__pyx_t_4);
-          __Pyx_INCREF(function);
-          __Pyx_DECREF_SET(__pyx_t_3, function);
-        }
-      }
-      __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
-      __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 31, __pyx_L1_error)
+      __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 39, __pyx_L1_error)
+      __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 39, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 31, __pyx_L1_error)
+      __pyx_t_4 = PyNumber_Subtract(__pyx_t_2, __pyx_v_end_i); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 39, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_4);
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __pyx_t_2 = PyObject_RichCompare(__pyx_t_4, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 39, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 39, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       if (__pyx_t_1) {
 
-        /* "dysgu/remapping.pyx":32
- *             right_clip = ""
- *             if cont[-1].islower():
- *                 end_i = len(cont) - 1             # <<<<<<<<<<<<<<
- *                 while cont[end_i].islower():
- *                     end_i -= 1
+        /* "dysgu/remapping.pyx":40
+ * 
+ *             if len(cont) - end_i > 8:
+ *                 right_clip = cont[end_i + 1:]#, 1             # <<<<<<<<<<<<<<
+ *                 return right_clip, 1, start_i
+ * 
  */
-        __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 32, __pyx_L1_error)
-        __pyx_t_2 = PyInt_FromSsize_t((__pyx_t_5 - 1)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 32, __pyx_L1_error)
+        __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_end_i, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 40, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
-        __pyx_v_end_i = __pyx_t_2;
-        __pyx_t_2 = 0;
-
-        /* "dysgu/remapping.pyx":33
- *             if cont[-1].islower():
- *                 end_i = len(cont) - 1
- *                 while cont[end_i].islower():             # <<<<<<<<<<<<<<
- *                     end_i -= 1
- *                     if end_i < 0:
- */
-        while (1) {
-          __pyx_t_3 = __Pyx_PyObject_GetItem(__pyx_v_cont, __pyx_v_end_i); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 33, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_3);
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_islower); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 33, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-          __pyx_t_3 = NULL;
-          if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
-            __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_4);
-            if (likely(__pyx_t_3)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-              __Pyx_INCREF(__pyx_t_3);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_4, function);
-            }
-          }
-          __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
-          __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 33, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 33, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (!__pyx_t_1) break;
-
-          /* "dysgu/remapping.pyx":34
- *                 end_i = len(cont) - 1
- *                 while cont[end_i].islower():
- *                     end_i -= 1             # <<<<<<<<<<<<<<
- *                     if end_i < 0:
- *                         break
- */
-          __pyx_t_2 = __Pyx_PyInt_SubtractObjC(__pyx_v_end_i, __pyx_int_1, 1, 1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 34, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF_SET(__pyx_v_end_i, __pyx_t_2);
-          __pyx_t_2 = 0;
-
-          /* "dysgu/remapping.pyx":35
- *                 while cont[end_i].islower():
- *                     end_i -= 1
- *                     if end_i < 0:             # <<<<<<<<<<<<<<
- *                         break
- *                 if len(cont) - end_i > 8:
- */
-          __pyx_t_2 = PyObject_RichCompare(__pyx_v_end_i, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 35, __pyx_L1_error)
-          __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 35, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (__pyx_t_1) {
-
-            /* "dysgu/remapping.pyx":36
- *                     end_i -= 1
- *                     if end_i < 0:
- *                         break             # <<<<<<<<<<<<<<
- *                 if len(cont) - end_i > 8:
- *                     right_clip = cont[end_i + 1:]#, 1
- */
-            goto __pyx_L12_break;
-
-            /* "dysgu/remapping.pyx":35
- *                 while cont[end_i].islower():
- *                     end_i -= 1
- *                     if end_i < 0:             # <<<<<<<<<<<<<<
- *                         break
- *                 if len(cont) - end_i > 8:
- */
-          }
-        }
-        __pyx_L12_break:;
-
-        /* "dysgu/remapping.pyx":37
- *                     if end_i < 0:
- *                         break
- *                 if len(cont) - end_i > 8:             # <<<<<<<<<<<<<<
- *                     right_clip = cont[end_i + 1:]#, 1
- *                     return right_clip, 1
- */
-        __pyx_t_5 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_5 == ((Py_ssize_t)-1))) __PYX_ERR(0, 37, __pyx_L1_error)
-        __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_5); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 37, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_2);
-        __pyx_t_4 = PyNumber_Subtract(__pyx_t_2, __pyx_v_end_i); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 37, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_cont, 0, 0, &__pyx_t_2, NULL, NULL, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 40, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-        __pyx_t_2 = PyObject_RichCompare(__pyx_t_4, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 37, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 37, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-        if (__pyx_t_1) {
+        __Pyx_DECREF_SET(__pyx_v_right_clip, __pyx_t_4);
+        __pyx_t_4 = 0;
 
-          /* "dysgu/remapping.pyx":38
- *                         break
- *                 if len(cont) - end_i > 8:
- *                     right_clip = cont[end_i + 1:]#, 1             # <<<<<<<<<<<<<<
- *                     return right_clip, 1
- * 
- */
-          __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_end_i, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 38, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_cont, 0, 0, &__pyx_t_2, NULL, NULL, 0, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 38, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          __Pyx_DECREF_SET(__pyx_v_right_clip, __pyx_t_4);
-          __pyx_t_4 = 0;
-
-          /* "dysgu/remapping.pyx":39
- *                 if len(cont) - end_i > 8:
- *                     right_clip = cont[end_i + 1:]#, 1
- *                     return right_clip, 1             # <<<<<<<<<<<<<<
+        /* "dysgu/remapping.pyx":41
+ *             if len(cont) - end_i > 8:
+ *                 right_clip = cont[end_i + 1:]#, 1
+ *                 return right_clip, 1, start_i             # <<<<<<<<<<<<<<
  * 
  * 
  */
-          __Pyx_XDECREF(__pyx_r);
-          __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 39, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_4);
-          __Pyx_INCREF(__pyx_v_right_clip);
-          __Pyx_GIVEREF(__pyx_v_right_clip);
-          PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_right_clip);
-          __Pyx_INCREF(__pyx_int_1);
-          __Pyx_GIVEREF(__pyx_int_1);
-          PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_1);
-          __pyx_r = __pyx_t_4;
-          __pyx_t_4 = 0;
-          goto __pyx_L0;
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 41, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_INCREF(__pyx_v_right_clip);
+        __Pyx_GIVEREF(__pyx_v_right_clip);
+        PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_right_clip);
+        __Pyx_INCREF(__pyx_int_1);
+        __Pyx_GIVEREF(__pyx_int_1);
+        PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_1);
+        __Pyx_INCREF(__pyx_v_start_i);
+        __Pyx_GIVEREF(__pyx_v_start_i);
+        PyTuple_SET_ITEM(__pyx_t_4, 2, __pyx_v_start_i);
+        __pyx_r = __pyx_t_4;
+        __pyx_t_4 = 0;
+        goto __pyx_L0;
 
-          /* "dysgu/remapping.pyx":37
- *                     if end_i < 0:
- *                         break
- *                 if len(cont) - end_i > 8:             # <<<<<<<<<<<<<<
- *                     right_clip = cont[end_i + 1:]#, 1
- *                     return right_clip, 1
- */
-        }
-
-        /* "dysgu/remapping.pyx":31
- *         else:
- *             right_clip = ""
- *             if cont[-1].islower():             # <<<<<<<<<<<<<<
- *                 end_i = len(cont) - 1
- *                 while cont[end_i].islower():
+        /* "dysgu/remapping.pyx":39
+ *             # if cont[-1].islower():
+ * 
+ *             if len(cont) - end_i > 8:             # <<<<<<<<<<<<<<
+ *                 right_clip = cont[end_i + 1:]#, 1
+ *                 return right_clip, 1, start_i
  */
       }
     }
-    __pyx_L4:;
+    __pyx_L10:;
 
-    /* "dysgu/remapping.pyx":17
+    /* "dysgu/remapping.pyx":16
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
  *     if cont:             # <<<<<<<<<<<<<<
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
- *             left_clip = ""
+ *         start_i = 1
+ *         while cont[start_i].islower():
  */
   }
 
-  /* "dysgu/remapping.pyx":16
+  /* "dysgu/remapping.pyx":15
  * 
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):             # <<<<<<<<<<<<<<
  *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+ *         start_i = 1
  */
 
   /* function exit code */
@@ -2578,18 +2513,19 @@ static PyObject *__pyx_pf_5dysgu_9remapping_2get_clipped_seq(CYTHON_UNUSED PyObj
   __Pyx_AddTraceback("dysgu.remapping.get_clipped_seq", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
-  __Pyx_XDECREF(__pyx_v_left_clip);
+  __Pyx_XDECREF(__pyx_v_start_i);
   __Pyx_XDECREF(__pyx_v_end_i);
+  __Pyx_XDECREF(__pyx_v_left_clip);
   __Pyx_XDECREF(__pyx_v_right_clip);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "dysgu/remapping.pyx":42
+/* "dysgu/remapping.pyx":44
  * 
  * 
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):             # <<<<<<<<<<<<<<
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):             # <<<<<<<<<<<<<<
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']
  */
@@ -2605,16 +2541,19 @@ static PyObject *__pyx_pw_5dysgu_9remapping_5filter_bad_alignment(PyObject *__py
   PyObject *__pyx_v_begin = 0;
   PyObject *__pyx_v_end = 0;
   PyObject *__pyx_v_break_position = 0;
+  CYTHON_UNUSED PyObject *__pyx_v_clip_seq = 0;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("filter_bad_alignment (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_align,&__pyx_n_s_event,&__pyx_n_s_idx,&__pyx_n_s_clip_side,&__pyx_n_s_begin,&__pyx_n_s_end,&__pyx_n_s_break_position,0};
-    PyObject* values[7] = {0,0,0,0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_align,&__pyx_n_s_event,&__pyx_n_s_idx,&__pyx_n_s_clip_side,&__pyx_n_s_begin,&__pyx_n_s_end,&__pyx_n_s_break_position,&__pyx_n_s_clip_seq,0};
+    PyObject* values[8] = {0,0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  8: values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
+        CYTHON_FALLTHROUGH;
         case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
         CYTHON_FALLTHROUGH;
         case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
@@ -2641,43 +2580,49 @@ static PyObject *__pyx_pw_5dysgu_9remapping_5filter_bad_alignment(PyObject *__py
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_event)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 1); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 1); __PYX_ERR(0, 44, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_idx)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 2); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 2); __PYX_ERR(0, 44, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_clip_side)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 3); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 3); __PYX_ERR(0, 44, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_begin)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 4); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 4); __PYX_ERR(0, 44, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
         if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_end)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 5); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 5); __PYX_ERR(0, 44, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
         if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_break_position)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, 6); __PYX_ERR(0, 42, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 6); __PYX_ERR(0, 44, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  7:
+        if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_clip_seq)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, 7); __PYX_ERR(0, 44, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "filter_bad_alignment") < 0)) __PYX_ERR(0, 42, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "filter_bad_alignment") < 0)) __PYX_ERR(0, 44, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 8) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -2687,6 +2632,7 @@ static PyObject *__pyx_pw_5dysgu_9remapping_5filter_bad_alignment(PyObject *__py
       values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
       values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
       values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+      values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
     }
     __pyx_v_align = values[0];
     __pyx_v_event = values[1];
@@ -2695,23 +2641,24 @@ static PyObject *__pyx_pw_5dysgu_9remapping_5filter_bad_alignment(PyObject *__py
     __pyx_v_begin = values[4];
     __pyx_v_end = values[5];
     __pyx_v_break_position = values[6];
+    __pyx_v_clip_seq = values[7];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 42, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("filter_bad_alignment", 1, 8, 8, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 44, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.remapping.filter_bad_alignment", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_5dysgu_9remapping_4filter_bad_alignment(__pyx_self, __pyx_v_align, __pyx_v_event, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_begin, __pyx_v_end, __pyx_v_break_position);
+  __pyx_r = __pyx_pf_5dysgu_9remapping_4filter_bad_alignment(__pyx_self, __pyx_v_align, __pyx_v_event, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_begin, __pyx_v_end, __pyx_v_break_position, __pyx_v_clip_seq);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_align, PyObject *__pyx_v_event, PyObject *__pyx_v_idx, CYTHON_UNUSED PyObject *__pyx_v_clip_side, PyObject *__pyx_v_begin, PyObject *__pyx_v_end, PyObject *__pyx_v_break_position) {
+static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_align, PyObject *__pyx_v_event, PyObject *__pyx_v_idx, CYTHON_UNUSED PyObject *__pyx_v_clip_side, PyObject *__pyx_v_begin, PyObject *__pyx_v_end, PyObject *__pyx_v_break_position, CYTHON_UNUSED PyObject *__pyx_v_clip_seq) {
   PyObject *__pyx_v_pos = NULL;
   PyObject *__pyx_v_score = NULL;
   PyObject *__pyx_v_span = NULL;
@@ -2737,99 +2684,99 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   int __pyx_t_12;
   __Pyx_RefNannySetupContext("filter_bad_alignment", 0);
 
-  /* "dysgu/remapping.pyx":43
+  /* "dysgu/remapping.pyx":45
  * 
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):
  *     pos = event["pos" + idx]             # <<<<<<<<<<<<<<
  *     score = align['optimal_alignment_score']
  *     span = align["query_end"] - align["query_begin"] + 1
  */
-  __pyx_t_1 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 45, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_event, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_event, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 45, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_pos = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "dysgu/remapping.pyx":44
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):
+  /* "dysgu/remapping.pyx":46
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']             # <<<<<<<<<<<<<<
  *     span = align["query_end"] - align["query_begin"] + 1
  *     seq1 = align['aligned_query_sequence']
  */
-  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_optimal_alignment_score); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 44, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_optimal_alignment_score); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 46, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_v_score = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "dysgu/remapping.pyx":45
+  /* "dysgu/remapping.pyx":47
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']
  *     span = align["query_end"] - align["query_begin"] + 1             # <<<<<<<<<<<<<<
  *     seq1 = align['aligned_query_sequence']
  *     seq2 = align['aligned_target_sequence']
  */
-  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_query_end); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_query_end); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_query_begin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_query_begin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyNumber_Subtract(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __pyx_t_3 = PyNumber_Subtract(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_t_3, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 45, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_AddObjC(__pyx_t_3, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 47, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_span = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":46
+  /* "dysgu/remapping.pyx":48
  *     score = align['optimal_alignment_score']
  *     span = align["query_end"] - align["query_begin"] + 1
  *     seq1 = align['aligned_query_sequence']             # <<<<<<<<<<<<<<
  *     seq2 = align['aligned_target_sequence']
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_aligned_query_sequence); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 46, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_aligned_query_sequence); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 48, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_seq1 = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":47
+  /* "dysgu/remapping.pyx":49
  *     span = align["query_end"] - align["query_begin"] + 1
  *     seq1 = align['aligned_query_sequence']
  *     seq2 = align['aligned_target_sequence']             # <<<<<<<<<<<<<<
  * 
  *     if not seq1 or not seq2:
  */
-  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_aligned_target_sequence); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 47, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Dict_GetItem(__pyx_v_align, __pyx_n_u_aligned_target_sequence); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 49, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_seq2 = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":49
+  /* "dysgu/remapping.pyx":51
  *     seq2 = align['aligned_target_sequence']
  * 
  *     if not seq1 or not seq2:             # <<<<<<<<<<<<<<
  *         return -1
  *     if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:
  */
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_seq1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_seq1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 51, __pyx_L1_error)
   __pyx_t_6 = ((!__pyx_t_5) != 0);
   if (!__pyx_t_6) {
   } else {
     __pyx_t_4 = __pyx_t_6;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_seq2); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_seq2); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 51, __pyx_L1_error)
   __pyx_t_5 = ((!__pyx_t_6) != 0);
   __pyx_t_4 = __pyx_t_5;
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_4) {
 
-    /* "dysgu/remapping.pyx":50
+    /* "dysgu/remapping.pyx":52
  * 
  *     if not seq1 or not seq2:
  *         return -1             # <<<<<<<<<<<<<<
@@ -2841,7 +2788,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
     __pyx_r = __pyx_int_neg_1;
     goto __pyx_L0;
 
-    /* "dysgu/remapping.pyx":49
+    /* "dysgu/remapping.pyx":51
  *     seq2 = align['aligned_target_sequence']
  * 
  *     if not seq1 or not seq2:             # <<<<<<<<<<<<<<
@@ -2850,45 +2797,45 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
   }
 
-  /* "dysgu/remapping.pyx":51
+  /* "dysgu/remapping.pyx":53
  *     if not seq1 or not seq2:
  *         return -1
  *     if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:             # <<<<<<<<<<<<<<
  *         return -1
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = PyObject_RichCompare(__pyx_t_1, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_3 = PyObject_RichCompare(__pyx_t_1, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   if (__pyx_t_5) {
   } else {
     __pyx_t_4 = __pyx_t_5;
     goto __pyx_L7_bool_binop_done;
   }
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_sequence); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_sequence); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_7 = PyObject_Length(__pyx_t_3); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_7 = PyObject_Length(__pyx_t_3); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __pyx_t_3 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_3 = PyInt_FromSsize_t(__pyx_t_7); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyNumber_Subtract(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Subtract(__pyx_t_3, __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_int_8, Py_GT); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 51, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 53, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_4 = __pyx_t_5;
   __pyx_L7_bool_binop_done:;
   if (__pyx_t_4) {
 
-    /* "dysgu/remapping.pyx":52
+    /* "dysgu/remapping.pyx":54
  *         return -1
  *     if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:
  *         return -1             # <<<<<<<<<<<<<<
@@ -2900,7 +2847,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
     __pyx_r = __pyx_int_neg_1;
     goto __pyx_L0;
 
-    /* "dysgu/remapping.pyx":51
+    /* "dysgu/remapping.pyx":53
  *     if not seq1 or not seq2:
  *         return -1
  *     if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:             # <<<<<<<<<<<<<<
@@ -2909,25 +2856,25 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
   }
 
-  /* "dysgu/remapping.pyx":54
+  /* "dysgu/remapping.pyx":56
  *         return -1
  * 
  *     distance_to_break = min(abs(begin - break_position), abs(end - break_position))             # <<<<<<<<<<<<<<
  *     large_gap_penalty = 24
  *     gapped_score = score
  */
-  __pyx_t_1 = PyNumber_Subtract(__pyx_v_end, __pyx_v_break_position); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Subtract(__pyx_v_end, __pyx_v_break_position); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyNumber_Absolute(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyNumber_Absolute(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyNumber_Subtract(__pyx_v_begin, __pyx_v_break_position); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Subtract(__pyx_v_begin, __pyx_v_break_position); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyNumber_Absolute(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyNumber_Absolute(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_8 = PyObject_RichCompare(__pyx_t_2, __pyx_t_3, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 54, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_8 = PyObject_RichCompare(__pyx_t_2, __pyx_t_3, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 56, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   if (__pyx_t_4) {
     __Pyx_INCREF(__pyx_t_2);
@@ -2944,7 +2891,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   __pyx_v_distance_to_break = __pyx_t_2;
   __pyx_t_2 = 0;
 
-  /* "dysgu/remapping.pyx":55
+  /* "dysgu/remapping.pyx":57
  * 
  *     distance_to_break = min(abs(begin - break_position), abs(end - break_position))
  *     large_gap_penalty = 24             # <<<<<<<<<<<<<<
@@ -2954,7 +2901,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   __Pyx_INCREF(__pyx_int_24);
   __pyx_v_large_gap_penalty = __pyx_int_24;
 
-  /* "dysgu/remapping.pyx":56
+  /* "dysgu/remapping.pyx":58
  *     distance_to_break = min(abs(begin - break_position), abs(end - break_position))
  *     large_gap_penalty = 24
  *     gapped_score = score             # <<<<<<<<<<<<<<
@@ -2964,31 +2911,31 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   __Pyx_INCREF(__pyx_v_score);
   __pyx_v_gapped_score = __pyx_v_score;
 
-  /* "dysgu/remapping.pyx":57
+  /* "dysgu/remapping.pyx":59
  *     large_gap_penalty = 24
  *     gapped_score = score
  *     if distance_to_break > 200:             # <<<<<<<<<<<<<<
  *         gapped_score = score - large_gap_penalty
  * 
  */
-  __pyx_t_2 = PyObject_RichCompare(__pyx_v_distance_to_break, __pyx_int_200, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 57, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 57, __pyx_L1_error)
+  __pyx_t_2 = PyObject_RichCompare(__pyx_v_distance_to_break, __pyx_int_200, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (__pyx_t_4) {
 
-    /* "dysgu/remapping.pyx":58
+    /* "dysgu/remapping.pyx":60
  *     gapped_score = score
  *     if distance_to_break > 200:
  *         gapped_score = score - large_gap_penalty             # <<<<<<<<<<<<<<
  * 
- *     # echo(distance_to_break)
+ *     if gapped_score > 12:
  */
-    __pyx_t_2 = PyNumber_Subtract(__pyx_v_score, __pyx_v_large_gap_penalty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 58, __pyx_L1_error)
+    __pyx_t_2 = PyNumber_Subtract(__pyx_v_score, __pyx_v_large_gap_penalty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 60, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF_SET(__pyx_v_gapped_score, __pyx_t_2);
     __pyx_t_2 = 0;
 
-    /* "dysgu/remapping.pyx":57
+    /* "dysgu/remapping.pyx":59
  *     large_gap_penalty = 24
  *     gapped_score = score
  *     if distance_to_break > 200:             # <<<<<<<<<<<<<<
@@ -2997,44 +2944,44 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
   }
 
-  /* "dysgu/remapping.pyx":76
- *     # echo(seq1)
- *     # echo(seq2)
+  /* "dysgu/remapping.pyx":62
+ *         gapped_score = score - large_gap_penalty
+ * 
  *     if gapped_score > 12:             # <<<<<<<<<<<<<<
  *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
- *             # echo("was overlapping")
+ *             return 1
  */
-  __pyx_t_2 = PyObject_RichCompare(__pyx_v_gapped_score, __pyx_int_12, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 76, __pyx_L1_error)
+  __pyx_t_2 = PyObject_RichCompare(__pyx_v_gapped_score, __pyx_int_12, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 62, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 62, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   if (__pyx_t_4) {
 
-    /* "dysgu/remapping.pyx":77
- *     # echo(seq2)
+    /* "dysgu/remapping.pyx":63
+ * 
  *     if gapped_score > 12:
  *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):             # <<<<<<<<<<<<<<
- *             # echo("was overlapping")
  *             return 1
+ *         elif gapped_score > 20:
  */
-    __pyx_t_2 = __Pyx_PyInt_SubtractObjC(__pyx_v_begin, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_SubtractObjC(__pyx_v_begin, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __pyx_t_11 = __Pyx_PyInt_As_int(__pyx_v_pos); if (unlikely((__pyx_t_11 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
-    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_pos, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_11 = __Pyx_PyInt_As_int(__pyx_v_pos); if (unlikely((__pyx_t_11 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_AddObjC(__pyx_v_pos, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_12 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_12 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 77, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyInt_As_int(__pyx_t_2); if (unlikely((__pyx_t_12 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 63, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_t_4 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_t_9, __pyx_t_10, __pyx_t_11, __pyx_t_12) != 0);
     if (__pyx_t_4) {
 
-      /* "dysgu/remapping.pyx":79
+      /* "dysgu/remapping.pyx":64
+ *     if gapped_score > 12:
  *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
- *             # echo("was overlapping")
  *             return 1             # <<<<<<<<<<<<<<
  *         elif gapped_score > 20:
  *             expected = span * 2  # 2 x match score
@@ -3044,87 +2991,87 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
       __pyx_r = __pyx_int_1;
       goto __pyx_L0;
 
-      /* "dysgu/remapping.pyx":77
- *     # echo(seq2)
+      /* "dysgu/remapping.pyx":63
+ * 
  *     if gapped_score > 12:
  *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):             # <<<<<<<<<<<<<<
- *             # echo("was overlapping")
  *             return 1
+ *         elif gapped_score > 20:
  */
     }
 
-    /* "dysgu/remapping.pyx":80
- *             # echo("was overlapping")
+    /* "dysgu/remapping.pyx":65
+ *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
  *             return 1
  *         elif gapped_score > 20:             # <<<<<<<<<<<<<<
  *             expected = span * 2  # 2 x match score
  *             # if gaps at both ends of alignment increase stringency
  */
-    __pyx_t_2 = PyObject_RichCompare(__pyx_v_gapped_score, __pyx_int_20, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 80, __pyx_L1_error)
-    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 80, __pyx_L1_error)
+    __pyx_t_2 = PyObject_RichCompare(__pyx_v_gapped_score, __pyx_int_20, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 65, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 65, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     if (__pyx_t_4) {
 
-      /* "dysgu/remapping.pyx":81
+      /* "dysgu/remapping.pyx":66
  *             return 1
  *         elif gapped_score > 20:
  *             expected = span * 2  # 2 x match score             # <<<<<<<<<<<<<<
  *             # if gaps at both ends of alignment increase stringency
  *             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:
  */
-      __pyx_t_2 = PyNumber_Multiply(__pyx_v_span, __pyx_int_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 81, __pyx_L1_error)
+      __pyx_t_2 = PyNumber_Multiply(__pyx_v_span, __pyx_int_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 66, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __pyx_v_expected = __pyx_t_2;
       __pyx_t_2 = 0;
 
-      /* "dysgu/remapping.pyx":83
+      /* "dysgu/remapping.pyx":68
  *             expected = span * 2  # 2 x match score
  *             # if gaps at both ends of alignment increase stringency
  *             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:             # <<<<<<<<<<<<<<
  *                 expected = span * 4
  *             # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
  */
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_int_2, Py_GE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_1 = PyObject_RichCompare(__pyx_t_2, __pyx_int_2, Py_GE); __Pyx_XGOTREF(__pyx_t_1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       if (__pyx_t_5) {
       } else {
         __pyx_t_4 = __pyx_t_5;
         goto __pyx_L13_bool_binop_done;
       }
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_sequence); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_align, __pyx_n_s_target_sequence); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_7 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_7 = PyObject_Length(__pyx_t_2); if (unlikely(__pyx_t_7 == ((Py_ssize_t)-1))) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_2 = PyInt_FromSsize_t((__pyx_t_7 - 2)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_2 = PyInt_FromSsize_t((__pyx_t_7 - 2)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
-      __pyx_t_3 = PyObject_RichCompare(__pyx_t_1, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_3 = PyObject_RichCompare(__pyx_t_1, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 83, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 68, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __pyx_t_4 = __pyx_t_5;
       __pyx_L13_bool_binop_done:;
       if (__pyx_t_4) {
 
-        /* "dysgu/remapping.pyx":84
+        /* "dysgu/remapping.pyx":69
  *             # if gaps at both ends of alignment increase stringency
  *             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:
  *                 expected = span * 4             # <<<<<<<<<<<<<<
  *             # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
  *             if span > 12 and float(score) / expected > 0.7:
  */
-        __pyx_t_3 = PyNumber_Multiply(__pyx_v_span, __pyx_int_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 84, __pyx_L1_error)
+        __pyx_t_3 = PyNumber_Multiply(__pyx_v_span, __pyx_int_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 69, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF_SET(__pyx_v_expected, __pyx_t_3);
         __pyx_t_3 = 0;
 
-        /* "dysgu/remapping.pyx":83
+        /* "dysgu/remapping.pyx":68
  *             expected = span * 2  # 2 x match score
  *             # if gaps at both ends of alignment increase stringency
  *             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:             # <<<<<<<<<<<<<<
@@ -3133,35 +3080,35 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
       }
 
-      /* "dysgu/remapping.pyx":86
+      /* "dysgu/remapping.pyx":71
  *                 expected = span * 4
  *             # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
  *             if span > 12 and float(score) / expected > 0.7:             # <<<<<<<<<<<<<<
  *                 return 1
  *     return -1
  */
-      __pyx_t_3 = PyObject_RichCompare(__pyx_v_span, __pyx_int_12, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
-      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 86, __pyx_L1_error)
+      __pyx_t_3 = PyObject_RichCompare(__pyx_v_span, __pyx_int_12, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 71, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 71, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       if (__pyx_t_5) {
       } else {
         __pyx_t_4 = __pyx_t_5;
         goto __pyx_L16_bool_binop_done;
       }
-      __pyx_t_3 = __Pyx_PyNumber_Float(__pyx_v_score); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyNumber_Float(__pyx_v_score); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 71, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_2 = __Pyx_PyNumber_Divide(__pyx_t_3, __pyx_v_expected); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 86, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyNumber_Divide(__pyx_t_3, __pyx_v_expected); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 71, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __pyx_t_3 = PyObject_RichCompare(__pyx_t_2, __pyx_float_0_7, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 86, __pyx_L1_error)
+      __pyx_t_3 = PyObject_RichCompare(__pyx_t_2, __pyx_float_0_7, Py_GT); __Pyx_XGOTREF(__pyx_t_3); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 71, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 86, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_3); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 71, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __pyx_t_4 = __pyx_t_5;
       __pyx_L16_bool_binop_done:;
       if (__pyx_t_4) {
 
-        /* "dysgu/remapping.pyx":87
+        /* "dysgu/remapping.pyx":72
  *             # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
  *             if span > 12 and float(score) / expected > 0.7:
  *                 return 1             # <<<<<<<<<<<<<<
@@ -3173,7 +3120,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
         __pyx_r = __pyx_int_1;
         goto __pyx_L0;
 
-        /* "dysgu/remapping.pyx":86
+        /* "dysgu/remapping.pyx":71
  *                 expected = span * 4
  *             # echo("HERE", expected, span, score/expected, align.target_begin, len(align.target_sequence) - align.target_end_optimal)
  *             if span > 12 and float(score) / expected > 0.7:             # <<<<<<<<<<<<<<
@@ -3182,8 +3129,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
       }
 
-      /* "dysgu/remapping.pyx":80
- *             # echo("was overlapping")
+      /* "dysgu/remapping.pyx":65
+ *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
  *             return 1
  *         elif gapped_score > 20:             # <<<<<<<<<<<<<<
  *             expected = span * 2  # 2 x match score
@@ -3191,16 +3138,16 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
  */
     }
 
-    /* "dysgu/remapping.pyx":76
- *     # echo(seq1)
- *     # echo(seq2)
+    /* "dysgu/remapping.pyx":62
+ *         gapped_score = score - large_gap_penalty
+ * 
  *     if gapped_score > 12:             # <<<<<<<<<<<<<<
  *         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
- *             # echo("was overlapping")
+ *             return 1
  */
   }
 
-  /* "dysgu/remapping.pyx":88
+  /* "dysgu/remapping.pyx":73
  *             if span > 12 and float(score) / expected > 0.7:
  *                 return 1
  *     return -1             # <<<<<<<<<<<<<<
@@ -3212,10 +3159,10 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   __pyx_r = __pyx_int_neg_1;
   goto __pyx_L0;
 
-  /* "dysgu/remapping.pyx":42
+  /* "dysgu/remapping.pyx":44
  * 
  * 
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):             # <<<<<<<<<<<<<<
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):             # <<<<<<<<<<<<<<
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']
  */
@@ -3243,7 +3190,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_4filter_bad_alignment(CYTHON_UNUSED 
   return __pyx_r;
 }
 
-/* "dysgu/remapping.pyx":90
+/* "dysgu/remapping.pyx":75
  *     return -1
  * 
  * def merge_align_regions(locations):             # <<<<<<<<<<<<<<
@@ -3287,60 +3234,60 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
   int __pyx_t_12;
   __Pyx_RefNannySetupContext("merge_align_regions", 0);
 
-  /* "dysgu/remapping.pyx":92
+  /* "dysgu/remapping.pyx":77
  * def merge_align_regions(locations):
  *     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
  *     if len(locations) <= 1:             # <<<<<<<<<<<<<<
  *         return locations
- * 
+ *     merge_dist = 10
  */
-  __pyx_t_1 = PyObject_Length(__pyx_v_locations); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 92, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_locations); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 77, __pyx_L1_error)
   __pyx_t_2 = ((__pyx_t_1 <= 1) != 0);
   if (__pyx_t_2) {
 
-    /* "dysgu/remapping.pyx":93
+    /* "dysgu/remapping.pyx":78
  *     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
  *     if len(locations) <= 1:
  *         return locations             # <<<<<<<<<<<<<<
- * 
  *     merge_dist = 10
+ *     new_l = []
  */
     __Pyx_XDECREF(__pyx_r);
     __Pyx_INCREF(__pyx_v_locations);
     __pyx_r = __pyx_v_locations;
     goto __pyx_L0;
 
-    /* "dysgu/remapping.pyx":92
+    /* "dysgu/remapping.pyx":77
  * def merge_align_regions(locations):
  *     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
  *     if len(locations) <= 1:             # <<<<<<<<<<<<<<
  *         return locations
- * 
+ *     merge_dist = 10
  */
   }
 
-  /* "dysgu/remapping.pyx":95
+  /* "dysgu/remapping.pyx":79
+ *     if len(locations) <= 1:
  *         return locations
- * 
  *     merge_dist = 10             # <<<<<<<<<<<<<<
  *     new_l = []
  *     for s, e in locations:
  */
   __pyx_v_merge_dist = 10;
 
-  /* "dysgu/remapping.pyx":96
- * 
+  /* "dysgu/remapping.pyx":80
+ *         return locations
  *     merge_dist = 10
  *     new_l = []             # <<<<<<<<<<<<<<
  *     for s, e in locations:
  *         if len(new_l) == 0:
  */
-  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 96, __pyx_L1_error)
+  __pyx_t_3 = PyList_New(0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 80, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_v_new_l = ((PyObject*)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "dysgu/remapping.pyx":97
+  /* "dysgu/remapping.pyx":81
  *     merge_dist = 10
  *     new_l = []
  *     for s, e in locations:             # <<<<<<<<<<<<<<
@@ -3351,26 +3298,26 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
     __pyx_t_3 = __pyx_v_locations; __Pyx_INCREF(__pyx_t_3); __pyx_t_1 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_locations); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 97, __pyx_L1_error)
+    __pyx_t_1 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_v_locations); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 81, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 97, __pyx_L1_error)
+    __pyx_t_4 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 81, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_4)) {
       if (likely(PyList_CheckExact(__pyx_t_3))) {
         if (__pyx_t_1 >= PyList_GET_SIZE(__pyx_t_3)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely(0 < 0)) __PYX_ERR(0, 97, __pyx_L1_error)
+        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely(0 < 0)) __PYX_ERR(0, 81, __pyx_L1_error)
         #else
-        __pyx_t_5 = PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 97, __pyx_L1_error)
+        __pyx_t_5 = PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 81, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       } else {
         if (__pyx_t_1 >= PyTuple_GET_SIZE(__pyx_t_3)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely(0 < 0)) __PYX_ERR(0, 97, __pyx_L1_error)
+        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_1); __Pyx_INCREF(__pyx_t_5); __pyx_t_1++; if (unlikely(0 < 0)) __PYX_ERR(0, 81, __pyx_L1_error)
         #else
-        __pyx_t_5 = PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 97, __pyx_L1_error)
+        __pyx_t_5 = PySequence_ITEM(__pyx_t_3, __pyx_t_1); __pyx_t_1++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 81, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       }
@@ -3380,7 +3327,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 97, __pyx_L1_error)
+          else __PYX_ERR(0, 81, __pyx_L1_error)
         }
         break;
       }
@@ -3392,7 +3339,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       if (unlikely(size != 2)) {
         if (size > 2) __Pyx_RaiseTooManyValuesError(2);
         else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-        __PYX_ERR(0, 97, __pyx_L1_error)
+        __PYX_ERR(0, 81, __pyx_L1_error)
       }
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
       if (likely(PyTuple_CheckExact(sequence))) {
@@ -3405,15 +3352,15 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       __Pyx_INCREF(__pyx_t_6);
       __Pyx_INCREF(__pyx_t_7);
       #else
-      __pyx_t_6 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 97, __pyx_L1_error)
+      __pyx_t_6 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 81, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 97, __pyx_L1_error)
+      __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 81, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       #endif
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     } else {
       Py_ssize_t index = -1;
-      __pyx_t_8 = PyObject_GetIter(__pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 97, __pyx_L1_error)
+      __pyx_t_8 = PyObject_GetIter(__pyx_t_5); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 81, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __pyx_t_9 = Py_TYPE(__pyx_t_8)->tp_iternext;
@@ -3421,7 +3368,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       __Pyx_GOTREF(__pyx_t_6);
       index = 1; __pyx_t_7 = __pyx_t_9(__pyx_t_8); if (unlikely(!__pyx_t_7)) goto __pyx_L6_unpacking_failed;
       __Pyx_GOTREF(__pyx_t_7);
-      if (__Pyx_IternextUnpackEndCheck(__pyx_t_9(__pyx_t_8), 2) < 0) __PYX_ERR(0, 97, __pyx_L1_error)
+      if (__Pyx_IternextUnpackEndCheck(__pyx_t_9(__pyx_t_8), 2) < 0) __PYX_ERR(0, 81, __pyx_L1_error)
       __pyx_t_9 = NULL;
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       goto __pyx_L7_unpacking_done;
@@ -3429,7 +3376,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __pyx_t_9 = NULL;
       if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-      __PYX_ERR(0, 97, __pyx_L1_error)
+      __PYX_ERR(0, 81, __pyx_L1_error)
       __pyx_L7_unpacking_done:;
     }
     __Pyx_XDECREF_SET(__pyx_v_s, __pyx_t_6);
@@ -3437,25 +3384,25 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
     __Pyx_XDECREF_SET(__pyx_v_e, __pyx_t_7);
     __pyx_t_7 = 0;
 
-    /* "dysgu/remapping.pyx":98
+    /* "dysgu/remapping.pyx":82
  *     new_l = []
  *     for s, e in locations:
  *         if len(new_l) == 0:             # <<<<<<<<<<<<<<
  *             new_l.append([s, e])
  *         last = new_l[-1]
  */
-    __pyx_t_10 = PyList_GET_SIZE(__pyx_v_new_l); if (unlikely(__pyx_t_10 == ((Py_ssize_t)-1))) __PYX_ERR(0, 98, __pyx_L1_error)
+    __pyx_t_10 = PyList_GET_SIZE(__pyx_v_new_l); if (unlikely(__pyx_t_10 == ((Py_ssize_t)-1))) __PYX_ERR(0, 82, __pyx_L1_error)
     __pyx_t_2 = ((__pyx_t_10 == 0) != 0);
     if (__pyx_t_2) {
 
-      /* "dysgu/remapping.pyx":99
+      /* "dysgu/remapping.pyx":83
  *     for s, e in locations:
  *         if len(new_l) == 0:
  *             new_l.append([s, e])             # <<<<<<<<<<<<<<
  *         last = new_l[-1]
  * 
  */
-      __pyx_t_5 = PyList_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 99, __pyx_L1_error)
+      __pyx_t_5 = PyList_New(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 83, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_INCREF(__pyx_v_s);
       __Pyx_GIVEREF(__pyx_v_s);
@@ -3463,10 +3410,10 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       __Pyx_INCREF(__pyx_v_e);
       __Pyx_GIVEREF(__pyx_v_e);
       PyList_SET_ITEM(__pyx_t_5, 1, __pyx_v_e);
-      __pyx_t_11 = __Pyx_PyList_Append(__pyx_v_new_l, __pyx_t_5); if (unlikely(__pyx_t_11 == ((int)-1))) __PYX_ERR(0, 99, __pyx_L1_error)
+      __pyx_t_11 = __Pyx_PyList_Append(__pyx_v_new_l, __pyx_t_5); if (unlikely(__pyx_t_11 == ((int)-1))) __PYX_ERR(0, 83, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-      /* "dysgu/remapping.pyx":98
+      /* "dysgu/remapping.pyx":82
  *     new_l = []
  *     for s, e in locations:
  *         if len(new_l) == 0:             # <<<<<<<<<<<<<<
@@ -3475,77 +3422,77 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
  */
     }
 
-    /* "dysgu/remapping.pyx":100
+    /* "dysgu/remapping.pyx":84
  *         if len(new_l) == 0:
  *             new_l.append([s, e])
  *         last = new_l[-1]             # <<<<<<<<<<<<<<
  * 
  *         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:
  */
-    __pyx_t_5 = __Pyx_GetItemInt_List(__pyx_v_new_l, -1L, long, 1, __Pyx_PyInt_From_long, 1, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 100, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt_List(__pyx_v_new_l, -1L, long, 1, __Pyx_PyInt_From_long, 1, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 84, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_XDECREF_SET(__pyx_v_last, __pyx_t_5);
     __pyx_t_5 = 0;
 
-    /* "dysgu/remapping.pyx":102
+    /* "dysgu/remapping.pyx":86
  *         last = new_l[-1]
  * 
  *         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:             # <<<<<<<<<<<<<<
  *             new_l[-1][1] = e
  *         else:
  */
-    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_last, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_last, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_7 = PyNumber_Subtract(__pyx_v_s, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Subtract(__pyx_v_s, __pyx_t_5); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyNumber_Absolute(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyNumber_Absolute(__pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyInt_From_long(__pyx_v_merge_dist); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyInt_From_long(__pyx_v_merge_dist); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_6 = PyObject_RichCompare(__pyx_t_5, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_6 = PyObject_RichCompare(__pyx_t_5, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     if (__pyx_t_12) {
     } else {
       __pyx_t_2 = __pyx_t_12;
       goto __pyx_L10_bool_binop_done;
     }
-    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_last, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_last, 1, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_7 = PyNumber_Subtract(__pyx_v_e, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_7 = PyNumber_Subtract(__pyx_v_e, __pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_6 = __Pyx_PyNumber_Absolute(__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyNumber_Absolute(__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = __Pyx_PyInt_From_long(__pyx_v_merge_dist); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyInt_From_long(__pyx_v_merge_dist); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
-    __pyx_t_5 = PyObject_RichCompare(__pyx_t_6, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_5 = PyObject_RichCompare(__pyx_t_6, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 102, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_12 < 0)) __PYX_ERR(0, 86, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_2 = __pyx_t_12;
     __pyx_L10_bool_binop_done:;
     if (__pyx_t_2) {
 
-      /* "dysgu/remapping.pyx":103
+      /* "dysgu/remapping.pyx":87
  * 
  *         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:
  *             new_l[-1][1] = e             # <<<<<<<<<<<<<<
  *         else:
  *             return None
  */
-      __pyx_t_5 = __Pyx_GetItemInt_List(__pyx_v_new_l, -1L, long, 1, __Pyx_PyInt_From_long, 1, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 103, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_GetItemInt_List(__pyx_v_new_l, -1L, long, 1, __Pyx_PyInt_From_long, 1, 1, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 87, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      if (unlikely(__Pyx_SetItemInt(__pyx_t_5, 1, __pyx_v_e, long, 1, __Pyx_PyInt_From_long, 0, 0, 1) < 0)) __PYX_ERR(0, 103, __pyx_L1_error)
+      if (unlikely(__Pyx_SetItemInt(__pyx_t_5, 1, __pyx_v_e, long, 1, __Pyx_PyInt_From_long, 0, 0, 1) < 0)) __PYX_ERR(0, 87, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-      /* "dysgu/remapping.pyx":102
+      /* "dysgu/remapping.pyx":86
  *         last = new_l[-1]
  * 
  *         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:             # <<<<<<<<<<<<<<
@@ -3555,12 +3502,12 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
       goto __pyx_L9;
     }
 
-    /* "dysgu/remapping.pyx":105
+    /* "dysgu/remapping.pyx":89
  *             new_l[-1][1] = e
  *         else:
  *             return None             # <<<<<<<<<<<<<<
- *             # new_l.append([s, e])
  *     return new_l
+ * 
  */
     /*else*/ {
       __Pyx_XDECREF(__pyx_r);
@@ -3570,7 +3517,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
     }
     __pyx_L9:;
 
-    /* "dysgu/remapping.pyx":97
+    /* "dysgu/remapping.pyx":81
  *     merge_dist = 10
  *     new_l = []
  *     for s, e in locations:             # <<<<<<<<<<<<<<
@@ -3580,9 +3527,9 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
   }
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "dysgu/remapping.pyx":107
+  /* "dysgu/remapping.pyx":90
+ *         else:
  *             return None
- *             # new_l.append([s, e])
  *     return new_l             # <<<<<<<<<<<<<<
  * 
  * 
@@ -3592,7 +3539,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
   __pyx_r = __pyx_v_new_l;
   goto __pyx_L0;
 
-  /* "dysgu/remapping.pyx":90
+  /* "dysgu/remapping.pyx":75
  *     return -1
  * 
  * def merge_align_regions(locations):             # <<<<<<<<<<<<<<
@@ -3619,7 +3566,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_6merge_align_regions(CYTHON_UNUSED P
   return __pyx_r;
 }
 
-/* "dysgu/remapping.pyx":110
+/* "dysgu/remapping.pyx":93
  * 
  * 
  * def remap_soft_clips(events, ref_genome, min_sv_len):             # <<<<<<<<<<<<<<
@@ -3662,17 +3609,17 @@ static PyObject *__pyx_pw_5dysgu_9remapping_9remap_soft_clips(PyObject *__pyx_se
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_ref_genome)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, 1); __PYX_ERR(0, 110, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, 1); __PYX_ERR(0, 93, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_min_sv_len)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, 2); __PYX_ERR(0, 110, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, 2); __PYX_ERR(0, 93, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "remap_soft_clips") < 0)) __PYX_ERR(0, 110, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "remap_soft_clips") < 0)) __PYX_ERR(0, 93, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -3687,7 +3634,7 @@ static PyObject *__pyx_pw_5dysgu_9remapping_9remap_soft_clips(PyObject *__pyx_se
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 110, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("remap_soft_clips", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 93, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.remapping.remap_soft_clips", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -3722,6 +3669,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   PyObject *__pyx_v_clip_res = NULL;
   PyObject *__pyx_v_clip_seq = NULL;
   PyObject *__pyx_v_clip_side = NULL;
+  PyObject *__pyx_v_length_other_clip = NULL;
   PyObject *__pyx_v_w = NULL;
   PyObject *__pyx_v_ref_start = NULL;
   PyObject *__pyx_v_ref_end = NULL;
@@ -3730,7 +3678,6 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   PyObject *__pyx_v_ref_seq_clipped = NULL;
   PyObject *__pyx_v_ref_seq_start = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_ref_seq_end = NULL;
-  PyObject *__pyx_v_tel = NULL;
   PyObject *__pyx_v_el = NULL;
   PyObject *__pyx_v_locs = NULL;
   PyObject *__pyx_v_l_start = NULL;
@@ -3738,11 +3685,10 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   PyObject *__pyx_v_ref_start2 = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_ref_end2 = NULL;
   PyObject *__pyx_v_ref_seq2 = NULL;
-  PyObject *__pyx_v_tsm = NULL;
   PyObject *__pyx_v_aln = NULL;
   PyObject *__pyx_v_a = NULL;
   CYTHON_UNUSED PyObject *__pyx_v_aligned_seq = NULL;
-  CYTHON_UNUSED PyObject *__pyx_v_score = NULL;
+  PyObject *__pyx_v_score = NULL;
   PyObject *__pyx_v_aln_q_end = NULL;
   PyObject *__pyx_v_aln_q_begin = NULL;
   PyObject *__pyx_v_aln_t_begin = NULL;
@@ -3758,6 +3704,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   PyObject *__pyx_v_break_point2 = NULL;
   PyObject *__pyx_v_overlap = NULL;
   PyObject *__pyx_v_svlen = NULL;
+  PyObject *__pyx_v_span = NULL;
   PyObject *__pyx_v_other = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -3788,48 +3735,48 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   Py_ssize_t __pyx_t_25;
   __Pyx_RefNannySetupContext("remap_soft_clips", 0);
 
-  /* "dysgu/remapping.pyx":112
+  /* "dysgu/remapping.pyx":95
  * def remap_soft_clips(events, ref_genome, min_sv_len):
  * 
  *     new_events = []             # <<<<<<<<<<<<<<
  *     try_remap_events = []
  *     ref_locs = []
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 112, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 95, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_new_events = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":113
+  /* "dysgu/remapping.pyx":96
  * 
  *     new_events = []
  *     try_remap_events = []             # <<<<<<<<<<<<<<
  *     ref_locs = []
  * 
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 113, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 96, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_try_remap_events = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":114
+  /* "dysgu/remapping.pyx":97
  *     new_events = []
  *     try_remap_events = []
  *     ref_locs = []             # <<<<<<<<<<<<<<
  * 
  *     for count, e in enumerate(events):
  */
-  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 114, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 97, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_ref_locs = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":116
+  /* "dysgu/remapping.pyx":99
  *     ref_locs = []
  * 
  *     for count, e in enumerate(events):             # <<<<<<<<<<<<<<
- *         # echo(e)
  *         e["remapped"] = 0
+ *         e["remap_score"] = 0
  */
   __Pyx_INCREF(__pyx_int_0);
   __pyx_t_1 = __pyx_int_0;
@@ -3837,26 +3784,26 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     __pyx_t_2 = __pyx_v_events; __Pyx_INCREF(__pyx_t_2); __pyx_t_3 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 116, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_2 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 99, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_4 = Py_TYPE(__pyx_t_2)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 116, __pyx_L1_error)
+    __pyx_t_4 = Py_TYPE(__pyx_t_2)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 99, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_4)) {
       if (likely(PyList_CheckExact(__pyx_t_2))) {
         if (__pyx_t_3 >= PyList_GET_SIZE(__pyx_t_2)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_5); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 116, __pyx_L1_error)
+        __pyx_t_5 = PyList_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_5); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 99, __pyx_L1_error)
         #else
-        __pyx_t_5 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 116, __pyx_L1_error)
+        __pyx_t_5 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 99, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       } else {
         if (__pyx_t_3 >= PyTuple_GET_SIZE(__pyx_t_2)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_5); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 116, __pyx_L1_error)
+        __pyx_t_5 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_3); __Pyx_INCREF(__pyx_t_5); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 99, __pyx_L1_error)
         #else
-        __pyx_t_5 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 116, __pyx_L1_error)
+        __pyx_t_5 = PySequence_ITEM(__pyx_t_2, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 99, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         #endif
       }
@@ -3866,7 +3813,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 116, __pyx_L1_error)
+          else __PYX_ERR(0, 99, __pyx_L1_error)
         }
         break;
       }
@@ -3876,87 +3823,87 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     __pyx_t_5 = 0;
     __Pyx_INCREF(__pyx_t_1);
     __Pyx_XDECREF_SET(__pyx_v_count, __pyx_t_1);
-    __pyx_t_5 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 116, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyInt_AddObjC(__pyx_t_1, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 99, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_1);
     __pyx_t_1 = __pyx_t_5;
     __pyx_t_5 = 0;
 
-    /* "dysgu/remapping.pyx":118
+    /* "dysgu/remapping.pyx":100
+ * 
  *     for count, e in enumerate(events):
- *         # echo(e)
  *         e["remapped"] = 0             # <<<<<<<<<<<<<<
- *         e["switched"] = 0
+ *         e["remap_score"] = 0
  *         if 'svlen_precise' not in e:
  */
-    if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remapped, __pyx_int_0) < 0)) __PYX_ERR(0, 118, __pyx_L1_error)
+    if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remapped, __pyx_int_0) < 0)) __PYX_ERR(0, 100, __pyx_L1_error)
 
-    /* "dysgu/remapping.pyx":119
- *         # echo(e)
+    /* "dysgu/remapping.pyx":101
+ *     for count, e in enumerate(events):
  *         e["remapped"] = 0
- *         e["switched"] = 0             # <<<<<<<<<<<<<<
+ *         e["remap_score"] = 0             # <<<<<<<<<<<<<<
  *         if 'svlen_precise' not in e:
  *             e['svlen_precise'] = 1
  */
-    if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_switched, __pyx_int_0) < 0)) __PYX_ERR(0, 119, __pyx_L1_error)
+    if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remap_score, __pyx_int_0) < 0)) __PYX_ERR(0, 101, __pyx_L1_error)
 
-    /* "dysgu/remapping.pyx":120
+    /* "dysgu/remapping.pyx":102
  *         e["remapped"] = 0
- *         e["switched"] = 0
+ *         e["remap_score"] = 0
  *         if 'svlen_precise' not in e:             # <<<<<<<<<<<<<<
  *             e['svlen_precise'] = 1
  * 
  */
-    __pyx_t_6 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_svlen_precise, __pyx_v_e, Py_NE)); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 120, __pyx_L1_error)
+    __pyx_t_6 = (__Pyx_PySequence_ContainsTF(__pyx_n_u_svlen_precise, __pyx_v_e, Py_NE)); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 102, __pyx_L1_error)
     __pyx_t_7 = (__pyx_t_6 != 0);
     if (__pyx_t_7) {
 
-      /* "dysgu/remapping.pyx":121
- *         e["switched"] = 0
+      /* "dysgu/remapping.pyx":103
+ *         e["remap_score"] = 0
  *         if 'svlen_precise' not in e:
  *             e['svlen_precise'] = 1             # <<<<<<<<<<<<<<
  * 
  *         if e["chrA"] != e["chrB"]:
  */
-      if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svlen_precise, __pyx_int_1) < 0)) __PYX_ERR(0, 121, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svlen_precise, __pyx_int_1) < 0)) __PYX_ERR(0, 103, __pyx_L1_error)
 
-      /* "dysgu/remapping.pyx":120
+      /* "dysgu/remapping.pyx":102
  *         e["remapped"] = 0
- *         e["switched"] = 0
+ *         e["remap_score"] = 0
  *         if 'svlen_precise' not in e:             # <<<<<<<<<<<<<<
  *             e['svlen_precise'] = 1
  * 
  */
     }
 
-    /* "dysgu/remapping.pyx":123
+    /* "dysgu/remapping.pyx":105
  *             e['svlen_precise'] = 1
  * 
  *         if e["chrA"] != e["chrB"]:             # <<<<<<<<<<<<<<
  *             new_events.append(e)
  *             continue
  */
-    __pyx_t_5 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 105, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 105, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
-    __pyx_t_9 = PyObject_RichCompare(__pyx_t_5, __pyx_t_8, Py_NE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_9 = PyObject_RichCompare(__pyx_t_5, __pyx_t_8, Py_NE); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 105, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 123, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 105, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     if (__pyx_t_7) {
 
-      /* "dysgu/remapping.pyx":124
+      /* "dysgu/remapping.pyx":106
  * 
  *         if e["chrA"] != e["chrB"]:
  *             new_events.append(e)             # <<<<<<<<<<<<<<
  *             continue
  * 
  */
-      __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 124, __pyx_L1_error)
+      __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 106, __pyx_L1_error)
 
-      /* "dysgu/remapping.pyx":125
+      /* "dysgu/remapping.pyx":107
  *         if e["chrA"] != e["chrB"]:
  *             new_events.append(e)
  *             continue             # <<<<<<<<<<<<<<
@@ -3965,7 +3912,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
       goto __pyx_L3_continue;
 
-      /* "dysgu/remapping.pyx":123
+      /* "dysgu/remapping.pyx":105
  *             e['svlen_precise'] = 1
  * 
  *         if e["chrA"] != e["chrB"]:             # <<<<<<<<<<<<<<
@@ -3974,7 +3921,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
     }
 
-    /* "dysgu/remapping.pyx":127
+    /* "dysgu/remapping.pyx":109
  *             continue
  * 
  *         try_remap = False             # <<<<<<<<<<<<<<
@@ -3983,24 +3930,24 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
     __pyx_v_try_remap = 0;
 
-    /* "dysgu/remapping.pyx":128
+    /* "dysgu/remapping.pyx":110
  * 
  *         try_remap = False
  *         if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):             # <<<<<<<<<<<<<<
  *             if not e['svlen_precise']:
  *                 try_remap = True
  */
-    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_contig); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_contig); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     if (!__pyx_t_6) {
     } else {
       goto __pyx_L9_next_and;
     }
-    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_contig2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_contig2); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     if (__pyx_t_6) {
     } else {
@@ -4008,31 +3955,31 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       goto __pyx_L8_bool_binop_done;
     }
     __pyx_L9_next_and:;
-    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_9);
-    __pyx_t_8 = PyObject_RichCompare(__pyx_t_9, __pyx_int_1000, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_8 = PyObject_RichCompare(__pyx_t_9, __pyx_int_1000, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 128, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 110, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __pyx_t_7 = __pyx_t_6;
     __pyx_L8_bool_binop_done:;
     if (__pyx_t_7) {
 
-      /* "dysgu/remapping.pyx":129
+      /* "dysgu/remapping.pyx":111
  *         try_remap = False
  *         if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):
  *             if not e['svlen_precise']:             # <<<<<<<<<<<<<<
  *                 try_remap = True
  * 
  */
-      __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen_precise); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen_precise); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 111, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 129, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 111, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __pyx_t_6 = ((!__pyx_t_7) != 0);
       if (__pyx_t_6) {
 
-        /* "dysgu/remapping.pyx":130
+        /* "dysgu/remapping.pyx":112
  *         if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):
  *             if not e['svlen_precise']:
  *                 try_remap = True             # <<<<<<<<<<<<<<
@@ -4041,7 +3988,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
         __pyx_v_try_remap = 1;
 
-        /* "dysgu/remapping.pyx":129
+        /* "dysgu/remapping.pyx":111
  *         try_remap = False
  *         if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):
  *             if not e['svlen_precise']:             # <<<<<<<<<<<<<<
@@ -4050,7 +3997,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
       }
 
-      /* "dysgu/remapping.pyx":128
+      /* "dysgu/remapping.pyx":110
  * 
  *         try_remap = False
  *         if (e["contig"] or e["contig2"]) and (e["svlen"] < 1000):             # <<<<<<<<<<<<<<
@@ -4059,7 +4006,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
     }
 
-    /* "dysgu/remapping.pyx":132
+    /* "dysgu/remapping.pyx":114
  *                 try_remap = True
  * 
  *         if not try_remap:             # <<<<<<<<<<<<<<
@@ -4069,25 +4016,25 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     __pyx_t_6 = ((!(__pyx_v_try_remap != 0)) != 0);
     if (__pyx_t_6) {
 
-      /* "dysgu/remapping.pyx":133
+      /* "dysgu/remapping.pyx":115
  * 
  *         if not try_remap:
  *             e["modified"] = 0             # <<<<<<<<<<<<<<
  *             new_events.append(e)
  *             continue
  */
-      if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_modified, __pyx_int_0) < 0)) __PYX_ERR(0, 133, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_modified, __pyx_int_0) < 0)) __PYX_ERR(0, 115, __pyx_L1_error)
 
-      /* "dysgu/remapping.pyx":134
+      /* "dysgu/remapping.pyx":116
  *         if not try_remap:
  *             e["modified"] = 0
  *             new_events.append(e)             # <<<<<<<<<<<<<<
  *             continue
  * 
  */
-      __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 134, __pyx_L1_error)
+      __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 116, __pyx_L1_error)
 
-      /* "dysgu/remapping.pyx":135
+      /* "dysgu/remapping.pyx":117
  *             e["modified"] = 0
  *             new_events.append(e)
  *             continue             # <<<<<<<<<<<<<<
@@ -4096,7 +4043,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
       goto __pyx_L3_continue;
 
-      /* "dysgu/remapping.pyx":132
+      /* "dysgu/remapping.pyx":114
  *                 try_remap = True
  * 
  *         if not try_remap:             # <<<<<<<<<<<<<<
@@ -4105,39 +4052,39 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
     }
 
-    /* "dysgu/remapping.pyx":138
+    /* "dysgu/remapping.pyx":120
  * 
  *         else:
  *             if e["posA"] <= e["posB"]:             # <<<<<<<<<<<<<<
- *                 # if count in (21, 22, 23):
- *                 #     echo("-->", count, (e["chrA"], e["posA"], e["posB"]))
+ *                 ref_locs.append((e["chrA"], e["posA"], e["posB"], count))
+ *             else:
  */
     /*else*/ {
-      __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 138, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 120, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 138, __pyx_L1_error)
+      __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 120, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_5 = PyObject_RichCompare(__pyx_t_8, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 138, __pyx_L1_error)
+      __pyx_t_5 = PyObject_RichCompare(__pyx_t_8, __pyx_t_9, Py_LE); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 120, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 138, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 120, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       if (__pyx_t_6) {
 
-        /* "dysgu/remapping.pyx":141
- *                 # if count in (21, 22, 23):
- *                 #     echo("-->", count, (e["chrA"], e["posA"], e["posB"]))
+        /* "dysgu/remapping.pyx":121
+ *         else:
+ *             if e["posA"] <= e["posB"]:
  *                 ref_locs.append((e["chrA"], e["posA"], e["posB"], count))             # <<<<<<<<<<<<<<
  *             else:
- *                 # if count in (21, 22, 23):
+ *                 ref_locs.append((e["chrA"], e["posB"], e["posA"], count))
  */
-        __pyx_t_5 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 141, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
-        __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 141, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 141, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_11 = PyTuple_New(4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 141, __pyx_L1_error)
+        __pyx_t_11 = PyTuple_New(4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_11);
         __Pyx_GIVEREF(__pyx_t_5);
         PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_5);
@@ -4151,34 +4098,34 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         __pyx_t_5 = 0;
         __pyx_t_9 = 0;
         __pyx_t_8 = 0;
-        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_ref_locs, __pyx_t_11); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 141, __pyx_L1_error)
+        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_ref_locs, __pyx_t_11); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 121, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
 
-        /* "dysgu/remapping.pyx":138
+        /* "dysgu/remapping.pyx":120
  * 
  *         else:
  *             if e["posA"] <= e["posB"]:             # <<<<<<<<<<<<<<
- *                 # if count in (21, 22, 23):
- *                 #     echo("-->", count, (e["chrA"], e["posA"], e["posB"]))
+ *                 ref_locs.append((e["chrA"], e["posA"], e["posB"], count))
+ *             else:
  */
         goto __pyx_L13;
       }
 
-      /* "dysgu/remapping.pyx":145
- *                 # if count in (21, 22, 23):
- *                 #     echo("-->", count, ".",  (e["chrA"], e["posA"], e["posB"]))
+      /* "dysgu/remapping.pyx":123
+ *                 ref_locs.append((e["chrA"], e["posA"], e["posB"], count))
+ *             else:
  *                 ref_locs.append((e["chrA"], e["posB"], e["posA"], count))             # <<<<<<<<<<<<<<
- *             # try_remap_events.append(e)
  * 
+ *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
  */
       /*else*/ {
-        __pyx_t_11 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 145, __pyx_L1_error)
+        __pyx_t_11 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_chrA); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 123, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_11);
-        __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 145, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posB); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 123, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 145, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_posA); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 123, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
-        __pyx_t_5 = PyTuple_New(4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 145, __pyx_L1_error)
+        __pyx_t_5 = PyTuple_New(4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 123, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         __Pyx_GIVEREF(__pyx_t_11);
         PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_11);
@@ -4192,43 +4139,43 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         __pyx_t_11 = 0;
         __pyx_t_8 = 0;
         __pyx_t_9 = 0;
-        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_ref_locs, __pyx_t_5); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 145, __pyx_L1_error)
+        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_ref_locs, __pyx_t_5); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 123, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       }
       __pyx_L13:;
     }
 
-    /* "dysgu/remapping.pyx":116
+    /* "dysgu/remapping.pyx":99
  *     ref_locs = []
  * 
  *     for count, e in enumerate(events):             # <<<<<<<<<<<<<<
- *         # echo(e)
  *         e["remapped"] = 0
+ *         e["remap_score"] = 0
  */
     __pyx_L3_continue:;
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":149
- * 
+  /* "dysgu/remapping.pyx":125
+ *                 ref_locs.append((e["chrA"], e["posB"], e["posA"], count))
  * 
  *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):             # <<<<<<<<<<<<<<
  *         if gstart < 0:
  *             gstart = 0
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_merge_intervals); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_merge_intervals); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __pyx_t_2 = PyTuple_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_v_ref_locs);
   __Pyx_GIVEREF(__pyx_v_ref_locs);
   PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_v_ref_locs);
-  __pyx_t_5 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 149, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_pad, __pyx_int_1500) < 0) __PYX_ERR(0, 149, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_add_indexes, Py_True) < 0) __PYX_ERR(0, 149, __pyx_L1_error)
-  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 149, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_pad, __pyx_int_1500) < 0) __PYX_ERR(0, 125, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_add_indexes, Py_True) < 0) __PYX_ERR(0, 125, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 125, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -4237,9 +4184,9 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     __pyx_t_5 = __pyx_t_9; __Pyx_INCREF(__pyx_t_5); __pyx_t_3 = 0;
     __pyx_t_4 = NULL;
   } else {
-    __pyx_t_3 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 149, __pyx_L1_error)
+    __pyx_t_3 = -1; __pyx_t_5 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 125, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 149, __pyx_L1_error)
+    __pyx_t_4 = Py_TYPE(__pyx_t_5)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 125, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   for (;;) {
@@ -4247,17 +4194,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       if (likely(PyList_CheckExact(__pyx_t_5))) {
         if (__pyx_t_3 >= PyList_GET_SIZE(__pyx_t_5)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_9 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_3); __Pyx_INCREF(__pyx_t_9); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 149, __pyx_L1_error)
+        __pyx_t_9 = PyList_GET_ITEM(__pyx_t_5, __pyx_t_3); __Pyx_INCREF(__pyx_t_9); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 125, __pyx_L1_error)
         #else
-        __pyx_t_9 = PySequence_ITEM(__pyx_t_5, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 149, __pyx_L1_error)
+        __pyx_t_9 = PySequence_ITEM(__pyx_t_5, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 125, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         #endif
       } else {
         if (__pyx_t_3 >= PyTuple_GET_SIZE(__pyx_t_5)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_9 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_3); __Pyx_INCREF(__pyx_t_9); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 149, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_GET_ITEM(__pyx_t_5, __pyx_t_3); __Pyx_INCREF(__pyx_t_9); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 125, __pyx_L1_error)
         #else
-        __pyx_t_9 = PySequence_ITEM(__pyx_t_5, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 149, __pyx_L1_error)
+        __pyx_t_9 = PySequence_ITEM(__pyx_t_5, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 125, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         #endif
       }
@@ -4267,7 +4214,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 149, __pyx_L1_error)
+          else __PYX_ERR(0, 125, __pyx_L1_error)
         }
         break;
       }
@@ -4279,7 +4226,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       if (unlikely(size != 4)) {
         if (size > 4) __Pyx_RaiseTooManyValuesError(4);
         else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-        __PYX_ERR(0, 149, __pyx_L1_error)
+        __PYX_ERR(0, 125, __pyx_L1_error)
       }
       #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
       if (likely(PyTuple_CheckExact(sequence))) {
@@ -4302,7 +4249,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         Py_ssize_t i;
         PyObject** temps[4] = {&__pyx_t_2,&__pyx_t_1,&__pyx_t_8,&__pyx_t_11};
         for (i=0; i < 4; i++) {
-          PyObject* item = PySequence_ITEM(sequence, i); if (unlikely(!item)) __PYX_ERR(0, 149, __pyx_L1_error)
+          PyObject* item = PySequence_ITEM(sequence, i); if (unlikely(!item)) __PYX_ERR(0, 125, __pyx_L1_error)
           __Pyx_GOTREF(item);
           *(temps[i]) = item;
         }
@@ -4312,7 +4259,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     } else {
       Py_ssize_t index = -1;
       PyObject** temps[4] = {&__pyx_t_2,&__pyx_t_1,&__pyx_t_8,&__pyx_t_11};
-      __pyx_t_12 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 149, __pyx_L1_error)
+      __pyx_t_12 = PyObject_GetIter(__pyx_t_9); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 125, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __pyx_t_13 = Py_TYPE(__pyx_t_12)->tp_iternext;
@@ -4321,7 +4268,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
         __Pyx_GOTREF(item);
         *(temps[index]) = item;
       }
-      if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_12), 4) < 0) __PYX_ERR(0, 149, __pyx_L1_error)
+      if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_12), 4) < 0) __PYX_ERR(0, 125, __pyx_L1_error)
       __pyx_t_13 = NULL;
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       goto __pyx_L17_unpacking_done;
@@ -4329,7 +4276,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       __pyx_t_13 = NULL;
       if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-      __PYX_ERR(0, 149, __pyx_L1_error)
+      __PYX_ERR(0, 125, __pyx_L1_error)
       __pyx_L17_unpacking_done:;
     }
     __Pyx_XDECREF_SET(__pyx_v_chrom, __pyx_t_2);
@@ -4341,19 +4288,19 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     __Pyx_XDECREF_SET(__pyx_v_grp_idxs, __pyx_t_11);
     __pyx_t_11 = 0;
 
-    /* "dysgu/remapping.pyx":150
+    /* "dysgu/remapping.pyx":126
  * 
  *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
  *         if gstart < 0:             # <<<<<<<<<<<<<<
  *             gstart = 0
  * 
  */
-    __pyx_t_9 = PyObject_RichCompare(__pyx_v_gstart, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 150, __pyx_L1_error)
-    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 150, __pyx_L1_error)
+    __pyx_t_9 = PyObject_RichCompare(__pyx_v_gstart, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 126, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_9); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 126, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     if (__pyx_t_6) {
 
-      /* "dysgu/remapping.pyx":151
+      /* "dysgu/remapping.pyx":127
  *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
  *         if gstart < 0:
  *             gstart = 0             # <<<<<<<<<<<<<<
@@ -4363,7 +4310,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       __Pyx_INCREF(__pyx_int_0);
       __Pyx_DECREF_SET(__pyx_v_gstart, __pyx_int_0);
 
-      /* "dysgu/remapping.pyx":150
+      /* "dysgu/remapping.pyx":126
  * 
  *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
  *         if gstart < 0:             # <<<<<<<<<<<<<<
@@ -4372,18 +4319,18 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
     }
 
-    /* "dysgu/remapping.pyx":153
+    /* "dysgu/remapping.pyx":129
  *             gstart = 0
  * 
  *         ref_seq_big = None             # <<<<<<<<<<<<<<
  * 
- * 
+ *         for index in grp_idxs:
  */
     __Pyx_INCREF(Py_None);
     __Pyx_XDECREF_SET(__pyx_v_ref_seq_big, Py_None);
 
-    /* "dysgu/remapping.pyx":156
- * 
+    /* "dysgu/remapping.pyx":131
+ *         ref_seq_big = None
  * 
  *         for index in grp_idxs:             # <<<<<<<<<<<<<<
  *             e = events[index]
@@ -4393,26 +4340,26 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       __pyx_t_9 = __pyx_v_grp_idxs; __Pyx_INCREF(__pyx_t_9); __pyx_t_14 = 0;
       __pyx_t_15 = NULL;
     } else {
-      __pyx_t_14 = -1; __pyx_t_9 = PyObject_GetIter(__pyx_v_grp_idxs); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 156, __pyx_L1_error)
+      __pyx_t_14 = -1; __pyx_t_9 = PyObject_GetIter(__pyx_v_grp_idxs); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 131, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_15 = Py_TYPE(__pyx_t_9)->tp_iternext; if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 156, __pyx_L1_error)
+      __pyx_t_15 = Py_TYPE(__pyx_t_9)->tp_iternext; if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 131, __pyx_L1_error)
     }
     for (;;) {
       if (likely(!__pyx_t_15)) {
         if (likely(PyList_CheckExact(__pyx_t_9))) {
           if (__pyx_t_14 >= PyList_GET_SIZE(__pyx_t_9)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_11 = PyList_GET_ITEM(__pyx_t_9, __pyx_t_14); __Pyx_INCREF(__pyx_t_11); __pyx_t_14++; if (unlikely(0 < 0)) __PYX_ERR(0, 156, __pyx_L1_error)
+          __pyx_t_11 = PyList_GET_ITEM(__pyx_t_9, __pyx_t_14); __Pyx_INCREF(__pyx_t_11); __pyx_t_14++; if (unlikely(0 < 0)) __PYX_ERR(0, 131, __pyx_L1_error)
           #else
-          __pyx_t_11 = PySequence_ITEM(__pyx_t_9, __pyx_t_14); __pyx_t_14++; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 156, __pyx_L1_error)
+          __pyx_t_11 = PySequence_ITEM(__pyx_t_9, __pyx_t_14); __pyx_t_14++; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 131, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_11);
           #endif
         } else {
           if (__pyx_t_14 >= PyTuple_GET_SIZE(__pyx_t_9)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_11 = PyTuple_GET_ITEM(__pyx_t_9, __pyx_t_14); __Pyx_INCREF(__pyx_t_11); __pyx_t_14++; if (unlikely(0 < 0)) __PYX_ERR(0, 156, __pyx_L1_error)
+          __pyx_t_11 = PyTuple_GET_ITEM(__pyx_t_9, __pyx_t_14); __Pyx_INCREF(__pyx_t_11); __pyx_t_14++; if (unlikely(0 < 0)) __PYX_ERR(0, 131, __pyx_L1_error)
           #else
-          __pyx_t_11 = PySequence_ITEM(__pyx_t_9, __pyx_t_14); __pyx_t_14++; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 156, __pyx_L1_error)
+          __pyx_t_11 = PySequence_ITEM(__pyx_t_9, __pyx_t_14); __pyx_t_14++; if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 131, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_11);
           #endif
         }
@@ -4422,7 +4369,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 156, __pyx_L1_error)
+            else __PYX_ERR(0, 131, __pyx_L1_error)
           }
           break;
         }
@@ -4431,20 +4378,20 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       __Pyx_XDECREF_SET(__pyx_v_index, __pyx_t_11);
       __pyx_t_11 = 0;
 
-      /* "dysgu/remapping.pyx":157
+      /* "dysgu/remapping.pyx":132
  * 
  *         for index in grp_idxs:
  *             e = events[index]             # <<<<<<<<<<<<<<
  * 
- *     # for e in try_remap_events:
+ *             added = 0
  */
-      __pyx_t_11 = __Pyx_PyObject_GetItem(__pyx_v_events, __pyx_v_index); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 157, __pyx_L1_error)
+      __pyx_t_11 = __Pyx_PyObject_GetItem(__pyx_v_events, __pyx_v_index); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 132, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_11);
       __Pyx_XDECREF_SET(__pyx_v_e, __pyx_t_11);
       __pyx_t_11 = 0;
 
-      /* "dysgu/remapping.pyx":161
- *     # for e in try_remap_events:
+      /* "dysgu/remapping.pyx":134
+ *             e = events[index]
  * 
  *             added = 0             # <<<<<<<<<<<<<<
  *             passed = False
@@ -4452,27 +4399,27 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
       __pyx_v_added = 0;
 
-      /* "dysgu/remapping.pyx":162
+      /* "dysgu/remapping.pyx":135
  * 
  *             added = 0
  *             passed = False             # <<<<<<<<<<<<<<
  *             high_quality_clip = False
- * 
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  */
       __pyx_v_passed = 0;
 
-      /* "dysgu/remapping.pyx":163
+      /* "dysgu/remapping.pyx":136
  *             added = 0
  *             passed = False
  *             high_quality_clip = False             # <<<<<<<<<<<<<<
- * 
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):
  */
       __pyx_v_high_quality_clip = 0;
 
-      /* "dysgu/remapping.pyx":165
+      /* "dysgu/remapping.pyx":138
  *             high_quality_clip = False
- * 
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):             # <<<<<<<<<<<<<<
  *                 if cont in e and e[cont]:
  * 
@@ -4481,9 +4428,9 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       for (;;) {
         if (__pyx_t_16 >= 2) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_8 = PyTuple_GET_ITEM(__pyx_t_11, __pyx_t_16); __Pyx_INCREF(__pyx_t_8); __pyx_t_16++; if (unlikely(0 < 0)) __PYX_ERR(0, 165, __pyx_L1_error)
+        __pyx_t_8 = PyTuple_GET_ITEM(__pyx_t_11, __pyx_t_16); __Pyx_INCREF(__pyx_t_8); __pyx_t_16++; if (unlikely(0 < 0)) __PYX_ERR(0, 138, __pyx_L1_error)
         #else
-        __pyx_t_8 = PySequence_ITEM(__pyx_t_11, __pyx_t_16); __pyx_t_16++; if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 165, __pyx_L1_error)
+        __pyx_t_8 = PySequence_ITEM(__pyx_t_11, __pyx_t_16); __pyx_t_16++; if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 138, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
         #endif
         if (likely(__pyx_t_8 != Py_None)) {
@@ -4492,7 +4439,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           if (unlikely(size != 2)) {
             if (size > 2) __Pyx_RaiseTooManyValuesError(2);
             else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-            __PYX_ERR(0, 165, __pyx_L1_error)
+            __PYX_ERR(0, 138, __pyx_L1_error)
           }
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
           __pyx_t_1 = PyTuple_GET_ITEM(sequence, 0); 
@@ -4500,76 +4447,76 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           __Pyx_INCREF(__pyx_t_1);
           __Pyx_INCREF(__pyx_t_2);
           #else
-          __pyx_t_1 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 165, __pyx_L1_error)
+          __pyx_t_1 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_2 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 165, __pyx_L1_error)
+          __pyx_t_2 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 138, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
           #endif
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         } else {
-          __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 165, __pyx_L1_error)
+          __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 138, __pyx_L1_error)
         }
         __Pyx_XDECREF_SET(__pyx_v_cont, __pyx_t_1);
         __pyx_t_1 = 0;
         __Pyx_XDECREF_SET(__pyx_v_idx, __pyx_t_2);
         __pyx_t_2 = 0;
 
-        /* "dysgu/remapping.pyx":166
- * 
+        /* "dysgu/remapping.pyx":139
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):
  *                 if cont in e and e[cont]:             # <<<<<<<<<<<<<<
  * 
  *                     break_position = e["pos" + idx]
  */
-        __pyx_t_7 = (__Pyx_PySequence_ContainsTF(__pyx_v_cont, __pyx_v_e, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 166, __pyx_L1_error)
+        __pyx_t_7 = (__Pyx_PySequence_ContainsTF(__pyx_v_cont, __pyx_v_e, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 139, __pyx_L1_error)
         __pyx_t_17 = (__pyx_t_7 != 0);
         if (__pyx_t_17) {
         } else {
           __pyx_t_6 = __pyx_t_17;
           goto __pyx_L24_bool_binop_done;
         }
-        __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_v_cont); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
+        __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_v_cont); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 139, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
-        __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 166, __pyx_L1_error)
+        __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 139, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
         __pyx_t_6 = __pyx_t_17;
         __pyx_L24_bool_binop_done:;
         if (__pyx_t_6) {
 
-          /* "dysgu/remapping.pyx":168
+          /* "dysgu/remapping.pyx":141
  *                 if cont in e and e[cont]:
  * 
  *                     break_position = e["pos" + idx]             # <<<<<<<<<<<<<<
  *                     clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
  *                     if not clip_res:
  */
-          __pyx_t_8 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 168, __pyx_L1_error)
+          __pyx_t_8 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 141, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
-          __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 168, __pyx_L1_error)
+          __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 141, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_XDECREF_SET(__pyx_v_break_position, __pyx_t_2);
           __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":169
+          /* "dysgu/remapping.pyx":142
  * 
  *                     break_position = e["pos" + idx]
  *                     clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])             # <<<<<<<<<<<<<<
  *                     if not clip_res:
  *                         continue
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_get_clipped_seq); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_get_clipped_seq); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
-          __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_v_cont); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __pyx_t_1 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_v_cont); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_12 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_ref_start); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __pyx_t_12 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_ref_start); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_12);
-          __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_12); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_12); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
           __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-          __pyx_t_12 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_ref_end); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __pyx_t_12 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_ref_end); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_12);
-          __pyx_t_19 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_12); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 169, __pyx_L1_error)
+          __pyx_t_19 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_12); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 142, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_19);
           __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
           __pyx_t_12 = NULL;
@@ -4587,7 +4534,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           #if CYTHON_FAST_PYCALL
           if (PyFunction_Check(__pyx_t_8)) {
             PyObject *__pyx_temp[5] = {__pyx_t_12, __pyx_t_1, __pyx_v_break_position, __pyx_t_18, __pyx_t_19};
-            __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 4+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+            __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 4+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 142, __pyx_L1_error)
             __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
             __Pyx_GOTREF(__pyx_t_2);
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -4598,7 +4545,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           #if CYTHON_FAST_PYCCALL
           if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
             PyObject *__pyx_temp[5] = {__pyx_t_12, __pyx_t_1, __pyx_v_break_position, __pyx_t_18, __pyx_t_19};
-            __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 4+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+            __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 4+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 142, __pyx_L1_error)
             __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
             __Pyx_GOTREF(__pyx_t_2);
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -4607,7 +4554,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           } else
           #endif
           {
-            __pyx_t_21 = PyTuple_New(4+__pyx_t_20); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 169, __pyx_L1_error)
+            __pyx_t_21 = PyTuple_New(4+__pyx_t_20); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 142, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_21);
             if (__pyx_t_12) {
               __Pyx_GIVEREF(__pyx_t_12); PyTuple_SET_ITEM(__pyx_t_21, 0, __pyx_t_12); __pyx_t_12 = NULL;
@@ -4624,7 +4571,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
             __pyx_t_1 = 0;
             __pyx_t_18 = 0;
             __pyx_t_19 = 0;
-            __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_21, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 169, __pyx_L1_error)
+            __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_21, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 142, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
             __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
           }
@@ -4632,163 +4579,215 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           __Pyx_XDECREF_SET(__pyx_v_clip_res, __pyx_t_2);
           __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":170
+          /* "dysgu/remapping.pyx":143
  *                     break_position = e["pos" + idx]
  *                     clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
  *                     if not clip_res:             # <<<<<<<<<<<<<<
  *                         continue
- *                     clip_seq, clip_side = clip_res
+ *                     clip_seq, clip_side, length_other_clip = clip_res
  */
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_clip_res); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 170, __pyx_L1_error)
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_clip_res); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 143, __pyx_L1_error)
           __pyx_t_17 = ((!__pyx_t_6) != 0);
           if (__pyx_t_17) {
 
-            /* "dysgu/remapping.pyx":171
+            /* "dysgu/remapping.pyx":144
  *                     clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
  *                     if not clip_res:
  *                         continue             # <<<<<<<<<<<<<<
- *                     clip_seq, clip_side = clip_res
+ *                     clip_seq, clip_side, length_other_clip = clip_res
  * 
  */
             goto __pyx_L21_continue;
 
-            /* "dysgu/remapping.pyx":170
+            /* "dysgu/remapping.pyx":143
  *                     break_position = e["pos" + idx]
  *                     clip_res = get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
  *                     if not clip_res:             # <<<<<<<<<<<<<<
  *                         continue
- *                     clip_seq, clip_side = clip_res
+ *                     clip_seq, clip_side, length_other_clip = clip_res
  */
           }
 
-          /* "dysgu/remapping.pyx":172
+          /* "dysgu/remapping.pyx":145
  *                     if not clip_res:
  *                         continue
- *                     clip_seq, clip_side = clip_res             # <<<<<<<<<<<<<<
+ *                     clip_seq, clip_side, length_other_clip = clip_res             # <<<<<<<<<<<<<<
  * 
- *                     if clip_side == 0:
+ *                     if length_other_clip > 3 and e['ref_bases'] < 50:
  */
           if ((likely(PyTuple_CheckExact(__pyx_v_clip_res))) || (PyList_CheckExact(__pyx_v_clip_res))) {
             PyObject* sequence = __pyx_v_clip_res;
             Py_ssize_t size = __Pyx_PySequence_SIZE(sequence);
-            if (unlikely(size != 2)) {
-              if (size > 2) __Pyx_RaiseTooManyValuesError(2);
+            if (unlikely(size != 3)) {
+              if (size > 3) __Pyx_RaiseTooManyValuesError(3);
               else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-              __PYX_ERR(0, 172, __pyx_L1_error)
+              __PYX_ERR(0, 145, __pyx_L1_error)
             }
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
             if (likely(PyTuple_CheckExact(sequence))) {
               __pyx_t_2 = PyTuple_GET_ITEM(sequence, 0); 
               __pyx_t_8 = PyTuple_GET_ITEM(sequence, 1); 
+              __pyx_t_21 = PyTuple_GET_ITEM(sequence, 2); 
             } else {
               __pyx_t_2 = PyList_GET_ITEM(sequence, 0); 
               __pyx_t_8 = PyList_GET_ITEM(sequence, 1); 
+              __pyx_t_21 = PyList_GET_ITEM(sequence, 2); 
             }
             __Pyx_INCREF(__pyx_t_2);
             __Pyx_INCREF(__pyx_t_8);
+            __Pyx_INCREF(__pyx_t_21);
             #else
-            __pyx_t_2 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 172, __pyx_L1_error)
+            __pyx_t_2 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 145, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_8 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 172, __pyx_L1_error)
+            __pyx_t_8 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 145, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_8);
+            __pyx_t_21 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 145, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
             #endif
           } else {
             Py_ssize_t index = -1;
-            __pyx_t_21 = PyObject_GetIter(__pyx_v_clip_res); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 172, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_21);
-            __pyx_t_13 = Py_TYPE(__pyx_t_21)->tp_iternext;
-            index = 0; __pyx_t_2 = __pyx_t_13(__pyx_t_21); if (unlikely(!__pyx_t_2)) goto __pyx_L27_unpacking_failed;
+            __pyx_t_19 = PyObject_GetIter(__pyx_v_clip_res); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 145, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_19);
+            __pyx_t_13 = Py_TYPE(__pyx_t_19)->tp_iternext;
+            index = 0; __pyx_t_2 = __pyx_t_13(__pyx_t_19); if (unlikely(!__pyx_t_2)) goto __pyx_L27_unpacking_failed;
             __Pyx_GOTREF(__pyx_t_2);
-            index = 1; __pyx_t_8 = __pyx_t_13(__pyx_t_21); if (unlikely(!__pyx_t_8)) goto __pyx_L27_unpacking_failed;
+            index = 1; __pyx_t_8 = __pyx_t_13(__pyx_t_19); if (unlikely(!__pyx_t_8)) goto __pyx_L27_unpacking_failed;
             __Pyx_GOTREF(__pyx_t_8);
-            if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_21), 2) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
+            index = 2; __pyx_t_21 = __pyx_t_13(__pyx_t_19); if (unlikely(!__pyx_t_21)) goto __pyx_L27_unpacking_failed;
+            __Pyx_GOTREF(__pyx_t_21);
+            if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_19), 3) < 0) __PYX_ERR(0, 145, __pyx_L1_error)
             __pyx_t_13 = NULL;
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+            __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
             goto __pyx_L28_unpacking_done;
             __pyx_L27_unpacking_failed:;
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+            __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
             __pyx_t_13 = NULL;
             if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-            __PYX_ERR(0, 172, __pyx_L1_error)
+            __PYX_ERR(0, 145, __pyx_L1_error)
             __pyx_L28_unpacking_done:;
           }
           __Pyx_XDECREF_SET(__pyx_v_clip_seq, __pyx_t_2);
           __pyx_t_2 = 0;
           __Pyx_XDECREF_SET(__pyx_v_clip_side, __pyx_t_8);
           __pyx_t_8 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_length_other_clip, __pyx_t_21);
+          __pyx_t_21 = 0;
 
-          /* "dysgu/remapping.pyx":174
- *                     clip_seq, clip_side = clip_res
+          /* "dysgu/remapping.pyx":147
+ *                     clip_seq, clip_side, length_other_clip = clip_res
+ * 
+ *                     if length_other_clip > 3 and e['ref_bases'] < 50:             # <<<<<<<<<<<<<<
+ *                         continue
+ * 
+ */
+          __pyx_t_21 = PyObject_RichCompare(__pyx_v_length_other_clip, __pyx_int_3, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 147, __pyx_L1_error)
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 147, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+          if (__pyx_t_6) {
+          } else {
+            __pyx_t_17 = __pyx_t_6;
+            goto __pyx_L30_bool_binop_done;
+          }
+          __pyx_t_21 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_ref_bases); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 147, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __pyx_t_8 = PyObject_RichCompare(__pyx_t_21, __pyx_int_50, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 147, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 147, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __pyx_t_17 = __pyx_t_6;
+          __pyx_L30_bool_binop_done:;
+          if (__pyx_t_17) {
+
+            /* "dysgu/remapping.pyx":148
+ * 
+ *                     if length_other_clip > 3 and e['ref_bases'] < 50:
+ *                         continue             # <<<<<<<<<<<<<<
+ * 
+ *                     if clip_side == 0:
+ */
+            goto __pyx_L21_continue;
+
+            /* "dysgu/remapping.pyx":147
+ *                     clip_seq, clip_side, length_other_clip = clip_res
+ * 
+ *                     if length_other_clip > 3 and e['ref_bases'] < 50:             # <<<<<<<<<<<<<<
+ *                         continue
+ * 
+ */
+          }
+
+          /* "dysgu/remapping.pyx":150
+ *                         continue
  * 
  *                     if clip_side == 0:             # <<<<<<<<<<<<<<
  *                         w = e[cont + "_left_weight"]
- *                         if not w > 40:  # todo set as a parameter option
+ *                         if not w > 10:  # todo set as a parameter option
  */
-          __pyx_t_8 = __Pyx_PyInt_EqObjC(__pyx_v_clip_side, __pyx_int_0, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 174, __pyx_L1_error)
+          __pyx_t_8 = __Pyx_PyInt_EqObjC(__pyx_v_clip_side, __pyx_int_0, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 150, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
-          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 174, __pyx_L1_error)
+          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 150, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           if (__pyx_t_17) {
 
-            /* "dysgu/remapping.pyx":175
+            /* "dysgu/remapping.pyx":151
  * 
  *                     if clip_side == 0:
  *                         w = e[cont + "_left_weight"]             # <<<<<<<<<<<<<<
- *                         if not w > 40:  # todo set as a parameter option
+ *                         if not w > 10:  # todo set as a parameter option
  *                             continue
  */
-            __pyx_t_8 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_left_weight); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 175, __pyx_L1_error)
+            __pyx_t_8 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_left_weight); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 151, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_8);
-            __pyx_t_2 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_8); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 175, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
+            __pyx_t_21 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_8); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 151, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-            __Pyx_XDECREF_SET(__pyx_v_w, __pyx_t_2);
-            __pyx_t_2 = 0;
+            __Pyx_XDECREF_SET(__pyx_v_w, __pyx_t_21);
+            __pyx_t_21 = 0;
 
-            /* "dysgu/remapping.pyx":176
+            /* "dysgu/remapping.pyx":152
  *                     if clip_side == 0:
  *                         w = e[cont + "_left_weight"]
- *                         if not w > 40:  # todo set as a parameter option             # <<<<<<<<<<<<<<
+ *                         if not w > 10:  # todo set as a parameter option             # <<<<<<<<<<<<<<
  *                             continue
  *                         elif w > 400:
  */
-            __pyx_t_2 = PyObject_RichCompare(__pyx_v_w, __pyx_int_40, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 176, __pyx_L1_error)
-            __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 176, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            __pyx_t_21 = PyObject_RichCompare(__pyx_v_w, __pyx_int_10, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 152, __pyx_L1_error)
+            __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 152, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
             __pyx_t_6 = ((!__pyx_t_17) != 0);
             if (__pyx_t_6) {
 
-              /* "dysgu/remapping.pyx":177
+              /* "dysgu/remapping.pyx":153
  *                         w = e[cont + "_left_weight"]
- *                         if not w > 40:  # todo set as a parameter option
+ *                         if not w > 10:  # todo set as a parameter option
  *                             continue             # <<<<<<<<<<<<<<
  *                         elif w > 400:
  *                             high_quality_clip = True
  */
               goto __pyx_L21_continue;
 
-              /* "dysgu/remapping.pyx":176
+              /* "dysgu/remapping.pyx":152
  *                     if clip_side == 0:
  *                         w = e[cont + "_left_weight"]
- *                         if not w > 40:  # todo set as a parameter option             # <<<<<<<<<<<<<<
+ *                         if not w > 10:  # todo set as a parameter option             # <<<<<<<<<<<<<<
  *                             continue
  *                         elif w > 400:
  */
             }
 
-            /* "dysgu/remapping.pyx":178
- *                         if not w > 40:  # todo set as a parameter option
+            /* "dysgu/remapping.pyx":154
+ *                         if not w > 10:  # todo set as a parameter option
  *                             continue
  *                         elif w > 400:             # <<<<<<<<<<<<<<
  *                             high_quality_clip = True
  *                     else:
  */
-            __pyx_t_2 = PyObject_RichCompare(__pyx_v_w, __pyx_int_400, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 178, __pyx_L1_error)
-            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 178, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            __pyx_t_21 = PyObject_RichCompare(__pyx_v_w, __pyx_int_400, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 154, __pyx_L1_error)
+            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 154, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
             if (__pyx_t_6) {
 
-              /* "dysgu/remapping.pyx":179
+              /* "dysgu/remapping.pyx":155
  *                             continue
  *                         elif w > 400:
  *                             high_quality_clip = True             # <<<<<<<<<<<<<<
@@ -4797,8 +4796,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
               __pyx_v_high_quality_clip = 1;
 
-              /* "dysgu/remapping.pyx":178
- *                         if not w > 40:  # todo set as a parameter option
+              /* "dysgu/remapping.pyx":154
+ *                         if not w > 10:  # todo set as a parameter option
  *                             continue
  *                         elif w > 400:             # <<<<<<<<<<<<<<
  *                             high_quality_clip = True
@@ -4806,86 +4805,86 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
             }
 
-            /* "dysgu/remapping.pyx":174
- *                     clip_seq, clip_side = clip_res
+            /* "dysgu/remapping.pyx":150
+ *                         continue
  * 
  *                     if clip_side == 0:             # <<<<<<<<<<<<<<
  *                         w = e[cont + "_left_weight"]
- *                         if not w > 40:  # todo set as a parameter option
+ *                         if not w > 10:  # todo set as a parameter option
  */
-            goto __pyx_L29;
+            goto __pyx_L32;
           }
 
-          /* "dysgu/remapping.pyx":181
+          /* "dysgu/remapping.pyx":157
  *                             high_quality_clip = True
  *                     else:
  *                         w = e[cont + "_right_weight"]             # <<<<<<<<<<<<<<
- *                         if not w > 40:
+ *                         if not w > 10:
  *                             continue
  */
           /*else*/ {
-            __pyx_t_2 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_right_weight); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 181, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
-            __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 181, __pyx_L1_error)
+            __pyx_t_21 = PyNumber_Add(__pyx_v_cont, __pyx_n_u_right_weight); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 157, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
+            __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_21); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 157, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_8);
-            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
             __Pyx_XDECREF_SET(__pyx_v_w, __pyx_t_8);
             __pyx_t_8 = 0;
 
-            /* "dysgu/remapping.pyx":182
+            /* "dysgu/remapping.pyx":158
  *                     else:
  *                         w = e[cont + "_right_weight"]
- *                         if not w > 40:             # <<<<<<<<<<<<<<
+ *                         if not w > 10:             # <<<<<<<<<<<<<<
  *                             continue
  *                         elif w > 400:
  */
-            __pyx_t_8 = PyObject_RichCompare(__pyx_v_w, __pyx_int_40, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 182, __pyx_L1_error)
-            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 182, __pyx_L1_error)
+            __pyx_t_8 = PyObject_RichCompare(__pyx_v_w, __pyx_int_10, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 158, __pyx_L1_error)
+            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 158, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
             __pyx_t_17 = ((!__pyx_t_6) != 0);
             if (__pyx_t_17) {
 
-              /* "dysgu/remapping.pyx":183
+              /* "dysgu/remapping.pyx":159
  *                         w = e[cont + "_right_weight"]
- *                         if not w > 40:
+ *                         if not w > 10:
  *                             continue             # <<<<<<<<<<<<<<
  *                         elif w > 400:
  *                             high_quality_clip = True
  */
               goto __pyx_L21_continue;
 
-              /* "dysgu/remapping.pyx":182
+              /* "dysgu/remapping.pyx":158
  *                     else:
  *                         w = e[cont + "_right_weight"]
- *                         if not w > 40:             # <<<<<<<<<<<<<<
+ *                         if not w > 10:             # <<<<<<<<<<<<<<
  *                             continue
  *                         elif w > 400:
  */
             }
 
-            /* "dysgu/remapping.pyx":184
- *                         if not w > 40:
+            /* "dysgu/remapping.pyx":160
+ *                         if not w > 10:
  *                             continue
  *                         elif w > 400:             # <<<<<<<<<<<<<<
  *                             high_quality_clip = True
  * 
  */
-            __pyx_t_8 = PyObject_RichCompare(__pyx_v_w, __pyx_int_400, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 184, __pyx_L1_error)
-            __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 184, __pyx_L1_error)
+            __pyx_t_8 = PyObject_RichCompare(__pyx_v_w, __pyx_int_400, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 160, __pyx_L1_error)
+            __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 160, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
             if (__pyx_t_17) {
 
-              /* "dysgu/remapping.pyx":185
+              /* "dysgu/remapping.pyx":161
  *                             continue
  *                         elif w > 400:
  *                             high_quality_clip = True             # <<<<<<<<<<<<<<
  * 
- *                     ref_start = break_position - 500 #svlen
+ *                     ref_start = break_position - 500
  */
               __pyx_v_high_quality_clip = 1;
 
-              /* "dysgu/remapping.pyx":184
- *                         if not w > 40:
+              /* "dysgu/remapping.pyx":160
+ *                         if not w > 10:
  *                             continue
  *                         elif w > 400:             # <<<<<<<<<<<<<<
  *                             high_quality_clip = True
@@ -4893,54 +4892,54 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
             }
           }
-          __pyx_L29:;
+          __pyx_L32:;
 
-          /* "dysgu/remapping.pyx":187
+          /* "dysgu/remapping.pyx":163
  *                             high_quality_clip = True
  * 
- *                     ref_start = break_position - 500 #svlen             # <<<<<<<<<<<<<<
- *                     # ref_start = 0 if ref_start < 0 else ref_start
- *                     ref_end = break_position + 500 #svlen
+ *                     ref_start = break_position - 500             # <<<<<<<<<<<<<<
+ *                     ref_end = break_position + 500
+ * 
  */
-          __pyx_t_8 = __Pyx_PyInt_SubtractObjC(__pyx_v_break_position, __pyx_int_500, 0x1F4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 187, __pyx_L1_error)
+          __pyx_t_8 = __Pyx_PyInt_SubtractObjC(__pyx_v_break_position, __pyx_int_500, 0x1F4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 163, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_XDECREF_SET(__pyx_v_ref_start, __pyx_t_8);
           __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":189
- *                     ref_start = break_position - 500 #svlen
- *                     # ref_start = 0 if ref_start < 0 else ref_start
- *                     ref_end = break_position + 500 #svlen             # <<<<<<<<<<<<<<
+          /* "dysgu/remapping.pyx":164
  * 
+ *                     ref_start = break_position - 500
+ *                     ref_end = break_position + 500             # <<<<<<<<<<<<<<
  * 
+ *                     start_idx = ref_start - gstart
  */
-          __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_v_break_position, __pyx_int_500, 0x1F4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 189, __pyx_L1_error)
+          __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_v_break_position, __pyx_int_500, 0x1F4, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 164, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_XDECREF_SET(__pyx_v_ref_end, __pyx_t_8);
           __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":192
+          /* "dysgu/remapping.pyx":166
+ *                     ref_end = break_position + 500
  * 
- * 
- *                     start_idx = ref_start - gstart #break_position - start - 500             # <<<<<<<<<<<<<<
- *                     # echo(gstart, ref_start, start_idx)
+ *                     start_idx = ref_start - gstart             # <<<<<<<<<<<<<<
  *                     start_idx = 0 if start_idx < 0 else start_idx
+ *                     end_idx = ref_end - gstart
  */
-          __pyx_t_8 = PyNumber_Subtract(__pyx_v_ref_start, __pyx_v_gstart); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __pyx_t_8 = PyNumber_Subtract(__pyx_v_ref_start, __pyx_v_gstart); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 166, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_XDECREF_SET(__pyx_v_start_idx, __pyx_t_8);
           __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":194
- *                     start_idx = ref_start - gstart #break_position - start - 500
- *                     # echo(gstart, ref_start, start_idx)
+          /* "dysgu/remapping.pyx":167
+ * 
+ *                     start_idx = ref_start - gstart
  *                     start_idx = 0 if start_idx < 0 else start_idx             # <<<<<<<<<<<<<<
- *                     end_idx = ref_end - gstart #break_position - start + 500
- *                     # r2 = ref_genome.fetch(e["chrA"], e["posA"] - 500, e["posB"] + 500)
+ *                     end_idx = ref_end - gstart
+ *                     if ref_seq_big is None:
  */
-          __pyx_t_2 = PyObject_RichCompare(__pyx_v_start_idx, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 194, __pyx_L1_error)
-          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 194, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          __pyx_t_21 = PyObject_RichCompare(__pyx_v_start_idx, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 167, __pyx_L1_error)
+          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 167, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
           if (__pyx_t_17) {
             __Pyx_INCREF(__pyx_int_0);
             __pyx_t_8 = __pyx_int_0;
@@ -4951,21 +4950,21 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           __Pyx_DECREF_SET(__pyx_v_start_idx, __pyx_t_8);
           __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":195
- *                     # echo(gstart, ref_start, start_idx)
+          /* "dysgu/remapping.pyx":168
+ *                     start_idx = ref_start - gstart
  *                     start_idx = 0 if start_idx < 0 else start_idx
- *                     end_idx = ref_end - gstart #break_position - start + 500             # <<<<<<<<<<<<<<
- *                     # r2 = ref_genome.fetch(e["chrA"], e["posA"] - 500, e["posB"] + 500)
- * 
+ *                     end_idx = ref_end - gstart             # <<<<<<<<<<<<<<
+ *                     if ref_seq_big is None:
+ *                         try:
  */
-          __pyx_t_8 = PyNumber_Subtract(__pyx_v_ref_end, __pyx_v_gstart); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 195, __pyx_L1_error)
+          __pyx_t_8 = PyNumber_Subtract(__pyx_v_ref_end, __pyx_v_gstart); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 168, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_8);
           __Pyx_XDECREF_SET(__pyx_v_end_idx, __pyx_t_8);
           __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":198
- *                     # r2 = ref_genome.fetch(e["chrA"], e["posA"] - 500, e["posB"] + 500)
- * 
+          /* "dysgu/remapping.pyx":169
+ *                     start_idx = 0 if start_idx < 0 else start_idx
+ *                     end_idx = ref_end - gstart
  *                     if ref_seq_big is None:             # <<<<<<<<<<<<<<
  *                         try:
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
@@ -4974,8 +4973,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           __pyx_t_6 = (__pyx_t_17 != 0);
           if (__pyx_t_6) {
 
-            /* "dysgu/remapping.pyx":199
- * 
+            /* "dysgu/remapping.pyx":170
+ *                     end_idx = ref_end - gstart
  *                     if ref_seq_big is None:
  *                         try:             # <<<<<<<<<<<<<<
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
@@ -4990,45 +4989,45 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_XGOTREF(__pyx_t_24);
               /*try:*/ {
 
-                /* "dysgu/remapping.pyx":200
+                /* "dysgu/remapping.pyx":171
  *                     if ref_seq_big is None:
  *                         try:
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()             # <<<<<<<<<<<<<<
  *                         except ValueError:
  *                             continue
  */
-                __pyx_t_21 = __Pyx_PyObject_GetAttrStr(__pyx_v_ref_genome, __pyx_n_s_fetch); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 200, __pyx_L33_error)
-                __Pyx_GOTREF(__pyx_t_21);
+                __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_ref_genome, __pyx_n_s_fetch); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L36_error)
+                __Pyx_GOTREF(__pyx_t_2);
                 __pyx_t_19 = NULL;
                 __pyx_t_20 = 0;
-                if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_21))) {
-                  __pyx_t_19 = PyMethod_GET_SELF(__pyx_t_21);
+                if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
+                  __pyx_t_19 = PyMethod_GET_SELF(__pyx_t_2);
                   if (likely(__pyx_t_19)) {
-                    PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_21);
+                    PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
                     __Pyx_INCREF(__pyx_t_19);
                     __Pyx_INCREF(function);
-                    __Pyx_DECREF_SET(__pyx_t_21, function);
+                    __Pyx_DECREF_SET(__pyx_t_2, function);
                     __pyx_t_20 = 1;
                   }
                 }
                 #if CYTHON_FAST_PYCALL
-                if (PyFunction_Check(__pyx_t_21)) {
+                if (PyFunction_Check(__pyx_t_2)) {
                   PyObject *__pyx_temp[4] = {__pyx_t_19, __pyx_v_chrom, __pyx_v_gstart, __pyx_v_gend};
-                  __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_21, __pyx_temp+1-__pyx_t_20, 3+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L33_error)
+                  __pyx_t_21 = __Pyx_PyFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_20, 3+__pyx_t_20); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 171, __pyx_L36_error)
                   __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
-                  __Pyx_GOTREF(__pyx_t_2);
+                  __Pyx_GOTREF(__pyx_t_21);
                 } else
                 #endif
                 #if CYTHON_FAST_PYCCALL
-                if (__Pyx_PyFastCFunction_Check(__pyx_t_21)) {
+                if (__Pyx_PyFastCFunction_Check(__pyx_t_2)) {
                   PyObject *__pyx_temp[4] = {__pyx_t_19, __pyx_v_chrom, __pyx_v_gstart, __pyx_v_gend};
-                  __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_21, __pyx_temp+1-__pyx_t_20, 3+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L33_error)
+                  __pyx_t_21 = __Pyx_PyCFunction_FastCall(__pyx_t_2, __pyx_temp+1-__pyx_t_20, 3+__pyx_t_20); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 171, __pyx_L36_error)
                   __Pyx_XDECREF(__pyx_t_19); __pyx_t_19 = 0;
-                  __Pyx_GOTREF(__pyx_t_2);
+                  __Pyx_GOTREF(__pyx_t_21);
                 } else
                 #endif
                 {
-                  __pyx_t_18 = PyTuple_New(3+__pyx_t_20); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 200, __pyx_L33_error)
+                  __pyx_t_18 = PyTuple_New(3+__pyx_t_20); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 171, __pyx_L36_error)
                   __Pyx_GOTREF(__pyx_t_18);
                   if (__pyx_t_19) {
                     __Pyx_GIVEREF(__pyx_t_19); PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_t_19); __pyx_t_19 = NULL;
@@ -5042,34 +5041,34 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_gend);
                   __Pyx_GIVEREF(__pyx_v_gend);
                   PyTuple_SET_ITEM(__pyx_t_18, 2+__pyx_t_20, __pyx_v_gend);
-                  __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_21, __pyx_t_18, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L33_error)
-                  __Pyx_GOTREF(__pyx_t_2);
+                  __pyx_t_21 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_18, NULL); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 171, __pyx_L36_error)
+                  __Pyx_GOTREF(__pyx_t_21);
                   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
                 }
-                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-                __pyx_t_21 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_upper); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 200, __pyx_L33_error)
-                __Pyx_GOTREF(__pyx_t_21);
                 __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-                __pyx_t_2 = NULL;
-                if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_21))) {
-                  __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_21);
-                  if (likely(__pyx_t_2)) {
-                    PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_21);
-                    __Pyx_INCREF(__pyx_t_2);
+                __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_21, __pyx_n_s_upper); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L36_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+                __pyx_t_21 = NULL;
+                if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
+                  __pyx_t_21 = PyMethod_GET_SELF(__pyx_t_2);
+                  if (likely(__pyx_t_21)) {
+                    PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_2);
+                    __Pyx_INCREF(__pyx_t_21);
                     __Pyx_INCREF(function);
-                    __Pyx_DECREF_SET(__pyx_t_21, function);
+                    __Pyx_DECREF_SET(__pyx_t_2, function);
                   }
                 }
-                __pyx_t_8 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_21);
-                __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-                if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 200, __pyx_L33_error)
+                __pyx_t_8 = (__pyx_t_21) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_21) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
+                __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
+                if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 171, __pyx_L36_error)
                 __Pyx_GOTREF(__pyx_t_8);
-                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+                __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
                 __Pyx_DECREF_SET(__pyx_v_ref_seq_big, __pyx_t_8);
                 __pyx_t_8 = 0;
 
-                /* "dysgu/remapping.pyx":199
- * 
+                /* "dysgu/remapping.pyx":170
+ *                     end_idx = ref_end - gstart
  *                     if ref_seq_big is None:
  *                         try:             # <<<<<<<<<<<<<<
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
@@ -5079,8 +5078,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_XDECREF(__pyx_t_22); __pyx_t_22 = 0;
               __Pyx_XDECREF(__pyx_t_23); __pyx_t_23 = 0;
               __Pyx_XDECREF(__pyx_t_24); __pyx_t_24 = 0;
-              goto __pyx_L40_try_end;
-              __pyx_L33_error:;
+              goto __pyx_L43_try_end;
+              __pyx_L36_error:;
               __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
               __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
               __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
@@ -5089,7 +5088,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
               __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
 
-              /* "dysgu/remapping.pyx":201
+              /* "dysgu/remapping.pyx":172
  *                         try:
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
  *                         except ValueError:             # <<<<<<<<<<<<<<
@@ -5099,30 +5098,30 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __pyx_t_20 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_ValueError);
               if (__pyx_t_20) {
                 __Pyx_AddTraceback("dysgu.remapping.remap_soft_clips", __pyx_clineno, __pyx_lineno, __pyx_filename);
-                if (__Pyx_GetException(&__pyx_t_8, &__pyx_t_21, &__pyx_t_2) < 0) __PYX_ERR(0, 201, __pyx_L35_except_error)
+                if (__Pyx_GetException(&__pyx_t_8, &__pyx_t_2, &__pyx_t_21) < 0) __PYX_ERR(0, 172, __pyx_L38_except_error)
                 __Pyx_GOTREF(__pyx_t_8);
-                __Pyx_GOTREF(__pyx_t_21);
                 __Pyx_GOTREF(__pyx_t_2);
+                __Pyx_GOTREF(__pyx_t_21);
 
-                /* "dysgu/remapping.pyx":202
+                /* "dysgu/remapping.pyx":173
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
  *                         except ValueError:
  *                             continue             # <<<<<<<<<<<<<<
  * 
  *                     ref_seq_clipped = ref_seq_big[start_idx:end_idx]
  */
-                goto __pyx_L42_except_continue;
-                __pyx_L42_except_continue:;
+                goto __pyx_L45_except_continue;
+                __pyx_L45_except_continue:;
                 __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
                 __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-                goto __pyx_L39_try_continue;
+                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+                goto __pyx_L42_try_continue;
               }
-              goto __pyx_L35_except_error;
-              __pyx_L35_except_error:;
+              goto __pyx_L38_except_error;
+              __pyx_L38_except_error:;
 
-              /* "dysgu/remapping.pyx":199
- * 
+              /* "dysgu/remapping.pyx":170
+ *                     end_idx = ref_end - gstart
  *                     if ref_seq_big is None:
  *                         try:             # <<<<<<<<<<<<<<
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
@@ -5133,94 +5132,94 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_XGIVEREF(__pyx_t_24);
               __Pyx_ExceptionReset(__pyx_t_22, __pyx_t_23, __pyx_t_24);
               goto __pyx_L1_error;
-              __pyx_L39_try_continue:;
+              __pyx_L42_try_continue:;
               __Pyx_XGIVEREF(__pyx_t_22);
               __Pyx_XGIVEREF(__pyx_t_23);
               __Pyx_XGIVEREF(__pyx_t_24);
               __Pyx_ExceptionReset(__pyx_t_22, __pyx_t_23, __pyx_t_24);
               goto __pyx_L21_continue;
-              __pyx_L40_try_end:;
+              __pyx_L43_try_end:;
             }
 
-            /* "dysgu/remapping.pyx":198
- *                     # r2 = ref_genome.fetch(e["chrA"], e["posA"] - 500, e["posB"] + 500)
- * 
+            /* "dysgu/remapping.pyx":169
+ *                     start_idx = 0 if start_idx < 0 else start_idx
+ *                     end_idx = ref_end - gstart
  *                     if ref_seq_big is None:             # <<<<<<<<<<<<<<
  *                         try:
  *                             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
  */
           }
 
-          /* "dysgu/remapping.pyx":204
+          /* "dysgu/remapping.pyx":175
  *                             continue
  * 
  *                     ref_seq_clipped = ref_seq_big[start_idx:end_idx]             # <<<<<<<<<<<<<<
  * 
  *                     ref_seq_start = gstart + start_idx
  */
-          __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_v_ref_seq_big, 0, 0, &__pyx_v_start_idx, &__pyx_v_end_idx, NULL, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 204, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_XDECREF_SET(__pyx_v_ref_seq_clipped, __pyx_t_2);
-          __pyx_t_2 = 0;
+          __pyx_t_21 = __Pyx_PyObject_GetSlice(__pyx_v_ref_seq_big, 0, 0, &__pyx_v_start_idx, &__pyx_v_end_idx, NULL, 0, 0, 1); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 175, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __Pyx_XDECREF_SET(__pyx_v_ref_seq_clipped, __pyx_t_21);
+          __pyx_t_21 = 0;
 
-          /* "dysgu/remapping.pyx":206
+          /* "dysgu/remapping.pyx":177
  *                     ref_seq_clipped = ref_seq_big[start_idx:end_idx]
  * 
  *                     ref_seq_start = gstart + start_idx             # <<<<<<<<<<<<<<
  *                     ref_seq_end = gstart + end_idx
  * 
  */
-          __pyx_t_2 = PyNumber_Add(__pyx_v_gstart, __pyx_v_start_idx); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_XDECREF_SET(__pyx_v_ref_seq_start, __pyx_t_2);
-          __pyx_t_2 = 0;
+          __pyx_t_21 = PyNumber_Add(__pyx_v_gstart, __pyx_v_start_idx); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 177, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __Pyx_XDECREF_SET(__pyx_v_ref_seq_start, __pyx_t_21);
+          __pyx_t_21 = 0;
 
-          /* "dysgu/remapping.pyx":207
+          /* "dysgu/remapping.pyx":178
  * 
  *                     ref_seq_start = gstart + start_idx
  *                     ref_seq_end = gstart + end_idx             # <<<<<<<<<<<<<<
  * 
- *                     # try:
+ *                     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
  */
-          __pyx_t_2 = PyNumber_Add(__pyx_v_gstart, __pyx_v_end_idx); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 207, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_XDECREF_SET(__pyx_v_ref_seq_end, __pyx_t_2);
-          __pyx_t_2 = 0;
+          __pyx_t_21 = PyNumber_Add(__pyx_v_gstart, __pyx_v_end_idx); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 178, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __Pyx_XDECREF_SET(__pyx_v_ref_seq_end, __pyx_t_21);
+          __pyx_t_21 = 0;
 
-          /* "dysgu/remapping.pyx":221
- * 
+          /* "dysgu/remapping.pyx":180
+ *                     ref_seq_end = gstart + end_idx
  * 
  *                     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":             # <<<<<<<<<<<<<<
  *                         continue
  * 
  */
-          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_v_ref_seq_clipped); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 221, __pyx_L1_error)
+          __pyx_t_17 = __Pyx_PyObject_IsTrue(__pyx_v_ref_seq_clipped); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 180, __pyx_L1_error)
           __pyx_t_7 = ((!__pyx_t_17) != 0);
           if (!__pyx_t_7) {
           } else {
             __pyx_t_6 = __pyx_t_7;
-            goto __pyx_L44_bool_binop_done;
+            goto __pyx_L47_bool_binop_done;
           }
-          __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_ref_seq_clipped, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 221, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_7 = (__Pyx_PyUnicode_ContainsTF(__pyx_t_2, __pyx_n_u_nN, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 221, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          __pyx_t_21 = __Pyx_GetItemInt(__pyx_v_ref_seq_clipped, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 180, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __pyx_t_7 = (__Pyx_PyUnicode_ContainsTF(__pyx_t_21, __pyx_n_u_nN, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 180, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
           __pyx_t_17 = (__pyx_t_7 != 0);
           if (!__pyx_t_17) {
           } else {
             __pyx_t_6 = __pyx_t_17;
-            goto __pyx_L44_bool_binop_done;
+            goto __pyx_L47_bool_binop_done;
           }
-          __pyx_t_2 = __Pyx_GetItemInt(__pyx_v_ref_seq_clipped, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 221, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_17 = (__Pyx_PyUnicode_ContainsTF(__pyx_t_2, __pyx_n_u_nN, Py_EQ)); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 221, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          __pyx_t_21 = __Pyx_GetItemInt(__pyx_v_ref_seq_clipped, -1L, long, 1, __Pyx_PyInt_From_long, 0, 1, 1); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 180, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __pyx_t_17 = (__Pyx_PyUnicode_ContainsTF(__pyx_t_21, __pyx_n_u_nN, Py_EQ)); if (unlikely(__pyx_t_17 < 0)) __PYX_ERR(0, 180, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
           __pyx_t_7 = (__pyx_t_17 != 0);
           __pyx_t_6 = __pyx_t_7;
-          __pyx_L44_bool_binop_done:;
+          __pyx_L47_bool_binop_done:;
           if (__pyx_t_6) {
 
-            /* "dysgu/remapping.pyx":222
+            /* "dysgu/remapping.pyx":181
  * 
  *                     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
  *                         continue             # <<<<<<<<<<<<<<
@@ -5229,8 +5228,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
             goto __pyx_L21_continue;
 
-            /* "dysgu/remapping.pyx":221
- * 
+            /* "dysgu/remapping.pyx":180
+ *                     ref_seq_end = gstart + end_idx
  * 
  *                     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":             # <<<<<<<<<<<<<<
  *                         continue
@@ -5238,97 +5237,66 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
           }
 
-          /* "dysgu/remapping.pyx":225
+          /* "dysgu/remapping.pyx":184
  * 
  *                     # Large alignment region
- *                     tel = time.time()             # <<<<<<<<<<<<<<
- *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")
- *                     tel = time.time() - tel
+ *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")             # <<<<<<<<<<<<<<
+ *                     locs = merge_align_regions(el['locations'])
+ *                     if not locs:
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 225, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_edlib); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 184, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_21);
-          __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 225, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_21, __pyx_n_s_align); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 184, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __pyx_t_21 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_8))) {
-            __pyx_t_21 = PyMethod_GET_SELF(__pyx_t_8);
-            if (likely(__pyx_t_21)) {
+          __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_clip_seq, __pyx_n_s_upper); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 184, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_18 = NULL;
+          if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_8))) {
+            __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_8);
+            if (likely(__pyx_t_18)) {
               PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_8);
-              __Pyx_INCREF(__pyx_t_21);
+              __Pyx_INCREF(__pyx_t_18);
               __Pyx_INCREF(function);
               __Pyx_DECREF_SET(__pyx_t_8, function);
             }
           }
-          __pyx_t_2 = (__pyx_t_21) ? __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_21) : __Pyx_PyObject_CallNoArg(__pyx_t_8);
-          __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
-          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_tel, __pyx_t_2);
-          __pyx_t_2 = 0;
-
-          /* "dysgu/remapping.pyx":226
- *                     # Large alignment region
- *                     tel = time.time()
- *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")             # <<<<<<<<<<<<<<
- *                     tel = time.time() - tel
- *                     locs = merge_align_regions(el['locations'])
- */
-          __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_edlib); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 226, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_align); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 226, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          __pyx_t_21 = __Pyx_PyObject_GetAttrStr(__pyx_v_clip_seq, __pyx_n_s_upper); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 226, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __pyx_t_18 = NULL;
-          if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_21))) {
-            __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_21);
-            if (likely(__pyx_t_18)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_21);
-              __Pyx_INCREF(__pyx_t_18);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_21, function);
-            }
-          }
-          __pyx_t_2 = (__pyx_t_18) ? __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_t_18) : __Pyx_PyObject_CallNoArg(__pyx_t_21);
+          __pyx_t_21 = (__pyx_t_18) ? __Pyx_PyObject_CallOneArg(__pyx_t_8, __pyx_t_18) : __Pyx_PyObject_CallNoArg(__pyx_t_8);
           __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 226, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __pyx_t_21 = PyTuple_New(2); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 226, __pyx_L1_error)
+          if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 184, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_GIVEREF(__pyx_t_2);
-          PyTuple_SET_ITEM(__pyx_t_21, 0, __pyx_t_2);
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 184, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __Pyx_GIVEREF(__pyx_t_21);
+          PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_21);
           __Pyx_INCREF(__pyx_v_ref_seq_clipped);
           __Pyx_GIVEREF(__pyx_v_ref_seq_clipped);
-          PyTuple_SET_ITEM(__pyx_t_21, 1, __pyx_v_ref_seq_clipped);
-          __pyx_t_2 = 0;
-          __pyx_t_2 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 226, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_mode, __pyx_n_u_HW) < 0) __PYX_ERR(0, 226, __pyx_L1_error)
-          if (PyDict_SetItem(__pyx_t_2, __pyx_n_s_task, __pyx_n_u_path) < 0) __PYX_ERR(0, 226, __pyx_L1_error)
-          __pyx_t_18 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_21, __pyx_t_2); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 226, __pyx_L1_error)
+          PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_v_ref_seq_clipped);
+          __pyx_t_21 = 0;
+          __pyx_t_21 = __Pyx_PyDict_NewPresized(2); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 184, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_mode, __pyx_n_u_HW) < 0) __PYX_ERR(0, 184, __pyx_L1_error)
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_task, __pyx_n_u_path) < 0) __PYX_ERR(0, 184, __pyx_L1_error)
+          __pyx_t_18 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_8, __pyx_t_21); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 184, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
+          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
           __Pyx_XDECREF_SET(__pyx_v_el, __pyx_t_18);
           __pyx_t_18 = 0;
 
-          /* "dysgu/remapping.pyx":227
- *                     tel = time.time()
+          /* "dysgu/remapping.pyx":185
+ *                     # Large alignment region
  *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")
- *                     tel = time.time() - tel             # <<<<<<<<<<<<<<
- *                     locs = merge_align_regions(el['locations'])
+ *                     locs = merge_align_regions(el['locations'])             # <<<<<<<<<<<<<<
  *                     if not locs:
+ *                         continue
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 227, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_21 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_time); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 227, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_merge_align_regions); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 185, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_el, __pyx_n_u_locations); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 185, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
           __pyx_t_2 = NULL;
           if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_21))) {
             __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_21);
@@ -5339,59 +5307,27 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_DECREF_SET(__pyx_t_21, function);
             }
           }
-          __pyx_t_18 = (__pyx_t_2) ? __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_t_2) : __Pyx_PyObject_CallNoArg(__pyx_t_21);
+          __pyx_t_18 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_21, __pyx_t_2, __pyx_t_8) : __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_t_8);
           __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 227, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+          if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 185, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
           __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __pyx_t_21 = PyNumber_Subtract(__pyx_t_18, __pyx_v_tel); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 227, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_DECREF_SET(__pyx_v_tel, __pyx_t_21);
-          __pyx_t_21 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_locs, __pyx_t_18);
+          __pyx_t_18 = 0;
 
-          /* "dysgu/remapping.pyx":228
+          /* "dysgu/remapping.pyx":186
  *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")
- *                     tel = time.time() - tel
- *                     locs = merge_align_regions(el['locations'])             # <<<<<<<<<<<<<<
- *                     if not locs:
- *                         continue
- */
-          __Pyx_GetModuleGlobalName(__pyx_t_18, __pyx_n_s_merge_align_regions); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 228, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_2 = __Pyx_PyObject_Dict_GetItem(__pyx_v_el, __pyx_n_u_locations); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 228, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_8 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_18))) {
-            __pyx_t_8 = PyMethod_GET_SELF(__pyx_t_18);
-            if (likely(__pyx_t_8)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-              __Pyx_INCREF(__pyx_t_8);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_18, function);
-            }
-          }
-          __pyx_t_21 = (__pyx_t_8) ? __Pyx_PyObject_Call2Args(__pyx_t_18, __pyx_t_8, __pyx_t_2) : __Pyx_PyObject_CallOneArg(__pyx_t_18, __pyx_t_2);
-          __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-          if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 228, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_locs, __pyx_t_21);
-          __pyx_t_21 = 0;
-
-          /* "dysgu/remapping.pyx":229
- *                     tel = time.time() - tel
  *                     locs = merge_align_regions(el['locations'])
  *                     if not locs:             # <<<<<<<<<<<<<<
  *                         continue
  * 
  */
-          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_locs); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 229, __pyx_L1_error)
+          __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_v_locs); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 186, __pyx_L1_error)
           __pyx_t_7 = ((!__pyx_t_6) != 0);
           if (__pyx_t_7) {
 
-            /* "dysgu/remapping.pyx":230
+            /* "dysgu/remapping.pyx":187
  *                     locs = merge_align_regions(el['locations'])
  *                     if not locs:
  *                         continue             # <<<<<<<<<<<<<<
@@ -5400,8 +5336,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
             goto __pyx_L21_continue;
 
-            /* "dysgu/remapping.pyx":229
- *                     tel = time.time() - tel
+            /* "dysgu/remapping.pyx":186
+ *                     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")
  *                     locs = merge_align_regions(el['locations'])
  *                     if not locs:             # <<<<<<<<<<<<<<
  *                         continue
@@ -5409,169 +5345,139 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
           }
 
-          /* "dysgu/remapping.pyx":232
+          /* "dysgu/remapping.pyx":189
  *                         continue
  * 
  *                     l_start, l_end = locs[0]             # <<<<<<<<<<<<<<
  * 
  *                     ref_start2 = ref_seq_start + l_start
  */
-          __pyx_t_21 = __Pyx_GetItemInt(__pyx_v_locs, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 232, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          if ((likely(PyTuple_CheckExact(__pyx_t_21))) || (PyList_CheckExact(__pyx_t_21))) {
-            PyObject* sequence = __pyx_t_21;
+          __pyx_t_18 = __Pyx_GetItemInt(__pyx_v_locs, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 189, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_18);
+          if ((likely(PyTuple_CheckExact(__pyx_t_18))) || (PyList_CheckExact(__pyx_t_18))) {
+            PyObject* sequence = __pyx_t_18;
             Py_ssize_t size = __Pyx_PySequence_SIZE(sequence);
             if (unlikely(size != 2)) {
               if (size > 2) __Pyx_RaiseTooManyValuesError(2);
               else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-              __PYX_ERR(0, 232, __pyx_L1_error)
+              __PYX_ERR(0, 189, __pyx_L1_error)
             }
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
             if (likely(PyTuple_CheckExact(sequence))) {
-              __pyx_t_18 = PyTuple_GET_ITEM(sequence, 0); 
-              __pyx_t_2 = PyTuple_GET_ITEM(sequence, 1); 
+              __pyx_t_21 = PyTuple_GET_ITEM(sequence, 0); 
+              __pyx_t_8 = PyTuple_GET_ITEM(sequence, 1); 
             } else {
-              __pyx_t_18 = PyList_GET_ITEM(sequence, 0); 
-              __pyx_t_2 = PyList_GET_ITEM(sequence, 1); 
+              __pyx_t_21 = PyList_GET_ITEM(sequence, 0); 
+              __pyx_t_8 = PyList_GET_ITEM(sequence, 1); 
             }
-            __Pyx_INCREF(__pyx_t_18);
-            __Pyx_INCREF(__pyx_t_2);
+            __Pyx_INCREF(__pyx_t_21);
+            __Pyx_INCREF(__pyx_t_8);
             #else
-            __pyx_t_18 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 232, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_2 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 232, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
+            __pyx_t_21 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 189, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
+            __pyx_t_8 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 189, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
             #endif
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           } else {
             Py_ssize_t index = -1;
-            __pyx_t_8 = PyObject_GetIter(__pyx_t_21); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 232, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-            __pyx_t_13 = Py_TYPE(__pyx_t_8)->tp_iternext;
-            index = 0; __pyx_t_18 = __pyx_t_13(__pyx_t_8); if (unlikely(!__pyx_t_18)) goto __pyx_L48_unpacking_failed;
-            __Pyx_GOTREF(__pyx_t_18);
-            index = 1; __pyx_t_2 = __pyx_t_13(__pyx_t_8); if (unlikely(!__pyx_t_2)) goto __pyx_L48_unpacking_failed;
+            __pyx_t_2 = PyObject_GetIter(__pyx_t_18); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 189, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
-            if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_8), 2) < 0) __PYX_ERR(0, 232, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+            __pyx_t_13 = Py_TYPE(__pyx_t_2)->tp_iternext;
+            index = 0; __pyx_t_21 = __pyx_t_13(__pyx_t_2); if (unlikely(!__pyx_t_21)) goto __pyx_L51_unpacking_failed;
+            __Pyx_GOTREF(__pyx_t_21);
+            index = 1; __pyx_t_8 = __pyx_t_13(__pyx_t_2); if (unlikely(!__pyx_t_8)) goto __pyx_L51_unpacking_failed;
+            __Pyx_GOTREF(__pyx_t_8);
+            if (__Pyx_IternextUnpackEndCheck(__pyx_t_13(__pyx_t_2), 2) < 0) __PYX_ERR(0, 189, __pyx_L1_error)
             __pyx_t_13 = NULL;
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-            goto __pyx_L49_unpacking_done;
-            __pyx_L48_unpacking_failed:;
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            goto __pyx_L52_unpacking_done;
+            __pyx_L51_unpacking_failed:;
+            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
             __pyx_t_13 = NULL;
             if (__Pyx_IterFinish() == 0) __Pyx_RaiseNeedMoreValuesError(index);
-            __PYX_ERR(0, 232, __pyx_L1_error)
-            __pyx_L49_unpacking_done:;
+            __PYX_ERR(0, 189, __pyx_L1_error)
+            __pyx_L52_unpacking_done:;
           }
-          __Pyx_XDECREF_SET(__pyx_v_l_start, __pyx_t_18);
-          __pyx_t_18 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_l_end, __pyx_t_2);
-          __pyx_t_2 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_l_start, __pyx_t_21);
+          __pyx_t_21 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_l_end, __pyx_t_8);
+          __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":234
+          /* "dysgu/remapping.pyx":191
  *                     l_start, l_end = locs[0]
  * 
  *                     ref_start2 = ref_seq_start + l_start             # <<<<<<<<<<<<<<
  *                     ref_end2 = ref_seq_start + l_end
  *                     ref_seq2 = ref_seq_clipped[l_start:l_end+1]
  */
-          __pyx_t_21 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_l_start); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 234, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_XDECREF_SET(__pyx_v_ref_start2, __pyx_t_21);
-          __pyx_t_21 = 0;
+          __pyx_t_18 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_l_start); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 191, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_18);
+          __Pyx_XDECREF_SET(__pyx_v_ref_start2, __pyx_t_18);
+          __pyx_t_18 = 0;
 
-          /* "dysgu/remapping.pyx":235
+          /* "dysgu/remapping.pyx":192
  * 
  *                     ref_start2 = ref_seq_start + l_start
  *                     ref_end2 = ref_seq_start + l_end             # <<<<<<<<<<<<<<
  *                     ref_seq2 = ref_seq_clipped[l_start:l_end+1]
  * 
  */
-          __pyx_t_21 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_l_end); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 235, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __Pyx_XDECREF_SET(__pyx_v_ref_end2, __pyx_t_21);
-          __pyx_t_21 = 0;
+          __pyx_t_18 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_l_end); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 192, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_18);
+          __Pyx_XDECREF_SET(__pyx_v_ref_end2, __pyx_t_18);
+          __pyx_t_18 = 0;
 
-          /* "dysgu/remapping.pyx":236
+          /* "dysgu/remapping.pyx":193
  *                     ref_start2 = ref_seq_start + l_start
  *                     ref_end2 = ref_seq_start + l_end
  *                     ref_seq2 = ref_seq_clipped[l_start:l_end+1]             # <<<<<<<<<<<<<<
  * 
- *                     tsm = time.time()
+ *                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
  */
-          __pyx_t_21 = __Pyx_PyInt_AddObjC(__pyx_v_l_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 236, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __pyx_t_2 = __Pyx_PyObject_GetSlice(__pyx_v_ref_seq_clipped, 0, 0, &__pyx_v_l_start, &__pyx_t_21, NULL, 0, 0, 1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 236, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_ref_seq2, __pyx_t_2);
-          __pyx_t_2 = 0;
+          __pyx_t_18 = __Pyx_PyInt_AddObjC(__pyx_v_l_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 193, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_18);
+          __pyx_t_8 = __Pyx_PyObject_GetSlice(__pyx_v_ref_seq_clipped, 0, 0, &__pyx_v_l_start, &__pyx_t_18, NULL, 0, 0, 1); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 193, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_ref_seq2, __pyx_t_8);
+          __pyx_t_8 = 0;
 
-          /* "dysgu/remapping.pyx":238
+          /* "dysgu/remapping.pyx":195
  *                     ref_seq2 = ref_seq_clipped[l_start:l_end+1]
  * 
- *                     tsm = time.time()             # <<<<<<<<<<<<<<
- *                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
- *                     a = aln(clip_seq)
- */
-          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 238, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 238, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __pyx_t_21 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_18))) {
-            __pyx_t_21 = PyMethod_GET_SELF(__pyx_t_18);
-            if (likely(__pyx_t_21)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-              __Pyx_INCREF(__pyx_t_21);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_18, function);
-            }
-          }
-          __pyx_t_2 = (__pyx_t_21) ? __Pyx_PyObject_CallOneArg(__pyx_t_18, __pyx_t_21) : __Pyx_PyObject_CallNoArg(__pyx_t_18);
-          __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
-          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_tsm, __pyx_t_2);
-          __pyx_t_2 = 0;
-
-          /* "dysgu/remapping.pyx":239
- * 
- *                     tsm = time.time()
  *                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)             # <<<<<<<<<<<<<<
  *                     a = aln(clip_seq)
- *                     tsm = time.time() - tsm
+ * 
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_StripedSmithWaterman); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 239, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_2);
-          __pyx_t_18 = PyTuple_New(1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 239, __pyx_L1_error)
+          __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_StripedSmithWaterman); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 195, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_8);
+          __pyx_t_18 = PyTuple_New(1); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 195, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_18);
           __Pyx_INCREF(__pyx_v_ref_seq2);
           __Pyx_GIVEREF(__pyx_v_ref_seq2);
           PyTuple_SET_ITEM(__pyx_t_18, 0, __pyx_v_ref_seq2);
-          __pyx_t_21 = __Pyx_PyDict_NewPresized(4); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 239, __pyx_L1_error)
+          __pyx_t_21 = __Pyx_PyDict_NewPresized(4); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 195, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_21);
-          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_match_score, __pyx_int_2) < 0) __PYX_ERR(0, 239, __pyx_L1_error)
-          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_mismatch_score, __pyx_int_neg_8) < 0) __PYX_ERR(0, 239, __pyx_L1_error)
-          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_gap_open_penalty, __pyx_int_12) < 0) __PYX_ERR(0, 239, __pyx_L1_error)
-          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_gap_extend_penalty, __pyx_int_1) < 0) __PYX_ERR(0, 239, __pyx_L1_error)
-          __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_18, __pyx_t_21); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 239, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
-          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_match_score, __pyx_int_2) < 0) __PYX_ERR(0, 195, __pyx_L1_error)
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_mismatch_score, __pyx_int_neg_8) < 0) __PYX_ERR(0, 195, __pyx_L1_error)
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_gap_open_penalty, __pyx_int_12) < 0) __PYX_ERR(0, 195, __pyx_L1_error)
+          if (PyDict_SetItem(__pyx_t_21, __pyx_n_s_gap_extend_penalty, __pyx_int_1) < 0) __PYX_ERR(0, 195, __pyx_L1_error)
+          __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_18, __pyx_t_21); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 195, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
           __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_aln, __pyx_t_8);
-          __pyx_t_8 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_aln, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":240
- *                     tsm = time.time()
+          /* "dysgu/remapping.pyx":196
+ * 
  *                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
  *                     a = aln(clip_seq)             # <<<<<<<<<<<<<<
- *                     tsm = time.time() - tsm
  * 
+ *                     aligned_seq = a.aligned_target_sequence
  */
           __Pyx_INCREF(__pyx_v_aln);
           __pyx_t_21 = __pyx_v_aln; __pyx_t_18 = NULL;
@@ -5584,297 +5490,217 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
               __Pyx_DECREF_SET(__pyx_t_21, function);
             }
           }
-          __pyx_t_8 = (__pyx_t_18) ? __Pyx_PyObject_Call2Args(__pyx_t_21, __pyx_t_18, __pyx_v_clip_seq) : __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_v_clip_seq);
+          __pyx_t_2 = (__pyx_t_18) ? __Pyx_PyObject_Call2Args(__pyx_t_21, __pyx_t_18, __pyx_v_clip_seq) : __Pyx_PyObject_CallOneArg(__pyx_t_21, __pyx_v_clip_seq);
           __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 240, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
+          if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
           __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_a, __pyx_t_8);
-          __pyx_t_8 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_a, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":241
- *                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
+          /* "dysgu/remapping.pyx":198
  *                     a = aln(clip_seq)
- *                     tsm = time.time() - tsm             # <<<<<<<<<<<<<<
- * 
- *                     aligned_seq = a.aligned_target_sequence
- */
-          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 241, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_21);
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_t_21, __pyx_n_s_time); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 241, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-          __pyx_t_21 = NULL;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_18))) {
-            __pyx_t_21 = PyMethod_GET_SELF(__pyx_t_18);
-            if (likely(__pyx_t_21)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_18);
-              __Pyx_INCREF(__pyx_t_21);
-              __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_18, function);
-            }
-          }
-          __pyx_t_8 = (__pyx_t_21) ? __Pyx_PyObject_CallOneArg(__pyx_t_18, __pyx_t_21) : __Pyx_PyObject_CallNoArg(__pyx_t_18);
-          __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
-          if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 241, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          __pyx_t_18 = PyNumber_Subtract(__pyx_t_8, __pyx_v_tsm); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 241, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          __Pyx_DECREF_SET(__pyx_v_tsm, __pyx_t_18);
-          __pyx_t_18 = 0;
-
-          /* "dysgu/remapping.pyx":243
- *                     tsm = time.time() - tsm
  * 
  *                     aligned_seq = a.aligned_target_sequence             # <<<<<<<<<<<<<<
  *                     score = a.optimal_alignment_score
  * 
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 243, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_aligned_seq, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 198, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_aligned_seq, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":244
+          /* "dysgu/remapping.pyx":199
  * 
  *                     aligned_seq = a.aligned_target_sequence
  *                     score = a.optimal_alignment_score             # <<<<<<<<<<<<<<
  * 
  *                     aln_q_end = a.query_end
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_optimal_alignment_score); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 244, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_score, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_optimal_alignment_score); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 199, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_score, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":246
+          /* "dysgu/remapping.pyx":201
  *                     score = a.optimal_alignment_score
  * 
  *                     aln_q_end = a.query_end             # <<<<<<<<<<<<<<
  *                     aln_q_begin = a.query_begin
  *                     aln_t_begin = a.target_begin
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_end); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 246, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_aln_q_end, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_end); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 201, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_aln_q_end, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":247
+          /* "dysgu/remapping.pyx":202
  * 
  *                     aln_q_end = a.query_end
  *                     aln_q_begin = a.query_begin             # <<<<<<<<<<<<<<
  *                     aln_t_begin = a.target_begin
  *                     target_end_optimal = a.target_end_optimal
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 247, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_aln_q_begin, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 202, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_aln_q_begin, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":248
+          /* "dysgu/remapping.pyx":203
  *                     aln_q_end = a.query_end
  *                     aln_q_begin = a.query_begin
  *                     aln_t_begin = a.target_begin             # <<<<<<<<<<<<<<
  *                     target_end_optimal = a.target_end_optimal
  * 
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 248, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_aln_t_begin, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 203, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_aln_t_begin, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":249
+          /* "dysgu/remapping.pyx":204
  *                     aln_q_begin = a.query_begin
  *                     aln_t_begin = a.target_begin
  *                     target_end_optimal = a.target_end_optimal             # <<<<<<<<<<<<<<
  * 
  *                     q_begin = ref_start2 + aln_q_begin
  */
-          __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 249, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_target_end_optimal, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 204, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_target_end_optimal, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":251
+          /* "dysgu/remapping.pyx":206
  *                     target_end_optimal = a.target_end_optimal
  * 
  *                     q_begin = ref_start2 + aln_q_begin             # <<<<<<<<<<<<<<
  *                     q_end = break_point = ref_start2 + aln_q_end
  * 
  */
-          __pyx_t_18 = PyNumber_Add(__pyx_v_ref_start2, __pyx_v_aln_q_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 251, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_q_begin, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __pyx_t_2 = PyNumber_Add(__pyx_v_ref_start2, __pyx_v_aln_q_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 206, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_q_begin, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":252
+          /* "dysgu/remapping.pyx":207
  * 
  *                     q_begin = ref_start2 + aln_q_begin
  *                     q_end = break_point = ref_start2 + aln_q_end             # <<<<<<<<<<<<<<
  * 
- *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position)
+ *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position, clip_seq)
  */
-          __pyx_t_18 = PyNumber_Add(__pyx_v_ref_start2, __pyx_v_aln_q_end); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 252, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __Pyx_INCREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_q_end, __pyx_t_18);
-          __Pyx_INCREF(__pyx_t_18);
-          __Pyx_XDECREF_SET(__pyx_v_break_point, __pyx_t_18);
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+          __pyx_t_2 = PyNumber_Add(__pyx_v_ref_start2, __pyx_v_aln_q_end); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 207, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __Pyx_INCREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_q_end, __pyx_t_2);
+          __Pyx_INCREF(__pyx_t_2);
+          __Pyx_XDECREF_SET(__pyx_v_break_point, __pyx_t_2);
+          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":254
+          /* "dysgu/remapping.pyx":209
  *                     q_end = break_point = ref_start2 + aln_q_end
  * 
- *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position)             # <<<<<<<<<<<<<<
+ *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position, clip_seq)             # <<<<<<<<<<<<<<
  * 
- *                     # if f == -1:
+ *                     if f != -1:
  */
-          __Pyx_GetModuleGlobalName(__pyx_t_8, __pyx_n_s_filter_bad_alignment); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 254, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_8);
-          __pyx_t_21 = NULL;
+          __Pyx_GetModuleGlobalName(__pyx_t_21, __pyx_n_s_filter_bad_alignment); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 209, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_21);
+          __pyx_t_18 = NULL;
           __pyx_t_20 = 0;
-          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_8))) {
-            __pyx_t_21 = PyMethod_GET_SELF(__pyx_t_8);
-            if (likely(__pyx_t_21)) {
-              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_8);
-              __Pyx_INCREF(__pyx_t_21);
+          if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_21))) {
+            __pyx_t_18 = PyMethod_GET_SELF(__pyx_t_21);
+            if (likely(__pyx_t_18)) {
+              PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_21);
+              __Pyx_INCREF(__pyx_t_18);
               __Pyx_INCREF(function);
-              __Pyx_DECREF_SET(__pyx_t_8, function);
+              __Pyx_DECREF_SET(__pyx_t_21, function);
               __pyx_t_20 = 1;
             }
           }
           #if CYTHON_FAST_PYCALL
-          if (PyFunction_Check(__pyx_t_8)) {
-            PyObject *__pyx_temp[8] = {__pyx_t_21, __pyx_v_a, __pyx_v_e, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_q_begin, __pyx_v_q_end, __pyx_v_break_position};
-            __pyx_t_18 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 7+__pyx_t_20); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 254, __pyx_L1_error)
-            __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
-            __Pyx_GOTREF(__pyx_t_18);
+          if (PyFunction_Check(__pyx_t_21)) {
+            PyObject *__pyx_temp[9] = {__pyx_t_18, __pyx_v_a, __pyx_v_e, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_q_begin, __pyx_v_q_end, __pyx_v_break_position, __pyx_v_clip_seq};
+            __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_21, __pyx_temp+1-__pyx_t_20, 8+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
+            __Pyx_GOTREF(__pyx_t_2);
           } else
           #endif
           #if CYTHON_FAST_PYCCALL
-          if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
-            PyObject *__pyx_temp[8] = {__pyx_t_21, __pyx_v_a, __pyx_v_e, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_q_begin, __pyx_v_q_end, __pyx_v_break_position};
-            __pyx_t_18 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_20, 7+__pyx_t_20); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 254, __pyx_L1_error)
-            __Pyx_XDECREF(__pyx_t_21); __pyx_t_21 = 0;
-            __Pyx_GOTREF(__pyx_t_18);
+          if (__Pyx_PyFastCFunction_Check(__pyx_t_21)) {
+            PyObject *__pyx_temp[9] = {__pyx_t_18, __pyx_v_a, __pyx_v_e, __pyx_v_idx, __pyx_v_clip_side, __pyx_v_q_begin, __pyx_v_q_end, __pyx_v_break_position, __pyx_v_clip_seq};
+            __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_21, __pyx_temp+1-__pyx_t_20, 8+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_XDECREF(__pyx_t_18); __pyx_t_18 = 0;
+            __Pyx_GOTREF(__pyx_t_2);
           } else
           #endif
           {
-            __pyx_t_2 = PyTuple_New(7+__pyx_t_20); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 254, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_2);
-            if (__pyx_t_21) {
-              __Pyx_GIVEREF(__pyx_t_21); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_21); __pyx_t_21 = NULL;
+            __pyx_t_8 = PyTuple_New(8+__pyx_t_20); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            if (__pyx_t_18) {
+              __Pyx_GIVEREF(__pyx_t_18); PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_18); __pyx_t_18 = NULL;
             }
             __Pyx_INCREF(__pyx_v_a);
             __Pyx_GIVEREF(__pyx_v_a);
-            PyTuple_SET_ITEM(__pyx_t_2, 0+__pyx_t_20, __pyx_v_a);
+            PyTuple_SET_ITEM(__pyx_t_8, 0+__pyx_t_20, __pyx_v_a);
             __Pyx_INCREF(__pyx_v_e);
             __Pyx_GIVEREF(__pyx_v_e);
-            PyTuple_SET_ITEM(__pyx_t_2, 1+__pyx_t_20, __pyx_v_e);
+            PyTuple_SET_ITEM(__pyx_t_8, 1+__pyx_t_20, __pyx_v_e);
             __Pyx_INCREF(__pyx_v_idx);
             __Pyx_GIVEREF(__pyx_v_idx);
-            PyTuple_SET_ITEM(__pyx_t_2, 2+__pyx_t_20, __pyx_v_idx);
+            PyTuple_SET_ITEM(__pyx_t_8, 2+__pyx_t_20, __pyx_v_idx);
             __Pyx_INCREF(__pyx_v_clip_side);
             __Pyx_GIVEREF(__pyx_v_clip_side);
-            PyTuple_SET_ITEM(__pyx_t_2, 3+__pyx_t_20, __pyx_v_clip_side);
+            PyTuple_SET_ITEM(__pyx_t_8, 3+__pyx_t_20, __pyx_v_clip_side);
             __Pyx_INCREF(__pyx_v_q_begin);
             __Pyx_GIVEREF(__pyx_v_q_begin);
-            PyTuple_SET_ITEM(__pyx_t_2, 4+__pyx_t_20, __pyx_v_q_begin);
+            PyTuple_SET_ITEM(__pyx_t_8, 4+__pyx_t_20, __pyx_v_q_begin);
             __Pyx_INCREF(__pyx_v_q_end);
             __Pyx_GIVEREF(__pyx_v_q_end);
-            PyTuple_SET_ITEM(__pyx_t_2, 5+__pyx_t_20, __pyx_v_q_end);
+            PyTuple_SET_ITEM(__pyx_t_8, 5+__pyx_t_20, __pyx_v_q_end);
             __Pyx_INCREF(__pyx_v_break_position);
             __Pyx_GIVEREF(__pyx_v_break_position);
-            PyTuple_SET_ITEM(__pyx_t_2, 6+__pyx_t_20, __pyx_v_break_position);
-            __pyx_t_18 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_2, NULL); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 254, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            PyTuple_SET_ITEM(__pyx_t_8, 6+__pyx_t_20, __pyx_v_break_position);
+            __Pyx_INCREF(__pyx_v_clip_seq);
+            __Pyx_GIVEREF(__pyx_v_clip_seq);
+            PyTuple_SET_ITEM(__pyx_t_8, 7+__pyx_t_20, __pyx_v_clip_seq);
+            __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_21, __pyx_t_8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 209, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_2);
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
           }
-          __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-          __Pyx_XDECREF_SET(__pyx_v_f, __pyx_t_18);
-          __pyx_t_18 = 0;
+          __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+          __Pyx_XDECREF_SET(__pyx_v_f, __pyx_t_2);
+          __pyx_t_2 = 0;
 
-          /* "dysgu/remapping.pyx":276
- *                     #     score = a2.optimal_alignment_score
+          /* "dysgu/remapping.pyx":211
+ *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position, clip_seq)
  * 
  *                     if f != -1:             # <<<<<<<<<<<<<<
  * 
- *                         if clip_side == 0:
- */
-          __pyx_t_18 = __Pyx_PyInt_NeObjC(__pyx_v_f, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 276, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_18);
-          __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 276, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-          if (__pyx_t_7) {
-
-            /* "dysgu/remapping.pyx":278
- *                     if f != -1:
- * 
- *                         if clip_side == 0:             # <<<<<<<<<<<<<<
- *                             break_point = ref_seq_start + aln_q_end
- *                         else:
- */
-            __pyx_t_18 = __Pyx_PyInt_EqObjC(__pyx_v_clip_side, __pyx_int_0, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 278, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 278, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            if (__pyx_t_7) {
-
-              /* "dysgu/remapping.pyx":279
- * 
- *                         if clip_side == 0:
- *                             break_point = ref_seq_start + aln_q_end             # <<<<<<<<<<<<<<
- *                         else:
- *                             break_point = ref_seq_start + aln_q_begin
- */
-              __pyx_t_18 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_aln_q_end); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 279, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_18);
-              __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_t_18);
-              __pyx_t_18 = 0;
-
-              /* "dysgu/remapping.pyx":278
- *                     if f != -1:
- * 
- *                         if clip_side == 0:             # <<<<<<<<<<<<<<
- *                             break_point = ref_seq_start + aln_q_end
- *                         else:
- */
-              goto __pyx_L51;
-            }
-
-            /* "dysgu/remapping.pyx":281
- *                             break_point = ref_seq_start + aln_q_end
- *                         else:
- *                             break_point = ref_seq_start + aln_q_begin             # <<<<<<<<<<<<<<
- * 
  *                         pos = e["pos" + idx]
  */
-            /*else*/ {
-              __pyx_t_18 = PyNumber_Add(__pyx_v_ref_seq_start, __pyx_v_aln_q_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 281, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_18);
-              __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_t_18);
-              __pyx_t_18 = 0;
-            }
-            __pyx_L51:;
+          __pyx_t_2 = __Pyx_PyInt_NeObjC(__pyx_v_f, __pyx_int_neg_1, -1L, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 211, __pyx_L1_error)
+          __Pyx_GOTREF(__pyx_t_2);
+          __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 211, __pyx_L1_error)
+          __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+          if (__pyx_t_7) {
 
-            /* "dysgu/remapping.pyx":283
- *                             break_point = ref_seq_start + aln_q_begin
+            /* "dysgu/remapping.pyx":213
+ *                     if f != -1:
  * 
  *                         pos = e["pos" + idx]             # <<<<<<<<<<<<<<
  *                         target_gap = None
  *                         ref_gap = None
  */
-            __pyx_t_18 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 283, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_18);
-            __pyx_t_8 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 283, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-            __Pyx_XDECREF_SET(__pyx_v_pos, __pyx_t_8);
-            __pyx_t_8 = 0;
+            __pyx_t_2 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 213, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_2);
+            __pyx_t_21 = __Pyx_PyObject_GetItem(__pyx_v_e, __pyx_t_2); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 213, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
+            __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+            __Pyx_XDECREF_SET(__pyx_v_pos, __pyx_t_21);
+            __pyx_t_21 = 0;
 
-            /* "dysgu/remapping.pyx":284
+            /* "dysgu/remapping.pyx":214
  * 
  *                         pos = e["pos" + idx]
  *                         target_gap = None             # <<<<<<<<<<<<<<
@@ -5884,7 +5710,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
             __Pyx_INCREF(Py_None);
             __Pyx_XDECREF_SET(__pyx_v_target_gap, Py_None);
 
-            /* "dysgu/remapping.pyx":285
+            /* "dysgu/remapping.pyx":215
  *                         pos = e["pos" + idx]
  *                         target_gap = None
  *                         ref_gap = None             # <<<<<<<<<<<<<<
@@ -5894,35 +5720,35 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
             __Pyx_INCREF(Py_None);
             __Pyx_XDECREF_SET(__pyx_v_ref_gap, Py_None);
 
-            /* "dysgu/remapping.pyx":286
+            /* "dysgu/remapping.pyx":216
  *                         target_gap = None
  *                         ref_gap = None
  *                         if clip_side == 0:             # <<<<<<<<<<<<<<
  *                             if q_end + 1 >= pos:
  *                                 kind = "INS"
  */
-            __pyx_t_8 = __Pyx_PyInt_EqObjC(__pyx_v_clip_side, __pyx_int_0, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 286, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 286, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __pyx_t_21 = __Pyx_PyInt_EqObjC(__pyx_v_clip_side, __pyx_int_0, 0, 0); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 216, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_21);
+            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 216, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
             if (__pyx_t_7) {
 
-              /* "dysgu/remapping.pyx":287
+              /* "dysgu/remapping.pyx":217
  *                         ref_gap = None
  *                         if clip_side == 0:
  *                             if q_end + 1 >= pos:             # <<<<<<<<<<<<<<
  *                                 kind = "INS"
  *                                 break_point = pos
  */
-              __pyx_t_8 = __Pyx_PyInt_AddObjC(__pyx_v_q_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 287, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_8);
-              __pyx_t_18 = PyObject_RichCompare(__pyx_t_8, __pyx_v_pos, Py_GE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 287, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 287, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __pyx_t_21 = __Pyx_PyInt_AddObjC(__pyx_v_q_end, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 217, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_21);
+              __pyx_t_2 = PyObject_RichCompare(__pyx_t_21, __pyx_v_pos, Py_GE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 217, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 217, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
               if (__pyx_t_7) {
 
-                /* "dysgu/remapping.pyx":288
+                /* "dysgu/remapping.pyx":218
  *                         if clip_side == 0:
  *                             if q_end + 1 >= pos:
  *                                 kind = "INS"             # <<<<<<<<<<<<<<
@@ -5932,7 +5758,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_n_u_INS);
                 __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_INS);
 
-                /* "dysgu/remapping.pyx":289
+                /* "dysgu/remapping.pyx":219
  *                             if q_end + 1 >= pos:
  *                                 kind = "INS"
  *                                 break_point = pos             # <<<<<<<<<<<<<<
@@ -5942,7 +5768,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_v_pos);
                 __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                /* "dysgu/remapping.pyx":290
+                /* "dysgu/remapping.pyx":220
  *                                 kind = "INS"
  *                                 break_point = pos
  *                                 break_point2 = pos             # <<<<<<<<<<<<<<
@@ -5952,48 +5778,48 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_v_pos);
                 __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_pos);
 
-                /* "dysgu/remapping.pyx":291
+                /* "dysgu/remapping.pyx":221
  *                                 break_point = pos
  *                                 break_point2 = pos
  *                                 overlap = q_end - pos             # <<<<<<<<<<<<<<
  *                                 svlen = len(clip_seq) - target_end_optimal + overlap
  *                             else:
  */
-                __pyx_t_18 = PyNumber_Subtract(__pyx_v_q_end, __pyx_v_pos); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 291, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_18);
-                __Pyx_XDECREF_SET(__pyx_v_overlap, __pyx_t_18);
-                __pyx_t_18 = 0;
+                __pyx_t_2 = PyNumber_Subtract(__pyx_v_q_end, __pyx_v_pos); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 221, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __Pyx_XDECREF_SET(__pyx_v_overlap, __pyx_t_2);
+                __pyx_t_2 = 0;
 
-                /* "dysgu/remapping.pyx":292
+                /* "dysgu/remapping.pyx":222
  *                                 break_point2 = pos
  *                                 overlap = q_end - pos
  *                                 svlen = len(clip_seq) - target_end_optimal + overlap             # <<<<<<<<<<<<<<
  *                             else:
  *                                 ref_gap = pos - q_end
  */
-                __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 292, __pyx_L1_error)
-                __pyx_t_18 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 292, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_18);
-                __pyx_t_8 = PyNumber_Subtract(__pyx_t_18, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 292, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_8);
-                __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-                __pyx_t_18 = PyNumber_Add(__pyx_t_8, __pyx_v_overlap); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 292, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_18);
-                __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-                __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_18);
-                __pyx_t_18 = 0;
+                __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 222, __pyx_L1_error)
+                __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 222, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __pyx_t_21 = PyNumber_Subtract(__pyx_t_2, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 222, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_21);
+                __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                __pyx_t_2 = PyNumber_Add(__pyx_t_21, __pyx_v_overlap); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 222, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+                __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_2);
+                __pyx_t_2 = 0;
 
-                /* "dysgu/remapping.pyx":287
+                /* "dysgu/remapping.pyx":217
  *                         ref_gap = None
  *                         if clip_side == 0:
  *                             if q_end + 1 >= pos:             # <<<<<<<<<<<<<<
  *                                 kind = "INS"
  *                                 break_point = pos
  */
-                goto __pyx_L53;
+                goto __pyx_L55;
               }
 
-              /* "dysgu/remapping.pyx":294
+              /* "dysgu/remapping.pyx":224
  *                                 svlen = len(clip_seq) - target_end_optimal + overlap
  *                             else:
  *                                 ref_gap = pos - q_end             # <<<<<<<<<<<<<<
@@ -6001,40 +5827,40 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  * 
  */
               /*else*/ {
-                __pyx_t_18 = PyNumber_Subtract(__pyx_v_pos, __pyx_v_q_end); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 294, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_18);
-                __Pyx_DECREF_SET(__pyx_v_ref_gap, __pyx_t_18);
-                __pyx_t_18 = 0;
+                __pyx_t_2 = PyNumber_Subtract(__pyx_v_pos, __pyx_v_q_end); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 224, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __Pyx_DECREF_SET(__pyx_v_ref_gap, __pyx_t_2);
+                __pyx_t_2 = 0;
 
-                /* "dysgu/remapping.pyx":295
+                /* "dysgu/remapping.pyx":225
  *                             else:
  *                                 ref_gap = pos - q_end
  *                                 target_gap = len(clip_seq) - target_end_optimal             # <<<<<<<<<<<<<<
  * 
  *                                 if target_gap > ref_gap:
  */
-                __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 295, __pyx_L1_error)
-                __pyx_t_18 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 295, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_18);
-                __pyx_t_8 = PyNumber_Subtract(__pyx_t_18, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 295, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_8);
-                __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-                __Pyx_DECREF_SET(__pyx_v_target_gap, __pyx_t_8);
-                __pyx_t_8 = 0;
+                __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 225, __pyx_L1_error)
+                __pyx_t_2 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 225, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_2);
+                __pyx_t_21 = PyNumber_Subtract(__pyx_t_2, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 225, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_21);
+                __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                __Pyx_DECREF_SET(__pyx_v_target_gap, __pyx_t_21);
+                __pyx_t_21 = 0;
 
-                /* "dysgu/remapping.pyx":297
+                /* "dysgu/remapping.pyx":227
  *                                 target_gap = len(clip_seq) - target_end_optimal
  * 
  *                                 if target_gap > ref_gap:             # <<<<<<<<<<<<<<
  *                                     kind = "INS"
  *                                     break_point = pos
  */
-                __pyx_t_8 = PyObject_RichCompare(__pyx_v_target_gap, __pyx_v_ref_gap, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 297, __pyx_L1_error)
-                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 297, __pyx_L1_error)
-                __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+                __pyx_t_21 = PyObject_RichCompare(__pyx_v_target_gap, __pyx_v_ref_gap, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 227, __pyx_L1_error)
+                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 227, __pyx_L1_error)
+                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
                 if (__pyx_t_7) {
 
-                  /* "dysgu/remapping.pyx":298
+                  /* "dysgu/remapping.pyx":228
  * 
  *                                 if target_gap > ref_gap:
  *                                     kind = "INS"             # <<<<<<<<<<<<<<
@@ -6044,7 +5870,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_n_u_INS);
                   __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_INS);
 
-                  /* "dysgu/remapping.pyx":299
+                  /* "dysgu/remapping.pyx":229
  *                                 if target_gap > ref_gap:
  *                                     kind = "INS"
  *                                     break_point = pos             # <<<<<<<<<<<<<<
@@ -6054,7 +5880,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":300
+                  /* "dysgu/remapping.pyx":230
  *                                     kind = "INS"
  *                                     break_point = pos
  *                                     break_point2 = pos             # <<<<<<<<<<<<<<
@@ -6064,7 +5890,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":301
+                  /* "dysgu/remapping.pyx":231
  *                                     break_point = pos
  *                                     break_point2 = pos
  *                                     svlen = target_gap             # <<<<<<<<<<<<<<
@@ -6074,17 +5900,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_target_gap);
                   __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_v_target_gap);
 
-                  /* "dysgu/remapping.pyx":297
+                  /* "dysgu/remapping.pyx":227
  *                                 target_gap = len(clip_seq) - target_end_optimal
  * 
  *                                 if target_gap > ref_gap:             # <<<<<<<<<<<<<<
  *                                     kind = "INS"
  *                                     break_point = pos
  */
-                  goto __pyx_L54;
+                  goto __pyx_L56;
                 }
 
-                /* "dysgu/remapping.pyx":304
+                /* "dysgu/remapping.pyx":234
  * 
  *                                 else:
  *                                     kind = "DEL"             # <<<<<<<<<<<<<<
@@ -6095,7 +5921,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_n_u_DEL);
                   __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_DEL);
 
-                  /* "dysgu/remapping.pyx":305
+                  /* "dysgu/remapping.pyx":235
  *                                 else:
  *                                     kind = "DEL"
  *                                     break_point = pos             # <<<<<<<<<<<<<<
@@ -6105,7 +5931,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":306
+                  /* "dysgu/remapping.pyx":236
  *                                     kind = "DEL"
  *                                     break_point = pos
  *                                     break_point2 = q_end             # <<<<<<<<<<<<<<
@@ -6115,7 +5941,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_q_end);
                   __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_q_end);
 
-                  /* "dysgu/remapping.pyx":307
+                  /* "dysgu/remapping.pyx":237
  *                                     break_point = pos
  *                                     break_point2 = q_end
  *                                     svlen = ref_gap             # <<<<<<<<<<<<<<
@@ -6125,23 +5951,23 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_ref_gap);
                   __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_v_ref_gap);
                 }
-                __pyx_L54:;
+                __pyx_L56:;
               }
-              __pyx_L53:;
+              __pyx_L55:;
 
-              /* "dysgu/remapping.pyx":310
+              /* "dysgu/remapping.pyx":240
  * 
  *                             # discard alignments with large unmapped overhang
  *                             if aln_t_begin > svlen:             # <<<<<<<<<<<<<<
  *                                 passed = False
  *                                 continue
  */
-              __pyx_t_8 = PyObject_RichCompare(__pyx_v_aln_t_begin, __pyx_v_svlen, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 310, __pyx_L1_error)
-              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 310, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              __pyx_t_21 = PyObject_RichCompare(__pyx_v_aln_t_begin, __pyx_v_svlen, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 240, __pyx_L1_error)
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 240, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
               if (__pyx_t_7) {
 
-                /* "dysgu/remapping.pyx":311
+                /* "dysgu/remapping.pyx":241
  *                             # discard alignments with large unmapped overhang
  *                             if aln_t_begin > svlen:
  *                                 passed = False             # <<<<<<<<<<<<<<
@@ -6150,7 +5976,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
                 __pyx_v_passed = 0;
 
-                /* "dysgu/remapping.pyx":312
+                /* "dysgu/remapping.pyx":242
  *                             if aln_t_begin > svlen:
  *                                 passed = False
  *                                 continue             # <<<<<<<<<<<<<<
@@ -6159,7 +5985,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
                 goto __pyx_L21_continue;
 
-                /* "dysgu/remapping.pyx":310
+                /* "dysgu/remapping.pyx":240
  * 
  *                             # discard alignments with large unmapped overhang
  *                             if aln_t_begin > svlen:             # <<<<<<<<<<<<<<
@@ -6168,17 +5994,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
               }
 
-              /* "dysgu/remapping.pyx":286
+              /* "dysgu/remapping.pyx":216
  *                         target_gap = None
  *                         ref_gap = None
  *                         if clip_side == 0:             # <<<<<<<<<<<<<<
  *                             if q_end + 1 >= pos:
  *                                 kind = "INS"
  */
-              goto __pyx_L52;
+              goto __pyx_L54;
             }
 
-            /* "dysgu/remapping.pyx":315
+            /* "dysgu/remapping.pyx":245
  *                         else:
  * 
  *                             if q_begin - 1 <= pos:             # <<<<<<<<<<<<<<
@@ -6186,15 +6012,15 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  *                                 break_point = pos
  */
             /*else*/ {
-              __pyx_t_8 = __Pyx_PyInt_SubtractObjC(__pyx_v_q_begin, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 315, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_8);
-              __pyx_t_18 = PyObject_RichCompare(__pyx_t_8, __pyx_v_pos, Py_LE); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 315, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 315, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __pyx_t_21 = __Pyx_PyInt_SubtractObjC(__pyx_v_q_begin, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 245, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_21);
+              __pyx_t_2 = PyObject_RichCompare(__pyx_t_21, __pyx_v_pos, Py_LE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 245, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 245, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
               if (__pyx_t_7) {
 
-                /* "dysgu/remapping.pyx":316
+                /* "dysgu/remapping.pyx":246
  * 
  *                             if q_begin - 1 <= pos:
  *                                 kind = "INS"             # <<<<<<<<<<<<<<
@@ -6204,7 +6030,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_n_u_INS);
                 __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_INS);
 
-                /* "dysgu/remapping.pyx":317
+                /* "dysgu/remapping.pyx":247
  *                             if q_begin - 1 <= pos:
  *                                 kind = "INS"
  *                                 break_point = pos             # <<<<<<<<<<<<<<
@@ -6214,7 +6040,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_v_pos);
                 __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                /* "dysgu/remapping.pyx":318
+                /* "dysgu/remapping.pyx":248
  *                                 kind = "INS"
  *                                 break_point = pos
  *                                 break_point2 = pos             # <<<<<<<<<<<<<<
@@ -6224,44 +6050,44 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_v_pos);
                 __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_pos);
 
-                /* "dysgu/remapping.pyx":319
+                /* "dysgu/remapping.pyx":249
  *                                 break_point = pos
  *                                 break_point2 = pos
  *                                 if q_end > pos:             # <<<<<<<<<<<<<<
  *                                     svlen = pos - q_begin + aln_t_begin
  *                                 else:
  */
-                __pyx_t_18 = PyObject_RichCompare(__pyx_v_q_end, __pyx_v_pos, Py_GT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 319, __pyx_L1_error)
-                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 319, __pyx_L1_error)
-                __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+                __pyx_t_2 = PyObject_RichCompare(__pyx_v_q_end, __pyx_v_pos, Py_GT); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 249, __pyx_L1_error)
+                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 249, __pyx_L1_error)
+                __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
                 if (__pyx_t_7) {
 
-                  /* "dysgu/remapping.pyx":320
+                  /* "dysgu/remapping.pyx":250
  *                                 break_point2 = pos
  *                                 if q_end > pos:
  *                                     svlen = pos - q_begin + aln_t_begin             # <<<<<<<<<<<<<<
  *                                 else:
  *                                     svlen = max(q_end, pos) -  min(q_begin, pos)
  */
-                  __pyx_t_18 = PyNumber_Subtract(__pyx_v_pos, __pyx_v_q_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 320, __pyx_L1_error)
-                  __Pyx_GOTREF(__pyx_t_18);
-                  __pyx_t_8 = PyNumber_Add(__pyx_t_18, __pyx_v_aln_t_begin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 320, __pyx_L1_error)
-                  __Pyx_GOTREF(__pyx_t_8);
-                  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_8);
-                  __pyx_t_8 = 0;
+                  __pyx_t_2 = PyNumber_Subtract(__pyx_v_pos, __pyx_v_q_begin); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 250, __pyx_L1_error)
+                  __Pyx_GOTREF(__pyx_t_2);
+                  __pyx_t_21 = PyNumber_Add(__pyx_t_2, __pyx_v_aln_t_begin); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 250, __pyx_L1_error)
+                  __Pyx_GOTREF(__pyx_t_21);
+                  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_21);
+                  __pyx_t_21 = 0;
 
-                  /* "dysgu/remapping.pyx":319
+                  /* "dysgu/remapping.pyx":249
  *                                 break_point = pos
  *                                 break_point2 = pos
  *                                 if q_end > pos:             # <<<<<<<<<<<<<<
  *                                     svlen = pos - q_begin + aln_t_begin
  *                                 else:
  */
-                  goto __pyx_L57;
+                  goto __pyx_L59;
                 }
 
-                /* "dysgu/remapping.pyx":322
+                /* "dysgu/remapping.pyx":252
  *                                     svlen = pos - q_begin + aln_t_begin
  *                                 else:
  *                                     svlen = max(q_end, pos) -  min(q_begin, pos)             # <<<<<<<<<<<<<<
@@ -6270,57 +6096,57 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
                 /*else*/ {
                   __Pyx_INCREF(__pyx_v_pos);
-                  __pyx_t_8 = __pyx_v_pos;
+                  __pyx_t_21 = __pyx_v_pos;
                   __Pyx_INCREF(__pyx_v_q_end);
-                  __pyx_t_18 = __pyx_v_q_end;
-                  __pyx_t_21 = PyObject_RichCompare(__pyx_t_8, __pyx_t_18, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 322, __pyx_L1_error)
-                  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 322, __pyx_L1_error)
-                  __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-                  if (__pyx_t_7) {
-                    __Pyx_INCREF(__pyx_t_8);
-                    __pyx_t_2 = __pyx_t_8;
-                  } else {
-                    __Pyx_INCREF(__pyx_t_18);
-                    __pyx_t_2 = __pyx_t_18;
-                  }
+                  __pyx_t_2 = __pyx_v_q_end;
+                  __pyx_t_18 = PyObject_RichCompare(__pyx_t_21, __pyx_t_2, Py_GT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 252, __pyx_L1_error)
+                  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 252, __pyx_L1_error)
                   __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-                  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-                  __Pyx_INCREF(__pyx_v_pos);
-                  __pyx_t_8 = __pyx_v_pos;
-                  __Pyx_INCREF(__pyx_v_q_begin);
-                  __pyx_t_18 = __pyx_v_q_begin;
-                  __pyx_t_19 = PyObject_RichCompare(__pyx_t_8, __pyx_t_18, Py_LT); __Pyx_XGOTREF(__pyx_t_19); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 322, __pyx_L1_error)
-                  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_19); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 322, __pyx_L1_error)
-                  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
                   if (__pyx_t_7) {
-                    __Pyx_INCREF(__pyx_t_8);
-                    __pyx_t_21 = __pyx_t_8;
+                    __Pyx_INCREF(__pyx_t_21);
+                    __pyx_t_8 = __pyx_t_21;
                   } else {
-                    __Pyx_INCREF(__pyx_t_18);
-                    __pyx_t_21 = __pyx_t_18;
+                    __Pyx_INCREF(__pyx_t_2);
+                    __pyx_t_8 = __pyx_t_2;
                   }
-                  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
-                  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-                  __pyx_t_8 = PyNumber_Subtract(__pyx_t_2, __pyx_t_21); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 322, __pyx_L1_error)
-                  __Pyx_GOTREF(__pyx_t_8);
                   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
                   __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_8);
-                  __pyx_t_8 = 0;
+                  __Pyx_INCREF(__pyx_v_pos);
+                  __pyx_t_21 = __pyx_v_pos;
+                  __Pyx_INCREF(__pyx_v_q_begin);
+                  __pyx_t_2 = __pyx_v_q_begin;
+                  __pyx_t_19 = PyObject_RichCompare(__pyx_t_21, __pyx_t_2, Py_LT); __Pyx_XGOTREF(__pyx_t_19); if (unlikely(!__pyx_t_19)) __PYX_ERR(0, 252, __pyx_L1_error)
+                  __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_19); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 252, __pyx_L1_error)
+                  __Pyx_DECREF(__pyx_t_19); __pyx_t_19 = 0;
+                  if (__pyx_t_7) {
+                    __Pyx_INCREF(__pyx_t_21);
+                    __pyx_t_18 = __pyx_t_21;
+                  } else {
+                    __Pyx_INCREF(__pyx_t_2);
+                    __pyx_t_18 = __pyx_t_2;
+                  }
+                  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+                  __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+                  __pyx_t_21 = PyNumber_Subtract(__pyx_t_8, __pyx_t_18); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 252, __pyx_L1_error)
+                  __Pyx_GOTREF(__pyx_t_21);
+                  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+                  __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_21);
+                  __pyx_t_21 = 0;
                 }
-                __pyx_L57:;
+                __pyx_L59:;
 
-                /* "dysgu/remapping.pyx":315
+                /* "dysgu/remapping.pyx":245
  *                         else:
  * 
  *                             if q_begin - 1 <= pos:             # <<<<<<<<<<<<<<
  *                                 kind = "INS"
  *                                 break_point = pos
  */
-                goto __pyx_L56;
+                goto __pyx_L58;
               }
 
-              /* "dysgu/remapping.pyx":325
+              /* "dysgu/remapping.pyx":255
  * 
  *                             else:
  *                                 ref_gap = q_begin - pos             # <<<<<<<<<<<<<<
@@ -6328,12 +6154,12 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  *                                 if target_gap > ref_gap:
  */
               /*else*/ {
-                __pyx_t_8 = PyNumber_Subtract(__pyx_v_q_begin, __pyx_v_pos); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 325, __pyx_L1_error)
-                __Pyx_GOTREF(__pyx_t_8);
-                __Pyx_DECREF_SET(__pyx_v_ref_gap, __pyx_t_8);
-                __pyx_t_8 = 0;
+                __pyx_t_21 = PyNumber_Subtract(__pyx_v_q_begin, __pyx_v_pos); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 255, __pyx_L1_error)
+                __Pyx_GOTREF(__pyx_t_21);
+                __Pyx_DECREF_SET(__pyx_v_ref_gap, __pyx_t_21);
+                __pyx_t_21 = 0;
 
-                /* "dysgu/remapping.pyx":326
+                /* "dysgu/remapping.pyx":256
  *                             else:
  *                                 ref_gap = q_begin - pos
  *                                 target_gap = aln_t_begin             # <<<<<<<<<<<<<<
@@ -6343,19 +6169,19 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_v_aln_t_begin);
                 __Pyx_DECREF_SET(__pyx_v_target_gap, __pyx_v_aln_t_begin);
 
-                /* "dysgu/remapping.pyx":327
+                /* "dysgu/remapping.pyx":257
  *                                 ref_gap = q_begin - pos
  *                                 target_gap = aln_t_begin
  *                                 if target_gap > ref_gap:             # <<<<<<<<<<<<<<
  *                                     kind = "INS"
  *                                     break_point = pos
  */
-                __pyx_t_8 = PyObject_RichCompare(__pyx_v_target_gap, __pyx_v_ref_gap, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 327, __pyx_L1_error)
-                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 327, __pyx_L1_error)
-                __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+                __pyx_t_21 = PyObject_RichCompare(__pyx_v_target_gap, __pyx_v_ref_gap, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 257, __pyx_L1_error)
+                __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 257, __pyx_L1_error)
+                __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
                 if (__pyx_t_7) {
 
-                  /* "dysgu/remapping.pyx":328
+                  /* "dysgu/remapping.pyx":258
  *                                 target_gap = aln_t_begin
  *                                 if target_gap > ref_gap:
  *                                     kind = "INS"             # <<<<<<<<<<<<<<
@@ -6365,7 +6191,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_n_u_INS);
                   __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_INS);
 
-                  /* "dysgu/remapping.pyx":329
+                  /* "dysgu/remapping.pyx":259
  *                                 if target_gap > ref_gap:
  *                                     kind = "INS"
  *                                     break_point = pos             # <<<<<<<<<<<<<<
@@ -6375,7 +6201,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":330
+                  /* "dysgu/remapping.pyx":260
  *                                     kind = "INS"
  *                                     break_point = pos
  *                                     break_point2 = pos             # <<<<<<<<<<<<<<
@@ -6385,7 +6211,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":331
+                  /* "dysgu/remapping.pyx":261
  *                                     break_point = pos
  *                                     break_point2 = pos
  *                                     svlen = target_gap             # <<<<<<<<<<<<<<
@@ -6395,17 +6221,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_target_gap);
                   __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_v_target_gap);
 
-                  /* "dysgu/remapping.pyx":327
+                  /* "dysgu/remapping.pyx":257
  *                                 ref_gap = q_begin - pos
  *                                 target_gap = aln_t_begin
  *                                 if target_gap > ref_gap:             # <<<<<<<<<<<<<<
  *                                     kind = "INS"
  *                                     break_point = pos
  */
-                  goto __pyx_L58;
+                  goto __pyx_L60;
                 }
 
-                /* "dysgu/remapping.pyx":333
+                /* "dysgu/remapping.pyx":263
  *                                     svlen = target_gap
  *                                 else:
  *                                     kind = "DEL"             # <<<<<<<<<<<<<<
@@ -6416,7 +6242,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_n_u_DEL);
                   __Pyx_XDECREF_SET(__pyx_v_kind, __pyx_n_u_DEL);
 
-                  /* "dysgu/remapping.pyx":334
+                  /* "dysgu/remapping.pyx":264
  *                                 else:
  *                                     kind = "DEL"
  *                                     break_point = pos             # <<<<<<<<<<<<<<
@@ -6426,7 +6252,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_pos);
                   __Pyx_DECREF_SET(__pyx_v_break_point, __pyx_v_pos);
 
-                  /* "dysgu/remapping.pyx":335
+                  /* "dysgu/remapping.pyx":265
  *                                     kind = "DEL"
  *                                     break_point = pos
  *                                     break_point2 = q_begin             # <<<<<<<<<<<<<<
@@ -6436,42 +6262,42 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                   __Pyx_INCREF(__pyx_v_q_begin);
                   __Pyx_XDECREF_SET(__pyx_v_break_point2, __pyx_v_q_begin);
 
-                  /* "dysgu/remapping.pyx":336
+                  /* "dysgu/remapping.pyx":266
  *                                     break_point = pos
  *                                     break_point2 = q_begin
  *                                     svlen = break_point2 - break_point             # <<<<<<<<<<<<<<
  * 
  *                             if len(clip_seq) - target_end_optimal > svlen:
  */
-                  __pyx_t_8 = PyNumber_Subtract(__pyx_v_break_point2, __pyx_v_break_point); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 336, __pyx_L1_error)
-                  __Pyx_GOTREF(__pyx_t_8);
-                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_8);
-                  __pyx_t_8 = 0;
+                  __pyx_t_21 = PyNumber_Subtract(__pyx_v_break_point2, __pyx_v_break_point); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 266, __pyx_L1_error)
+                  __Pyx_GOTREF(__pyx_t_21);
+                  __Pyx_XDECREF_SET(__pyx_v_svlen, __pyx_t_21);
+                  __pyx_t_21 = 0;
                 }
-                __pyx_L58:;
+                __pyx_L60:;
               }
-              __pyx_L56:;
+              __pyx_L58:;
 
-              /* "dysgu/remapping.pyx":338
+              /* "dysgu/remapping.pyx":268
  *                                     svlen = break_point2 - break_point
  * 
  *                             if len(clip_seq) - target_end_optimal > svlen:             # <<<<<<<<<<<<<<
  *                                 passed = False
  *                                 continue
  */
-              __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 338, __pyx_L1_error)
-              __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 338, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_8);
-              __pyx_t_21 = PyNumber_Subtract(__pyx_t_8, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 338, __pyx_L1_error)
+              __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 268, __pyx_L1_error)
+              __pyx_t_21 = PyInt_FromSsize_t(__pyx_t_25); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 268, __pyx_L1_error)
               __Pyx_GOTREF(__pyx_t_21);
-              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-              __pyx_t_8 = PyObject_RichCompare(__pyx_t_21, __pyx_v_svlen, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 338, __pyx_L1_error)
+              __pyx_t_18 = PyNumber_Subtract(__pyx_t_21, __pyx_v_target_end_optimal); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 268, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
               __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 338, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              __pyx_t_21 = PyObject_RichCompare(__pyx_t_18, __pyx_v_svlen, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 268, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 268, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
               if (__pyx_t_7) {
 
-                /* "dysgu/remapping.pyx":339
+                /* "dysgu/remapping.pyx":269
  * 
  *                             if len(clip_seq) - target_end_optimal > svlen:
  *                                 passed = False             # <<<<<<<<<<<<<<
@@ -6480,16 +6306,16 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
                 __pyx_v_passed = 0;
 
-                /* "dysgu/remapping.pyx":340
+                /* "dysgu/remapping.pyx":270
  *                             if len(clip_seq) - target_end_optimal > svlen:
  *                                 passed = False
  *                                 continue             # <<<<<<<<<<<<<<
  * 
- *                         e["remapped"] = 1
+ *                         if svlen < min_sv_len:
  */
                 goto __pyx_L21_continue;
 
-                /* "dysgu/remapping.pyx":338
+                /* "dysgu/remapping.pyx":268
  *                                     svlen = break_point2 - break_point
  * 
  *                             if len(clip_seq) - target_end_optimal > svlen:             # <<<<<<<<<<<<<<
@@ -6498,71 +6324,31 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
               }
             }
-            __pyx_L52:;
+            __pyx_L54:;
 
-            /* "dysgu/remapping.pyx":342
+            /* "dysgu/remapping.pyx":272
  *                                 continue
- * 
- *                         e["remapped"] = 1             # <<<<<<<<<<<<<<
- *                         if e['svtype'] != kind:
- *                             e["switched"] = 1
- */
-            if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remapped, __pyx_int_1) < 0)) __PYX_ERR(0, 342, __pyx_L1_error)
-
-            /* "dysgu/remapping.pyx":343
- * 
- *                         e["remapped"] = 1
- *                         if e['svtype'] != kind:             # <<<<<<<<<<<<<<
- *                             e["switched"] = 1
- * 
- */
-            __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svtype); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 343, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __pyx_t_7 = (__Pyx_PyUnicode_Equals(__pyx_t_8, __pyx_v_kind, Py_NE)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 343, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-            if (__pyx_t_7) {
-
-              /* "dysgu/remapping.pyx":344
- *                         e["remapped"] = 1
- *                         if e['svtype'] != kind:
- *                             e["switched"] = 1             # <<<<<<<<<<<<<<
- * 
- *                         if svlen < min_sv_len:
- */
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_switched, __pyx_int_1) < 0)) __PYX_ERR(0, 344, __pyx_L1_error)
-
-              /* "dysgu/remapping.pyx":343
- * 
- *                         e["remapped"] = 1
- *                         if e['svtype'] != kind:             # <<<<<<<<<<<<<<
- *                             e["switched"] = 1
- * 
- */
-            }
-
-            /* "dysgu/remapping.pyx":346
- *                             e["switched"] = 1
  * 
  *                         if svlen < min_sv_len:             # <<<<<<<<<<<<<<
  *                             continue
  * 
  */
-            __pyx_t_8 = PyObject_RichCompare(__pyx_v_svlen, __pyx_v_min_sv_len, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 346, __pyx_L1_error)
-            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 346, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __pyx_t_21 = PyObject_RichCompare(__pyx_v_svlen, __pyx_v_min_sv_len, Py_LT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 272, __pyx_L1_error)
+            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 272, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
             if (__pyx_t_7) {
 
-              /* "dysgu/remapping.pyx":347
+              /* "dysgu/remapping.pyx":273
  * 
  *                         if svlen < min_sv_len:
  *                             continue             # <<<<<<<<<<<<<<
  * 
- *                         if abs(svlen - e['svlen']) > 20:
+ *                         if kind == "DEL":
  */
               goto __pyx_L21_continue;
 
-              /* "dysgu/remapping.pyx":346
- *                             e["switched"] = 1
+              /* "dysgu/remapping.pyx":272
+ *                                 continue
  * 
  *                         if svlen < min_sv_len:             # <<<<<<<<<<<<<<
  *                             continue
@@ -6570,68 +6356,171 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
             }
 
-            /* "dysgu/remapping.pyx":349
+            /* "dysgu/remapping.pyx":275
  *                             continue
  * 
- *                         if abs(svlen - e['svlen']) > 20:             # <<<<<<<<<<<<<<
- *                             e['svtype'] = kind
- *                             e['svlen'] = svlen
+ *                         if kind == "DEL":             # <<<<<<<<<<<<<<
+ *                             span = a.query_end - a.query_begin + 1
+ *                             if span < len(clip_seq) * 0.4 and span < 50:
  */
-            __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 349, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __pyx_t_21 = PyNumber_Subtract(__pyx_v_svlen, __pyx_t_8); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 349, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_21);
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-            __pyx_t_8 = __Pyx_PyNumber_Absolute(__pyx_t_21); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 349, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_8);
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-            __pyx_t_21 = PyObject_RichCompare(__pyx_t_8, __pyx_int_20, Py_GT); __Pyx_XGOTREF(__pyx_t_21); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 349, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-            __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_21); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 349, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
-            if (__pyx_t_7) {
+            __pyx_t_7 = (__Pyx_PyUnicode_Equals(__pyx_v_kind, __pyx_n_u_DEL, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 275, __pyx_L1_error)
+            __pyx_t_6 = (__pyx_t_7 != 0);
+            if (__pyx_t_6) {
 
-              /* "dysgu/remapping.pyx":350
+              /* "dysgu/remapping.pyx":276
+ * 
+ *                         if kind == "DEL":
+ *                             span = a.query_end - a.query_begin + 1             # <<<<<<<<<<<<<<
+ *                             if span < len(clip_seq) * 0.4 and span < 50:
+ *                                 continue
+ */
+              __pyx_t_21 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_end); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 276, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_21);
+              __pyx_t_18 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_query_begin); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 276, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              __pyx_t_8 = PyNumber_Subtract(__pyx_t_21, __pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 276, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_8);
+              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __pyx_t_18 = __Pyx_PyInt_AddObjC(__pyx_t_8, __pyx_int_1, 1, 0, 0); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 276, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              __Pyx_XDECREF_SET(__pyx_v_span, __pyx_t_18);
+              __pyx_t_18 = 0;
+
+              /* "dysgu/remapping.pyx":277
+ *                         if kind == "DEL":
+ *                             span = a.query_end - a.query_begin + 1
+ *                             if span < len(clip_seq) * 0.4 and span < 50:             # <<<<<<<<<<<<<<
+ *                                 continue
+ * 
+ */
+              __pyx_t_25 = PyObject_Length(__pyx_v_clip_seq); if (unlikely(__pyx_t_25 == ((Py_ssize_t)-1))) __PYX_ERR(0, 277, __pyx_L1_error)
+              __pyx_t_18 = PyFloat_FromDouble((__pyx_t_25 * 0.4)); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 277, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              __pyx_t_8 = PyObject_RichCompare(__pyx_v_span, __pyx_t_18, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 277, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 277, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              if (__pyx_t_7) {
+              } else {
+                __pyx_t_6 = __pyx_t_7;
+                goto __pyx_L65_bool_binop_done;
+              }
+              __pyx_t_8 = PyObject_RichCompare(__pyx_v_span, __pyx_int_50, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 277, __pyx_L1_error)
+              __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 277, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+              __pyx_t_6 = __pyx_t_7;
+              __pyx_L65_bool_binop_done:;
+              if (__pyx_t_6) {
+
+                /* "dysgu/remapping.pyx":278
+ *                             span = a.query_end - a.query_begin + 1
+ *                             if span < len(clip_seq) * 0.4 and span < 50:
+ *                                 continue             # <<<<<<<<<<<<<<
+ * 
+ *                         # echo("BREAKPOINT", break_point)
+ */
+                goto __pyx_L21_continue;
+
+                /* "dysgu/remapping.pyx":277
+ *                         if kind == "DEL":
+ *                             span = a.query_end - a.query_begin + 1
+ *                             if span < len(clip_seq) * 0.4 and span < 50:             # <<<<<<<<<<<<<<
+ *                                 continue
+ * 
+ */
+              }
+
+              /* "dysgu/remapping.pyx":275
+ *                             continue
+ * 
+ *                         if kind == "DEL":             # <<<<<<<<<<<<<<
+ *                             span = a.query_end - a.query_begin + 1
+ *                             if span < len(clip_seq) * 0.4 and span < 50:
+ */
+            }
+
+            /* "dysgu/remapping.pyx":285
+ *                         # echo("--", kind, "pos" + idx, break_point, break_point2)
+ * 
+ *                         if abs(svlen - e['svlen']) > 20:             # <<<<<<<<<<<<<<
+ *                             e["remapped"] = 1
+ *                             e["remap_score"] = score
+ */
+            __pyx_t_8 = __Pyx_PyObject_Dict_GetItem(__pyx_v_e, __pyx_n_u_svlen); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 285, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __pyx_t_18 = PyNumber_Subtract(__pyx_v_svlen, __pyx_t_8); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 285, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_18);
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __pyx_t_8 = __Pyx_PyNumber_Absolute(__pyx_t_18); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 285, __pyx_L1_error)
+            __Pyx_GOTREF(__pyx_t_8);
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+            __pyx_t_18 = PyObject_RichCompare(__pyx_t_8, __pyx_int_20, Py_GT); __Pyx_XGOTREF(__pyx_t_18); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 285, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
+            __pyx_t_6 = __Pyx_PyObject_IsTrue(__pyx_t_18); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 285, __pyx_L1_error)
+            __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
+            if (__pyx_t_6) {
+
+              /* "dysgu/remapping.pyx":286
  * 
  *                         if abs(svlen - e['svlen']) > 20:
+ *                             e["remapped"] = 1             # <<<<<<<<<<<<<<
+ *                             e["remap_score"] = score
+ *                             # if e['svtype'] != kind:
+ */
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remapped, __pyx_int_1) < 0)) __PYX_ERR(0, 286, __pyx_L1_error)
+
+              /* "dysgu/remapping.pyx":287
+ *                         if abs(svlen - e['svlen']) > 20:
+ *                             e["remapped"] = 1
+ *                             e["remap_score"] = score             # <<<<<<<<<<<<<<
+ *                             # if e['svtype'] != kind:
+ *                             #     e["switched"] = 1
+ */
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_remap_score, __pyx_v_score) < 0)) __PYX_ERR(0, 287, __pyx_L1_error)
+
+              /* "dysgu/remapping.pyx":291
+ *                             #     e["switched"] = 1
+ * 
  *                             e['svtype'] = kind             # <<<<<<<<<<<<<<
  *                             e['svlen'] = svlen
  *                             e['pos' + idx] = break_point
  */
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svtype, __pyx_v_kind) < 0)) __PYX_ERR(0, 350, __pyx_L1_error)
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svtype, __pyx_v_kind) < 0)) __PYX_ERR(0, 291, __pyx_L1_error)
 
-              /* "dysgu/remapping.pyx":351
- *                         if abs(svlen - e['svlen']) > 20:
+              /* "dysgu/remapping.pyx":292
+ * 
  *                             e['svtype'] = kind
  *                             e['svlen'] = svlen             # <<<<<<<<<<<<<<
  *                             e['pos' + idx] = break_point
  *                             if idx == "A":
  */
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svlen, __pyx_v_svlen) < 0)) __PYX_ERR(0, 351, __pyx_L1_error)
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_svlen, __pyx_v_svlen) < 0)) __PYX_ERR(0, 292, __pyx_L1_error)
 
-              /* "dysgu/remapping.pyx":352
+              /* "dysgu/remapping.pyx":293
  *                             e['svtype'] = kind
  *                             e['svlen'] = svlen
  *                             e['pos' + idx] = break_point             # <<<<<<<<<<<<<<
  *                             if idx == "A":
  *                                 other = "B"
  */
-              __pyx_t_21 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 352, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_21);
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_t_21, __pyx_v_break_point) < 0)) __PYX_ERR(0, 352, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+              __pyx_t_18 = PyNumber_Add(__pyx_n_u_pos, __pyx_v_idx); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 293, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_t_18, __pyx_v_break_point) < 0)) __PYX_ERR(0, 293, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-              /* "dysgu/remapping.pyx":353
+              /* "dysgu/remapping.pyx":294
  *                             e['svlen'] = svlen
  *                             e['pos' + idx] = break_point
  *                             if idx == "A":             # <<<<<<<<<<<<<<
  *                                 other = "B"
  *                             else:
  */
-              __pyx_t_7 = (__Pyx_PyUnicode_Equals(__pyx_v_idx, __pyx_n_u_A, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 353, __pyx_L1_error)
-              if (__pyx_t_7) {
+              __pyx_t_6 = (__Pyx_PyUnicode_Equals(__pyx_v_idx, __pyx_n_u_A, Py_EQ)); if (unlikely(__pyx_t_6 < 0)) __PYX_ERR(0, 294, __pyx_L1_error)
+              if (__pyx_t_6) {
 
-                /* "dysgu/remapping.pyx":354
+                /* "dysgu/remapping.pyx":295
  *                             e['pos' + idx] = break_point
  *                             if idx == "A":
  *                                 other = "B"             # <<<<<<<<<<<<<<
@@ -6641,17 +6530,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_n_u_B);
                 __Pyx_XDECREF_SET(__pyx_v_other, __pyx_n_u_B);
 
-                /* "dysgu/remapping.pyx":353
+                /* "dysgu/remapping.pyx":294
  *                             e['svlen'] = svlen
  *                             e['pos' + idx] = break_point
  *                             if idx == "A":             # <<<<<<<<<<<<<<
  *                                 other = "B"
  *                             else:
  */
-                goto __pyx_L63;
+                goto __pyx_L68;
               }
 
-              /* "dysgu/remapping.pyx":356
+              /* "dysgu/remapping.pyx":297
  *                                 other = "B"
  *                             else:
  *                                 other = "A"             # <<<<<<<<<<<<<<
@@ -6662,48 +6551,48 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
                 __Pyx_INCREF(__pyx_n_u_A);
                 __Pyx_XDECREF_SET(__pyx_v_other, __pyx_n_u_A);
               }
-              __pyx_L63:;
+              __pyx_L68:;
 
-              /* "dysgu/remapping.pyx":357
+              /* "dysgu/remapping.pyx":298
  *                             else:
  *                                 other = "A"
  *                             e['pos' + other] = break_point2             # <<<<<<<<<<<<<<
  *                             e['cipos95A'] = 0
  *                             e['cipos95B'] = 0
  */
-              __pyx_t_21 = __Pyx_PyUnicode_Concat(__pyx_n_u_pos, __pyx_v_other); if (unlikely(!__pyx_t_21)) __PYX_ERR(0, 357, __pyx_L1_error)
-              __Pyx_GOTREF(__pyx_t_21);
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_t_21, __pyx_v_break_point2) < 0)) __PYX_ERR(0, 357, __pyx_L1_error)
-              __Pyx_DECREF(__pyx_t_21); __pyx_t_21 = 0;
+              __pyx_t_18 = __Pyx_PyUnicode_Concat(__pyx_n_u_pos, __pyx_v_other); if (unlikely(!__pyx_t_18)) __PYX_ERR(0, 298, __pyx_L1_error)
+              __Pyx_GOTREF(__pyx_t_18);
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_t_18, __pyx_v_break_point2) < 0)) __PYX_ERR(0, 298, __pyx_L1_error)
+              __Pyx_DECREF(__pyx_t_18); __pyx_t_18 = 0;
 
-              /* "dysgu/remapping.pyx":358
+              /* "dysgu/remapping.pyx":299
  *                                 other = "A"
  *                             e['pos' + other] = break_point2
  *                             e['cipos95A'] = 0             # <<<<<<<<<<<<<<
  *                             e['cipos95B'] = 0
  *                             new_events.append(e)
  */
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_cipos95A, __pyx_int_0) < 0)) __PYX_ERR(0, 358, __pyx_L1_error)
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_cipos95A, __pyx_int_0) < 0)) __PYX_ERR(0, 299, __pyx_L1_error)
 
-              /* "dysgu/remapping.pyx":359
+              /* "dysgu/remapping.pyx":300
  *                             e['pos' + other] = break_point2
  *                             e['cipos95A'] = 0
  *                             e['cipos95B'] = 0             # <<<<<<<<<<<<<<
  *                             new_events.append(e)
  *                             added = 1
  */
-              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_cipos95B, __pyx_int_0) < 0)) __PYX_ERR(0, 359, __pyx_L1_error)
+              if (unlikely(PyObject_SetItem(__pyx_v_e, __pyx_n_u_cipos95B, __pyx_int_0) < 0)) __PYX_ERR(0, 300, __pyx_L1_error)
 
-              /* "dysgu/remapping.pyx":360
+              /* "dysgu/remapping.pyx":301
  *                             e['cipos95A'] = 0
  *                             e['cipos95B'] = 0
  *                             new_events.append(e)             # <<<<<<<<<<<<<<
  *                             added = 1
  *                             break  # dont analyse contig2
  */
-              __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 360, __pyx_L1_error)
+              __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 301, __pyx_L1_error)
 
-              /* "dysgu/remapping.pyx":361
+              /* "dysgu/remapping.pyx":302
  *                             e['cipos95B'] = 0
  *                             new_events.append(e)
  *                             added = 1             # <<<<<<<<<<<<<<
@@ -6712,7 +6601,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
               __pyx_v_added = 1;
 
-              /* "dysgu/remapping.pyx":362
+              /* "dysgu/remapping.pyx":303
  *                             new_events.append(e)
  *                             added = 1
  *                             break  # dont analyse contig2             # <<<<<<<<<<<<<<
@@ -6721,26 +6610,26 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
               goto __pyx_L22_break;
 
-              /* "dysgu/remapping.pyx":349
- *                             continue
+              /* "dysgu/remapping.pyx":285
+ *                         # echo("--", kind, "pos" + idx, break_point, break_point2)
  * 
  *                         if abs(svlen - e['svlen']) > 20:             # <<<<<<<<<<<<<<
- *                             e['svtype'] = kind
- *                             e['svlen'] = svlen
+ *                             e["remapped"] = 1
+ *                             e["remap_score"] = score
  */
             }
 
-            /* "dysgu/remapping.pyx":276
- *                     #     score = a2.optimal_alignment_score
+            /* "dysgu/remapping.pyx":211
+ *                     f = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position, clip_seq)
  * 
  *                     if f != -1:             # <<<<<<<<<<<<<<
  * 
- *                         if clip_side == 0:
+ *                         pos = e["pos" + idx]
  */
-            goto __pyx_L50;
+            goto __pyx_L53;
           }
 
-          /* "dysgu/remapping.pyx":365
+          /* "dysgu/remapping.pyx":306
  * 
  *                     else:
  *                         passed = False             # <<<<<<<<<<<<<<
@@ -6750,10 +6639,10 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
           /*else*/ {
             __pyx_v_passed = 0;
           }
-          __pyx_L50:;
+          __pyx_L53:;
 
-          /* "dysgu/remapping.pyx":166
- * 
+          /* "dysgu/remapping.pyx":139
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):
  *                 if cont in e and e[cont]:             # <<<<<<<<<<<<<<
  * 
@@ -6761,17 +6650,17 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
         }
 
-        /* "dysgu/remapping.pyx":367
+        /* "dysgu/remapping.pyx":308
  *                         passed = False
  * 
  *                 if added:             # <<<<<<<<<<<<<<
  *                     break
  * 
  */
-        __pyx_t_7 = (__pyx_v_added != 0);
-        if (__pyx_t_7) {
+        __pyx_t_6 = (__pyx_v_added != 0);
+        if (__pyx_t_6) {
 
-          /* "dysgu/remapping.pyx":368
+          /* "dysgu/remapping.pyx":309
  * 
  *                 if added:
  *                     break             # <<<<<<<<<<<<<<
@@ -6780,7 +6669,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
           goto __pyx_L22_break;
 
-          /* "dysgu/remapping.pyx":367
+          /* "dysgu/remapping.pyx":308
  *                         passed = False
  * 
  *                 if added:             # <<<<<<<<<<<<<<
@@ -6789,9 +6678,9 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
         }
 
-        /* "dysgu/remapping.pyx":165
+        /* "dysgu/remapping.pyx":138
  *             high_quality_clip = False
- * 
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):             # <<<<<<<<<<<<<<
  *                 if cont in e and e[cont]:
  * 
@@ -6801,34 +6690,34 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
       __pyx_L22_break:;
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
 
-      /* "dysgu/remapping.pyx":370
+      /* "dysgu/remapping.pyx":311
  *                     break
  * 
  *             if not added and high_quality_clip:             # <<<<<<<<<<<<<<
  *                 new_events.append(e)
  * 
  */
-      __pyx_t_6 = ((!(__pyx_v_added != 0)) != 0);
-      if (__pyx_t_6) {
-      } else {
-        __pyx_t_7 = __pyx_t_6;
-        goto __pyx_L66_bool_binop_done;
-      }
-      __pyx_t_6 = (__pyx_v_high_quality_clip != 0);
-      __pyx_t_7 = __pyx_t_6;
-      __pyx_L66_bool_binop_done:;
+      __pyx_t_7 = ((!(__pyx_v_added != 0)) != 0);
       if (__pyx_t_7) {
+      } else {
+        __pyx_t_6 = __pyx_t_7;
+        goto __pyx_L71_bool_binop_done;
+      }
+      __pyx_t_7 = (__pyx_v_high_quality_clip != 0);
+      __pyx_t_6 = __pyx_t_7;
+      __pyx_L71_bool_binop_done:;
+      if (__pyx_t_6) {
 
-        /* "dysgu/remapping.pyx":371
+        /* "dysgu/remapping.pyx":312
  * 
  *             if not added and high_quality_clip:
  *                 new_events.append(e)             # <<<<<<<<<<<<<<
  * 
- *     # for e in new_events:
+ *     return new_events
  */
-        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 371, __pyx_L1_error)
+        __pyx_t_10 = __Pyx_PyList_Append(__pyx_v_new_events, __pyx_v_e); if (unlikely(__pyx_t_10 == ((int)-1))) __PYX_ERR(0, 312, __pyx_L1_error)
 
-        /* "dysgu/remapping.pyx":370
+        /* "dysgu/remapping.pyx":311
  *                     break
  * 
  *             if not added and high_quality_clip:             # <<<<<<<<<<<<<<
@@ -6837,8 +6726,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
  */
       }
 
-      /* "dysgu/remapping.pyx":156
- * 
+      /* "dysgu/remapping.pyx":131
+ *         ref_seq_big = None
  * 
  *         for index in grp_idxs:             # <<<<<<<<<<<<<<
  *             e = events[index]
@@ -6847,8 +6736,8 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
     }
     __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
 
-    /* "dysgu/remapping.pyx":149
- * 
+    /* "dysgu/remapping.pyx":125
+ *                 ref_locs.append((e["chrA"], e["posB"], e["posA"], count))
  * 
  *     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):             # <<<<<<<<<<<<<<
  *         if gstart < 0:
@@ -6857,9 +6746,9 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
-  /* "dysgu/remapping.pyx":376
- *     #     if e['event_id'] == 6:
- *     #         echo("here", e)
+  /* "dysgu/remapping.pyx":314
+ *                 new_events.append(e)
+ * 
  *     return new_events             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
@@ -6867,7 +6756,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   __pyx_r = __pyx_v_new_events;
   goto __pyx_L0;
 
-  /* "dysgu/remapping.pyx":110
+  /* "dysgu/remapping.pyx":93
  * 
  * 
  * def remap_soft_clips(events, ref_genome, min_sv_len):             # <<<<<<<<<<<<<<
@@ -6907,6 +6796,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   __Pyx_XDECREF(__pyx_v_clip_res);
   __Pyx_XDECREF(__pyx_v_clip_seq);
   __Pyx_XDECREF(__pyx_v_clip_side);
+  __Pyx_XDECREF(__pyx_v_length_other_clip);
   __Pyx_XDECREF(__pyx_v_w);
   __Pyx_XDECREF(__pyx_v_ref_start);
   __Pyx_XDECREF(__pyx_v_ref_end);
@@ -6915,7 +6805,6 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   __Pyx_XDECREF(__pyx_v_ref_seq_clipped);
   __Pyx_XDECREF(__pyx_v_ref_seq_start);
   __Pyx_XDECREF(__pyx_v_ref_seq_end);
-  __Pyx_XDECREF(__pyx_v_tel);
   __Pyx_XDECREF(__pyx_v_el);
   __Pyx_XDECREF(__pyx_v_locs);
   __Pyx_XDECREF(__pyx_v_l_start);
@@ -6923,7 +6812,6 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   __Pyx_XDECREF(__pyx_v_ref_start2);
   __Pyx_XDECREF(__pyx_v_ref_end2);
   __Pyx_XDECREF(__pyx_v_ref_seq2);
-  __Pyx_XDECREF(__pyx_v_tsm);
   __Pyx_XDECREF(__pyx_v_aln);
   __Pyx_XDECREF(__pyx_v_a);
   __Pyx_XDECREF(__pyx_v_aligned_seq);
@@ -6943,6 +6831,7 @@ static PyObject *__pyx_pf_5dysgu_9remapping_8remap_soft_clips(CYTHON_UNUSED PyOb
   __Pyx_XDECREF(__pyx_v_break_point2);
   __Pyx_XDECREF(__pyx_v_overlap);
   __Pyx_XDECREF(__pyx_v_svlen);
+  __Pyx_XDECREF(__pyx_v_span);
   __Pyx_XDECREF(__pyx_v_other);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
@@ -7074,6 +6963,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_last, __pyx_k_last, sizeof(__pyx_k_last), 0, 0, 1, 1},
   {&__pyx_n_s_left_clip, __pyx_k_left_clip, sizeof(__pyx_k_left_clip), 0, 0, 1, 1},
   {&__pyx_n_u_left_weight, __pyx_k_left_weight, sizeof(__pyx_k_left_weight), 0, 1, 0, 1},
+  {&__pyx_n_s_length_other_clip, __pyx_k_length_other_clip, sizeof(__pyx_k_length_other_clip), 0, 0, 1, 1},
   {&__pyx_n_s_locations, __pyx_k_locations, sizeof(__pyx_k_locations), 0, 0, 1, 1},
   {&__pyx_n_u_locations, __pyx_k_locations, sizeof(__pyx_k_locations), 0, 1, 0, 1},
   {&__pyx_n_s_locs, __pyx_k_locs, sizeof(__pyx_k_locs), 0, 0, 1, 1},
@@ -7109,6 +6999,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_query_begin, __pyx_k_query_begin, sizeof(__pyx_k_query_begin), 0, 1, 0, 1},
   {&__pyx_n_s_query_end, __pyx_k_query_end, sizeof(__pyx_k_query_end), 0, 0, 1, 1},
   {&__pyx_n_u_query_end, __pyx_k_query_end, sizeof(__pyx_k_query_end), 0, 1, 0, 1},
+  {&__pyx_n_u_ref_bases, __pyx_k_ref_bases, sizeof(__pyx_k_ref_bases), 0, 1, 0, 1},
   {&__pyx_n_u_ref_end, __pyx_k_ref_end, sizeof(__pyx_k_ref_end), 0, 1, 0, 1},
   {&__pyx_n_s_ref_end2, __pyx_k_ref_end2, sizeof(__pyx_k_ref_end2), 0, 0, 1, 1},
   {&__pyx_n_s_ref_end_2, __pyx_k_ref_end_2, sizeof(__pyx_k_ref_end_2), 0, 0, 1, 1},
@@ -7123,6 +7014,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_ref_start, __pyx_k_ref_start, sizeof(__pyx_k_ref_start), 0, 1, 0, 1},
   {&__pyx_n_s_ref_start2, __pyx_k_ref_start2, sizeof(__pyx_k_ref_start2), 0, 0, 1, 1},
   {&__pyx_n_s_ref_start_2, __pyx_k_ref_start_2, sizeof(__pyx_k_ref_start_2), 0, 0, 1, 1},
+  {&__pyx_n_u_remap_score, __pyx_k_remap_score, sizeof(__pyx_k_remap_score), 0, 1, 0, 1},
   {&__pyx_n_s_remap_soft_clips, __pyx_k_remap_soft_clips, sizeof(__pyx_k_remap_soft_clips), 0, 0, 1, 1},
   {&__pyx_n_u_remapped, __pyx_k_remapped, sizeof(__pyx_k_remapped), 0, 1, 0, 1},
   {&__pyx_n_s_right_clip, __pyx_k_right_clip, sizeof(__pyx_k_right_clip), 0, 0, 1, 1},
@@ -7133,30 +7025,27 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_seq2, __pyx_k_seq2, sizeof(__pyx_k_seq2), 0, 0, 1, 1},
   {&__pyx_n_s_skbio_alignment, __pyx_k_skbio_alignment, sizeof(__pyx_k_skbio_alignment), 0, 0, 1, 1},
   {&__pyx_n_s_span, __pyx_k_span, sizeof(__pyx_k_span), 0, 0, 1, 1},
+  {&__pyx_n_s_start_i, __pyx_k_start_i, sizeof(__pyx_k_start_i), 0, 0, 1, 1},
   {&__pyx_n_s_start_idx, __pyx_k_start_idx, sizeof(__pyx_k_start_idx), 0, 0, 1, 1},
   {&__pyx_n_s_svlen, __pyx_k_svlen, sizeof(__pyx_k_svlen), 0, 0, 1, 1},
   {&__pyx_n_u_svlen, __pyx_k_svlen, sizeof(__pyx_k_svlen), 0, 1, 0, 1},
   {&__pyx_n_u_svlen_precise, __pyx_k_svlen_precise, sizeof(__pyx_k_svlen_precise), 0, 1, 0, 1},
   {&__pyx_n_u_svtype, __pyx_k_svtype, sizeof(__pyx_k_svtype), 0, 1, 0, 1},
-  {&__pyx_n_u_switched, __pyx_k_switched, sizeof(__pyx_k_switched), 0, 1, 0, 1},
   {&__pyx_n_s_target_begin, __pyx_k_target_begin, sizeof(__pyx_k_target_begin), 0, 0, 1, 1},
   {&__pyx_n_s_target_end_optimal, __pyx_k_target_end_optimal, sizeof(__pyx_k_target_end_optimal), 0, 0, 1, 1},
   {&__pyx_n_s_target_gap, __pyx_k_target_gap, sizeof(__pyx_k_target_gap), 0, 0, 1, 1},
   {&__pyx_n_s_target_sequence, __pyx_k_target_sequence, sizeof(__pyx_k_target_sequence), 0, 0, 1, 1},
   {&__pyx_n_s_task, __pyx_k_task, sizeof(__pyx_k_task), 0, 0, 1, 1},
-  {&__pyx_n_s_tel, __pyx_k_tel, sizeof(__pyx_k_tel), 0, 0, 1, 1},
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
-  {&__pyx_n_s_time, __pyx_k_time, sizeof(__pyx_k_time), 0, 0, 1, 1},
   {&__pyx_n_s_try_remap, __pyx_k_try_remap, sizeof(__pyx_k_try_remap), 0, 0, 1, 1},
   {&__pyx_n_s_try_remap_events, __pyx_k_try_remap_events, sizeof(__pyx_k_try_remap_events), 0, 0, 1, 1},
-  {&__pyx_n_s_tsm, __pyx_k_tsm, sizeof(__pyx_k_tsm), 0, 0, 1, 1},
   {&__pyx_n_s_upper, __pyx_k_upper, sizeof(__pyx_k_upper), 0, 0, 1, 1},
   {&__pyx_n_s_w, __pyx_k_w, sizeof(__pyx_k_w), 0, 0, 1, 1},
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(0, 116, __pyx_L1_error)
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 201, __pyx_L1_error)
+  __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(0, 99, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 172, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -7166,82 +7055,82 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "dysgu/remapping.pyx":165
+  /* "dysgu/remapping.pyx":138
  *             high_quality_clip = False
- * 
+ *             # echo(e["chrA"], e["posA"], e["posB"])
  *             for cont, idx in (("contig", "A"), ("contig2", "B")):             # <<<<<<<<<<<<<<
  *                 if cont in e and e[cont]:
  * 
  */
-  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_n_u_contig, __pyx_n_u_A); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_tuple__2 = PyTuple_Pack(2, __pyx_n_u_contig, __pyx_n_u_A); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
-  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_u_contig2, __pyx_n_u_B); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_tuple__3 = PyTuple_Pack(2, __pyx_n_u_contig2, __pyx_n_u_B); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
-  __pyx_tuple__4 = PyTuple_Pack(2, __pyx_tuple__2, __pyx_tuple__3); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_tuple__4 = PyTuple_Pack(2, __pyx_tuple__2, __pyx_tuple__3); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 138, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__4);
   __Pyx_GIVEREF(__pyx_tuple__4);
 
-  /* "dysgu/remapping.pyx":12
+  /* "dysgu/remapping.pyx":11
  * 
  * 
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 
  */
-  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_n_s_args); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_n_s_args); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
-  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARARGS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_echo, 12, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_codeobj__6 = (PyObject*)__Pyx_PyCode_New(0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS|CO_VARARGS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__5, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_echo, 11, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__6)) __PYX_ERR(0, 11, __pyx_L1_error)
 
-  /* "dysgu/remapping.pyx":16
+  /* "dysgu/remapping.pyx":15
  * 
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):             # <<<<<<<<<<<<<<
  *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+ *         start_i = 1
  */
-  __pyx_tuple__7 = PyTuple_Pack(7, __pyx_n_s_cont, __pyx_n_s_position, __pyx_n_s_cont_ref_start, __pyx_n_s_cont_ref_end, __pyx_n_s_left_clip, __pyx_n_s_end_i, __pyx_n_s_right_clip); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 16, __pyx_L1_error)
+  __pyx_tuple__7 = PyTuple_Pack(8, __pyx_n_s_cont, __pyx_n_s_position, __pyx_n_s_cont_ref_start, __pyx_n_s_cont_ref_end, __pyx_n_s_start_i, __pyx_n_s_end_i, __pyx_n_s_left_clip, __pyx_n_s_right_clip); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
-  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(4, 0, 7, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_get_clipped_seq, 16, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 16, __pyx_L1_error)
+  __pyx_codeobj__8 = (PyObject*)__Pyx_PyCode_New(4, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__7, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_get_clipped_seq, 15, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__8)) __PYX_ERR(0, 15, __pyx_L1_error)
 
-  /* "dysgu/remapping.pyx":42
+  /* "dysgu/remapping.pyx":44
  * 
  * 
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):             # <<<<<<<<<<<<<<
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):             # <<<<<<<<<<<<<<
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']
  */
-  __pyx_tuple__9 = PyTuple_Pack(16, __pyx_n_s_align, __pyx_n_s_event, __pyx_n_s_idx, __pyx_n_s_clip_side, __pyx_n_s_begin, __pyx_n_s_end, __pyx_n_s_break_position, __pyx_n_s_pos, __pyx_n_s_score, __pyx_n_s_span, __pyx_n_s_seq1, __pyx_n_s_seq2, __pyx_n_s_distance_to_break, __pyx_n_s_large_gap_penalty, __pyx_n_s_gapped_score, __pyx_n_s_expected); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 42, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(17, __pyx_n_s_align, __pyx_n_s_event, __pyx_n_s_idx, __pyx_n_s_clip_side, __pyx_n_s_begin, __pyx_n_s_end, __pyx_n_s_break_position, __pyx_n_s_clip_seq, __pyx_n_s_pos, __pyx_n_s_score, __pyx_n_s_span, __pyx_n_s_seq1, __pyx_n_s_seq2, __pyx_n_s_distance_to_break, __pyx_n_s_large_gap_penalty, __pyx_n_s_gapped_score, __pyx_n_s_expected); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 44, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
-  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(7, 0, 16, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_filter_bad_alignment, 42, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 42, __pyx_L1_error)
+  __pyx_codeobj__10 = (PyObject*)__Pyx_PyCode_New(8, 0, 17, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__9, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_filter_bad_alignment, 44, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__10)) __PYX_ERR(0, 44, __pyx_L1_error)
 
-  /* "dysgu/remapping.pyx":90
+  /* "dysgu/remapping.pyx":75
  *     return -1
  * 
  * def merge_align_regions(locations):             # <<<<<<<<<<<<<<
  *     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
  *     if len(locations) <= 1:
  */
-  __pyx_tuple__11 = PyTuple_Pack(6, __pyx_n_s_locations, __pyx_n_s_merge_dist, __pyx_n_s_new_l, __pyx_n_s_s, __pyx_n_s_e, __pyx_n_s_last); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 90, __pyx_L1_error)
+  __pyx_tuple__11 = PyTuple_Pack(6, __pyx_n_s_locations, __pyx_n_s_merge_dist, __pyx_n_s_new_l, __pyx_n_s_s, __pyx_n_s_e, __pyx_n_s_last); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__11);
   __Pyx_GIVEREF(__pyx_tuple__11);
-  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(1, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__11, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_merge_align_regions, 90, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 90, __pyx_L1_error)
+  __pyx_codeobj__12 = (PyObject*)__Pyx_PyCode_New(1, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__11, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_merge_align_regions, 75, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__12)) __PYX_ERR(0, 75, __pyx_L1_error)
 
-  /* "dysgu/remapping.pyx":110
+  /* "dysgu/remapping.pyx":93
  * 
  * 
  * def remap_soft_clips(events, ref_genome, min_sv_len):             # <<<<<<<<<<<<<<
  * 
  *     new_events = []
  */
-  __pyx_tuple__13 = PyTuple_Pack(61, __pyx_n_s_events, __pyx_n_s_ref_genome, __pyx_n_s_min_sv_len, __pyx_n_s_new_events, __pyx_n_s_try_remap_events, __pyx_n_s_ref_locs, __pyx_n_s_count, __pyx_n_s_e, __pyx_n_s_try_remap, __pyx_n_s_chrom, __pyx_n_s_gstart, __pyx_n_s_gend, __pyx_n_s_grp_idxs, __pyx_n_s_ref_seq_big, __pyx_n_s_index, __pyx_n_s_added, __pyx_n_s_passed, __pyx_n_s_high_quality_clip, __pyx_n_s_cont, __pyx_n_s_idx, __pyx_n_s_break_position, __pyx_n_s_clip_res, __pyx_n_s_clip_seq, __pyx_n_s_clip_side, __pyx_n_s_w, __pyx_n_s_ref_start_2, __pyx_n_s_ref_end_2, __pyx_n_s_start_idx, __pyx_n_s_end_idx, __pyx_n_s_ref_seq_clipped, __pyx_n_s_ref_seq_start, __pyx_n_s_ref_seq_end, __pyx_n_s_tel, __pyx_n_s_el, __pyx_n_s_locs, __pyx_n_s_l_start, __pyx_n_s_l_end, __pyx_n_s_ref_start2, __pyx_n_s_ref_end2, __pyx_n_s_ref_seq2, __pyx_n_s_tsm, __pyx_n_s_aln, __pyx_n_s_a, __pyx_n_s_aligned_seq, __pyx_n_s_score, __pyx_n_s_aln_q_end, __pyx_n_s_aln_q_begin, __pyx_n_s_aln_t_begin, __pyx_n_s_target_end_optimal, __pyx_n_s_q_begin, __pyx_n_s_q_end, __pyx_n_s_break_point, __pyx_n_s_f, __pyx_n_s_pos, __pyx_n_s_target_gap, __pyx_n_s_ref_gap, __pyx_n_s_kind, __pyx_n_s_break_point2, __pyx_n_s_overlap, __pyx_n_s_svlen, __pyx_n_s_other); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 110, __pyx_L1_error)
+  __pyx_tuple__13 = PyTuple_Pack(61, __pyx_n_s_events, __pyx_n_s_ref_genome, __pyx_n_s_min_sv_len, __pyx_n_s_new_events, __pyx_n_s_try_remap_events, __pyx_n_s_ref_locs, __pyx_n_s_count, __pyx_n_s_e, __pyx_n_s_try_remap, __pyx_n_s_chrom, __pyx_n_s_gstart, __pyx_n_s_gend, __pyx_n_s_grp_idxs, __pyx_n_s_ref_seq_big, __pyx_n_s_index, __pyx_n_s_added, __pyx_n_s_passed, __pyx_n_s_high_quality_clip, __pyx_n_s_cont, __pyx_n_s_idx, __pyx_n_s_break_position, __pyx_n_s_clip_res, __pyx_n_s_clip_seq, __pyx_n_s_clip_side, __pyx_n_s_length_other_clip, __pyx_n_s_w, __pyx_n_s_ref_start_2, __pyx_n_s_ref_end_2, __pyx_n_s_start_idx, __pyx_n_s_end_idx, __pyx_n_s_ref_seq_clipped, __pyx_n_s_ref_seq_start, __pyx_n_s_ref_seq_end, __pyx_n_s_el, __pyx_n_s_locs, __pyx_n_s_l_start, __pyx_n_s_l_end, __pyx_n_s_ref_start2, __pyx_n_s_ref_end2, __pyx_n_s_ref_seq2, __pyx_n_s_aln, __pyx_n_s_a, __pyx_n_s_aligned_seq, __pyx_n_s_score, __pyx_n_s_aln_q_end, __pyx_n_s_aln_q_begin, __pyx_n_s_aln_t_begin, __pyx_n_s_target_end_optimal, __pyx_n_s_q_begin, __pyx_n_s_q_end, __pyx_n_s_break_point, __pyx_n_s_f, __pyx_n_s_pos, __pyx_n_s_target_gap, __pyx_n_s_ref_gap, __pyx_n_s_kind, __pyx_n_s_break_point2, __pyx_n_s_overlap, __pyx_n_s_svlen, __pyx_n_s_span, __pyx_n_s_other); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__13);
   __Pyx_GIVEREF(__pyx_tuple__13);
-  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(3, 0, 61, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__13, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_remap_soft_clips, 110, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 110, __pyx_L1_error)
+  __pyx_codeobj__14 = (PyObject*)__Pyx_PyCode_New(3, 0, 61, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__13, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_remapping_pyx, __pyx_n_s_remap_soft_clips, 93, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__14)) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -7255,12 +7144,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitGlobals(void) {
   __pyx_int_0 = PyInt_FromLong(0); if (unlikely(!__pyx_int_0)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_1 = PyInt_FromLong(1); if (unlikely(!__pyx_int_1)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_2 = PyInt_FromLong(2); if (unlikely(!__pyx_int_2)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_3 = PyInt_FromLong(3); if (unlikely(!__pyx_int_3)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_4 = PyInt_FromLong(4); if (unlikely(!__pyx_int_4)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_8 = PyInt_FromLong(8); if (unlikely(!__pyx_int_8)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_10 = PyInt_FromLong(10); if (unlikely(!__pyx_int_10)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_12 = PyInt_FromLong(12); if (unlikely(!__pyx_int_12)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_20 = PyInt_FromLong(20); if (unlikely(!__pyx_int_20)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_24 = PyInt_FromLong(24); if (unlikely(!__pyx_int_24)) __PYX_ERR(0, 1, __pyx_L1_error)
-  __pyx_int_40 = PyInt_FromLong(40); if (unlikely(!__pyx_int_40)) __PYX_ERR(0, 1, __pyx_L1_error)
+  __pyx_int_50 = PyInt_FromLong(50); if (unlikely(!__pyx_int_50)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_200 = PyInt_FromLong(200); if (unlikely(!__pyx_int_200)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_400 = PyInt_FromLong(400); if (unlikely(!__pyx_int_400)) __PYX_ERR(0, 1, __pyx_L1_error)
   __pyx_int_500 = PyInt_FromLong(500); if (unlikely(!__pyx_int_500)) __PYX_ERR(0, 1, __pyx_L1_error)
@@ -7588,8 +7479,8 @@ if (!__Pyx_RefNanny) {
  * from skbio.alignment import StripedSmithWaterman
  * from dysgu.map_set_utils cimport is_overlapping
  * from dysgu.coverage import merge_intervals             # <<<<<<<<<<<<<<
- * import time
  * 
+ * import edlib
  */
   __pyx_t_2 = PyList_New(1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 5, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
@@ -7605,100 +7496,88 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":6
- * from dysgu.map_set_utils cimport is_overlapping
+  /* "dysgu/remapping.pyx":7
  * from dysgu.coverage import merge_intervals
- * import time             # <<<<<<<<<<<<<<
- * 
- * import edlib
- */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_time, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 6, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_time, __pyx_t_1) < 0) __PYX_ERR(0, 6, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-  /* "dysgu/remapping.pyx":8
- * import time
  * 
  * import edlib             # <<<<<<<<<<<<<<
  * import click
  * 
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_edlib, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_edlib, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_edlib, __pyx_t_1) < 0) __PYX_ERR(0, 8, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_edlib, __pyx_t_1) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":9
+  /* "dysgu/remapping.pyx":8
  * 
  * import edlib
  * import click             # <<<<<<<<<<<<<<
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_click, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 9, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_click, 0, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_click, __pyx_t_1) < 0) __PYX_ERR(0, 9, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_click, __pyx_t_1) < 0) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":12
+  /* "dysgu/remapping.pyx":11
  * 
  * 
  * def echo(*args):             # <<<<<<<<<<<<<<
  *     click.echo(args, err=True)
  * 
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_1echo, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_1echo, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_echo, __pyx_t_1) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_echo, __pyx_t_1) < 0) __PYX_ERR(0, 11, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":16
+  /* "dysgu/remapping.pyx":15
  * 
  * 
  * def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):             # <<<<<<<<<<<<<<
  *     if cont:
- *         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
+ *         start_i = 1
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_3get_clipped_seq, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 16, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_3get_clipped_seq, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_get_clipped_seq, __pyx_t_1) < 0) __PYX_ERR(0, 16, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_get_clipped_seq, __pyx_t_1) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":42
+  /* "dysgu/remapping.pyx":44
  * 
  * 
- * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position):             # <<<<<<<<<<<<<<
+ * def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):             # <<<<<<<<<<<<<<
  *     pos = event["pos" + idx]
  *     score = align['optimal_alignment_score']
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_5filter_bad_alignment, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 42, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_5filter_bad_alignment, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 44, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_filter_bad_alignment, __pyx_t_1) < 0) __PYX_ERR(0, 42, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_filter_bad_alignment, __pyx_t_1) < 0) __PYX_ERR(0, 44, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":90
+  /* "dysgu/remapping.pyx":75
  *     return -1
  * 
  * def merge_align_regions(locations):             # <<<<<<<<<<<<<<
  *     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
  *     if len(locations) <= 1:
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_7merge_align_regions, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_7merge_align_regions, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_merge_align_regions, __pyx_t_1) < 0) __PYX_ERR(0, 90, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_merge_align_regions, __pyx_t_1) < 0) __PYX_ERR(0, 75, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/remapping.pyx":110
+  /* "dysgu/remapping.pyx":93
  * 
  * 
  * def remap_soft_clips(events, ref_genome, min_sv_len):             # <<<<<<<<<<<<<<
  * 
  *     new_events = []
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_9remap_soft_clips, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 110, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9remapping_9remap_soft_clips, NULL, __pyx_n_s_dysgu_remapping); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_remap_soft_clips, __pyx_t_1) < 0) __PYX_ERR(0, 110, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_remap_soft_clips, __pyx_t_1) < 0) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "dysgu/remapping.pyx":1
@@ -8045,26 +7924,6 @@ bad:
     return -1;
 }
 
-/* py_abs */
-#if CYTHON_USE_PYLONG_INTERNALS
-static PyObject *__Pyx_PyLong_AbsNeg(PyObject *n) {
-    if (likely(Py_SIZE(n) == -1)) {
-        return PyLong_FromLong(((PyLongObject*)n)->ob_digit[0]);
-    }
-#if CYTHON_COMPILING_IN_CPYTHON
-    {
-        PyObject *copy = _PyLong_Copy((PyLongObject*)n);
-        if (likely(copy)) {
-            Py_SIZE(copy) = -(Py_SIZE(copy));
-        }
-        return copy;
-    }
-#else
-    return PyNumber_Negative(n);
-#endif
-}
-#endif
-
 /* GetItemInt */
 static PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
     PyObject *r;
@@ -8151,6 +8010,35 @@ static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, 
 #endif
     return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
 }
+
+/* ObjectGetItem */
+#if CYTHON_USE_TYPE_SLOTS
+static PyObject *__Pyx_PyObject_GetIndex(PyObject *obj, PyObject* index) {
+    PyObject *runerr;
+    Py_ssize_t key_value;
+    PySequenceMethods *m = Py_TYPE(obj)->tp_as_sequence;
+    if (unlikely(!(m && m->sq_item))) {
+        PyErr_Format(PyExc_TypeError, "'%.200s' object is not subscriptable", Py_TYPE(obj)->tp_name);
+        return NULL;
+    }
+    key_value = __Pyx_PyIndex_AsSsize_t(index);
+    if (likely(key_value != -1 || !(runerr = PyErr_Occurred()))) {
+        return __Pyx_GetItemInt_Fast(obj, key_value, 0, 1, 1);
+    }
+    if (PyErr_GivenExceptionMatches(runerr, PyExc_OverflowError)) {
+        PyErr_Clear();
+        PyErr_Format(PyExc_IndexError, "cannot fit '%.200s' into an index-sized integer", Py_TYPE(index)->tp_name);
+    }
+    return NULL;
+}
+static PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key) {
+    PyMappingMethods *m = Py_TYPE(obj)->tp_as_mapping;
+    if (likely(m && m->mp_subscript)) {
+        return m->mp_subscript(obj, key);
+    }
+    return __Pyx_PyObject_GetIndex(obj, key);
+}
+#endif
 
 /* PyFunctionFastCall */
 #if CYTHON_FAST_PYCALL
@@ -8373,35 +8261,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObjec
     result = __Pyx_PyObject_Call(func, args, NULL);
     Py_DECREF(args);
     return result;
-}
-#endif
-
-/* ObjectGetItem */
-#if CYTHON_USE_TYPE_SLOTS
-static PyObject *__Pyx_PyObject_GetIndex(PyObject *obj, PyObject* index) {
-    PyObject *runerr;
-    Py_ssize_t key_value;
-    PySequenceMethods *m = Py_TYPE(obj)->tp_as_sequence;
-    if (unlikely(!(m && m->sq_item))) {
-        PyErr_Format(PyExc_TypeError, "'%.200s' object is not subscriptable", Py_TYPE(obj)->tp_name);
-        return NULL;
-    }
-    key_value = __Pyx_PyIndex_AsSsize_t(index);
-    if (likely(key_value != -1 || !(runerr = PyErr_Occurred()))) {
-        return __Pyx_GetItemInt_Fast(obj, key_value, 0, 1, 1);
-    }
-    if (PyErr_GivenExceptionMatches(runerr, PyExc_OverflowError)) {
-        PyErr_Clear();
-        PyErr_Format(PyExc_IndexError, "cannot fit '%.200s' into an index-sized integer", Py_TYPE(index)->tp_name);
-    }
-    return NULL;
-}
-static PyObject *__Pyx_PyObject_GetItem(PyObject *obj, PyObject* key) {
-    PyMappingMethods *m = Py_TYPE(obj)->tp_as_mapping;
-    if (likely(m && m->mp_subscript)) {
-        return m->mp_subscript(obj, key);
-    }
-    return __Pyx_PyObject_GetIndex(obj, key);
 }
 #endif
 
@@ -8650,6 +8509,26 @@ static PyObject* __Pyx_PyInt_SubtractObjC(PyObject *op1, PyObject *op2, CYTHON_U
             return PyFloat_FromDouble(result);
     }
     return (inplace ? PyNumber_InPlaceSubtract : PyNumber_Subtract)(op1, op2);
+}
+#endif
+
+/* py_abs */
+#if CYTHON_USE_PYLONG_INTERNALS
+static PyObject *__Pyx_PyLong_AbsNeg(PyObject *n) {
+    if (likely(Py_SIZE(n) == -1)) {
+        return PyLong_FromLong(((PyLongObject*)n)->ob_digit[0]);
+    }
+#if CYTHON_COMPILING_IN_CPYTHON
+    {
+        PyObject *copy = _PyLong_Copy((PyLongObject*)n);
+        if (likely(copy)) {
+            Py_SIZE(copy) = -(Py_SIZE(copy));
+        }
+        return copy;
+    }
+#else
+    return PyNumber_Negative(n);
+#endif
 }
 #endif
 
@@ -9746,6 +9625,28 @@ bad:
     Py_XDECREF(py_frame);
 }
 
+/* CIntFromPyVerify */
+#define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
+    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
+#define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
+    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
+#define __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, exc)\
+    {\
+        func_type value = func_value;\
+        if (sizeof(target_type) < sizeof(func_type)) {\
+            if (unlikely(value != (func_type) (target_type) value)) {\
+                func_type zero = 0;\
+                if (exc && unlikely(value == (func_type)-1 && PyErr_Occurred()))\
+                    return (target_type) -1;\
+                if (is_unsigned && unlikely(value < zero))\
+                    goto raise_neg_overflow;\
+                else\
+                    goto raise_overflow;\
+            }\
+        }\
+        return (target_type) value;\
+    }
+
 /* CIntToPy */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
     const long neg_one = (long) ((long) 0 - (long) 1), const_zero = (long) 0;
@@ -9776,28 +9677,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
                                      little, !is_unsigned);
     }
 }
-
-/* CIntFromPyVerify */
-#define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
-    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
-#define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
-    __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
-#define __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, exc)\
-    {\
-        func_type value = func_value;\
-        if (sizeof(target_type) < sizeof(func_type)) {\
-            if (unlikely(value != (func_type) (target_type) value)) {\
-                func_type zero = 0;\
-                if (exc && unlikely(value == (func_type)-1 && PyErr_Occurred()))\
-                    return (target_type) -1;\
-                if (is_unsigned && unlikely(value < zero))\
-                    goto raise_neg_overflow;\
-                else\
-                    goto raise_overflow;\
-            }\
-        }\
-        return (target_type) value;\
-    }
 
 /* CIntFromPy */
 static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {

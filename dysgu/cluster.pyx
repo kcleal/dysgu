@@ -109,7 +109,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         j_id = ej["event_id"]
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
-
+        # echo(idx, jdx)
         seen.add((i_id, j_id))
 
         fail = False
@@ -129,6 +129,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         if ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
             dist1 = abs(ei["posA"] - ej["posA"])
             dist2 = abs(ei["posB"] - ej["posB"])
+            # echo(dist1, dist2)
             if dist1 < 250 and dist2 < 250 and is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
                 loci_similar = True
             if dist1 < 5 and dist2 < 5:
@@ -497,7 +498,7 @@ cdef find_repeat_expansions(events, insert_stdev):
     return events
 
 
-def component_job(infile, component, regions, event_id, max_dist, clip_length, insert_med, insert_stdev, min_supp,
+def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, min_supp,
                   merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs):
 
     potential_events = []
@@ -550,7 +551,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                                                      read_len, ibam)
         read_len = genome_scanner.approx_read_length
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
-        max_clust_dist = 5 * (int(insert_median + (5 * insert_stdev)))
+        max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
         click.echo(f"Max clustering dist {max_clust_dist}", err=True)
@@ -612,7 +613,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             if res:
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-                potential_events, event_id = component_job(infile, res, regions, event_id, max_clust_dist, args["clip_length"],
+                potential_events, event_id = component_job(infile, res, regions, event_id, args["clip_length"],
                                                  insert_median,
                                                  insert_stdev,
                                                  args["min_support"],

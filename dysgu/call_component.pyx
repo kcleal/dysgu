@@ -2487,10 +2487,11 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
         r["contig2"] = r["contig"]
         r["contig"] = contig2
 
+    max_depth = 0
     if kind == "hemi-regional":
         chrom_i = infile.get_tid(r["chrA"])
         if chrom_i in regions_depth:
-            reads_10kb = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
+            reads_10kb, max_depth = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
             reads_10kb = round(reads_10kb, 3)
         else:
             reads_10kb = 0
@@ -2498,13 +2499,13 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
         # Calculate max
         chrom_i = infile.get_tid(r["chrA"])
         if chrom_i in regions_depth:
-            reads_10kb_left = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
+            reads_10kb_left, max_depth = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
             reads_10kb_left = round(reads_10kb_left, 3)
         else:
             reads_10kb_left = 0
         chrom_i = infile.get_tid(r["chrB"])
         if chrom_i in regions_depth:
-            reads_10kb_right = coverage.calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
+            reads_10kb_right, max_depth = coverage.calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
             reads_10kb_right = round(reads_10kb_right, 3)
         else:
             reads_10kb_right = 0
@@ -2513,9 +2514,13 @@ cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
         else:
             reads_10kb = reads_10kb_right
 
+    if reads_10kb >= 80 and not ar and not br:  # todo set as parameter
+        return None
+
     r["kind"] = kind
     r["raw_reads_10kb"] = reads_10kb
     if r["chrA"] != r["chrB"]:
         r["svlen"] = 1000000
-    # r["su"] = r["pe"] + r["supp"] + r["spanning"]
+
+    r["mcov"] = max_depth
     return r

@@ -187,8 +187,9 @@ cdef class ClipScoper:
 
         n_local_minimizers = len(clip_table) #len(self.clip_table[idx])
         n_local_reads = self.scope_left.size() if idx == 0 else self.scope_right.size()
-
-        upper_bound = (1 + (n_local_reads * 0.05)) * self.upper_bound_n_minimizers
+        #
+        upper_bound = (1 + (n_local_reads * 0.15)) * self.upper_bound_n_minimizers
+        # echo(upper_bound, n_local_minimizers)
         if n_local_minimizers > upper_bound:
             find_candidate = 0
 
@@ -790,6 +791,11 @@ cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     cdef unordered_set[int] clustered_nodes
     clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos, clustered_nodes)
 
+    # vtemp = []
+    # if not clustered_nodes.empty():
+    #     for other_node in clustered_nodes:
+    #         vtemp.append(other_node)
+    # echo(r.qname, node_name, node_name, pos, vtemp)
     if not clustered_nodes.empty():
     # if len(clustered_nodes2) > 0:
         for other_node in clustered_nodes:
@@ -819,12 +825,12 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     if read_enum != BREAKEND:
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
-    else:
+    elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
 
     pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
-    # echo("---", r.qname, read_enum, node_name, node_name, event_pos, pos2, list(other_nodes))
+    # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom == chrom2, chrom, chrom2)
     # look = set(['D00360:18:H8VC6ADXX:2:1113:5589:6008', 'D00360:18:H8VC6ADXX:2:1107:19359:83854', 'D00360:18:H8VC6ADXX:2:2102:2821:89140'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
     # if r.qname in look:
@@ -1020,50 +1026,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
 
-        # if add_primary_link:
-        #
-        #     # Use mate information to generate cluster, or if unmapped use current position and try call insertion
-        #     if read_enum == BREAKEND:
-        #     # if clip_or_wr == 4:
-        #         chrom2 = chrom
-        #         pos2 = event_pos
-        #
-        #     elif read_enum >= 2:
-        #     # elif clip_or_wr >= 2:  # within read
-        #         chrom2 = chrom
-        #         if r.cigartuples[cigar_index][0] != 1:  # not insertion, use length of cigar event
-        #             pos2 = cigar_pos2 #event_pos + r.cigartuples[cigar_index][1]
-        #         else:
-        #             pos2 = event_pos
-        #
-        #     if current_overlaps_roi and io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1):
-        #         # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
-        #         return
-        #
-        #     left_clip_size, right_clip_size = clip_sizes(r)
-        #
-        #     # Non-discordant/non-split that are same loci, might be insertion --> goto add_insertion_link
-        #     # (left_clip_size < clip_l and right_clip_size < clip_l) and
-        #     if (flag & 2 and not flag & 2048) and (abs(r.tlen) < clustering_dist and read_enum < 2): #clip_or_wr < 2):
-        #         add_insertion_link = 1  # todo is this if block nessasary?
-        #
-        #     else:
-        #         # echo("primary", r.qname, r.pos)
-        #         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-        #                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
-        #
-        # if add_insertion_link:
-        #     # If soft-clipped try and find other break points using soft-clipped information
-        #
-        #     if good_clip and cigar_clip(r, clip_l):
-        #         echo("soft-clip", r.qname, r.pos, event_pos, pos2)
-        #         read_enum = BREAKEND
-        #         chrom2 = 10000000
-        #         pos2 = event_pos
-        #         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-        #                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
-
-
+    ###
     else:  # Single end
         if read_enum == SPLIT:
         # if clip_or_wr == 1:

@@ -604,7 +604,7 @@ cdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
     return chrom_depth[bin_start]
 
 
-cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
+cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
     # Round start and end to get index
     cdef float fs = start / 100
     cdef float fe = end / 100
@@ -618,10 +618,14 @@ cpdef float calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil
         end = len_chrom
     cdef int i
     cdef float total = 0
-
-    for i in range(start, end):
-        total += chrom_depth[i]
-
+    cdef float max_cov = 0
+    cdef float cov_val
+    with nogil:
+        for i in range(start, end):
+            cov_val = chrom_depth[i]
+            total += cov_val
+            if cov_val > max_cov:
+                max_cov = cov_val
     if total == 0:
-        return 0
-    return total / (end - start)
+        return 0, 0
+    return total / (end - start), max_cov

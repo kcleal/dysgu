@@ -163,17 +163,17 @@ cpdef list col_names(extended):
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
          "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
-         "raw_reads_10kb",
+         "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "switched"
+                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score"
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
           "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
-         "raw_reads_10kb",
+         "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "switched"
+                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score"
             ]
 
 
@@ -266,11 +266,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"RT={read_kind}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:SW"
+        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:SW"
+        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -299,9 +299,9 @@ def get_fmt(r, extended):
 
         v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
+                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
-                                      round(r["n_unmapped_mates"], 2), r["double_clips"], r["switched"]]
+                                      round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -309,9 +309,9 @@ def get_fmt(r, extended):
     else:
         v = ["./.", r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], r['linked'], r['neigh'], r['neigh10kb'],
+                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
-                                  round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["switched"]]
+                                  round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -401,7 +401,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
-##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
+##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
+##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
 ##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other break points within 1 bp of break site">
 ##FORMAT=<ID=NEIGH10,Number=1,Type=Integer,Description="Number of other break points within 10 kp of break site">
@@ -413,7 +414,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NXA,Number=1,Type=Integer,Description="Mean number of XA tags per read">
 ##FORMAT=<ID=NMU,Number=1,Type=Integer,Description="Mean number of mates unmapped per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
-##FORMAT=<ID=SW,Number=1,Type=Integer,Description="Sv-type was switched by remapping">{}
+##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
         else:
@@ -462,7 +463,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
-##FORMAT=<ID=COV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
+##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
+##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
 ##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other break points within 1 bp of break site">
 ##FORMAT=<ID=NEIGH10,Number=1,Type=Integer,Description="Number of other break points within 10 kp of break site">
@@ -474,7 +476,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NXA,Number=1,Type=Integer,Description="Mean number of XA tags per read">
 ##FORMAT=<ID=NMU,Number=1,Type=Integer,Description="Mean number of mates unmapped per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
-##FORMAT=<ID=SW,Number=1,Type=Integer,Description="Sv-type was switched by remapping">{}
+##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
