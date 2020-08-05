@@ -2089,7 +2089,47 @@ cdef start_end_query_pair(r1, r2):
     return s1, e1, s2, e2
 
 
-cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
+def sort_by_length(x):
+    return len(x)
+
+
+cdef assemble_partitioned_reads(info, u_reads, v_reads, int block_edge, int assemble):
+
+    as1 = None
+    as2 = None
+    if assemble:
+        if info["preciseA"]:
+            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
+        if info["preciseB"]:
+            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
+
+    info["linked"] = 0
+    info["block_edge"] = block_edge
+    info["contig"] = None
+    info["contig_left_weight"] = 0
+    info["contig_right_weight"] = 0
+    info["contig2"] = None
+    info["contig2_left_weight"] = 0
+    info["contig2_right_weight"] = 0
+    rbases = 0
+    if as1 is not None and "contig" in as1:
+        info["contig"] = as1["contig"]
+        rbases += as1["ref_bases"]
+        info["contig_ref_start"] = as1["ref_start"]
+        info["contig_ref_end"] = as1["ref_end"]
+        info["contig_left_weight"] = as1["left_weight"]
+        info["contig_right_weight"] = as1["right_weight"]
+    if as2 is not None and "contig" in as2:
+        info["contig2"] = as2["contig"]
+        rbases += as2["ref_bases"]
+        info["contig2_ref_start"] = as2["ref_start"]
+        info["contig2_ref_end"] = as2["ref_end"]
+        info["contig2_left_weight"] = as2["left_weight"]
+        info["contig2_right_weight"] = as2["right_weight"]
+    info["ref_bases"] = rbases
+
+
+cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int min_support, int block_edge, int assemble, int extended_tags):
 
     grp_u = defaultdict(list)
     grp_v = defaultdict(list)
@@ -2100,8 +2140,6 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
         grp_v[r.qname].append(r)
 
     informative = []
-    precise_a = []
-    precise_b = []
 
     cdef AlignmentItem v_item, i
     cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
@@ -2132,7 +2170,6 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
             b_start, b_end = b.pos, b.reference_end
             read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
 
-            # echo(a.pos, a_ct, b.pos, b_ct, left_clip_a, right_clip_a, left_clip_b, right_clip_b, read_overlaps_mate)
             v_item = AlignmentItem(a.rname,
                                    b.rname,
                                    int(not a.flag & 2304),  # Is primary
@@ -2168,25 +2205,73 @@ cdef dict call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev):
 
             classify_d(v_item)
 
-            if v_item.breakA_precise:
-                precise_a.append(v_item.breakA)
-            if v_item.breakB_precise:
-                precise_b.append(v_item.breakB)
-
             informative.append(v_item)
 
     if not informative:
-        return {}
+        return
 
-    call_informative = Counter([(i.svtype, i.join_type) for i in informative]).most_common()
+    svtypes_counts = [[], [], [], []]
 
-    cdef str svtype, jointype
-    svtype, jointype = call_informative[0][0]
+    for i in informative:
+        if i.svtype == "DEL":
+            svtypes_counts[0].append(i)
+        elif i.svtype == "DUP":
+            svtypes_counts[1].append(i)
+        elif i.svtype == "INV":
+            svtypes_counts[2].append(i)
+        elif i.svtype == "TRA":
+            svtypes_counts[3].append(i)
 
-    return make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
+    svtypes_res = sorted(svtypes_counts, key=sort_by_length, reverse=True)
+
+    # if len(svtypes_res[0]) < min_support:
+    #     svtypes_res = [svtypes_res[0] + svtypes_res[1]]  # merge with next most common
+
+    results = []
+    for sub_informative in svtypes_res:
+        if len(sub_informative) >= min_support:
+            svtype = sub_informative[0].svtype
+            if svtype == "INV" or svtype == "TRA":
+                jointype = Counter([i.join_type for i in sub_informative]).most_common(1)[0][1]
+            else:
+                jointype = sub_informative[0].join_type
+            precise_a = []
+            precise_b = []
+            u_reads = []
+            v_reads = []
+            for v_item in sub_informative:
+                if v_item.breakA_precise:
+                    precise_a.append(v_item.breakA)
+                if v_item.breakB_precise:
+                    precise_b.append(v_item.breakB)
+                u_reads.append(v_item.read_a)
+                v_reads.append(v_item.read_b)
+
+            info = make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
+            attrs = count_attributes(u_reads, v_reads, [], extended_tags)
+            if not attrs or attrs["su"] < min_support:
+                continue
+
+            info.update(attrs)
+            assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
+            results.append(info)
+
+    return results
+
+    # quit()
+    # call_informative = Counter([(i.svtype, i.join_type) for i in informative]).most_common()
+    # key is e.g. (DEL 3to5)
+
+    # for key in
+
+    # echo(call_informative, u_reads[0].pos)
+    # cdef str svtype, jointype
+    # svtype, jointype = call_informative[0][0]
+
+    # return make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
 
-cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev,
+cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev,
                    int min_support, int block_edge, int assemble, int extended_tags):
 
     spanning_alignments = []
@@ -2248,52 +2333,63 @@ cdef dict one_edge(infile, u_reads_info, v_reads_info, int clip_length, int inse
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
 
-    else:
-        info.update(call_from_reads(u_reads, v_reads, insert_size, insert_stdev))
-        if len(info) < 2:
+        attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
+
+        if not attrs or attrs["su"] < min_support:
             return {}
 
+        info.update(attrs)
+        assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
+        return [info]
+
+    else:
+        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags)
+        return results
+        # info.update(call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags))
+        # if len(info) < 2:
+        #     return {}
+
     # count read attributes
-    attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
-
-    if not attrs or attrs["pe"] + attrs["supp"] + len(spanning_alignments) < min_support:
-        return {}
-
-    info.update(attrs)
-    as1 = None
-    as2 = None
-    if assemble:
-        if info["preciseA"]:
-            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
-        if info["preciseB"]:
-            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
-
-    info["linked"] = 0
-    info["block_edge"] = block_edge
-    info["contig"] = None
-    info["contig_left_weight"] = 0
-    info["contig_right_weight"] = 0
-    info["contig2"] = None
-    info["contig2_left_weight"] = 0
-    info["contig2_right_weight"] = 0
-    rbases = 0
-    if as1 is not None and "contig" in as1:
-        info["contig"] = as1["contig"]
-        rbases += as1["ref_bases"]
-        info["contig_ref_start"] = as1["ref_start"]
-        info["contig_ref_end"] = as1["ref_end"]
-        info["contig_left_weight"] = as1["left_weight"]
-        info["contig_right_weight"] = as1["right_weight"]
-    if as2 is not None and "contig" in as2:
-        info["contig2"] = as2["contig"]
-        rbases += as2["ref_bases"]
-        info["contig2_ref_start"] = as2["ref_start"]
-        info["contig2_ref_end"] = as2["ref_end"]
-        info["contig2_left_weight"] = as2["left_weight"]
-        info["contig2_right_weight"] = as2["right_weight"]
-    info["ref_bases"] = rbases
-
-    return info
+    # attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
+    #
+    # if not attrs or attrs["su"] < min_support:
+    #     return {}
+    #
+    # info.update(attrs)
+    # as1 = None
+    # as2 = None
+    # if assemble:
+    #     if info["preciseA"]:
+    #         as1 = assembler.base_assemble(u_reads, info["posA"], 500)
+    #     if info["preciseB"]:
+    #         as2 = assembler.base_assemble(v_reads, info["posB"], 500)
+    #
+    # info["linked"] = 0
+    # info["block_edge"] = block_edge
+    # info["contig"] = None
+    # info["contig_left_weight"] = 0
+    # info["contig_right_weight"] = 0
+    # info["contig2"] = None
+    # info["contig2_left_weight"] = 0
+    # info["contig2_right_weight"] = 0
+    # rbases = 0
+    # if as1 is not None and "contig" in as1:
+    #     info["contig"] = as1["contig"]
+    #     rbases += as1["ref_bases"]
+    #     info["contig_ref_start"] = as1["ref_start"]
+    #     info["contig_ref_end"] = as1["ref_end"]
+    #     info["contig_left_weight"] = as1["left_weight"]
+    #     info["contig_right_weight"] = as1["right_weight"]
+    # if as2 is not None and "contig" in as2:
+    #     info["contig2"] = as2["contig"]
+    #     rbases += as2["ref_bases"]
+    #     info["contig2_ref_start"] = as2["ref_start"]
+    #     info["contig2_ref_end"] = as2["ref_end"]
+    #     info["contig2_left_weight"] = as2["left_weight"]
+    #     info["contig2_right_weight"] = as2["right_weight"]
+    # info["ref_bases"] = rbases
+    #
+    # return info
 
 
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
@@ -2369,8 +2465,8 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         if v in seen:
             seen.remove(v)
 
-        events.append(one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, assemble_contigs,
-                               extended_tags))
+        events += one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, assemble_contigs,
+                               extended_tags)
 
     # Process any unconnected blocks
     if seen:
@@ -2410,6 +2506,8 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags,
                                  assemble_contigs):
+
+    # min_support = 2
     n_parts = len(data["parts"])
     events = []
 

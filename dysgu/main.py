@@ -19,7 +19,7 @@ defaults = {
             "clip_length": 15,
             "output": "-",
             "svs_out": "-",
-            "max_cov": 200,
+            "max_cov": 250,
             "buffer_size": 0,
             "min_support": 3,
             "min_size": 30,

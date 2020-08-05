@@ -228,6 +228,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
         if not pick_best:
 
             w0 = best[0]  # Weighting for base result
+
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
             svlen = w0["svlen"]
             for k in range(1, len(best)):
@@ -242,7 +243,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                 if item["maxASsupp"] > w0["maxASsupp"]:
                     best[0]["maxASsupp"] = item["maxASsupp"]
 
-                if item["svtype"] == "DEL" and item["svlen"] > svlen:
+                if item["svtype"] == "DEL" and item["svlen"] * 0.6 < svlen < item["svlen"]:  # increase svlen size
                     svlen = item["svlen"]
                     best[0]["svlen"] = svlen
 
@@ -564,6 +565,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
+    lower_bound_support = min_support - 2 if min_support - 2 > 1 else 1
+    echo("lower bound suport", lower_bound_support)
+
     read_buffer = genome_scanner.read_buffer
 
     t5 = time.time()
@@ -578,7 +582,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             m=7,
                                             clip_l=args["clip_length"],
                                             min_sv_size=args["min_size"],
-                                            min_support=min_support,
+                                            min_support=lower_bound_support, #min_support,
                                             procs=args["procs"],
                                             mapq_thresh=args["mq"],
                                             debug=None,
@@ -605,18 +609,19 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         diffs = 0.15
     echo("len components", len(cc))
     for start_i, end_i in cc:
-        cnt += 1
-        if end_i - start_i >= min_support:
+            cnt += 1
+
+        # if end_i - start_i >= min_support:
             component = list(cmp[start_i: end_i])
 
-            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, min_support)
+            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support)
             if res:
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
                 potential_events, event_id = component_job(infile, res, regions, event_id, args["clip_length"],
                                                  insert_median,
                                                  insert_stdev,
-                                                 args["min_support"],
+                                                 lower_bound_support, #args["min_support"],
                                                  args["merge_dist"],
                                                  regions_only,
                                                  extended_tags,
@@ -646,6 +651,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     merged = elide_insertions(merged)
 
+    # Filter for absolute support and size here
     merged = [event for event in merged if event["svlen"] >= args["min_size"] and event["su"] >= args["min_support"]]
     # for e in merged:
     #     if e["event_id"] == 6:

@@ -1446,23 +1446,23 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         seen_t.update(current_t)  # Only count edge once
 
-    cdef first, second
-    for t in seen_t:
-        if sum(len(item) for item in counts[t]) < min_support:  # .values()
-            del counts[t]
-            first = t[0]
-            second = t[1]
-            if first in self_counts and len(self_counts[first]) < min_support:
-                del self_counts[first]
-            if second in self_counts and len(self_counts[second]) < min_support:
-                del self_counts[second]
+    # cdef first, second
+    # for t in seen_t:
+    #     if sum(len(item) for item in counts[t]) < min_support:  # .values()
+    #         del counts[t]
+    #         first = t[0]
+    #         second = t[1]
+    #         if first in self_counts and len(self_counts[first]) < min_support:
+    #             del self_counts[first]
+    #         if second in self_counts and len(self_counts[second]) < min_support:
+    #             del self_counts[second]
 
     return counts, self_counts
 
 
 cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
                          int min_support):
-
+    # min_support = 2
     n2n = {}
     reads = {}
 
@@ -1488,28 +1488,28 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
             return {}
 
     sb = {}
-    kept = set([])
-    deleted = set([])
+    # kept = set([])
+    # deleted = set([])
     for edge, vd in support_between.items():
 
-        sup = sum([len(vv) for vv in vd])  # .values()
-        if sup >= min_support:
+        # sup = sum([len(vv) for vv in vd])  # .values()
+        # if sup >= min_support:
             sb[edge] = vd
-            kept.add(edge[0])
-            kept.add(edge[1])
-        else:
-            deleted.add(edge[0])
-            deleted.add(edge[1])
+            # kept.add(edge[0])
+            # kept.add(edge[1])
+        # else:
+        #     deleted.add(edge[0])
+        #     deleted.add(edge[1])
 
-    deleted -= kept
+    # deleted -= kept
 
     # check deleted for support within, discard if min_support not reached
-    for block_node in deleted:
-        if block_node in support_within:
-            if len(support_within[block_node]) < min_support:
-                del partitions[block_node]
-        else:
-            del partitions[block_node]
+    # for block_node in deleted:
+    #     if block_node in support_within:
+    #         if len(support_within[block_node]) < min_support:
+    #             del partitions[block_node]
+    #     else:
+    #         del partitions[block_node]
     #
     # echo("parts", partitions)
     # echo("s_between", sb)
