@@ -90,10 +90,10 @@ cdef extern from "wrap_map_set2.h" nogil:
         MinimizerTable() nogil
 
         int size()
-        void insert(int key, long value1)
-        void erase(int key)
-        void erase_lower(int key, long value)
-        int has_key(int key)
+        void insert(long key, long value1)
+        void erase(long key)
+        void erase_lower(long key, long value)
+        int has_key(long key)
         int has_lower_key(long key2)
         long get_lower()
         unordered_set[long].iterator get_iterator()
@@ -211,7 +211,7 @@ cdef tuple clip_sizes_hard(r)
 cdef int cigar_clip(r, int clip_length)
 
 
-cdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
+cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil

@@ -25,7 +25,7 @@ defaults = {
             "min_size": 30,
             "model": None,
             "max_tlen": 1000,
-            "z_depth": 2,
+            "z_depth": 2, #2,
             "z_breadth": 2,
             "regions_only": "False",
             "soft_search": "True"
@@ -303,3 +303,13 @@ def test_command(ctx, **kwargs):
     assert result.exit_code == 0
     click.echo("Run test complete", err=True)
 
+
+# @cli.command("debug")
+# @click.pass_context
+# def test_command(ctx, **kwargs):
+#     """Run dysgu tests"""
+#
+#     from . import debugger
+#
+#     debugger.run_debug()
+#     click.echo("Run debug complete", err=True)

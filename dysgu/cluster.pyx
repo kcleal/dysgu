@@ -14,7 +14,7 @@ import sys
 import pickle
 import resource
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, remapping
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance, position_distance, is_overlapping
 import itertools
 from operator import mul
@@ -195,7 +195,7 @@ cpdef srt_func(c):
 
 
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
-                 rel_diffs=False, diffs=15, same_sample=True, debug=False):
+                 rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0):
     """Try and merge similar events, use overlap of both breaks points
     """
 
@@ -231,6 +231,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
             svlen = w0["svlen"]
+            svt = w0["svtype"]
             for k in range(1, len(best)):
 
                 item = best[k]
@@ -243,7 +244,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                 if item["maxASsupp"] > w0["maxASsupp"]:
                     best[0]["maxASsupp"] = item["maxASsupp"]
 
-                if item["svtype"] == "DEL" and item["svlen"] * 0.6 < svlen < item["svlen"]:  # increase svlen size
+                if item["svtype"] == "DEL" and svt == "DEL" and (item["svlen"] * 0.6 < svlen < item["svlen"] or min_size > svlen < item["svlen"]):  # increase svlen size
                     svlen = item["svlen"]
                     best[0]["svlen"] = svlen
 
@@ -301,7 +302,6 @@ def elide_insertions(events, max_dist=150):
 
         for target in ols:
             other = events[target[2]]
-            echo(other)
             bad_ids.add(other["event_id"])
 
     return [i for i in events if i["event_id"] not in bad_ids]
@@ -500,7 +500,7 @@ cdef find_repeat_expansions(events, insert_stdev):
 
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, min_supp,
-                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs):
+                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
 
     potential_events = []
     for event in call_component.call_from_block_model(infile,
@@ -524,7 +524,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
     potential_events = filter_potential(potential_events, regions, regions_only)
     potential_events = merge_events(potential_events, merge_dist, regions,
-                                    try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
+                                    try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
 
     return potential_events, event_id
 
@@ -565,7 +565,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
-    lower_bound_support = min_support - 2 if min_support - 2 > 1 else 1
+    lower_bound_support = min_support #- 1 if min_support - 1 > 1 else 1
     echo("lower bound suport", lower_bound_support)
 
     read_buffer = genome_scanner.read_buffer
@@ -578,8 +578,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             minimizer_dist=150,
                                             minimizer_support_thresh=args["z_depth"],
                                             minimizer_breadth=args["z_breadth"],
-                                            k=10,
-                                            m=7,
+                                            k=12,
+                                            m=6,
                                             clip_l=args["clip_length"],
                                             min_sv_size=args["min_size"],
                                             min_support=lower_bound_support, #min_support,
@@ -594,8 +594,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
         time.time() - t5), err=True)
 
-    cdef int cnt = 0
-
     t0 = time.time()
     cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer)
 
@@ -609,9 +607,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         diffs = 0.15
     echo("len components", len(cc))
     for start_i, end_i in cc:
-            cnt += 1
 
-        # if end_i - start_i >= min_support:
+        if end_i - start_i >= lower_bound_support:
             component = list(cmp[start_i: end_i])
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support)
@@ -626,7 +623,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                                  regions_only,
                                                  extended_tags,
                                                  assemble_contigs,
-                                                 rel_diffs=rel_diffs, diffs=diffs)
+                                                 rel_diffs=rel_diffs, diffs=diffs, min_size=args["min_size"])
                 if potential_events:
                     block_edge_events += potential_events
                     # echo(potential_events)
@@ -636,7 +633,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = []
 
     tremap = time.time()
-    block_edge_events = remapping.remap_soft_clips(block_edge_events, ref_genome, args["min_size"])
+    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"])
     echo("remapping", time.time() - tremap)
     # for item in block_edge_events:
     #     echo(item)
@@ -644,7 +641,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     if args["merge_within"] == "True":
         tmr = time.time()
         merged = merge_events(block_edge_events, args["merge_dist"], regions, try_rev=False, pick_best=False,
-                                         debug=True)
+                                         debug=True, min_size=args["min_size"])
         echo("merging all", time.time() - tmr)
     else:
         merged = block_edge_events

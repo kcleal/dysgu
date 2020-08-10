@@ -514,7 +514,7 @@ class TwoWayMap
 
 
 typedef robin_hood::unordered_set<long> set_of_long_t;
-typedef robin_hood::unordered_map<int, set_of_long_t> mm_map_t;
+typedef robin_hood::unordered_map<long, set_of_long_t> mm_map_t;
 
 class MinimizerTable
 // Key's are read-names (integer), the table value is a set with each item a minimizer (long)
@@ -526,13 +526,13 @@ class MinimizerTable
 
         int size() { return mm_map.size(); }
 
-        void insert(int key, long value) { mm_map[key].insert(value); }
+        void insert(long key, long value) { mm_map[key].insert(value); }
 
-        void erase(int key) { mm_map.erase(key); }
+        void erase(long key) { mm_map.erase(key); }
 
-        void erase_lower(int key, long value) { mm_map[key].erase(value); }
+        void erase_lower(long key, long value) { mm_map[key].erase(value); }
 
-        int has_key(int key) {
+        int has_key(long key) {
             itr = mm_map.find(key);
             if (itr == mm_map.end()) { return 0; }
             else { return 1; }

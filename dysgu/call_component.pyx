@@ -796,6 +796,10 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
     info["contig2"] = None
     info["contig2_left_weight"] = 0
     info["contig2_right_weight"] = 0
+    info["contig_ref_start"] = None
+    info["contig_ref_end"] = None
+    info["contig2_ref_start"] = None
+    info["contig2_ref_end"] = None
     as1 = None
     as2 = None
     ref_bases = 0
@@ -2107,10 +2111,14 @@ cdef assemble_partitioned_reads(info, u_reads, v_reads, int block_edge, int asse
     info["block_edge"] = block_edge
     info["contig"] = None
     info["contig_left_weight"] = 0
+    info["contig_ref_start"] = None
+    info["contig_ref_end"] = None
     info["contig_right_weight"] = 0
     info["contig2"] = None
     info["contig2_left_weight"] = 0
     info["contig2_right_weight"] = 0
+    info["contig2_ref_start"] = None
+    info["contig2_ref_end"] = None
     rbases = 0
     if as1 is not None and "contig" in as1:
         info["contig"] = as1["contig"]

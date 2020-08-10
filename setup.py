@@ -86,7 +86,7 @@ print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view", "remapping"]:
+             "map_set_utils", "cluster", "sv2fq", "view"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],

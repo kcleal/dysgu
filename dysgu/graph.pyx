@@ -96,11 +96,7 @@ cdef class Table:
 
 
 cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
-    """End minimizer. A iterator which takes the size of the window, `k`, and an iterable,
-    `li`. Then returns an iterator such that the ith element yielded is equal
-    to min(list(li)[max(i - k + 1, 0):i+1]).
-    Each yield takes amortized O(1) time, and overall the generator takes O(k)
-    space.
+    """End minimizer
     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
 
     cdef int i = 0
@@ -185,11 +181,10 @@ cdef class ClipScoper:
         cdef int n_local_minimizers, n_local_reads
         cdef float upper_bound
 
-        n_local_minimizers = len(clip_table) #len(self.clip_table[idx])
+        n_local_minimizers = len(clip_table)
         n_local_reads = self.scope_left.size() if idx == 0 else self.scope_right.size()
-        #
         upper_bound = (1 + (n_local_reads * 0.15)) * self.upper_bound_n_minimizers
-        # echo(upper_bound, n_local_minimizers)
+
         if n_local_minimizers > upper_bound:
             find_candidate = 0
 
@@ -211,28 +206,15 @@ cdef class ClipScoper:
                 targets = clip_table[m]
 
                 for item_position, mitem in targets:
-                    if abs(item_position - position) < 10:
-                    # if abs(minimizer_pos_pair.second - position) < 10:
-                    #     mitem = minimizer_pos_pair.first
-                        # count_iter = target_counts.find(item)
-                        # if count_iter == target_counts.end():
-                        #     target_counts[item] = 1
-                        # else:
-                        #     # preincrement(dereference(count_iter).second) # += 1
-                        #     target_counts[item] += 1
+                    if abs(item_position - position) < 7:
 
                         total_m_found += 1
                         target_counts[mitem] += 1
-                        support = (total_m_found / 2) + target_counts[mitem] #len(target_counts)
-
-                        # total_m_found += 1
-                        # support = (total_m_found / 2) + dereference(count_iter).second #target_counts[item]  #len(target_counts)
+                        support = (total_m_found / 2) + target_counts[mitem]
 
                         if support >= self.minimizer_support_thresh:
-                           # res.update(target_counts.keys())
-                           #  result.add(item)
                             clustered_nodes.insert(mitem)
-                        # if len(result) >= 4:  # Maximum edges for each read
+                        # Maximum edges for each read
                         if clustered_nodes.size() >= 4:
                             find_candidate = 0
                             break
@@ -253,21 +235,9 @@ cdef class ClipScoper:
                 break
             if abs(scope[0].first - position) > self.max_dist:
 
-                # name_pair = scope[0]
                 item_position = scope[0].first
                 name = scope[0].second
                 scope.pop_front()
-
-                # if name in self.read_minimizers:
-                #     for m, idx in self.read_minimizers[name]:
-                #         minimizer_table = self.clip_table[idx]
-                #         if m in minimizer_table:
-                #             minimizer_table[m].remove((item_position, name))
-                #             if len(minimizer_table[m]) == 0:
-                #                 del minimizer_table[m]
-                #
-                #     del self.read_minimizers[name]
-
 
                 if mm_table.has_key(name):
                     set_iter = mm_table.get_iterator_begin()
@@ -309,11 +279,9 @@ cdef class ClipScoper:
             self.scope_left.clear()
             self.scope_right.clear()
 
-            # self.clip_table = {0: defaultdict(set), 1: defaultdict(set)}
-
             self.clip_table_left = defaultdict(set)
             self.clip_table_right = defaultdict(set)
-            # self.read_minimizers = defaultdict(set)
+
             self.current_chrom = chrom
 
         self._insert(seq, cigar_start, cigar_end, input_read, position, clustered_nodes)
@@ -791,13 +759,7 @@ cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     cdef unordered_set[int] clustered_nodes
     clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos, clustered_nodes)
 
-    # vtemp = []
-    # if not clustered_nodes.empty():
-    #     for other_node in clustered_nodes:
-    #         vtemp.append(other_node)
-    # echo(r.qname, node_name, node_name, pos, vtemp)
     if not clustered_nodes.empty():
-    # if len(clustered_nodes2) > 0:
         for other_node in clustered_nodes:
             if not G.hasEdge(node_name, other_node):
                 # 2 signifies that this is a local edge as opposed to a template edge
