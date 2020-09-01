@@ -161,16 +161,16 @@ def get_include_reads(include_regions, bam):
 cpdef list col_names(extended):
     if extended:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
-         "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
+         "GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
+          "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed"
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
-          "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "pe", "supp", "sc", "block_edge",
+          "GT", "GQ", "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
+          "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed"
@@ -266,11 +266,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"RT={read_kind}"]
 
     if extended:
-        fmt_keys = "GT:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -297,9 +297,9 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
 def get_fmt(r, extended):
     if extended:
 
-        v = ["./.", r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
+        v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                      r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"]]
         if "prob" in r:
@@ -307,9 +307,9 @@ def get_fmt(r, extended):
         return v
 
     else:
-        v = ["./.", r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
+        v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                  r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"]]
         if "prob" in r:
@@ -384,6 +384,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality phred scaled">
 ##FORMAT=<ID=DP,Number=1,Type=Float,Description="Mean distance-to-pair metric supporting the variant">
 ##FORMAT=<ID=DN,Number=1,Type=Float,Description="Mean distance-to-normal metric supporting the variant">
 ##FORMAT=<ID=DAP,Number=1,Type=Float,Description="Mean distance-to-alignment metric for primary alignments">
@@ -400,6 +401,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
+##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
@@ -451,6 +453,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality phred scaled">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
 ##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
 ##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
@@ -463,6 +466,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
+##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">

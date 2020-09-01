@@ -1,6 +1,9 @@
 from skbio.alignment import StripedSmithWaterman
 from dysgu.map_set_utils import is_overlapping
 from dysgu.coverage import merge_intervals
+from dysgu.assembler import check_contig_match, compute_rep
+
+# from dysgu.ksw2_utils import py_ksw2_alignment
 
 import edlib
 import click
@@ -11,7 +14,7 @@ def echo(*args):
 
 
 def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
-    if cont:
+    if cont and len(cont) > 5:
         start_i = 1
         while cont[start_i].islower():
             start_i += 1
@@ -33,12 +36,12 @@ def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
                 return right_clip, 1, start_i
 
 
-def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_position, clip_seq):
+def filter_bad_alignment(align, event, idx, begin, end, break_position, filter_expected=True):
     pos = event["pos" + idx]
-    score = align['optimal_alignment_score']
-    span = align["query_end"] - align["query_begin"] + 1
-    seq1 = align['aligned_query_sequence']
-    seq2 = align['aligned_target_sequence']
+    score = align.optimal_alignment_score
+    span = align.query_end - align.query_begin + 1
+    seq1 = align.aligned_query_sequence
+    seq2 = align.aligned_target_sequence
 
     if not seq1 or not seq2:
         return -1
@@ -48,8 +51,16 @@ def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_positio
     distance_to_break = min(abs(begin - break_position), abs(end - break_position))
     large_gap_penalty = 24
     gapped_score = score
+
     if distance_to_break > 200:
         gapped_score = score - large_gap_penalty
+
+    # rep = 0
+    # if distance_to_break > 50:  # Increase alignment stringency for deletions with repetitive regions
+    #     rep = compute_rep(align.query_sequence)  # still penalized insertions todo fix this
+    #     expect_thresh = 0.9
+    # else:
+    expect_thresh = 0.7
 
     if gapped_score > 12:
         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
@@ -59,8 +70,17 @@ def filter_bad_alignment(align, event, idx, clip_side, begin, end, break_positio
             # if gaps at both ends of alignment increase stringency
             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:
                 expected = span * 4
-            if span > 12 and float(score) / expected > 0.7:
+
+            # if rep:
+            #     expected += int(25 * rep)  # rep is float between 0 - 1
+            #
+            # if not filter_expected:
+            #     return 1
+            # echo(span, score, expected, float(score) / expected, rep)
+            if span > 12 and float(score) / expected > expect_thresh:
                 return expected - score
+            else:
+                return -1
     return -1
 
 
@@ -110,7 +130,7 @@ def switch_sides(e):
     return e
 
 
-def remap_soft_clips(events, ref_genome, min_sv_len):
+def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
 
     new_events = []
     ref_locs = []
@@ -152,7 +172,10 @@ def remap_soft_clips(events, ref_genome, min_sv_len):
             # Might be different reference genome version, compared to bam genome
             continue
 
+        # note this doesnt parellelize well with multiprocessing.pool, suspect serializing is too slow
+        # could try and parallel before the fetch command above using publish/subscribe model
         for index in grp_idxs:
+
             e = events[index]
             added = 0
             high_quality_clip = False
@@ -197,7 +220,8 @@ def remap_soft_clips(events, ref_genome, min_sv_len):
                         continue
 
                     # Large alignment region
-                    el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="path")
+
+                    el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="locations")
                     locs = merge_align_regions(el['locations'])
 
                     if not locs:
@@ -206,10 +230,23 @@ def remap_soft_clips(events, ref_genome, min_sv_len):
                     l_start, l_end = locs[0]
 
                     ref_start2 = ref_seq_start + l_start
+
+                    # if clip_side == 1 and e[cont + "_ref_start"] < ref_start2:
+                    #     l_start -= (ref_start2 - e[cont + "_ref_start"])
+                    #     echo(ref_start2 - e[cont + "_ref_start"])
+
                     ref_seq2 = ref_seq_clipped[l_start:l_end+1]
 
                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
                     a = aln(clip_seq)
+
+                    # a = py_ksw2_alignment(ref_seq2, clip_seq, 2, -8, 12, 1)
+                    # echo(a)
+                    # echo(ref_start2)
+                    # echo(e["posA"], e["posB"])
+                    # echo(ref_seq2)
+                    # echo(e["contig_ref_start"])
+                    # echo(clip_side)
 
                     score = a.optimal_alignment_score
 
@@ -221,7 +258,32 @@ def remap_soft_clips(events, ref_genome, min_sv_len):
                     q_begin = ref_start2 + aln_q_begin
                     q_end = ref_start2 + aln_q_end
 
-                    edit_dist = filter_bad_alignment(a, e, idx, clip_side, q_begin, q_end, break_position, clip_seq)
+                    edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position, filter_expected=True)
+                    # echo("filter passed", edit_dist != -1)
+                    # if edit_dist == -1:
+                    #
+                    #     a = py_ksw2_alignment(ref_seq2, clip_seq, 2, -8, 12, 1)
+                    #     # aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12,
+                    #     #                            gap_extend_penalty=1)
+                    #     # a = aln(clip_seq)
+                    #
+                    #     score = a.optimal_alignment_score
+                    #
+                    #     aln_q_end = a.query_end
+                    #     aln_q_begin = a.query_begin
+                    #     aln_t_begin = a.target_begin
+                    #     target_end_optimal = a.target_end_optimal
+                    #
+                    #     q_begin = ref_start2 + aln_q_begin
+                    #     q_end = ref_start2 + aln_q_end
+                    #
+                    #     edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position)
+
+                        # if edit_dist != -1:
+                        #     echo("2", e)
+                        #     echo(a.cigar)
+                        #     echo(a)
+                        #     echo()
 
                     if edit_dist != -1:
 
@@ -318,3 +380,43 @@ def remap_soft_clips(events, ref_genome, min_sv_len):
                 new_events.append(e)
 
     return new_events
+    # check for smaller indels that could explain the SV
+    # checked = []
+
+    # for e in new_events:
+    #     passed = True
+    #     if e["svtype"] == "DEL":
+    #         # get local reads with biggest dels and check if found del can be aligned
+    #         reads_with_dels = []
+    #         for a in input_bam.fetch(e["chrA"], e["posA"], e["posA"] + 1):
+    #             if a.cigartuples is None:
+    #                 continue
+    #             ds = sorted([i for i in a.cigartuples if i[0] == 2 and i[1] < 30], key=lambda x: x[1], reverse=True)
+    #             if len(ds):
+    #                 if ds[0][1] > 10:
+    #                     passed = False
+    #                     break
+            #         reads_with_dels.append((ds[0], a.seq))
+            # if len(reads_with_dels) == 0:
+            #     continue
+            # srt_rd = sorted(reads_with_dels, reverse=True)
+            #
+            # clip_seq = None
+            # if e["contig"]:
+            #     clip_res = get_clipped_seq(e[cont], e["posA"], e["contig_ref_start"], e["contig_ref_end"])
+            #     if clip_res:
+            #         clip_seq, _, _ = clip_res
+            # else:
+            #     clip_res = get_clipped_seq(e[cont], e["posB"], e["contig2_ref_start"], e["contig2_ref_end"])
+            #     if clip_res:
+            #         clip_seq, _, _ = clip_res
+            #
+            # for _, seq in srt_rd[:3]:
+            #
+            #     if check_contig_match(seq, clip_seq, return_int=True):
+            #         passed = False
+            #         break
+    #     if passed:
+    #         checked.append(e)
+    #
+    # return checked

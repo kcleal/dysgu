@@ -1,7 +1,7 @@
 #cython: language_level=3, boundscheck=False
 
 from __future__ import absolute_import
-from collections import deque
+from collections import deque, defaultdict
 import click
 from dysgu import io_funcs
 import numpy as np
@@ -487,8 +487,8 @@ class GenomeScanner:
             self.last_tell = tell
             if not self.no_tell:
                 self.input_bam.reset()
-        else:
-            ibam.close()
+        # else:
+        #     ibam.close()
 
         return insert_median, insert_stdev
 
@@ -606,6 +606,7 @@ cdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
 
 cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
     # Round start and end to get index
+
     cdef float fs = start / 100
     cdef float fe = end / 100
 
@@ -619,13 +620,157 @@ cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
     cdef int i
     cdef float total = 0
     cdef float max_cov = 0
-    cdef float cov_val
+    cdef float cov_val = 0
+
     with nogil:
-        for i in range(start, end):
-            cov_val = chrom_depth[i]
-            total += cov_val
-            if cov_val > max_cov:
-                max_cov = cov_val
+
+        if start == end:
+            total = chrom_depth[start]
+            max_cov = total
+
+        else:
+            for i in range(start, end):
+                cov_val = chrom_depth[i]
+                total += cov_val
+                if cov_val > max_cov:
+                    max_cov = cov_val
     if total == 0:
         return 0, 0
+    if start == end:
+        return total, max_cov
     return total / (end - start), max_cov
+
+
+support_bands = [0.9, 0.25]  # todo check these work with long reads
+
+cpdef float adaptive_support_threshold(bunch, depth_table, allele_fraction):
+
+    pad = 500
+    max_val = -1
+
+    positions = []
+
+    bin_counts = defaultdict(int)
+    background_counts = {}
+    for r_info in bunch:
+
+        event_pos = r_info[6]
+
+        # Get bin value
+        p = int(event_pos / 100)
+        bin_counts[p] += 1
+
+        if p not in background_counts:
+            counts, _ = calculate_coverage(event_pos, event_pos, depth_table[r_info[3]])
+            background_counts[p] = counts
+        positions.append(event_pos)
+
+    max_support = len(bunch)
+    if max_support > len(support_bands) - 1:
+        thresh = allele_fraction
+    else:
+        thresh = support_bands[max_support]
+    for k, v in background_counts.items():
+        if v == 0:
+            continue
+        af = float(bin_counts[k]) / v
+        if af > max_val:
+            max_val = af
+        if af > thresh:
+            return 1
+
+    if max_val == -1:
+        return 1
+    else:
+        return 0
+
+
+cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile, max_cov):
+
+    # Check if side A in regions
+    ar = False  # c_io_funcs.intersecter_int_chrom
+    if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
+        ar = True
+    br = False
+    if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
+        br = True
+
+    kind = "extra-regional"
+    if not ar and not br:
+        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
+            switch = True
+
+        # Skip if regions have been provided; almost always false positives?
+        # if regions is not None:
+        #     return None
+
+    switch = False
+    if (br and not ar) or (not br and ar):
+        kind = "hemi-regional"
+        if not br and ar:
+            switch = True
+
+    if ar and br:
+        if r["chrA"] == r["chrB"]:
+            rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
+            rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
+            if rA[0] == rB[0] and rA[1] == rB[1]:
+                kind = "intra_regional"
+                # Put posA first
+                if r["posA"] > r["posB"]:
+                    switch = True
+            else:
+                kind = "inter-regional"
+                if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
+                    switch = True
+        else:
+            kind = "inter-regional"
+
+    if switch:
+        chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contig2"]
+        r["chrA"] = r["chrB"]
+        r["posA"] = r["posB"]
+        r["cipos95A"] = r["cipos95B"]
+        r["chrB"] = chrA
+        r["posB"] = posA
+        r["cipos95B"] = cipos95A
+        r["contig2"] = r["contig"]
+        r["contig"] = contig2
+
+    max_depth = 0
+    if kind == "hemi-regional":
+        chrom_i = infile.get_tid(r["chrA"])
+        if chrom_i in regions_depth:
+            reads_10kb, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
+            reads_10kb = round(reads_10kb, 3)
+        else:
+            reads_10kb = 0
+    else:
+        # Calculate max
+        chrom_i = infile.get_tid(r["chrA"])
+        if chrom_i in regions_depth:
+            reads_10kb_left, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
+            reads_10kb_left = round(reads_10kb_left, 3)
+        else:
+            reads_10kb_left = 0
+        chrom_i = infile.get_tid(r["chrB"])
+        if chrom_i in regions_depth:
+            reads_10kb_right, max_depth = calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
+            reads_10kb_right = round(reads_10kb_right, 3)
+        else:
+            reads_10kb_right = 0
+        if reads_10kb_left > reads_10kb_right:
+            reads_10kb = reads_10kb_left
+        else:
+            reads_10kb = reads_10kb_right
+
+    if reads_10kb >= max_cov * 0.55 and not ar and not br:
+        return None
+
+    r["kind"] = kind
+    r["raw_reads_10kb"] = reads_10kb
+    if r["chrA"] != r["chrB"]:
+        r["svlen"] = 1000000
+
+    r["mcov"] = max_depth
+    return r

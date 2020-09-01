@@ -14,10 +14,11 @@ import sys
 import pickle
 import resource
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance, position_distance, is_overlapping
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
+from dysgu.map_set_utils cimport is_reciprocal_overlapping
 import itertools
-from operator import mul
+import multiprocessing
+
 
 
 def echo(*args):
@@ -26,21 +27,18 @@ def echo(*args):
 
 def filter_potential(input_events, tree, regions_only):
     potential = []
-
     for i in input_events:
 
         if "posB" not in i:  # Skip events for which no posB was identified
             continue
-
+        if "sqc" not in i:
+            i["sqc"] = -1
         if i["svtype"] == "INS" and "svlen_precise" in i and i["svlen_precise"] == 0 and not i["contig"] and not i["contig2"]:
             continue
-        # if i["chrA"] == i["chrB"] and i["posA"] == i["posB"]:
-        #     continue
         if "contig" not in i or i["contig"] == "":
             i["contig"] = None
 
         # Remove events for which both ends are in --include but no contig was found
-
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i["chrA"], i["posA"], i["posA"] + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i["chrB"], i["posB"], i["posB"] + 1)
         if (posA_intersects and posB_intersects) and (i["contig"] is None or i["contig2"] is None):
@@ -97,7 +95,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
 
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
-        # echo("compare all")
     else:
         event_iter = compare_subset(potential, max_dist)  # Use NCLS, generate overlap tree and perform intersections
 
@@ -109,7 +106,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         j_id = ej["event_id"]
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
-        # echo(idx, jdx)
+
         seen.add((i_id, j_id))
 
         fail = False
@@ -125,13 +122,25 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         # Check if events point to the same loci
         loci_similar = False
         loci_same = False
-
+        align_contigs = False
         if ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
             dist1 = abs(ei["posA"] - ej["posA"])
             dist2 = abs(ei["posB"] - ej["posB"])
-            # echo(dist1, dist2)
             if dist1 < 250 and dist2 < 250 and is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
                 loci_similar = True
+            if dist1 < 5 and dist2 < 5:
+                loci_same = True
+            # if dist1 < 250 and dist2 < 250:
+            #     # Try and merge remapped events that are close by
+            #     if ('svlen_precise' in ei and ei["svlen_precise"] == 0) or ("svlen_precise" in ej and ej["svlen_precise"] == 0):
+            #         continue
+            #         if ei["svtype"] != "INS":
+            #             align_contigs = True
+            #         loci_similar = True
+            #
+            #     if not loci_similar and is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"]):
+            #         loci_similar = True
+
             if dist1 < 5 and dist2 < 5:
                 loci_same = True
 
@@ -153,27 +162,41 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs=False, dif
         cj = "" if ej["contig"] is None else ej["contig"]
         cj2 = "" if ej["contig2"] is None else ej["contig2"]
         any_contigs_to_check = any((ei["contig"], ei["contig2"])) and any((ej["contig"], ej["contig2"]))
-        # echo("loci", loci_similar, loci_same, any_contigs_to_check, ei["posA"], ei["posB"], ej["posA"], ej["posB"])
 
         if loci_similar or loci_same:
             if any_contigs_to_check and loci_same:  # Try and match contigs
                 G.add_edge(i_id, j_id, loci_same=loci_same)
-                # echo(i_id, j_id)
-                # echo("loci same", ei["posA"], ei["posB"], ej["posA"], ej["posB"])
 
             # No contigs to match, merge anyway
             elif not any_contigs_to_check and loci_same:
                 G.add_edge(i_id, j_id, loci_same=loci_same)
-                # echo("2", i_id, j_id)
+
             # Only merge loci if they are not both within --include regions. chrA:posA only needs checking
             elif not (io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and
                       io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)):
                 G.add_edge(i_id, j_id, loci_same=loci_same)
-                # echo("3", i_id, j_id)
+        # if loci_similar or loci_same:
+        #     # if any_contigs_to_check and align_contigs:  # Try and match contigs
+        #     #     continue
+        #     #     # check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False)
+        #     #     if ci and cj: v = ci, cj
+        #     #     elif ci and cj2: v = ci, cj2
+        #     #     elif ci2 and cj2: v = ci2, cj2
+        #     #     elif ci2 and cj: v = ci2, cj
+        #     #     else: continue
+        #     #
+        #     #     if assembler.check_contig_match(v[0], v[1], return_int=True):
+        #     #         G.add_edge(i_id, j_id, loci_same=loci_same)
+        #
+        #     # No contigs to match, merge anyway
+        #     if loci_same:
+        #         G.add_edge(i_id, j_id, loci_same=loci_same)
+        #
+        #     # Only merge loci if they are not both within --include regions. chrA:posA only needs checking
+        #     elif not (io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and
+        #               io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)):
+        #         G.add_edge(i_id, j_id, loci_same=loci_same)
 
-            # echo(io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1),
-            #           io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1))
-        # echo("len g nodes", len(G.nodes()))
     return G
 
 
@@ -195,7 +218,8 @@ cpdef srt_func(c):
 
 
 def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_partners=False,
-                 rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0):
+                 rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0,
+                 skip_imprecise=False):
     """Try and merge similar events, use overlap of both breaks points
     """
 
@@ -205,6 +229,12 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
 
     # Cluster events on graph
     G = nx.Graph()
+
+    # if skip_imprecise:
+    #     pt = [i for i in potential if "svlen_precise" not in i or i["svlen_precise"] == 1]
+    # else:
+    #     pt = potential
+
     G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample,
                          debug=debug)
 
@@ -230,8 +260,11 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
             w0 = best[0]  # Weighting for base result
 
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
+            spanned = bool(w0["spanning"])
             svlen = w0["svlen"]
             svt = w0["svtype"]
+            sqc = w0["sqc"] if "sqc" in w0 else -1
+
             for k in range(1, len(best)):
 
                 item = best[k]
@@ -244,9 +277,25 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                 if item["maxASsupp"] > w0["maxASsupp"]:
                     best[0]["maxASsupp"] = item["maxASsupp"]
 
-                if item["svtype"] == "DEL" and svt == "DEL" and (item["svlen"] * 0.6 < svlen < item["svlen"] or min_size > svlen < item["svlen"]):  # increase svlen size
-                    svlen = item["svlen"]
-                    best[0]["svlen"] = svlen
+                if item["svtype"] == "DEL" and svt == "DEL":
+                    if not spanned:
+                        if item["spanning"]:
+                            svlen = item["svlen"]
+
+                        elif (item["svlen"] * 0.6 < svlen < item["svlen"] or min_size > svlen < item["svlen"]):  # increase svlen size
+                            svlen = item["svlen"]
+                            best[0]["svlen"] = svlen
+
+                elif item["svtype"] == "INS" and svt == "INS":
+                    if not spanned:
+                        if item["spanning"]:
+                            svlen = item["svlen"]
+                        # elif (item["svlen"] * 0.6 < svlen < item["svlen"] or min_size > svlen < item["svlen"]):  # increase svlen size
+                        #     svlen = item["svlen"]
+                        #     best[0]["svlen"] = svlen
+                if "sqc" in item and item["sqc"] != -1 and sqc == 1:
+                    best[0]["sqc"] = sqc
+                    sqc = item["sqc"]
 
                 # Average weight these
                 wt = item["pe"] + item["supp"] + item["spanning"]
@@ -500,7 +549,8 @@ cdef find_repeat_expansions(events, insert_stdev):
 
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, min_supp,
-                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
+                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size,
+                  ):
 
     potential_events = []
     for event in call_component.call_from_block_model(infile,
@@ -510,7 +560,8 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       insert_stdev,
                                                       min_supp,
                                                       extended_tags,
-                                                      assemble_contigs):
+                                                      assemble_contigs,
+                                                      ):
         if event:
             event["event_id"] = event_id
             if event["chrA"] is not None:
@@ -523,19 +574,102 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
         return potential_events, event_id
 
     potential_events = filter_potential(potential_events, regions, regions_only)
-    potential_events = merge_events(potential_events, merge_dist, regions,
-                                    try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
 
+    # potential_events = merge_events(potential_events, merge_dist, regions,
+    #                                 try_rev=False, pick_best=False, rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
+    #                                 skip_imprecise=True)
+    # potential_events = merge_events(potential_events, merge_dist, regions,
+    #                                 try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
     return potential_events, event_id
 
 
-def pipe1(args, infile, kind, regions, ibam, ref_genome):
+class Consumer(multiprocessing.Process):
+
+    def __init__(self, task_queue, result_queue, bam_path, open_mode, regions, clip_length, insert_median, insert_stdev, support, merge_dist,
+                 regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
+        self.infile = pysam.AlignmentFile(bam_path, open_mode)
+        self.regions = regions
+        self.clip_length = clip_length
+        self.insert_median = insert_median
+        self.insert_stdev = insert_stdev
+        self.support = support
+        self.merge_dist = merge_dist
+        self.regions_only = regions_only
+        self.extended_tags = extended_tags
+        self.assemble_contigs = assemble_contigs
+        self.rel_diffs = rel_diffs
+        self.diffs = diffs
+        self.min_size = min_size
+        # these must be at the bottom:
+        multiprocessing.Process.__init__(self)
+        self.task_queue = task_queue
+        self.result_queue = result_queue
+
+    def run(self):
+        while True:
+            next_task = self.task_queue.get()
+            if next_task is None:
+                # Poison pill means shutdown
+                self.infile.close()
+                self.task_queue.task_done()
+                break
+
+            event_id, job = next_task()
+            events = []
+
+            potential_events, event_id = component_job(self.infile,
+                                                       job,
+                                                       self.regions,
+                                                       event_id,
+                                                       self.clip_length,
+                                                       self.insert_median,
+                                                       self.insert_stdev,
+                                                       self.support,
+                                                       self.merge_dist,
+                                                       self.regions_only,
+                                                       self.extended_tags,
+                                                       self.assemble_contigs,
+                                                       self.rel_diffs,
+                                                       self.diffs,
+                                                       self.min_size)
+
+            if potential_events:
+                events += potential_events
+
+            self.result_queue.put(events)
+            self.task_queue.task_done()
+
+
+            # while True:
+            #     try:
+            #         self.result_queue.put_nowait(events)
+            #         # echo("sending back")
+            #         break
+            #     except:
+            #         time.sleep(1)
+            #         echo("waiting for queue to empty")
+            #         continue
+
+class Task:
+
+    def __init__(self, job_id, job):
+        self.job_id = job_id
+        self.job = job
+
+    def __call__(self):
+        return self.job_id, self.job
+
+    def __str__(self):
+        return f'{self.job_id} * {len(self.job)}'
+
+
+def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
 
-    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], args["procs"],
+    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], 1, # 1 process #args["procs"],
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
@@ -566,6 +700,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     block_edge_events = []
     min_support = args["min_support"]
     lower_bound_support = min_support #- 1 if min_support - 1 > 1 else 1
+    clip_length = args["clip_length"]
+    merge_dist = args["merge_dist"]
+    min_size = args["min_size"]
+
     echo("lower bound suport", lower_bound_support)
 
     read_buffer = genome_scanner.read_buffer
@@ -580,10 +718,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             minimizer_breadth=args["z_breadth"],
                                             k=12,
                                             m=6,
-                                            clip_l=args["clip_length"],
-                                            min_sv_size=args["min_size"],
+                                            clip_l=clip_length,
+                                            min_sv_size=min_size,
                                             min_support=lower_bound_support, #min_support,
-                                            procs=args["procs"],
+                                            procs=1, #args["procs"],
                                             mapq_thresh=args["mq"],
                                             debug=None,
                                             paired_end=paired_end,
@@ -606,37 +744,96 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         rel_diffs = True
         diffs = 0.15
     echo("len components", len(cc))
+
+    if args["procs"] > 1:
+        tasks = multiprocessing.JoinableQueue(maxsize=100)
+        results_q = multiprocessing.Queue(maxsize=10000)
+        consumers = [ Consumer(tasks, results_q, args["sv_aligns"], open_mode, regions, clip_length, insert_median,
+                               insert_stdev, min_support, merge_dist, regions_only, extended_tags, assemble_contigs,
+                               rel_diffs, diffs, min_size)
+            for i in range(args["procs"])]
+
+        for w in consumers:
+            w.start()
+
+    else:
+        tasks = None
+        results = None
+        consumers = None
+
+    num_jobs = 0
+    completed = 0
+
     for start_i, end_i in cc:
 
         if end_i - start_i >= lower_bound_support:
             component = list(cmp[start_i: end_i])
 
-            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support)
+            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+
             if res:
+                event_id += 1
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-                potential_events, event_id = component_job(infile, res, regions, event_id, args["clip_length"],
-                                                 insert_median,
-                                                 insert_stdev,
-                                                 lower_bound_support, #args["min_support"],
-                                                 args["merge_dist"],
-                                                 regions_only,
-                                                 extended_tags,
-                                                 assemble_contigs,
-                                                 rel_diffs=rel_diffs, diffs=diffs, min_size=args["min_size"])
-                if potential_events:
-                    block_edge_events += potential_events
-                    # echo(potential_events)
+                if args["procs"] == 1:
+
+                    potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                                                               insert_median,
+                                                               insert_stdev,
+                                                               lower_bound_support,
+                                                               merge_dist,
+                                                               regions_only,
+                                                               extended_tags,
+                                                               assemble_contigs,
+                                                               rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
+
+                    if potential_events:
+                        block_edge_events += potential_events
+
+                else:
+
+                    while not results_q.empty():
+                        # echo("retrieving")
+                        item = results_q.get()
+                        block_edge_events += item
+                        completed += 1
+                        num_jobs -= 1
+
+                    # echo("putting", event_id)
+                    # try:
+                    #     allowed = set([str, float, int])
+                    #     assert all([type(k) in allowed for k in res.values()])
+                    # except:
+                    #     echo(res)
+                    #     quit()
+
+                    tasks.put(Task(event_id, res))
+                    num_jobs += 1
+
+
+    if args["procs"] > 1:
+
+        for _ in range(args["procs"]):
+            tasks.put(None)
+        tasks.join()
+
+        while num_jobs:
+            item = results_q.get()
+            block_edge_events += item
+            completed += 1
+            num_jobs -= 1
+
+    echo("len block edge", len(block_edge_events))
 
     echo("components", time.time() - t0)
     t3 = time.time()
     preliminaries = []
 
     tremap = time.time()
-    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"])
+
+    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile)
     echo("remapping", time.time() - tremap)
-    # for item in block_edge_events:
-    #     echo(item)
+
     # Merge across calls
     if args["merge_within"] == "True":
         tmr = time.time()
@@ -647,16 +844,16 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         merged = block_edge_events
 
     merged = elide_insertions(merged)
-
-    # Filter for absolute support and size here
-    merged = [event for event in merged if event["svlen"] >= args["min_size"] and event["su"] >= args["min_support"]]
     # for e in merged:
-    #     if e["event_id"] == 6:
-    #         echo(e)
+    #     echo(e["svlen"], e["su"])
+    # Filter for absolute support and size here
+    merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"])
+              and event["su"] >= args["min_support"]]
+    # echo(len(merged))
     if merged:
         for event in merged:
             # Collect coverage information
-            event_dict = call_component.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile) # regions_depth)
+            event_dict = coverage.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile, args["max_cov"]) # regions_depth)
 
             if event_dict:
                 preliminaries.append(event_dict)
@@ -664,11 +861,13 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam)
 
     if len(preliminaries) == 0:
         click.echo("No events found", err=True)
         quit()
     echo("time3", time.time() - t3)
+
     return preliminaries, extended_tags
 
 
@@ -681,10 +880,12 @@ def cluster_reads(args):
     opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
     if kind not in opts:
         raise ValueError("Input must be a .bam/cam/sam or stdin")
+
+    bam_mode = opts[kind]
     # if args["procs"] > 1:
     #     raise ValueError("Sorry, only single process is supported currently")
     click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
-    infile = pysam.AlignmentFile(args["sv_aligns"], opts[kind], threads=args["procs"])
+    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1) #args["procs"])
 
     ref_genome = pysam.FastaFile(args["reference"])
 
@@ -693,7 +894,7 @@ def cluster_reads(args):
         kind = args["sv_aligns"].split(".")[-1]
         if kind == "stdin" or kind == "-" or kind not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
-        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=args["procs"])
+        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=1)
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
@@ -725,7 +926,7 @@ def cluster_reads(args):
 
     # Run dysgu here:
     t4 = time.time()
-    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome)
+    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
@@ -749,6 +950,10 @@ def cluster_reads(args):
 
     infile.close()
     ref_genome.close()
+    try:
+        ibam.close()
+    except:
+        pass
 
     echo(time.time() - t0)
     click.echo("dysgu call {} complete, n={}, time={} h:m:s".format(

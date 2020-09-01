@@ -4,12 +4,14 @@ from __future__ import absolute_import
 import time
 import click
 import ncls
-from collections import defaultdict
+from collections import defaultdict, deque
 import numpy as np
 cimport numpy as np
 from cpython cimport array
 import array
 import re
+
+import edlib
 
 from libcpp.vector cimport vector
 
@@ -47,12 +49,12 @@ ctypedef vector[ScopeItem_t] ForwardScope_t
 ctypedef cpp_pair[int, cpp_item] event_item
 ctypedef cpp_pair[long, int] cpp_long_pair
 ctypedef long int long_int
+
 ctypedef PairedEndScoper PairedEndScoper_t
 ctypedef TemplateEdges TemplateEdges_t
-
 ctypedef NodeToName NodeToName_t
-
 ctypedef ClipScoper ClipScoper_t
+
 
 # 1 = soft-clipped split-read, the supplementary mapping might be discarded. whole read is a node
 # 2 = deletion event contained within read
@@ -95,7 +97,7 @@ cdef class Table:
         return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
-cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
+cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found, unordered_set[long]& homopolymers):
     """End minimizer
     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
 
@@ -103,13 +105,24 @@ cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found
     cdef int end = len(s) - m + 1
     cdef int last_idx = end - 1
     cdef cpp_deque[cpp_long_pair] window2
-    cdef long int hx2
+    cdef long hx2
     cdef bytes s_bytes = bytes(s.encode("ascii"))
     cdef const unsigned char* sub_ptr = s_bytes
 
     with nogil:
-        for i in range(end):
+        while i < end:
+        # for i in range(end):
             hx2 = xxhasher(sub_ptr, m, 42)
+            # if homopolymers.find(hx2) != homopolymers.end():
+                # if m + m < end - i - 1:
+            #         hx2 = xxhasher(sub_ptr, m + m, 42)
+            #         if homopolymers.find(hx2) != homopolymers.end():
+            #             i += 1
+            #             continue
+            #     else:
+            #         i += 1 #m
+            #         continue
+
             if i == 0 or i == last_idx:
                 found.insert(hx2)
 
@@ -123,6 +136,7 @@ cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found
             sub_ptr += 1
             minimizer_i = window2.front().first
             found.insert(minimizer_i)
+            i += 1
 
 
 cdef str left_soft_clips(str seq, int code_length):
@@ -133,16 +147,41 @@ cdef str right_soft_clips(str seq, int code_length):
     return seq[len(seq) - code_length:]
 
 
-cdef class ClipScoper:
+cdef uint64_t pair_to_int64(uint32_t left, uint32_t right) nogil:
+    return <uint64_t> left << 32 | right
 
+
+cdef uint32_t int64_left(uint64_t item) nogil:
+    cdef uint32_t v = 0
+    v |= item >> 32
+    return v
+
+cdef uint32_t int64_right(uint64_t item) nogil:
+    return <uint32_t> item
+
+
+cdef class ClipScoper:
+    # todo sort out types; use uint64_t instead of long
+
+    # first in pair is chrom position, second is node name
     cdef cpp_deque[cpp_pair[int, int]] scope_left, scope_right
 
     # MinimizerTable - keys are read-names, value is a set of longs, minimizers associated with read
     cdef MinimizerTable read_minimizers_left, read_minimizers_right
 
-    cdef object clip_table_left, clip_table_right #, read_minimizers
+    # Hashmap key is minimizer val, value is a set of chrom pos + node name packed as a 64 int
+    cdef unordered_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
+    # cdef object clip_table_left, clip_table_right # read_minimizers
+
+    cdef unordered_set[long] homopolymer_table
+
     cdef int max_dist, k, w, clip_length, current_chrom, minimizer_support_thresh, minimizer_matches
     cdef float target_density, upper_bound_n_minimizers
+    cdef int n_local_minimizers
+
+    cdef object rds_clip
+
+    cdef bint minimizer_mode
 
     """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
     def __cinit__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,
@@ -152,21 +191,44 @@ cdef class ClipScoper:
         self.w = m
         self.clip_length = clip_length
 
-        self.clip_table_left = defaultdict(set)
-        self.clip_table_right = defaultdict(set)
+        # self.clip_table_left = defaultdict(set)
+        # self.clip_table_right = defaultdict(set)
+
+        # fill out homopolymer table
+        cdef long hx2
+        cdef bytes s_bytes
+        cdef const unsigned char* sub_ptr
+
+        for letter in "ATCGN":
+            for s in (m, m*2):
+                poly = letter * m
+                s_bytes = bytes(poly.encode("ascii"))
+                sub_ptr = s_bytes
+                hx2 = xxhasher(sub_ptr, m, 42)
+                self.homopolymer_table.insert(hx2)
 
         self.current_chrom = 0
         self.minimizer_support_thresh = minimizer_support_thresh
         self.minimizer_matches = minimizer_breadth
 
+        self.n_local_minimizers = 0
         self.target_density = 2. / (m + 1)
         self.upper_bound_n_minimizers = read_length * self.target_density
 
-    cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position, clip_table,
+        self.rds_clip = [deque([]), deque([])]
+
+        self.minimizer_mode = False
+
+    cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position,
+                                     unordered_map[uint64_t, unordered_set[uint64_t]]& clip_table,
+                                     # clip_table,
                                      unordered_set[int]& clustered_nodes):
 
         cdef unordered_set[long] clip_minimizers
-        sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers)  # get minimizers of sequence
+
+        cdef unordered_set[uint64_t].iterator targets_iter, targets_end
+
+        sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers, self.homopolymer_table)  # get minimizers of sequence
         if clip_minimizers.empty():
             return
 
@@ -176,12 +238,15 @@ cdef class ClipScoper:
 
         cdef int total_m_found = 0
         cdef int find_candidate = 1
-        cdef long int m
-        cdef long int item
+        cdef long m
+        cdef long set_item
         cdef int n_local_minimizers, n_local_reads
         cdef float upper_bound
 
-        n_local_minimizers = len(clip_table)
+        # n_local_minimizers = clip_table.size()
+        n_local_minimizers = self.n_local_minimizers
+
+        # n_local_minimizers = len(clip_table)
         n_local_reads = self.scope_left.size() if idx == 0 else self.scope_right.size()
         upper_bound = (1 + (n_local_reads * 0.15)) * self.upper_bound_n_minimizers
 
@@ -189,7 +254,7 @@ cdef class ClipScoper:
             find_candidate = 0
 
         cdef cpp_pair[long, int] minimizer_pos_pair
-        cdef int mitem
+        cdef int mitem, item_position
 
         for m in clip_minimizers:
 
@@ -198,15 +263,35 @@ cdef class ClipScoper:
             else:
                 self.read_minimizers_right.insert(name, m)
 
-            if m not in clip_table:
-                clip_table[m].add((position, name))
+            if clip_table.find(m) == clip_table.end():
+                clip_table[m].insert(pair_to_int64(position, name))
+
+                self.n_local_minimizers += 1
+
+            # if m not in clip_table:
+            #     clip_table[m].add((position, name))
+
                 continue
 
             elif find_candidate:  # Look for suitable partners
-                targets = clip_table[m]
+                #
 
-                for item_position, mitem in targets:
+                targets_iter = clip_table[m].begin()
+                targets_end = clip_table[m].end()
+                while targets_iter != targets_end:
+                    set_item = dereference(targets_iter)
+
+                # for set_item in clip_table[m]: # dereference(targets):
+
+                # targets = clip_table[m]
+                # for item_position, mitem in targets:
+
+
+                    item_position = int64_left(set_item)
+
                     if abs(item_position - position) < 7:
+
+                        mitem = int64_right(set_item)
 
                         total_m_found += 1
                         target_counts[mitem] += 1
@@ -215,14 +300,19 @@ cdef class ClipScoper:
                         if support >= self.minimizer_support_thresh:
                             clustered_nodes.insert(mitem)
                         # Maximum edges for each read
-                        if clustered_nodes.size() >= 4:
+                        if clustered_nodes.size() >= 5:
                             find_candidate = 0
                             break
 
-            clip_table[m].add((position, name))
+                    preincrement(targets_iter)
+
+            # clip_table[m].add((position, name))
+            clip_table[m].insert(pair_to_int64(position, name))
+
 
     cdef void _refresh_scope(self, cpp_deque[cpp_pair[int, int]]& scope, int position, MinimizerTable& mm_table,
-                             clip_table):
+                             unordered_map[uint64_t, unordered_set[uint64_t]]& clip_table,
+                             ):
         # Remove out of scope reads and minimizers
         cdef int item_position, name
         cdef long m
@@ -244,34 +334,165 @@ cdef class ClipScoper:
                     set_iter_end = mm_table.get_iterator_end()
                     while set_iter != set_iter_end:
                         m = dereference(set_iter)
-                        if m in clip_table:
-                            clip_table[m].remove((item_position, name))
-                            if len(clip_table[m]) == 0:
-                                del clip_table[m]
+
+                        if clip_table.find(m) != clip_table.end():
+                            clip_table[m].erase(pair_to_int64(item_position, name))
+
+                            if clip_table[m].empty():
+                                self.n_local_minimizers -= 1
+                            #     clip_table.erase(m)
+
+                        # if m in clip_table:
+                        #     clip_table[m].remove((item_position, name))
+                        #     if len(clip_table[m]) == 0:
+                        #         del clip_table[m]
+
                         preincrement(set_iter)
                     mm_table.erase(name)
             else:
                 break
 
-    cdef void _insert(self, str seq, int cigar_start, int cigar_end, int input_read, int position,
+    cdef void _insert(self, seq, int cigar_start, int cigar_end, int input_read, int position,
                       unordered_set[int]& clustered_nodes):
         # Find soft-clips of interest
-        cdef set clip_set
-        cdef str clip_seq
+
         if cigar_start >= self.clip_length:
-            self._refresh_scope(self.scope_left, position, self.read_minimizers_left, self.clip_table_left)
             clip_seq = left_soft_clips(seq, cigar_start)
+            self._refresh_scope(self.scope_left, position, self.read_minimizers_left, self.clip_table_left)
+
+            # if not self.scope_left.empty() or not self.scope_right.empty():
             self._add_m_find_candidates(clip_seq, input_read, 0, position, self.clip_table_left, clustered_nodes)
             self.scope_left.push_back(cpp_item(position, input_read))
+            # else:
+            #     self.minimizer_mode = False
+            #     echo("switching bck at", position)
+            #     self._add_r_overlap_mode(clip_seq, input_read, 0, position, clustered_nodes)
+
 
         if cigar_end >= self.clip_length:
-            self._refresh_scope(self.scope_right, position, self.read_minimizers_right, self.clip_table_right)
             clip_seq = right_soft_clips(seq, cigar_end)
+            self._refresh_scope(self.scope_right, position, self.read_minimizers_right, self.clip_table_right)
+            # if not self.scope_right.empty() or not self.scope_left.empty():
             self._add_m_find_candidates(clip_seq, input_read, 1, position, self.clip_table_right, clustered_nodes)
             self.scope_right.push_back(cpp_item(position, input_read))
 
-    cdef void update(self, int input_read, str seq, int cigar_start, int cigar_end, int chrom, int position,
-               unordered_set[int]& clustered_nodes):
+            # else:
+            #     self.minimizer_mode = False
+            #     echo("switching bck at", position)
+            #     self._add_r_overlap_mode(clip_seq, input_read, 1, position, clustered_nodes)
+
+
+    cdef void _dump_to_minimizer_table(self, clip_seq, int name, int idx, int position,
+                                  unordered_set[int]& clustered_nodes):
+
+        self.minimizer_mode = True
+        cdef unordered_set[long] clip_minimizers
+        cdef unordered_map[uint64_t, unordered_set[uint64_t]] clip_table
+        cdef cpp_deque[cpp_pair[int, int]] scope
+
+        for position, clip_seq, input_read in self.rds_clip[idx]:
+            sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers, self.homopolymer_table)  # get minimizers of sequence
+            if idx == 0:
+                clip_table = self.clip_table_left
+                scope = self.scope_left
+            else:
+                clip_table = self.clip_table_left
+                scope = self.scope_left
+            for m in clip_minimizers:
+                clip_table[m].insert(pair_to_int64(position, name))
+            scope.push_back(cpp_item(position, input_read))
+            clip_minimizers.clear()
+
+        self._add_m_find_candidates(clip_seq, name, idx, position, clip_table, clustered_nodes)
+
+    cdef void _add_r_overlap_mode(self, clip_seq, int name, int idx, int position,
+                                  unordered_set[int]& clustered_nodes):
+
+        # echo(r.qname)
+        q = self.rds_clip[idx]
+
+        while len(q) > 0 and position - q[0][0] > 250:
+            q.popleft()
+
+        # if len(q) > 100:
+        #     self._dump_to_minimizer_table(clip_seq, name, idx, position, clustered_nodes)
+        #     return
+
+        if len(q) == 0 or len(q) > 100:
+            q.append((position, clip_seq, name))
+            return
+
+        cdef int i
+        cdef int count = 0
+
+        for i in range(len(q) -1, -1, -1):
+            count += 1
+            if count > 10:
+                break
+            other = q[i]
+            query_seq = clip_seq
+            other_seq = other[1]
+            other_pos = other[0]
+            # trim to expected overlap
+            # if idx == 1:  # right clip, trim left to same position (avoid overhang that wont globally align)
+            #     if other_pos != position:
+            #         if position > other_pos:
+            #             offset = position - other_pos
+            #             if offset < len(other_seq):
+            #                 other_seq = other_seq[offset:]
+            #             else:
+            #                 continue
+            #         elif other_pos > position:
+            #             offset = other_pos - position
+            #             query_seq = query_seq[offset:]
+            # else:  # left clip, trim rhs to same position
+            #     if other_pos != position:
+            #         if position > other_pos:
+            #             offset = position - other_pos
+            #             if offset < len(other_seq):
+            #                 other_seq = other_seq[:len(other_seq) - offset]
+            #             else:
+            #                 continue
+            #         elif other_pos > position:
+            #             offset = other_pos - position
+            #             query_seq = query_seq[:len(query_seq) - offset]
+
+            if not query_seq or not other_seq:
+                break
+            if len(other_seq) > len(query_seq):  # how well does one fit inside the other?
+                ol_size = len(other_seq)
+                el = edlib.align(query_seq, other_seq, mode="HW")
+            else:
+                ol_size = len(query_seq)
+                el = edlib.align(other_seq, query_seq, mode="HW")
+
+            pct_ed = el['editDistance'] / ol_size
+            # echo(r.qname, other[1].qname, query_seq, other_seq, position, other[0])
+            # echo(el, ol_size, pct_ed)
+            if pct_ed < 0.05:
+                clustered_nodes.insert(other[2])
+                # Maximum edges for each read
+                if clustered_nodes.size() >= 4:
+                    find_candidate = 0
+                    break
+
+        q.append((position, clip_seq, name))
+
+    cdef void _insert_overlap(self, rseq, int cigar_start, int cigar_end, int input_read, int position,
+                      unordered_set[int]& clustered_nodes):
+
+        if cigar_start >= self.clip_length:
+            clip_seq = left_soft_clips(rseq, cigar_start)
+            self._add_r_overlap_mode(clip_seq, input_read, 0, position, clustered_nodes)
+
+        if cigar_end >= self.clip_length:
+            clip_seq = right_soft_clips(rseq, cigar_end)
+            self._add_r_overlap_mode(clip_seq, input_read, 1, position, clustered_nodes)
+
+    cdef void update(self, r, int input_read, int chrom, int position,
+               unordered_set[int]& clustered_nodes):  # node_name, chrom, pos, clustered_nodes
+
+        clip_left, clip_right = map_set_utils.clip_sizes(r)
 
         # Find candidate nodes with matching minimizers
         if chrom != self.current_chrom:
@@ -279,12 +500,21 @@ cdef class ClipScoper:
             self.scope_left.clear()
             self.scope_right.clear()
 
-            self.clip_table_left = defaultdict(set)
-            self.clip_table_right = defaultdict(set)
+            self.clip_table_left.clear() #= defaultdict(set)
+            self.clip_table_right.clear() #= defaultdict(set)
+
+            # self.clip_table_left = defaultdict(set)
+            # self.clip_table_right = defaultdict(set)
 
             self.current_chrom = chrom
 
-        self._insert(seq, cigar_start, cigar_end, input_read, position, clustered_nodes)
+            # self.rds_clip = [deque([]), deque([])]
+            # self.minimizer_mode = False
+
+        # if self.minimizer_mode:
+        self._insert(r.seq, clip_left, clip_right, input_read, position, clustered_nodes)
+        # else:
+        #     self._insert_overlap(r.seq, clip_left, clip_right, input_read, position, clustered_nodes)
 
 
 cdef struct LocalVal:
@@ -365,10 +595,10 @@ cdef class PairedEndScoper:
                 # echo("dropping up to", dereference(local_it).first)
                 self.loci.erase(self.loci.begin(), local_it)
 
-            if current_chrom != chrom2:  # Erase items out of range in forward scope
-                local_it = dereference(forward_scope).lower_bound(current_pos - self.clst_dist)
-                if local_it != dereference(forward_scope).begin():
-                    dereference(forward_scope).erase(dereference(forward_scope).begin(), local_it)
+            # if current_chrom != chrom2:  # Erase items out of range in forward scope
+            #     local_it = dereference(forward_scope).lower_bound(current_pos - self.clst_dist)
+            #     if local_it != dereference(forward_scope).begin():
+            #         dereference(forward_scope).erase(dereference(forward_scope).begin(), local_it)
 
             # Debug
             # local_it = forward_scope.begin()
@@ -524,14 +754,14 @@ cdef class TemplateEdges:
             # Array values are flag, node name, query start
 
 
-cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges template_edges):
-
+cdef void add_template_edges(G, TemplateEdges template_edges):
+    # this function joins up template reads (read 1, read 2, plus any supplementary)
     cdef int ii, u_start, v_start, u, v, uflag, vflag
 
-    # for qname, arr in template_edges.templates.items():  # normally 2 reads, or >2 if supplementary reads
-    # for qname, (read1_aligns, read2_aligns) in template_edges.templates.items():
+    # normally 2 reads for paired end, or >2 if supplementary reads
     for qname, arr in template_edges.iterate_map():
-        # echo(qname, arr)
+        # if qname == "HWI-D00360:7:H88WKADXX:1:2210:5065:66533":
+        #     echo(qname, arr)
         read1_aligns = []
         read2_aligns = []
         for ii in range(0, len(arr), 3):
@@ -539,7 +769,9 @@ cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges te
                 read1_aligns.append(arr[ii:ii + 3])
             else:
                 read2_aligns.append(arr[ii:ii + 3])
-        # echo(read1_aligns, read2_aligns)
+
+        # if qname == "HWI-D00360:7:H88WKADXX:1:2210:5065:66533":
+        #     echo(read1_aligns, read2_aligns)
 
         primary1 = None
         primary2 = None
@@ -565,6 +797,7 @@ cdef void add_template_edges(G, TemplateEdges template_edges): #TemplateEdges te
                 if primary1 is None:  # Check last in list
                     if not read1_aligns[-1][2] & 2304:
                         primary1 = read1_aligns[-1][1]
+
 
         if len(read2_aligns) > 0:
             if len(read2_aligns) == 1:
@@ -754,15 +987,14 @@ cdef connect_left(a, b, r, paired, max_dist, mq_thresh):
 cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
 
     cdef int other_node
-    clip_left, clip_right = map_set_utils.clip_sizes(r)
 
     cdef unordered_set[int] clustered_nodes
-    clip_scope.update(node_name, r.seq, clip_left, clip_right, chrom, pos, clustered_nodes)
+    clip_scope.update(r, node_name, chrom, pos, clustered_nodes)
 
     if not clustered_nodes.empty():
         for other_node in clustered_nodes:
+            # echo("adding clip edge", node_name, other_node, clip_left, clip_right)
             if not G.hasEdge(node_name, other_node):
-                # 2 signifies that this is a local edge as opposed to a template edge
                 G.addEdge(node_name, other_node, 2)
 
 
@@ -790,13 +1022,17 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
 
+        # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
+        #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
+
+
     pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
-    # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom == chrom2, chrom, chrom2)
+    # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
     # look = set(['D00360:18:H8VC6ADXX:2:1113:5589:6008', 'D00360:18:H8VC6ADXX:2:1107:19359:83854', 'D00360:18:H8VC6ADXX:2:2102:2821:89140'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
     # if r.qname in look:
-    # if r.qname == "D00360:18:H8VC6ADXX:2:1210:17677:71151":
+    # if r.qname == "HWI-D00360:7:H88WKADXX:1:2210:5065:66533":
     #     echo("@", r.flag, node_name, event_pos, pos2, list(other_nodes), cigar_index)
     #     quit()
     if not other_nodes.empty():
@@ -1169,8 +1405,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                         elif opp == 4:
                             clipped = 1
 
-            # if r.qname == "D00360:18:H8VC6ADXX:2:1210:17677:71151":
-            #             echo("hi", added, abs(r.tlen), clustering_dist, r.rname == r.rnext)
+            # if r.qname == "HISEQ1:11:H8GV6ADXX:2:2209:4271:24798":
+            #             echo("hi", added, min_sv_size, r.rname == r.rnext)
             if not added:
                 # Whole alignment will be used, try infer position from soft-clip
                 cigar_index = -1
@@ -1324,10 +1560,12 @@ cdef dict get_partitions(G, nodes):
     cdef int u, v, i
     parts = []
     for u in nodes:
+
         if seen.find(u) != seen.end(): #u in seen:
             continue
 
         for v in G.neighbors(u):
+
             if seen.find(v) != seen.end(): #v in seen:
                 continue
 
@@ -1423,20 +1661,23 @@ cdef tuple count_support_between(G, parts, int min_support):
 
 
 cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
-                         int min_support):
+                         int min_support, int procs):
     # min_support = 2
     n2n = {}
     reads = {}
 
     cdef int v
     for v in component:
-        if v in read_buffer:
+        if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
         # Need to keep a record of all node info, and cigar indexes
         n2n[v] = node_to_name[v]
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
+    # echo(component)
+    # echo(partitions)
+    # quit()
     support_between, support_within = count_support_between(G, partitions, min_support)
 
     if len(support_between) == 0 and len(support_within) == 0:

@@ -72,10 +72,12 @@ ext_modules = list()
 
 root = os.path.abspath(os.path.dirname(__file__))
 htslib = os.path.join(root, "dysgu/htslib")
+# ksw2 = os.path.join(root, "dysgu/ksw2")
 
 libraries = [f"{htslib}/hts"]  # Library name for libhts.so
 library_dirs = [htslib, numpy.get_include()] + pysam.get_include()
-include_dirs = [numpy.get_include(), root, f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
+include_dirs = [numpy.get_include(), root,
+                f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
 runtime_dirs = [os.path.join(root, "dysgu/htslib")]
 
 
@@ -86,7 +88,7 @@ print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv2fq", "view"]:
+             "map_set_utils", "cluster", "sv2fq", "view", "post_call_metrics"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -107,7 +109,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.8.7',
+    version='0.9.3',
     python_requires='>=3.7',
     install_requires=[
             'cython',

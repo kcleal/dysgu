@@ -598,7 +598,7 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             "right_weight": right_clip_weight}
 
 
-cdef float compute_rep(seq):
+cpdef float compute_rep(seq):
 
     last_visited = {}
     tot = []
@@ -641,7 +641,6 @@ cdef tuple get_rep(contig_seq):
     for left_clip_end in range(len(contig_seq)):
         if contig_seq[left_clip_end].isupper():
             break
-
 
     for right_clip_start in range(len(contig_seq) - 1, -1, -1):
         if contig_seq[right_clip_start].isupper():
@@ -723,7 +722,8 @@ cpdef list contig_info(events):
 
 
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
-
+    if not a or not b:
+        return 0
     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
     alignment = query(str(b))
     # echo(alignment)

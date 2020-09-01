@@ -1,15 +1,9 @@
 #cython: language_level=3
 
 import click
-from collections import deque, defaultdict
 
 from libcpp.vector cimport vector as cpp_vector
-
 from libcpp.pair cimport pair as cpp_pair
-from libcpp.string cimport string as cpp_string
-
-import cython
-from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 
 from libc.stdlib cimport abs as c_abs
 from libc.math cimport fabs as c_fabs
@@ -18,14 +12,6 @@ from libc.math cimport fabs as c_fabs
 # from pysam.libcalignedsegment cimport AlignedSegment
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 from libc.stdint cimport uint32_t
-
-from dysgu.map_set_utils cimport hash as xxhasher
-
-# ctypedef cpp_vector[int] int_vec_t
-# ctypedef cpp_pair[int, int] get_val_result
-
-# ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
-# ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 
 ctypedef cpp_pair[int, int] cpp_item
@@ -241,6 +227,4 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
         span2 = c_abs(y2 - y1)
         center2 = (y1 + y2) / 2
     return c_fabs(center1 - center2)
-
-
 

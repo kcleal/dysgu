@@ -9,13 +9,16 @@ from numpy.random import normal
 import itertools
 from dysgu import io_funcs, assembler, coverage
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, unordered_map
+from dysgu.post_call_metrics cimport soft_clip_qual_corr
+from dysgu.coverage import adaptive_support_threshold
 import warnings
 from pysam.libcalignedsegment cimport AlignedSegment
 from libc.stdint cimport uint64_t
+
 from pysam.libchtslib cimport bam_get_qname
 
-from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import fcluster
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -757,7 +760,9 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
         u_reads.append(v_item.read_a)
         if v_item.read_b is not None:
             v_reads.append(v_item.read_b)
-
+    # for item in u_reads:
+    #     echo(item.qname, item.pos, item.flag)
+    # echo("--")
     call_informative = Counter([(itm.svtype, itm.join_type) for itm in sub_informative]).most_common()
     svtype, jointype = call_informative[0][0]
     info.update(make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
@@ -817,6 +822,13 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
     info["ref_bases"] = ref_bases
     info["svlen_precise"] = svlen_precise  # if 0 then soft-clip will be remapped
 
+    if info["svlen_precise"] == 0: # and info["svtype"] == "INS":
+        corr_score = soft_clip_qual_corr(u_reads + v_reads)
+        info["sqc"] = corr_score
+    else:
+        info["sqc"] = -1
+
+    # echo(info["chrA"], info["posA"], corr_score, info["svtype"])
     return info
 
 
@@ -1042,7 +1054,8 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
         info["linked"] = 0
         info["block_edge"] = 0
         info["ref_bases"] = ref_bases
-        # echo(info)
+        info["sqc"] = -1  # not calculated
+
         return info
 
     elif len(informative) > 0:
@@ -2442,8 +2455,7 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
 
 cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support,
-                 int assemble_contigs, int extended_tags
-                 ):
+                 int assemble_contigs, int extended_tags):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
@@ -2459,7 +2471,9 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer)   # [(Nodeinfo, alignment)..]
         rd_v = get_reads(bam, d[1], data["reads"], data["n2n"], add_to_buffer)
 
-        buffered_reads += len(rd_u) + len(rd_v)
+        total_reads = len(rd_u) + len(rd_v)
+
+        buffered_reads += total_reads
         if add_to_buffer and buffered_reads > 1e6:
             add_to_buffer = 0
 
@@ -2482,9 +2496,15 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
             d = data["parts"][part_key]
             if len(d) >= min_support:
                 # Call single block, only collect local reads to the block
+
+                # if not adaptive_support_threshold([n2n[i] for i in d], depth_table, 0.05):
+                #     continue
+
                 rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
+
                 if len(rds) < min_support:
                     continue
+
                 res = single(bam, rds, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags)
                 if res:
                     if isinstance(res, dict):
@@ -2497,6 +2517,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         o_count = out_counts[k]
         i_counts = len(d)
         if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
+
             rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
             if len(rds) < min_support:
                 continue
@@ -2540,93 +2561,3 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     return events
 
-
-cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile):
-
-    # Check if side A in regions
-    ar = False  # c_io_funcs.intersecter_int_chrom
-    if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
-        ar = True
-    br = False
-    if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
-        br = True
-
-    kind = "extra-regional"
-    if not ar and not br:
-        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
-            switch = True
-
-        # Skip if regions have been provided; almost always false positives?
-        # if regions is not None:
-        #     return None
-
-    switch = False
-    if (br and not ar) or (not br and ar):
-        kind = "hemi-regional"
-        if not br and ar:
-            switch = True
-
-    if ar and br:
-        if r["chrA"] == r["chrB"]:
-            rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
-            rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
-            if rA[0] == rB[0] and rA[1] == rB[1]:
-                kind = "intra_regional"
-                # Put posA first
-                if r["posA"] > r["posB"]:
-                    switch = True
-            else:
-                kind = "inter-regional"
-                if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
-                    switch = True
-        else:
-            kind = "inter-regional"
-
-    if switch:
-        chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contig2"]
-        r["chrA"] = r["chrB"]
-        r["posA"] = r["posB"]
-        r["cipos95A"] = r["cipos95B"]
-        r["chrB"] = chrA
-        r["posB"] = posA
-        r["cipos95B"] = cipos95A
-        r["contig2"] = r["contig"]
-        r["contig"] = contig2
-
-    max_depth = 0
-    if kind == "hemi-regional":
-        chrom_i = infile.get_tid(r["chrA"])
-        if chrom_i in regions_depth:
-            reads_10kb, max_depth = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
-            reads_10kb = round(reads_10kb, 3)
-        else:
-            reads_10kb = 0
-    else:
-        # Calculate max
-        chrom_i = infile.get_tid(r["chrA"])
-        if chrom_i in regions_depth:
-            reads_10kb_left, max_depth = coverage.calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
-            reads_10kb_left = round(reads_10kb_left, 3)
-        else:
-            reads_10kb_left = 0
-        chrom_i = infile.get_tid(r["chrB"])
-        if chrom_i in regions_depth:
-            reads_10kb_right, max_depth = coverage.calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
-            reads_10kb_right = round(reads_10kb_right, 3)
-        else:
-            reads_10kb_right = 0
-        if reads_10kb_left > reads_10kb_right:
-            reads_10kb = reads_10kb_left
-        else:
-            reads_10kb = reads_10kb_right
-
-    if reads_10kb >= 80 and not ar and not br:  # todo set as parameter
-        return None
-
-    r["kind"] = kind
-    r["raw_reads_10kb"] = reads_10kb
-    if r["chrA"] != r["chrB"]:
-        r["svlen"] = 1000000
-
-    r["mcov"] = max_depth
-    return r

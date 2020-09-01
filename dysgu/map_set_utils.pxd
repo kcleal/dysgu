@@ -63,6 +63,7 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         U& operator[](T&)
         pair[iterator, bint] insert(pair[T, U])
         iterator find(const T&)
+        iterator begin()
         iterator end()
         int erase(T&)
         int size()
@@ -188,17 +189,6 @@ cdef class Py_IntSet:
     cdef int size(self) nogil
 
 
-# cdef class ClipScoper:
-#     cdef void update(self, int input_read, str seq, int cigar_start, int cigar_end, int chrom, int position,
-#                unordered_set[int]& other_nodes)
-#
-#     cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position, minimize_table,
-#                                unordered_set[int]& res)
-#     cdef void _refresh_scope(self, cpp_deque[cpp_item]& scope, int position, MinimizerTable& mm_table, clip_table)
-#     cdef void _insert(self, str seq, int cigar_start, int cigar_end, int input_read, int position,
-#                 unordered_set[int]& other_nodes)
-
-
 cdef int cigar_exists(r)
 
 
@@ -221,10 +211,3 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil
-
-
-# cdef list search_ssr_kc(str seq)
-
-# cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found)
-
-
