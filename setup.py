@@ -109,7 +109,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.9.3',
+    version='0.9.6',
     python_requires='>=3.7',
     install_requires=[
             'cython',
@@ -122,6 +122,7 @@ setup(
             'ncls',
             'scikit-bio',
             'sortedcontainers',
+            'lightgbm'
 
         ],
     packages=["dysgu", "dysgu.tests"],

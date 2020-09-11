@@ -1,20 +1,83 @@
 #cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
-from collections import defaultdict
+
 import numpy as np
 cimport numpy as np
-from pysam.libchtslib cimport bam_get_qname
 
 from dysgu.map_set_utils cimport unordered_map
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 
 from libc.math cimport fabs as c_fabs
-from libc.stdint cimport uint64_t
 from libcpp.vector cimport vector as cpp_vector
 
 from dysgu.map_set_utils import echo
 
 import math
+import array
+import pickle
+import os
+import click
+import gzip
+import pandas as pd
+pd.options.mode.chained_assignment = None
+
+
+class BadClipCounter:
+
+    def __init__(self, n_references):
+        self.clip_pos_arr = [array.array("L", []) for i in range(n_references)]  # 32 bit unsigned int
+
+    def add(self, chrom, position):
+        self.clip_pos_arr[chrom].append(position)
+
+    def sort_arrays(self):
+        self.clip_pos_arr = [np.array(i, dtype=np.dtype("i"))for i in self.clip_pos_arr]
+        [i.sort() for i in self.clip_pos_arr]
+
+    def count_near(self, int chrom, int start, int end):
+
+        cdef int [:] a = self.clip_pos_arr[chrom]
+        if len(a) == 0:
+            return 0
+
+        idx = np.searchsorted(a, start)
+
+        # search forward and backwards
+        cdef int i = idx
+        cdef int len_a = len(a)
+        cdef int count = 0
+        cdef int p
+
+        while True:
+            if i < 0 or i == len_a:
+                break
+            p = a[i]
+            if p <= end:
+                count += 1
+                i += 1
+            else:
+                break
+
+        return count
+
+def get_badclip_metric(events, bad_clip_counter, bam):
+
+    bad_clip_counter.sort_arrays()
+    new_events = []
+    for e in events:
+
+        if e["chrA"] == e["chrB"] and abs(e["posB"] - e["posA"]) < 500:
+            start = min(e["posA"], e["posB"]) - 500
+            end = max(e["posA"], e["posB"]) + 500
+            count = bad_clip_counter.count_near(bam.gettid(e["chrA"]), start, end)
+        else:
+            c1 = bad_clip_counter.count_near(bam.gettid(e["chrA"]), e["posA"] - 500, e["posA"] + 500)
+            c2 = bad_clip_counter.count_near(bam.gettid(e["chrB"]), e["posB"] - 500, e["posB"] + 500)
+            count = c1 + c2
+        e["bad_clip_count"] = count
+        new_events.append(e)
+
+    return new_events
 
 
 cdef float soft_clip_qual_corr(reads):
@@ -118,13 +181,13 @@ def bayes_gt(ref, alt, is_dup):
     return lp_homref, lp_het, lp_homalt
 
 
-def get_gt_metric(events, infile):
+def get_gt_metric(events, infile, add_gt=False):
 
     new_events = []
     pad = 5
     for e in events:
 
-        if infile is None:
+        if infile is None or not add_gt:
             e["GT"] = "./."
             e["GQ"] = -1
             continue
@@ -140,7 +203,7 @@ def get_gt_metric(events, infile):
 
         # total = len(d)
         support_reads = e["su"] - e["spanning"]  # spanning are counted twice
-        ref = int(e["raw_reads_10kb"]) #total - support_reads
+        ref = int(np.ceil(e["raw_reads_10kb"])) #total - support_reads
         if ref < 0:
             ref = 0
         # echo(ref, support_reads)
@@ -176,4 +239,34 @@ def get_gt_metric(events, infile):
 
     return events
 
-    # return new_events
+
+def apply_model(df, mode):
+
+    pth = os.path.dirname(os.path.abspath(__file__))
+    pth = f"{pth}/dysgu_model.1.pkl.gz"
+    models = pickle.load(gzip.open(pth, "rb"))
+
+    cols = models[f"{mode}_cols"]
+    clf = models[f"{mode}_classifier"]
+
+    c = dict(zip(
+        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC'],
+        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count']
+                 ))
+    X = df[[c[i] for i in cols]]
+    X.columns = cols
+    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2}
+
+    X["SVTYPE"] = [keys[i] for i in X["SVTYPE"]]
+    X["SVLEN"] = [i if i == i else -1 for i in X["SVLEN"]]
+
+    for c in models["cats"]:  # categorical data
+        if c in X:
+            X[c] = [i if i == i else 0 for i in X[c]]
+            X[c] = X[c].astype("category")
+
+    pred = np.round(models[f"{mode}_classifier"].predict_proba(X)[:, 1], 3)
+    df = df.assign(prob=pred)
+    df = df.assign(filter=["PASS" if i >= 0.5 else "lowProb" for i in pred])
+
+    return df

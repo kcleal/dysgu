@@ -709,7 +709,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     read_buffer = genome_scanner.read_buffer
 
     t5 = time.time()
-    G, node_to_name = graph.construct_graph(genome_scanner,
+    G, node_to_name, bad_clip_counter = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
@@ -726,7 +726,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             debug=None,
                                             paired_end=paired_end,
                                             read_length=read_len,
-                                            )
+                                            contigs=args["contigs"])
     echo("graph time", time.time() - t5)
     click.echo("graph time, mem={} Mb, time={} h:m:s".format(
         int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
@@ -831,7 +831,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     tremap = time.time()
 
-    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile)
+
+    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
+                                                keep_unmapped=True if args["mode"] == "pe" else False)
     echo("remapping", time.time() - tremap)
 
     # Merge across calls
@@ -858,10 +860,25 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             if event_dict:
                 preliminaries.append(event_dict)
 
+    t1a = time.time()
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    t1a = time.time() - t1a
+
+    t1b = time.time()
     preliminaries = sample_level_density(preliminaries, regions)
+    t1b = time.time() - t1b
+
+    t1c = time.time()
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    t1c = time.time() - t1c
+
+
+    # nothing done here yet
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam)
+    t1d = time.time()
+    preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
+    t1d = time.time() -t1d
+    echo("proc preliminiaries times", t1a, t1b, t1c, t1d)
 
     if len(preliminaries) == 0:
         click.echo("No events found", err=True)
@@ -929,6 +946,8 @@ def cluster_reads(args):
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
+
+    df = post_call_metrics.apply_model(df, args["mode"])
 
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])

@@ -6,7 +6,7 @@ import time
 from multiprocessing import cpu_count
 import pkg_resources
 import warnings
-from . import cluster, view, sv2bam, sv2fq
+from dysgu import cluster, view, sv2bam, sv2fq
 import uuid
 import datetime
 
@@ -102,6 +102,8 @@ def cli():
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
@@ -244,6 +246,8 @@ def get_reads(ctx, **kwargs):
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):

@@ -99,6 +99,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
     for opp, length in cigar:
         with nogil:
+        # if True:
             if done:
                 break
 
@@ -172,7 +173,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
                 if c_abs(<int32_t>current_pos - approx_position) > max_distance:
                     i += length
-                    current_pos += 1
+                    #current_pos += 1
                     continue
 
                 for o in range(1, length + 1, 1):
@@ -204,7 +205,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                 current_pos += length + 1
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
-
+                # echo(r.qname, current_pos)
                 if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
                     i += length
                     current_pos += length
@@ -241,6 +242,9 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
+
+                    # if current_pos == 3393864:
+                    #     echo(basemap[base], qual, r.qname, r.pos)
 
             start = 0
 
@@ -329,7 +333,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
         return path
 
     with nogil:
-
+    # if True:
         for i in range(0, len_nodes):
 
             u = nodes_to_visit[i]
@@ -350,15 +354,17 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
             best_local_i = -1
             for pred in neighborList:
 
-                pred_score = node_scores[pred.first]
+                pred_score = node_scores[pred.first]  # first is other end of edge, second is weight
                 score = node_weight + pred_score
-                node_scores[u] = score
+                if score > node_scores[u]:
+                    node_scores[u] = score
 
                 if score >= best_score:
                     best_score = score
                     best_node = u
 
-                local_score = G.weight(pred.first, u) #n_weights[pred.first]
+                # The sum of base-qualities of previous node
+                local_score = pred.second #G.weight(pred.first, u)
                 if local_score > best_local_score:
                     best_local_score = local_score
                     best_local_i = pred.first

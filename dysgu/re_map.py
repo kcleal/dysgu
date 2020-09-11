@@ -25,14 +25,14 @@ def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
             end_i -= 1
             if end_i < 0:
                 break
-
+        extra = 5
         if abs(cont_ref_start - position) < abs(cont_ref_end - position):
             if start_i > 8:
-                left_clip = cont[:start_i - 1]
+                left_clip = cont[:start_i]  # should be - 0
                 return left_clip, 0, len(cont) - end_i
         else:
             if len(cont) - end_i > 8:
-                right_clip = cont[end_i + 1:]#, 1
+                right_clip = cont[end_i + 1:]  # + 1
                 return right_clip, 1, start_i
 
 
@@ -84,6 +84,34 @@ def filter_bad_alignment(align, event, idx, begin, end, break_position, filter_e
     return -1
 
 
+# def bad_soft_clip(break_position, clip_side, ref_seq_big, gstart, clip_seq):
+#     # check that the soft-clip cant be aligned to the local genomic sequence using less stringent alignment params
+#     if clip_side == 0:
+#
+#         ref_start = break_position - len(clip_seq)  # todo set as parameter
+#         ref_end = break_position
+#     else:
+#         ref_start = break_position
+#         ref_end = break_position + len(clip_seq)
+#
+#     start_idx = ref_start - gstart
+#     start_idx = 0 if start_idx < 0 else start_idx
+#     end_idx = ref_end - gstart
+#
+#     ref_seq_clipped = ref_seq_big[start_idx:end_idx]
+#
+#     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
+#         return True
+#
+#     aln = StripedSmithWaterman(ref_seq_clipped, match_score=2, mismatch_score=-3, gap_open_penalty=3, gap_extend_penalty=1)
+#     a = aln(clip_seq)
+#     score = a.optimal_alignment_score
+#     span = a.query_end - a.query_begin + 1
+#     expected = span * 2
+#     if span / len(clip_seq) > 0.7 and score / expected > 0.5:
+#         return True
+
+
 def merge_align_regions(locations):
     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
     if len(locations) <= 1:
@@ -130,7 +158,7 @@ def switch_sides(e):
     return e
 
 
-def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
+def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=True):
 
     new_events = []
     ref_locs = []
@@ -179,6 +207,7 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
             e = events[index]
             added = 0
             high_quality_clip = False
+            skip_event = False
             for cont, idx in (("contig", "A"), ("contig2", "B")):
                 if cont in e and e[cont]:
 
@@ -205,7 +234,10 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
                         elif w > 400:
                             high_quality_clip = True
 
-                    ref_start = break_position - 500
+                    # if bad_soft_clip(break_position, clip_side, ref_seq_big, gstart, clip_seq):
+                    #     continue
+
+                    ref_start = break_position - 500  # todo set as parameter
                     ref_end = break_position + 500
 
                     start_idx = ref_start - gstart
@@ -217,7 +249,8 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
                     ref_seq_start = gstart + start_idx
                     # ref_seq_end = gstart + end_idx
                     if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
-                        continue
+                        skip_event = True
+                        break
 
                     # Large alignment region
 
@@ -239,7 +272,10 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
 
                     aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=12, gap_extend_penalty=1)
                     a = aln(clip_seq)
-
+                    # echo(clip_seq)
+                    # echo(a)
+                    # echo(locs)
+                    # echo(el)
                     # a = py_ksw2_alignment(ref_seq2, clip_seq, 2, -8, 12, 1)
                     # echo(a)
                     # echo(ref_start2)
@@ -376,7 +412,7 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam):
                 if added:
                     break
 
-            if not added and high_quality_clip:
+            if not added and not skip_event and high_quality_clip and keep_unmapped:
                 new_events.append(e)
 
     return new_events

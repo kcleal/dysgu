@@ -691,7 +691,10 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     # if aln.flag & 2:
     #     v_item.query_gap = insert_size - abs(aln.tlen)
     # else:
-    rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
+    if insert_std > 0:
+        rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
+    else:  # single read mode
+        rand_insert_pos = 100
     v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
 
     return v_item
@@ -843,23 +846,31 @@ cdef partition_single(informative, info, insert_size, insert_stdev, spanning_ali
     cdef int firstB = informative[0].breakB
     cdef int br_a, br_b, seperation
     cdef bint try_cluster = False
-    for v_item in informative:
-        br_a = v_item.breakA
-        br_b = v_item.breakB
-        coords[idx, 0] = br_a
-        coords[idx, 1] = br_b
-        idx += 1
-        if idx > 0 and not try_cluster:
-            seperation = np.sqrt((br_a - firstA)**2 + (br_b - firstB)**2)
-            if seperation > insert_size:
-                try_cluster = True
+
+    if insert_size != -1 and len(informative) > 1:  # paired end mode
+        for v_item in informative:
+            br_a = v_item.breakA
+            br_b = v_item.breakB
+            coords[idx, 0] = br_a
+            coords[idx, 1] = br_b
+            idx += 1
+            if idx > 0 and not try_cluster:
+                seperation = np.sqrt((br_a - firstA)**2 + (br_b - firstB)**2)
+                if seperation > insert_size:
+                    # if insert_size == -1 and seperation > 100:  # single read mode
+                    #     try_cluster = True
+                    # else:
+                        try_cluster = True
 
     sub_cluster_calls = []
     if try_cluster:
         try:
             Z = linkage(coords, 'single')
         except:
+            echo(informative[0].chrA)
             echo(informative[0].breakA)
+            echo(coords)
+            echo(linkage(coords, 'single'))
             quit()
         clusters = fcluster(Z, insert_size, criterion='distance')
         clusters_d = defaultdict(list)
@@ -882,6 +893,7 @@ cdef partition_single(informative, info, insert_size, insert_stdev, spanning_ali
 
 cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
+
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
@@ -1040,7 +1052,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
         as2 = None
         ref_bases = 0
 
-        if to_assemble or len(spanning_alignments) > 0:
+        if to_assemble: # or len(spanning_alignments) > 0:
             if info["preciseA"]:
                 as1 = assembler.base_assemble(u_reads, info["posA"], 500)
                 ref_bases += assign_contig_to_break(as1, info, "A", spanning_alignments)

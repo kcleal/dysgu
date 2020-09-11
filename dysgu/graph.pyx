@@ -38,6 +38,8 @@ from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes, clip_siz
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
 
+from dysgu.post_call_metrics import BadClipCounter
+
 ctypedef cpp_pair[int, int] cpp_item
 
 ctypedef map_set_utils.Py_IntSet Py_IntSet
@@ -1129,7 +1131,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                             int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                             TemplateEdges_t template_edges, NodeToName node_to_name,
                             int cigar_pos2, int mapq_thresh, ClipScoper_t clip_scope,
-                            ReadEnum_t read_enum):
+                            ReadEnum_t read_enum, bad_clip_counter):
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
@@ -1169,6 +1171,8 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
 
         good_clip = good_quality_clip(r, 15)
+        if not good_clip:
+            bad_clip_counter.add(chrom, r.pos)
 
         if read_enum == SPLIT:
         # if clip_or_wr == 1:  # and chrom == rnext and abs(pnext - event_pos) < loci_dist:  # Same loci
@@ -1267,7 +1271,6 @@ cdef struct CigarEvent:
     int opp
     int cigar_index
     int event_pos
-    # int clip_or_wr
     int pos2
     int length
     bint cigar_skip
@@ -1281,7 +1284,6 @@ cdef CigarEvent make_cigar_event(int opp, int cigar_index, int event_pos, int po
     item.cigar_index = cigar_index
     item.event_pos = event_pos
     item.read_enum = read_enum
-    # item.clip_or_wr = clip_or_wr
     item.pos2 = pos2
     item.length = length
     item.cigar_skip = 0
@@ -1292,7 +1294,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int min_sv_size=30,
                             int minimizer_support_thresh=2, int minimizer_breadth=3,
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, int min_support=3, procs=1,
-                            int paired_end=1, int read_length=150):
+                            int paired_end=1, int read_length=150, bint contigs=True):
 
     t0 = time.time()
     click.echo("Building graph with clustering distance {} bp, scope length {} bp".format(max_dist, clustering_dist),
@@ -1310,6 +1312,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences)
+
+    bad_clip_counter = BadClipCounter(infile.header.nreferences)
+
     cdef long tell
     G = map_set_utils.Py_SimpleGraph()
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
@@ -1356,7 +1361,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     process_alignment(G, r, clip_l, max_dist, gettid,
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
-                                      template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT)
+                                      template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
+                                      bad_clip_counter)
                     added = True
 
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
@@ -1407,7 +1413,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
             # if r.qname == "HISEQ1:11:H8GV6ADXX:2:2209:4271:24798":
             #             echo("hi", added, min_sv_size, r.rname == r.rnext)
-            if not added:
+
+            if not added and contigs:
                 # Whole alignment will be used, try infer position from soft-clip
                 cigar_index = -1
                 pos2 = -1
@@ -1422,7 +1429,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           overlap_regions, clustering_dist, pe_scope,
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
-                                          pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND)
+                                          pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter)
                 else:
                     # Use whole read, could be normal or discordant
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
@@ -1440,8 +1447,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
-                                      pos2, mapq_thresh, clip_scope, read_enum)
-
+                                      pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter)
+            # process within-read events
             if not events_to_add.empty():
                 itr_events = events_to_add.begin()
 
@@ -1456,13 +1463,13 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
-                                      v.pos2, mapq_thresh, clip_scope, v.read_enum)
+                                      v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter)
 
                     preincrement(itr_events)
 
     add_template_edges(G, template_edges)
 
-    return G, node_to_name
+    return G, node_to_name, bad_clip_counter
 
 
 cpdef tuple get_block_components(G, node_to_name, infile, read_buffer):

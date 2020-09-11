@@ -158,14 +158,14 @@ def get_include_reads(include_regions, bam):
             yield r
 
 
-cpdef list col_names(extended):
+cpdef list col_names(extended, small_output):  # todo fix for view command
     if extended:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
          "GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed"
+                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count"
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
@@ -173,11 +173,11 @@ cpdef list col_names(extended):
           "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
-                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed"
+                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count"
             ]
 
 
-def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
+def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, small_output):
 
     # Pick best row (best support, or highest prob if available
     if len(format_f) > 1:
@@ -250,10 +250,13 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
     if add_kind:
         info_extras += [f"KIND={r['kind']}"]
 
-    info_extras += [f"GC={gc}",
+    if not small_output:
+        info_extras += [f"GC={gc}",
                     f"REP={'%.3f' % float(rep)}",
                     f"REPSC={'%.3f' % float(repsc)}",
-                    f"LPREC={lenprec}",
+                    f"LPREC={lenprec}"]
+
+    info_extras += [
                     f"NEXP={n_expansion}",
                     f"STRIDE={stride}",
                     f"EXPSEQ={exp_seq}",
@@ -265,16 +268,21 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
                     f"SC={sc}",
                     f"RT={read_kind}"]
 
-    if extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
-        if "prob" in r:
-            fmt_keys += ":PROB"
-    else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED"
+    if small_output:
+        fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:COV:NEIGH10:PS:MS:RMS:RED:BCC"
         if "prob" in r:
             fmt_keys += ":PROB"
 
-    rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", ".",
+    elif extended:
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC"
+        if "prob" in r:
+            fmt_keys += ":PROB"
+    else:
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC"
+        if "prob" in r:
+            fmt_keys += ":PROB"
+
+    rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", "." if "filter" not in r else r['filter'],
            # INFO line
            ";".join([f"SVMETHOD=DYSGUv{version}",
                    f"SVTYPE={r['svtype']}",
@@ -294,14 +302,24 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended):
     return rec
 
 
-def get_fmt(r, extended):
-    if extended:
+def get_fmt(r, extended, small_output):
+
+    if small_output:  # "GT:GQ:MAPQP:SU:WR:PE:SR:SC:COV:NEIGH10:PS:MS:RMS:RED:BCC"
+        v = [r["GT"], r["GQ"], r['MAPQpri'],
+                                  r['su'], r['spanning'], r['pe'], r['supp'],
+                                  r['sc'], r['raw_reads_10kb'], r['neigh10kb'],
+                                  r["plus"], r["minus"], r["remap_score"], r["remap_ed"], r["bad_clip_count"]]
+        if "prob" in r:
+            v.append(r["prob"])
+        return v
+
+    elif extended:
 
         v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                       r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
-                                      round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"]]
+                                      round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
@@ -311,16 +329,16 @@ def get_fmt(r, extended):
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
                                   r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
-                                  round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"]]
+                                  round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
 
 
-def gen_format_fields(r, df, names, extended, n_fields):
+def gen_format_fields(r, df, names, extended, n_fields, small_output):
 
     if len(names) == 1:
-        return {0: get_fmt(r, extended)}, {}
+        return {0: get_fmt(r, extended, small_output)}, {}
 
     cols = {}
     if "partners" in r:
@@ -341,7 +359,7 @@ def gen_format_fields(r, df, names, extended, n_fields):
     for name in names:
         if name in cols:
             row = cols[name]
-            format_fields[name] = get_fmt(row, extended)
+            format_fields[name] = get_fmt(row, extended, small_output)
         else:
             format_fields[name] = [0] * n_fields
 
@@ -417,7 +435,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NMU,Number=1,Type=Float,Description="Mean number of mates unmapped per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
-##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping edit distance">{}
+##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
+##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
         else:
@@ -482,7 +501,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NMU,Number=1,Type=Float,Description="Mean number of mates unmapped per read">
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
-##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping edit distance">{}
+##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
+##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
@@ -521,17 +541,18 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
     jobs = []
 
     add_kind = args["add_kind"] == "True"
+    small_output = args["metrics"] == "False"
     for idx, r in df.iterrows():
 
         if idx in seen_idx:
             continue
 
-        format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields)
+        format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields, small_output)
         # click.echo(format_f, err=True)
         if "partners" in r:
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags)
+        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output)
         # click.echo(r_main, err=True)
         # quit()
         recs.append(r_main)
