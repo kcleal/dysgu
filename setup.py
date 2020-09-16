@@ -49,14 +49,11 @@ def cpp_flag(compiler, flags):
 def get_extra_args():
     compiler = ccompiler.new_compiler()
     extra_compile_args = []
-
     flags = ['-std=c++17', '-std=c++14', '-std=c++11']
-
     f = cpp_flag(compiler, flags)
     if not f:
         return ['-std=c++11']  # raise RuntimeError("Invalid compiler")
     extra_compile_args.append(f)
-
     flags = ['--stdlib=libc++']
     f = cpp_flag(compiler, flags)
     if f:
