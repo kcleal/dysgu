@@ -87,7 +87,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
     cdef uint64_t o, key
 
     cdef int begin, end, step, p, qual, opp, length, n
-    cdef int start = 1
+    cdef bint start = True
 
     cdef int prev_node = -1
     cdef int ref_bases = 0
@@ -102,7 +102,8 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
         # if True:
             if done:
                 break
-
+            # if r.qname == "m64004_190803_004451/12323053/ccs":
+            #     echo(opp, length, current_pos, current_pos + length)
             if opp == 4:
                 if start:
 
@@ -117,23 +118,23 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                             i += 1
                             continue
 
-                        # seq = rseq[i]
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
                         i += 1
-                        # k = (seq, current_pos, o, 0)  # 0 = left soft clip
+                        # 0 = left soft clip
                         key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>0)
                         if ndict_r2.has_tuple_key(key):
                             n = ndict_r2.get_index_prev()
-                        # if k in ndict_r:  #
-                        #     n = ndict_r[k]  #
                         else:
                             n = G.addNode()
                             if n >= nweight.size():
                                 nweight.push_back(0)
-                            # ndict_r[k] = n
                             ndict_r2.insert_tuple_key(key, n)
+                            # if n == 1192:
+                            #     echo("First seen4", r.qname, basemap[base], current_pos, length, prev_node)
                         nweight[n] += qual
+                        # if prev_node == n:
+                        #     echo("4", prev_node, n, o)
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
                         prev_node = n
@@ -145,67 +146,68 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                             done = 1
                             break
 
-                        # seq = rseq[i]
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
                         i += 1
 
-                        # k = (seq, current_pos, o, 1)  # 1 = right soft clip
+                        # 1 = right soft clip
                         key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>1)
                         if ndict_r2.has_tuple_key(key):
                             n = ndict_r2.get_index_prev()
-                        # if k in ndict_r:
-                        #     n = ndict_r[k]
                         else:
                             n = G.addNode()
                             if n >= nweight.size():
                                 nweight.push_back(0)
-                            # ndict_r[k] = n
                             ndict_r2.insert_tuple_key(key, n)
+
+                            # if n == 1192:
+                            #     echo("First seen41", r.qname, basemap[base], current_pos, length, prev_node)
                         nweight[n] += qual
+                        # if prev_node == n:
+                        #     echo("4,1", prev_node, n, o)
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
                         prev_node = n
-                        # if current_pos == 25158703 and o >= 20 and o <= 30:
-                        #     echo(basemap[base], current_pos, o, qual, "node", n, "nweight", nweight[n])
 
             elif opp == 1:  # Insertion
-
+                # if r.qname == "m64004_190803_004451/12323053/ccs":
+                #     echo( c_abs(<int32_t>current_pos - approx_position) > max_distance, length + 1)
                 if c_abs(<int32_t>current_pos - approx_position) > max_distance:
                     i += length
+                    if current_pos > approx_position:
+                        break  # out of range
                     #current_pos += 1
                     continue
 
                 for o in range(1, length + 1, 1):
 
-                    # seq = rseq[i]
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
-                    # k = (seq, current_pos, o, 2)  # 2 = insertion
+                    # 2 = insertion
                     key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>2)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
-                    # if k in ndict_r:
-                    #     n = ndict_r[k]
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
-                        # ndict_r[k] = n
                         ndict_r2.insert_tuple_key(key, n)
+
                     nweight[n] += qual
+
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
-
+                # if r.qname == "m64004_190803_004451/12323053/ccs":
+                #     echo(current_pos, current_pos + 1, "done")
                 current_pos += 1  # <-- Reference pos increases 1
 
             elif opp == 2 or opp == 5:  # Hard clip or deletion
                 current_pos += length + 1
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
-                # echo(r.qname, current_pos)
+
                 if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
                     i += length
                     current_pos += length
@@ -222,31 +224,34 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                         done = 1
                         break
 
-                    # seq = rseq[i]
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
-                    # k = (seq, current_pos, 0, 4)  # 4 = matched base
+                    # 4 = matched base
                     key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>4)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
-                    # if k in ndict_r:
-                    #     n = ndict_r[k]
+
                     else:
                         n = G.addNode()
                         if n >= nweight.size():
                             nweight.push_back(0)
-                        # ndict_r[k] = n
                         ndict_r2.insert_tuple_key(key, n)
+
+                        # if n == 1192:
+                        #     echo("First seen", r.qname, basemap[base], current_pos, length, prev_node)
+
                     nweight[n] += qual
+
+                    # if prev_node == n:
+                    #     echo("match", prev_node, n, p, length, current_pos, r.qname, basemap[base])
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
+                    # if r.qname == "m64004_190803_004451/12323053/ccs":
+                    #     echo("finished pos", current_pos)
 
-                    # if current_pos == 3393864:
-                    #     echo(basemap[base], qual, r.qname, r.pos)
-
-            start = 0
+            start = False
 
 
 cdef cpp_deque[int] topo_sort2(DiGraph& G):
@@ -266,8 +271,8 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
     cdef cpp_vector[int] neighbors
     cdef int v, n, w
 
-    with nogil:
-
+    # with nogil:
+    if True:
         for v in range(G.numberOfNodes()):  # process all vertices in G
             if explored.find(v) != explored.end(): #explored.has_key(v) == 1:
                 continue
@@ -297,8 +302,9 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
                             order.push_back(-1)
                             order.push_back(n)
                             order.push_back(w)
-                            return order
-                            #raise ValueError("Graph contains a cycle.")
+                            # return order
+                            echo("Cycle", n, w)
+                            raise ValueError("Graph contains a cycle.")
                         new_nodes.push_back(n)
 
                 if new_nodes.size() > 0:   # Add new_nodes to fringe
@@ -453,10 +459,12 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             continue
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
+        # echo(len(r.seq))
         add_to_graph(G, r, node_weights, node_dict_r, ndict_r2, position, max_distance)
 
-    cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
 
+    cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
+    # echo("sorted", nodes_to_visit2.size(), nodes_to_visit2[0])
     if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
         idx = nodes_to_visit2[1]
         idx2 = nodes_to_visit2[2]
@@ -467,9 +475,10 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         quit()
 
     cdef cpp_deque[int] path2
-
+    # echo("here2")
+    # echo(nodes_to_visit2.size())
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
-
+    # echo("here3")
     if path2.size() < 50:
         return {}
 

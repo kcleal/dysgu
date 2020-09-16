@@ -372,6 +372,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
         if extended_tags:
             HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
+##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
@@ -436,12 +437,14 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
 ##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
-##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">{}
+##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">
+##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
         else:
             HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
+##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
@@ -502,7 +505,8 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
 ##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
-##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">{}
+##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">
+##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
 # ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">

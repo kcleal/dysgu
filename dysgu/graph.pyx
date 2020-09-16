@@ -1352,6 +1352,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             # del_was_last = 0
 
             events_to_add.clear()
+
             if len(r.cigartuples) > 1:
 
                 if r.has_tag("SA"):
@@ -1418,8 +1419,11 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                 # Whole alignment will be used, try infer position from soft-clip
                 cigar_index = -1
                 pos2 = -1
+
                 left_clip_size, right_clip_size = clip_sizes_hard(r)  # soft and hard-clips
+
                 if r.flag & 8 and clipped:
+
                     # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
                     if not (left_clip_size and right_clip_size) and good_quality_clip(r, 20):
                         # left_clip_size, right_clip_size = clip_sizes(r)
@@ -1430,7 +1434,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter)
+
                 else:
+
                     # Use whole read, could be normal or discordant
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
                         if not clipped:
@@ -1448,7 +1454,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter)
+
             # process within-read events
+
             if not events_to_add.empty():
                 itr_events = events_to_add.begin()
 

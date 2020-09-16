@@ -86,9 +86,12 @@ cdef float soft_clip_qual_corr(reads):
     cdef const unsigned char[:] quals
     cdef int idx, x, i, j
     cdef unordered_map[int, cpp_vector[int]] qq
+
     for r in reads:
 
         quals = r.query_qualities
+        if r.cigartuples is None or quals is None:
+            continue
         if r.cigartuples[0][0] == 4:
             idx = 0
             for x in range(r.pos - r.cigartuples[0][1], r.pos):
@@ -182,9 +185,10 @@ def bayes_gt(ref, alt, is_dup):
 
 
 def get_gt_metric(events, infile, add_gt=False):
-
+    if add_gt:
+        click.echo("Adding GT", err=True)
     new_events = []
-    pad = 5
+    pad = 50
     for e in events:
 
         if infile is None or not add_gt:
@@ -192,21 +196,83 @@ def get_gt_metric(events, infile, add_gt=False):
             e["GQ"] = -1
             continue
 
-        # d = set([])
-        # for r in infile.fetch(e["chrA"], e["posA"] - pad, e["posA"] + pad):
-        #     unique_name = (r.qname, r.flag, r.pos, r.rname)
-        #     d.add(unique_name)
-        # if e["chrA"] != e["chrB"] or (e["posB"] != e["posA"] and abs(e["posB"] - e["posA"]) > pad*2):
-        #     for r in infile.fetch(e["chrA"], e["posA"] - pad, e["posA"] + pad):
-        #         unique_name = (r.qname, r.flag, r.pos, r.rname)
-        #         d.add(unique_name)
+        regions = [[e["chrA"], e["posA"] - pad, e["posA"] + pad]]
 
-        # total = len(d)
+        if e["svtype"] != "INS":
+            sep = abs(e["posB"] - e["posA"])
+            if e["chrB"] == e["chrA"] and sep < 1000:
+                if e["posB"] >= e["posA"]:
+                    regions[0][-1] = e["posB"] + pad
+                else:
+                    regions[0][0] = e["posB"] - pad
+            else:
+                regions.append([e["chrB"], e["posB"] - pad, e["posB"] + pad])
+
+        d = set([])
+        probable_sv_reads = set([])
+
+        svlen = e["svlen"] + 1e-6
+        wr = e["spanning"] > 0
+        deletion = e["svtype"] == "DEL"
+        posA = []
+
+        fail = False
+        for chrom, start, end in regions:
+
+            target_pos = start + pad
+            try:
+                fetch = infile.fetch(chrom, start, end)
+            except:
+                fail = True
+                break
+
+            for r in fetch:
+                ct = r.cigartuples
+
+                if ct and r.flag & 2 and r.mapq > 10:
+                    if not r.pos <= target_pos <= r.reference_end:
+                        continue
+                    if wr or e["svlen"] < 50:
+                        current_pos = r.pos
+                        first = True
+                        for opp, length in ct:
+                            if opp == 4 or opp == 5:
+                                if (first and abs(target_pos - current_pos) < 100) or \
+                                    (not first and abs(current_pos + length - target_pos) < 100):
+                                    probable_sv_reads.add(r.qname)
+                                    break
+                            elif opp == 2:
+                                if deletion and abs(target_pos - current_pos) < 100 and min(svlen, length) / max(svlen, length) > 0.8:
+                                    probable_sv_reads.add(r.qname)
+                                    break
+                                current_pos += length
+                            elif opp == 1:
+                                if not deletion and abs(target_pos - current_pos) < 100 and min(svlen, length) / max(svlen, length) > 0.8:
+                                    probable_sv_reads.add(r.qname)
+                                    break
+                                current_pos += 1
+
+                            elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
+                                current_pos += length
+                            first = False
+                        else:
+                            d.add(r.qname)
+                    else:
+                        first, last = ct[0][0], ct[-1][0]
+                        if first == 4 or first == 5 or last == 4 or last == 5:
+                            probable_sv_reads.add(r.qname)
+                        else:
+                            d.add(r.qname)
+
+        if fail or len(d) == 0 and len(probable_sv_reads) == 0:
+            e["GT"] = "./."
+            e["GQ"] = -1
+            continue
+
+        ref = len(d.difference(probable_sv_reads))
+
         support_reads = e["su"] - e["spanning"]  # spanning are counted twice
-        ref = int(np.ceil(e["raw_reads_10kb"])) #total - support_reads
-        if ref < 0:
-            ref = 0
-        # echo(ref, support_reads)
+
         gt_lplist = bayes_gt(ref, support_reads, e["svtype"] == "DUP")
         best, second_best = sorted([ (i, e) for i, e in enumerate(gt_lplist) ], key=lambda x: x[1], reverse=True)[0:2]
         gt_idx = best[0]
@@ -235,19 +301,28 @@ def get_gt_metric(events, infile, add_gt=False):
             result['SQ'] = '.'
             result['GT'] = './.'
         e.update(result)
-        # echo(result)
 
     return events
 
 
-def apply_model(df, mode):
+def apply_model(df, mode, contigs, paired, thresholds):
 
     pth = os.path.dirname(os.path.abspath(__file__))
     pth = f"{pth}/dysgu_model.1.pkl.gz"
     models = pickle.load(gzip.open(pth, "rb"))
 
-    cols = models[f"{mode}_cols"]
-    clf = models[f"{mode}_classifier"]
+    if paired == "False":
+        col_key = f"pacbio_cols"
+        model_key = f"pacbio_classifier"
+        if contigs == "False":
+            col_key += "_no_contigs"
+            model_key += "_no_contigs"
+    else:
+        col_key = f"pe_cols"
+        model_key = f"pe_classifier"
+
+    cols = models[col_key]
+    clf = models[model_key]
 
     c = dict(zip(
         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC'],
@@ -265,8 +340,9 @@ def apply_model(df, mode):
             X[c] = [i if i == i else 0 for i in X[c]]
             X[c] = X[c].astype("category")
 
-    pred = np.round(models[f"{mode}_classifier"].predict_proba(X)[:, 1], 3)
+    pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
-    df = df.assign(filter=["PASS" if i >= 0.5 else "lowProb" for i in pred])
+
+    df = df.assign(filter=["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], pred)])
 
     return df

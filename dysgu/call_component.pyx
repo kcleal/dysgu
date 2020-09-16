@@ -831,7 +831,6 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
     else:
         info["sqc"] = -1
 
-    # echo(info["chrA"], info["posA"], corr_score, info["svtype"])
     return info
 
 
@@ -1060,7 +1059,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
                 as2 = assembler.base_assemble(v_reads, info["posB"], 500)
                 ref_bases += assign_contig_to_break(as2, info, "B", 0)
             if not as1 and len(generic_insertions) > 0:
-                as1 = assembler.base_assemble(generic_insertions, info["posA"], 500)
+                as1 = assembler.base_assemble([item.read_a for item in generic_insertions], info["posA"], 500)
                 ref_bases += assign_contig_to_break(as1, info, "A", 0)
 
         info["linked"] = 0
@@ -2169,6 +2168,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
 
     for r in u_reads:
         grp_u[r.qname].append(r)
+
     for r in v_reads:
         grp_v[r.qname].append(r)
 
@@ -2241,7 +2241,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
             informative.append(v_item)
 
     if not informative:
-        return
+        return {}
 
     svtypes_counts = [[], [], [], []]
 
@@ -2272,6 +2272,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
             precise_b = []
             u_reads = []
             v_reads = []
+
             for v_item in sub_informative:
                 if v_item.breakA_precise:
                     precise_a.append(v_item.breakA)
@@ -2281,12 +2282,15 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
                 v_reads.append(v_item.read_b)
 
             info = make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
+
             attrs = count_attributes(u_reads, v_reads, [], extended_tags)
+
             if not attrs or attrs["su"] < min_support:
                 continue
 
             info.update(attrs)
             assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
+
             results.append(info)
 
     return results
@@ -2313,10 +2317,10 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
     cdef int cigar_index, event_pos
 
     for cigar_info, a in u_reads_info:
-
+        if not a.cigartuples:
+            continue
         u_reads.append(a)
         cigar_index = cigar_info[5]
-
         if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
             event_pos = cigar_info[6]
             ci = a.cigartuples[cigar_index]
@@ -2328,8 +2332,9 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
                                         a))
 
     for cigar_info, a in v_reads_info:
+        if not a.cigartuples:
+            continue
         v_reads.append(a)
-
         cigar_index = cigar_info[5]
         if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
             event_pos = cigar_info[6]
@@ -2349,6 +2354,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
 
     # make call from spanning alignments if possible
+
     if len(spanning_alignments) > 0:
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
@@ -2365,64 +2371,23 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
-
+        echo("3")
         attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
 
         if not attrs or attrs["su"] < min_support:
             return {}
 
         info.update(attrs)
+
         assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
+
         return [info]
 
     else:
-        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags)
-        return results
-        # info.update(call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags))
-        # if len(info) < 2:
-        #     return {}
 
-    # count read attributes
-    # attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
-    #
-    # if not attrs or attrs["su"] < min_support:
-    #     return {}
-    #
-    # info.update(attrs)
-    # as1 = None
-    # as2 = None
-    # if assemble:
-    #     if info["preciseA"]:
-    #         as1 = assembler.base_assemble(u_reads, info["posA"], 500)
-    #     if info["preciseB"]:
-    #         as2 = assembler.base_assemble(v_reads, info["posB"], 500)
-    #
-    # info["linked"] = 0
-    # info["block_edge"] = block_edge
-    # info["contig"] = None
-    # info["contig_left_weight"] = 0
-    # info["contig_right_weight"] = 0
-    # info["contig2"] = None
-    # info["contig2_left_weight"] = 0
-    # info["contig2_right_weight"] = 0
-    # rbases = 0
-    # if as1 is not None and "contig" in as1:
-    #     info["contig"] = as1["contig"]
-    #     rbases += as1["ref_bases"]
-    #     info["contig_ref_start"] = as1["ref_start"]
-    #     info["contig_ref_end"] = as1["ref_end"]
-    #     info["contig_left_weight"] = as1["left_weight"]
-    #     info["contig_right_weight"] = as1["right_weight"]
-    # if as2 is not None and "contig" in as2:
-    #     info["contig2"] = as2["contig"]
-    #     rbases += as2["ref_bases"]
-    #     info["contig2_ref_start"] = as2["ref_start"]
-    #     info["contig2_ref_end"] = as2["ref_end"]
-    #     info["contig2_left_weight"] = as2["left_weight"]
-    #     info["contig2_right_weight"] = as2["right_weight"]
-    # info["ref_bases"] = rbases
-    #
-    # return info
+        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags)
+
+        return results
 
 
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):

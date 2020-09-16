@@ -28,8 +28,8 @@ defaults = {
             "z_depth": 2, #2,
             "z_breadth": 2,
             "regions_only": "False",
-            "soft_search": "True"
-
+            "soft_search": "True",
+            "default_long_support": 2
             }
 
 version = pkg_resources.require("dysgu")[0].version
@@ -64,8 +64,10 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
                              "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--pl', help="Type of input reads. Needed when --mode is not used.", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
@@ -105,11 +107,25 @@ def cli():
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--gt", help="Add genotype to SVs", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
+              type=str, show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
     """Run dysgu on input file with default parameters"""
     # Add arguments to context
     t0 = time.time()
+
+    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+        kwargs["paired"] = "False"
+        kwargs["max_cov"] = 150
+        kwargs["mq"] = 20
+        kwargs["min_support"] = 2
+        kwargs["pl"] = kwargs["mode"]
+
     ctx = apply_ctx(ctx, kwargs)
 
     if kwargs["pfix"] == "uid":
@@ -128,11 +144,11 @@ def run_pipeline(ctx, **kwargs):
         tmp_file_name = f"{dest}/{bname}.{pfix}.bam"
 
     # Switch to different read mode if provided
-    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
-        ctx.obj["paired"] = "False"
-        ctx.obj["mq"] = 20
-        ctx.obj["max_cov"] = 150
-        ctx.obj["min_support"] = 2
+    # if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+    #     ctx.obj["paired"] = "False"
+    #     ctx.obj["mq"] = 20
+    #     ctx.obj["max_cov"] = 150
+    #     ctx.obj["min_support"] = 2
 
     # Get SV reads
     ctx.obj["output"] = tmp_file_name
@@ -208,8 +224,10 @@ def get_reads(ctx, **kwargs):
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
                              "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--pl', help="Type of input reads. Needed when --mode is not used.", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
@@ -249,16 +267,24 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--gt", help="Add genotype to SVs", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
+              type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural vaiants"""
     # Create dest in not done so already
-    ctx = apply_ctx(ctx, kwargs)
     if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
-        ctx.obj["paired"] = "False"
-        ctx.obj["mq"] = 20
-        ctx.obj["max_cov"] = 150
-        ctx.obj["min_support"] = 2
+        kwargs["paired"] = "False"
+        kwargs["max_cov"] = 150
+        kwargs["mq"] = 20
+        kwargs["min_support"] = 2
+        kwargs["pl"] = kwargs["mode"]
+
+    ctx = apply_ctx(ctx, kwargs)
 
     cluster.cluster_reads(ctx.obj)
 

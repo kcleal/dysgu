@@ -699,6 +699,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
+    click.echo("Minimum support {}".format(min_support), err=True)
     lower_bound_support = min_support #- 1 if min_support - 1 > 1 else 1
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
@@ -831,9 +832,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     tremap = time.time()
 
-
-    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
-                                                keep_unmapped=True if args["mode"] == "pe" else False)
+    if args["keep_small"] == "False":
+        block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
+                                                keep_unmapped=True if args["pl"] == "pe" else False)
     echo("remapping", time.time() - tremap)
 
     # Merge across calls
@@ -874,7 +875,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
 
     # nothing done here yet
-    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam)
+    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
     t1d = time.time()
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
     t1d = time.time() -t1d
@@ -926,6 +927,11 @@ def cluster_reads(args):
 
     click.echo("Sample name: {}".format(sample_name), err=True)
 
+    try:
+        args["thresholds"] = dict(zip(["DEL", "INS", "INV", "DUP", "TRA"], (map(float, args["thresholds"].split(",")))))
+    except:
+        raise ValueError("--thresholds parameter not understood, require a comma-separated string for DEL,INS,INV,DUP,TRA")
+
     if "insert_median" not in args and "I" in args:
         im, istd = map(float, args["I"].split(","))
         args["insert_median"] = im
@@ -947,14 +953,14 @@ def cluster_reads(args):
     echo("evet time", time.time() - t4)
     df = pd.DataFrame.from_records(events)
 
-    df = post_call_metrics.apply_model(df, args["mode"])
+    df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
 
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])
         df["sample"] = [sample_name] * len(df)
         df["id"] = range(len(df))
         m = {"pe": 1, "pacbio": 2, "nanopore": 3}
-        df["type"] = [m[args["mode"]]] * len(df)
+        df["type"] = [m[args["pl"]]] * len(df)
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
             df[io_funcs.col_names()].to_csv(outfile, index=False)
