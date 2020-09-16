@@ -209,7 +209,7 @@ def config(args):
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size):
+cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size, pe):
 
     # cdef uint32_t clip_length
     cdef int flag
@@ -231,6 +231,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     read_length = []
 
     cdef int max_scope = 100000
+    if not pe:
+        max_scope = 100
     cdef int count = 0
     cdef int nn = 0
     cdef bint paired_end = 0
@@ -317,7 +319,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length,
-                                    int threads)
+                                    int threads, int paired_end)
 
 def process(args):
 
@@ -330,13 +332,14 @@ def process(args):
 
 
     out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
+    pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
 
     if ("reads" not in args or args["reads"] == "None") and exc_tree is None:  # and paired_end:
 
-        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["procs"])
+        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["procs"], pe)
         if count < 0:
             click.echo("Error reading input file", err=True)
             quit()
@@ -348,9 +351,10 @@ def process(args):
 
     else:
         click.echo("Fetching with pysam", err=True)
+
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                args["min_size"])
+                                                                args["min_size"], pe)
 
     click.echo("dysgu fetch {} complete, n={}, time={} h:m:s".format(args["bam"],
                                                             count,

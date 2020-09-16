@@ -67,7 +67,7 @@ def cli():
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
                              "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
-@click.option('--pl', help="Type of input reads. Needed when --mode is not used.", default="pe",
+@click.option('--pl', help="Type of input reads. Needed when --mode is not used", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
@@ -192,6 +192,8 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
               default=None, type=click.Path(exists=True))
+@click.option('--pl', help="Type of input reads", default="pe",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.pass_context
 def get_reads(ctx, **kwargs):
     """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
@@ -227,7 +229,7 @@ def get_reads(ctx, **kwargs):
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
                              "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
-@click.option('--pl', help="Type of input reads. Needed when --mode is not used.", default="pe",
+@click.option('--pl', help="Type of input reads. Needed when --mode is not used", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)

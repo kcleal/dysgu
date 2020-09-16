@@ -4,7 +4,9 @@ numpy
 pandas
 pysam
 networkx>=2.4
-scikit-learn==0.21.2
+scikit-learn>=0.22
 ncls
 scikit-bio
+edlib
 sortedcontainers
+lightgbm

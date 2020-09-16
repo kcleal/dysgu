@@ -7,13 +7,13 @@
 #include <map>
 
 #include "robin_hood.h"
-#include "./htslib/htslib/sam.h"
-#include "./htslib/htslib/hfile.h"
+#include "htslib/htslib/sam.h"
+#include "htslib/htslib/hfile.h"
 #include "xxhash64.h"
 
 
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length,
-                          int threads) {
+                          int threads, int paired_end) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
@@ -39,6 +39,10 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     int max_scope = 100000;
     int max_write_queue = 500000;
 
+    if (paired_end == 0) {
+        max_scope = 100;
+        max_write_queue = 100;
+    }
     uint64_t total = 0;
 
     std::pair<uint64_t, bam1_t*> scope_item;
