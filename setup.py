@@ -6,6 +6,9 @@ import numpy
 from distutils import ccompiler
 import os
 import pysam
+import glob
+import sys
+
 
 # Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
 
@@ -68,14 +71,41 @@ extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
 ext_modules = list()
 
 root = os.path.abspath(os.path.dirname(__file__))
-htslib = os.path.join(root, "dysgu/htslib")
-# ksw2 = os.path.join(root, "dysgu/ksw2")
+# Try and link dynamically to htslib
+htslib = None
+if "--htslib" in sys.argv:
+    idx = sys.argv.index("--htslib")
+    h = sys.argv[idx + 1]
+    if h and os.path.exists(h):
+        if any("libhts" in i for i in glob.glob(h + "/*")):
+            print("Using --htslib at {}".format(h))
+            htslib = h
+            if htslib[-1] == "/":
+                htslib = htslib[:-1]
+            sys.argv.remove("--htslib")
+            sys.argv.remove(h)
+    else:
+        raise ValueError("--htslib path does not exists")
+
+#
+# if os.getenv("PATH", None):
+#     for i in os.environ["PATH"].split(":"):
+#         if "htslib" in os.path.basename(i):
+#             print(glob.glob(i))
+#             if any("libhts" in i for i in glob.glob(i + "/*")):
+#                 htslib = i
+#                 break
+
+if htslib is None:
+    print("Using packaged htslib")
+    htslib = os.path.join(root, "dysgu/htslib")
+
 
 libraries = [f"{htslib}/hts"]  # Library name for libhts.so
 library_dirs = [htslib, numpy.get_include()] + pysam.get_include()
 include_dirs = [numpy.get_include(), root,
                 f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
-runtime_dirs = [os.path.join(root, "dysgu/htslib")]
+runtime_dirs = [htslib]  # os.path.join(root, "dysgu/htslib")
 
 
 print("Libs", libraries)
@@ -106,7 +136,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='0.9.7',
+    version='0.9.82',
     python_requires='>=3.7',
     install_requires=[
             'cython',

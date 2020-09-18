@@ -617,12 +617,17 @@ cdef class PairedEndScoper:
                     vitem = dereference(local_it)
 
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
+                    # Below: this increases speceficity slightly but hurts sensitivity for short-reads (del), but decreases both for insertions
+                    # if (read_enum == DELETION and vitem.second.read_enum != DELETION) or (read_enum == INSERTION and vitem.second.read_enum != INSERTION) \
+                    #       or (vitem.second.read_enum == DELETION and read_enum != DELETION) or (vitem.second.read_enum == INSERTION and read_enum != INSERTION):
                         steps += 1
                         continue  # Dont connect insertions to deletions
 
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # echo("1", node_name, node_name2, current_pos, pos2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                        # if node_name == 9:
+                        #     echo("1", node_name, node_name2, current_pos, pos2, current_chrom, chrom2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                        #     echo(read_enum, vitem.second.read_enum, read_enum == INSERTION, vitem.second.read_enum == DELETION)
                         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
                             sep = c_abs(vitem.first - pos2)
@@ -655,6 +660,8 @@ cdef class PairedEndScoper:
                     while steps < 4:
                         vitem = dereference(local_it)
                         if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
+                        # if (read_enum == DELETION and vitem.second.read_enum != DELETION) or (read_enum == INSERTION and vitem.second.read_enum != INSERTION) \
+                        #   or (vitem.second.read_enum == DELETION and read_enum != DELETION) or (vitem.second.read_enum == INSERTION and read_enum != INSERTION):
                             steps += 1
                             continue  # Dont connect insertions to deletions
                         node_name2 = vitem.second.node_name
@@ -1034,7 +1041,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     # look = set(['D00360:18:H8VC6ADXX:2:1113:5589:6008', 'D00360:18:H8VC6ADXX:2:1107:19359:83854', 'D00360:18:H8VC6ADXX:2:2102:2821:89140'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
     # if r.qname in look:
-    # if r.qname == "HWI-D00360:7:H88WKADXX:1:2210:5065:66533":
+    # if r.qname == "D00360:18:H8VC6ADXX:1:2209:11290:77618":
     #     echo("@", r.flag, node_name, event_pos, pos2, list(other_nodes), cigar_index)
     #     quit()
     if not other_nodes.empty():
@@ -1293,7 +1300,7 @@ cdef CigarEvent make_cigar_event(int opp, int cigar_index, int event_pos, int po
 cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                             int min_sv_size=30,
                             int minimizer_support_thresh=2, int minimizer_breadth=3,
-                            int minimizer_dist=10, int mapq_thresh=1, debug=None, int min_support=3, procs=1,
+                            int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True):
 
     t0 = time.time()
@@ -1680,19 +1687,24 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     # min_support = 2
     n2n = {}
     reads = {}
-
+    cdef int support_estimate = 0
     cdef int v
     for v in component:
         if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
         # Need to keep a record of all node info, and cigar indexes
-        n2n[v] = node_to_name[v]
+        key = node_to_name[v]
+        if key[5] != -1:
+            support_estimate += 2
+        else:
+            support_estimate += 1
+        n2n[v] = key
 
+    if support_estimate < min_support:
+        return {}
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
-    # echo(component)
-    # echo(partitions)
-    # quit()
+
     support_between, support_within = count_support_between(G, partitions, min_support)
 
     if len(support_between) == 0 and len(support_within) == 0:

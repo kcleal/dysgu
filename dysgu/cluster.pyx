@@ -18,7 +18,7 @@ from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, 
 from dysgu.map_set_utils cimport is_reciprocal_overlapping
 import itertools
 import multiprocessing
-
+from scipy import stats
 
 
 def echo(*args):
@@ -230,11 +230,6 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
     # Cluster events on graph
     G = nx.Graph()
 
-    # if skip_imprecise:
-    #     pt = [i for i in potential if "svlen_precise" not in i or i["svlen_precise"] == 1]
-    # else:
-    #     pt = potential
-
     G = enumerate_events(G, potential, max_dist, try_rev, tree, rel_diffs, diffs, same_sample,
                          debug=debug)
 
@@ -270,7 +265,7 @@ def merge_events(potential, max_dist, tree, try_rev=False, pick_best=False, add_
                 item = best[k]
 
                 # Sum these
-                for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning"):
+                for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning", "n_small_tlen"):
                     if t in item:
                         best[0][t] += item[t]
 
@@ -548,17 +543,26 @@ cdef find_repeat_expansions(events, insert_stdev):
     return events
 
 
-def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, min_supp,
+def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, min_supp, lower_bound_support,
                   merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size,
                   ):
 
     potential_events = []
+
+    if insert_med != -1:
+        insert_ppf = stats.norm.ppf(0.05, loc=insert_med, scale=insert_stdev)
+        if insert_ppf < 0:
+            insert_ppf = 0
+    else:
+        insert_ppf = -1
     for event in call_component.call_from_block_model(infile,
                                                       component,
                                                       clip_length,
                                                       insert_med,
                                                       insert_stdev,
+                                                      insert_ppf,
                                                       min_supp,
+                                                      lower_bound_support,
                                                       extended_tags,
                                                       assemble_contigs,
                                                       ):
@@ -575,17 +579,12 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
     potential_events = filter_potential(potential_events, regions, regions_only)
 
-    # potential_events = merge_events(potential_events, merge_dist, regions,
-    #                                 try_rev=False, pick_best=False, rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
-    #                                 skip_imprecise=True)
-    # potential_events = merge_events(potential_events, merge_dist, regions,
-    #                                 try_rev=False, pick_best=True, rel_diffs=rel_diffs, diffs=diffs)
     return potential_events, event_id
 
 
 class Consumer(multiprocessing.Process):
 
-    def __init__(self, task_queue, result_queue, bam_path, open_mode, regions, clip_length, insert_median, insert_stdev, support, merge_dist,
+    def __init__(self, task_queue, result_queue, bam_path, open_mode, regions, clip_length, insert_median, insert_stdev, support, lower_bound_support, merge_dist,
                  regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
         self.infile = pysam.AlignmentFile(bam_path, open_mode)
         self.regions = regions
@@ -593,6 +592,7 @@ class Consumer(multiprocessing.Process):
         self.insert_median = insert_median
         self.insert_stdev = insert_stdev
         self.support = support
+        self.lower_bound_support = lower_bound_support
         self.merge_dist = merge_dist
         self.regions_only = regions_only
         self.extended_tags = extended_tags
@@ -625,6 +625,7 @@ class Consumer(multiprocessing.Process):
                                                        self.insert_median,
                                                        self.insert_stdev,
                                                        self.support,
+                                                       self.lower_bound_support,
                                                        self.merge_dist,
                                                        self.regions_only,
                                                        self.extended_tags,
@@ -700,7 +701,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     block_edge_events = []
     min_support = args["min_support"]
     click.echo("Minimum support {}".format(min_support), err=True)
-    lower_bound_support = min_support #- 1 if min_support - 1 > 1 else 1
+    if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
+        lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
+    else:
+        lower_bound_support = min_support
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
@@ -721,7 +725,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             m=6,
                                             clip_l=clip_length,
                                             min_sv_size=min_size,
-                                            min_support=lower_bound_support, #min_support,
                                             procs=1, #args["procs"],
                                             mapq_thresh=args["mq"],
                                             debug=None,
@@ -767,7 +770,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     for start_i, end_i in cc:
 
-        if end_i - start_i >= lower_bound_support:
+        # if end_i - start_i >= lower_bound_support:
             component = list(cmp[start_i: end_i])
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
@@ -781,6 +784,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                     potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                                insert_median,
                                                                insert_stdev,
+                                                               min_support,
                                                                lower_bound_support,
                                                                merge_dist,
                                                                regions_only,
@@ -832,9 +836,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     tremap = time.time()
 
-    if args["keep_small"] == "False":
-        block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
-                                                keep_unmapped=True if args["pl"] == "pe" else False)
+    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
+                                                keep_unmapped=True if args["pl"] == "pe" else False, keep_small=args["keep_small"] == "True")
     echo("remapping", time.time() - tremap)
 
     # Merge across calls

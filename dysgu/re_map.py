@@ -158,7 +158,7 @@ def switch_sides(e):
     return e
 
 
-def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=True):
+def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=True, keep_small=False):
 
     new_events = []
     ref_locs = []
@@ -378,7 +378,7 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=Tr
                             if len(clip_seq) - target_end_optimal > svlen:
                                 continue
 
-                        if svlen < min_sv_len:
+                        if svlen < min_sv_len and not keep_small:
                             continue
 
                         if kind == "DEL":
@@ -416,43 +416,3 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=Tr
                 new_events.append(e)
 
     return new_events
-    # check for smaller indels that could explain the SV
-    # checked = []
-
-    # for e in new_events:
-    #     passed = True
-    #     if e["svtype"] == "DEL":
-    #         # get local reads with biggest dels and check if found del can be aligned
-    #         reads_with_dels = []
-    #         for a in input_bam.fetch(e["chrA"], e["posA"], e["posA"] + 1):
-    #             if a.cigartuples is None:
-    #                 continue
-    #             ds = sorted([i for i in a.cigartuples if i[0] == 2 and i[1] < 30], key=lambda x: x[1], reverse=True)
-    #             if len(ds):
-    #                 if ds[0][1] > 10:
-    #                     passed = False
-    #                     break
-            #         reads_with_dels.append((ds[0], a.seq))
-            # if len(reads_with_dels) == 0:
-            #     continue
-            # srt_rd = sorted(reads_with_dels, reverse=True)
-            #
-            # clip_seq = None
-            # if e["contig"]:
-            #     clip_res = get_clipped_seq(e[cont], e["posA"], e["contig_ref_start"], e["contig_ref_end"])
-            #     if clip_res:
-            #         clip_seq, _, _ = clip_res
-            # else:
-            #     clip_res = get_clipped_seq(e[cont], e["posB"], e["contig2_ref_start"], e["contig2_ref_end"])
-            #     if clip_res:
-            #         clip_seq, _, _ = clip_res
-            #
-            # for _, seq in srt_rd[:3]:
-            #
-            #     if check_contig_match(seq, clip_seq, return_int=True):
-            #         passed = False
-            #         break
-    #     if passed:
-    #         checked.append(e)
-    #
-    # return checked

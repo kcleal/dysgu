@@ -92,10 +92,10 @@ cdef n_aligned_bases(ct):
     return float(aligned), float(large_gaps), float(n_small_gaps)
 
 
-cdef dict extended_attrs(reads1, reads2, spanning): #, svtype):
+cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf):
     r = {"su": 0,  "pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
-         "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0}
+         "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0, "n_small_tlen": 0}
     paired_end = set([])
     seen = set([])
 
@@ -119,7 +119,8 @@ cdef dict extended_attrs(reads1, reads2, spanning): #, svtype):
         flag = a.flag
         if flag & 2:
             r["NP"] += 1
-
+        if a.flag & 1 and a.tlen and abs(a.tlen) < insert_ppf:
+            r["n_small_tlen"] += 1
         if paired_end and flag & 8:
             r["n_unmapped_mates"] += 1
 
@@ -263,12 +264,12 @@ cdef dict extended_attrs(reads1, reads2, spanning): #, svtype):
     return r
 
 
-cdef dict normal_attrs(reads1, reads2, spanning): #, svtype):
+cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf):
 
     r = {"su": 0, "pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
          "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0, "n_xa": [],
-         "n_unmapped_mates": 0}
+         "n_unmapped_mates": 0, "n_small_tlen": 0}
 
     paired_end = set([])
     seen = set([])
@@ -295,8 +296,10 @@ cdef dict normal_attrs(reads1, reads2, spanning): #, svtype):
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         r["n_gaps"].append(n_small_gaps / a_bases)
 
-        if flag & 2:
+        if flag & 2:  # paired-end implied
             r["NP"] += 1
+        if a.flag & 1 and a.tlen and abs(a.tlen) < insert_ppf:
+            r["n_small_tlen"] += 1
 
         if paired_end and flag & 8:
             r["n_unmapped_mates"] += 1
@@ -413,19 +416,16 @@ cdef dict normal_attrs(reads1, reads2, spanning): #, svtype):
 
     r["su"] = r["pe"] + r["supp"] + (2*r["spanning"])
 
-
-    # r["su"] = len(reads1) + len(reads2) + (2*len(spanning))
-
     return r
 
 
-cdef dict count_attributes(reads1, reads2, spanning, int extended_tags):
+cdef dict count_attributes(reads1, reads2, spanning, int extended_tags, float insert_ppf):
 
     if extended_tags:
-        return extended_attrs(reads1, reads2, spanning)
+        return extended_attrs(reads1, reads2, spanning, insert_ppf)
 
     else:
-        return normal_attrs(reads1, reads2, spanning)
+        return normal_attrs(reads1, reads2, spanning, insert_ppf)
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
@@ -746,7 +746,7 @@ def assign_contig_to_break(asmb, info, side, spanning):
     return ref_bases
 
 
-cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, to_assemble, spanning_alignments,
+cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble, spanning_alignments,
                       extended_tags, svlen_precise):
 
     info = {}
@@ -780,7 +780,7 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
     #     sub_reads.append(v_item.read_a)
     #     if v_item.read_b is not None:
     #         sub_reads.append(v_item.read_b)
-    attrs = count_attributes(u_reads, v_reads, [], extended_tags)
+    attrs = count_attributes(u_reads, v_reads, [], extended_tags, insert_ppf)
 
     support = attrs["su"]
 
@@ -834,7 +834,7 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, min_support, t
     return info
 
 
-cdef partition_single(informative, info, insert_size, insert_stdev, spanning_alignments,
+cdef partition_single(informative, info, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                       min_support, extended_tags, to_assemble):
 
     # spanning alignments is empty
@@ -877,12 +877,12 @@ cdef partition_single(informative, info, insert_size, insert_stdev, spanning_ali
             clusters_d[cluster_id].append(v_item)
         blocks = clusters_d.values()
         for sub_informative in blocks:
-            info = make_single_call(sub_informative, insert_size, insert_stdev, min_support, to_assemble,
+            info = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                     spanning_alignments, extended_tags, 1)
             if info:
                 sub_cluster_calls.append(info)
     else:
-        info = make_single_call(informative, insert_size, insert_stdev, min_support, to_assemble,
+        info = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 1)
         if info:
             sub_cluster_calls.append(info)
@@ -890,7 +890,7 @@ cdef partition_single(informative, info, insert_size, insert_stdev, spanning_ali
     return sub_cluster_calls
 
 
-cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int min_support,
+cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
 
     # Infer the other breakpoint from a single group
@@ -900,8 +900,8 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
     cdef int n_templates = len(set([i.qname for _, i in rds]))
 
     if n_templates == 1:
-        # Filter for paired ends, will also remove single end reads though
-        if not any(not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
+        # Filter uninteresting reads
+        if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
             return {}
@@ -916,15 +916,23 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
     spanning_alignments = []  # make call from these if available (and count attributes)
     generic_insertions = []
     tmp = defaultdict(list)  # group by template name
+    small_tlen_outliers = 0  # for paired reads note any smaller than expected TLENs
+
     for cigar_info, align in rds:
         tmp[align.qname].append((cigar_info, align))
+
+        if align.flag & 1 and abs(align.tlen) < insert_ppf:
+            small_tlen_outliers += 1
 
     cdef AlignmentItem v_item, itm
     cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
 
     # coords = []
+
     for temp_name, alignments in tmp.items():
+
         l_align = list(alignments)
+
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
             if pair is not None:
@@ -1029,7 +1037,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
             if v_item.read_b is not None:
                 informative_reads.append(v_item.read_b)
 
-        attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], extended_tags)
+        attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], extended_tags, insert_ppf)
 
         support = attrs["su"]
 
@@ -1070,11 +1078,11 @@ cdef single(infile, rds, int insert_size, int insert_stdev, int clip_length, int
         return info
 
     elif len(informative) > 0:
-        return partition_single(informative, info, insert_size, insert_stdev, spanning_alignments,
+        return partition_single(informative, info, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                                 min_support, extended_tags, to_assemble)
 
     elif len(generic_insertions) > 0:
-        return make_single_call(generic_insertions, insert_size, insert_stdev, min_support, to_assemble,
+        return make_single_call(generic_insertions, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 0)
 
     # elif len(informative) or len(generic_insertions):
@@ -2161,7 +2169,7 @@ cdef assemble_partitioned_reads(info, u_reads, v_reads, int block_edge, int asse
     info["ref_bases"] = rbases
 
 
-cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int min_support, int block_edge, int assemble, int extended_tags):
+cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float insert_ppf, int min_support, int block_edge, int assemble, int extended_tags):
 
     grp_u = defaultdict(list)
     grp_v = defaultdict(list)
@@ -2283,7 +2291,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
 
             info = make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
-            attrs = count_attributes(u_reads, v_reads, [], extended_tags)
+            attrs = count_attributes(u_reads, v_reads, [], extended_tags, insert_ppf)
 
             if not attrs or attrs["su"] < min_support:
                 continue
@@ -2308,7 +2316,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, int mi
     # return make_call(informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
 
 
-cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev,
+cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
                    int min_support, int block_edge, int assemble, int extended_tags):
 
     spanning_alignments = []
@@ -2371,8 +2379,8 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
-        echo("3")
-        attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags)
+
+        attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags, insert_ppf)
 
         if not attrs or attrs["su"] < min_support:
             return {}
@@ -2385,7 +2393,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
 
     else:
 
-        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, min_support, block_edge, assemble, extended_tags)
+        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
 
         return results
 
@@ -2431,7 +2439,7 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
     return aligns
 
 
-cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, int min_support,
+cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support, int lower_bound_support,
                  int assemble_contigs, int extended_tags):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
@@ -2464,14 +2472,14 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         if v in seen:
             seen.remove(v)
 
-        events += one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, min_support, 1, assemble_contigs,
+        events += one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
                                extended_tags)
 
     # Process any unconnected blocks
     if seen:
         for part_key in seen:
             d = data["parts"][part_key]
-            if len(d) >= min_support:
+            if len(d) >= lower_bound_support:
                 # Call single block, only collect local reads to the block
 
                 # if not adaptive_support_threshold([n2n[i] for i in d], depth_table, 0.05):
@@ -2479,10 +2487,10 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
 
                 rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
 
-                if len(rds) < min_support:
+                if len(rds) < lower_bound_support:
                     continue
 
-                res = single(bam, rds, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags)
+                res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
                 if res:
                     if isinstance(res, dict):
                         events.append(res)
@@ -2496,10 +2504,10 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
         if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
 
             rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
-            if len(rds) < min_support:
+            if len(rds) < lower_bound_support:
                 continue
 
-            res = single(bam, rds, insert_size, insert_stdev, clip_length, min_support, assemble_contigs, extended_tags)
+            res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
 
             if res:
                 if isinstance(res, dict):
@@ -2510,7 +2518,7 @@ cpdef list multi(data, bam, int insert_size, int insert_stdev, int clip_length, 
     return events
 
 
-cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, min_support, extended_tags,
+cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support, extended_tags,
                                  assemble_contigs):
 
     # min_support = 2
@@ -2519,16 +2527,16 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     if n_parts >= 1:
         # Processed single edges and break apart connected
-        events += multi(data, bam, insert_size, insert_stdev, clip_length, min_support,
+        events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
                         assemble_contigs, extended_tags)
 
     elif n_parts == 0: # and min_support == 1:
         # Possible single read only
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
-        if len(rds) < min_support:
+        if len(rds) < lower_bound_support:
             return []
 
-        e = single(bam, rds, insert_size, insert_stdev, clip_length, min_support,
+        e = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
                    assemble_contigs, extended_tags)
         if e:
             if isinstance(e, list):

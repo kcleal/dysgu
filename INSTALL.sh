@@ -3,14 +3,16 @@
 OPTIND=1
 config_args=""
 threads="1"
-
-while getopts "h?j:" opt; do
+htslib_folder="./dysgu/htslib"
+while getopts "h?j:l:" opt; do
     case "$opt" in
     h|\?)
-        show_help
+        echo "Options: -j number of build threads; -l path to external htslib folder"
         exit 0
         ;;
     j)  threads=$OPTARG
+        ;;
+    l)  htslib_folder=$OPTARG
         ;;
     esac
 done
@@ -20,15 +22,20 @@ shift $((OPTIND-1))
 [ "${1:-}" = "--" ] && shift
 
 echo "Build threads:" $threads
+echo "htslib_folder:" $htslib_folder
 echo "Extra configure args:" $@
 
-echo "Building htslib"
-cd ./dysgu/htslib
-autoheader
-autoconf
-./configure $@
-make -j$threads
-cd ../../
+
+if [[ $htslib_folder == "./dysgu/htslib" ]]
+then
+  echo "Building htslib"
+  cd ./dysgu/htslib
+  autoheader
+  autoconf
+  ./configure $@
+  make -j$threads
+  cd ../../
+fi
 
 echo "Installing dependencies"
 pip install -r requirements.txt
@@ -37,36 +44,5 @@ echo "Installing dysgu"
 python setup.py install
 
 dysgu --version
-dysgu test
+#dysgu test
 echo "Done"
-
-
-#from subprocess import run
-#import os
-#import click
-
-
-#@click.command()
-#@click.option('-j', default=1, help='Number of threads')
-#def build(j):
-
-#    print("Building htslib")
-#    sub = "./dysgu/htslib"
-#    if not os.path.exists(sub):
-#        print(f"htslib is missing from {sub}, try downloading with git clone --recursive https://github.com/kcleal/dysgu.git")
-#        quit()
-#    run(f"cd ./dysgu/htslib; autoheader; autoconf; ./configure; make -j {j};", shell=True)#
-
-#    print("Installing dependencies")
-#    run(["pip install -r requirements.txt"], shell=True)
-
-#    print("Installing dysgu")
-#    run(["python setup.py install"], shell=True)
-
-#    run(["dysgu --version"], shell=True)
-#    run(["dysgu test"], shell=True)
-#    print("Done")
-
-
-#if __name__ == '__main__':
-#    build()
