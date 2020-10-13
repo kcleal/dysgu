@@ -162,14 +162,14 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
 
     if small_output:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
-          "GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc",
+          "GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc", "bnd",
          "raw_reads_10kb", "contigA", "contigB", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed",
             ]
     if extended:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
          "GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
+          "maxASsupp",  "su", "pe", "supp", "sc", "bnd", "scq", "sqw", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "n_small_tlen"
@@ -177,7 +177,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
           "GT", "GQ", "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "pe", "supp", "sc", "sqc", "block_edge",
+          "maxASsupp",  "su", "pe", "supp", "sc", "bnd", "scq", "sqw", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "n_small_tlen"
@@ -200,13 +200,14 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         exp_seq = r["exp_seq"]
         ref_poly = r["ref_poly_bases"]
 
-        su, pe, sr, sc, wr = 0, 0, 0, 0, 0
+        su, pe, sr, sc, bnd, wr = 0, 0, 0, 0, 0, 0
         # probs = []
         for row in df_rows.values():
             pe += row["pe"]
             sr += row["supp"]
             sc += row["sc"]
             su += row["su"]
+            bnd += row["bnd"]
             wr += row["spanning"]
             # probs.append(row["Prob"])
         # probs = round(np.median(probs), 3)
@@ -216,6 +217,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         sr = r["supp"]
         sc = r["sc"]
         su = r["su"]
+        bnd = r["bnd"]
         wr = r["spanning"]
         # probs = r["Prob"]
         gc = r["gc"]
@@ -273,19 +275,20 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
                     f"PE={pe}",
                     f"SR={sr}",
                     f"SC={sc}",
+                    f"BND={bnd}",
                     f"RT={read_kind}"]
 
     if small_output:
-        fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:COV:NEIGH10:PS:MS:RMS:RED:BCC"
+        fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC"
         if "prob" in r:
             fmt_keys += ":PROB"
 
     elif extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:STL"
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:STL"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:SQC:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:STL"
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:STL"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -314,17 +317,16 @@ def get_fmt(r, extended, small_output):
     if small_output:  # "GT:GQ:MAPQP:SU:WR:PE:SR:SC:COV:NEIGH10:PS:MS:RMS:RED:BCC"
         v = [r["GT"], r["GQ"], r['MAPQpri'],
                                   r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['raw_reads_10kb'], r['neigh10kb'],
+                                  r['sc'], r['bnd'], r['raw_reads_10kb'], r['neigh10kb'],
                                   r["plus"], r["minus"], r["remap_score"], r["remap_ed"], r["bad_clip_count"]]
         if "prob" in r:
             v.append(r["prob"])
         return v
 
     elif extended:
-
         v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], r["n_small_tlen"]]
         if "prob" in r:
@@ -334,7 +336,7 @@ def get_fmt(r, extended, small_output):
     else:
         v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], round(r['sqc'], 2), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], r["n_small_tlen"]]
         if "prob" in r:
@@ -374,7 +376,7 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
 
 
 
-def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names="", extended_tags=False, header=None):
+def to_vcf(df, args, names, outfile, n_fields=17, show_names=True,  contig_names="", extended_tags=False, header=None):
     if header is None:
         if extended_tags:
             HEADER = """##fileformat=VCFv4.2
@@ -395,6 +397,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
 ##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
 ##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
+##INFO=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##INFO=<ID=CONTIGA,Number=1,Type=String,Description="Contig from CHROM POS">
 ##INFO=<ID=CONTIGB,Number=1,Type=String,Description="Contig from CHR2 END">
 ##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
@@ -427,7 +430,9 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
+##FORMAT=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
+##FORMAT=<ID=SCQ,Number=1,Type=Float,Description="Soft-clip quality weight value">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
@@ -468,6 +473,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
 ##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
 ##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
+##INFO=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##INFO=<ID=CONTIGA,Number=1,Type=String,Description="Contig from CHROM POS">
 ##INFO=<ID=CONTIGB,Number=1,Type=String,Description="Contig from CHR2 END">
 ##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
@@ -496,7 +502,9 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 ##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
 ##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
 ##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
+##FORMAT=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
+##FORMAT=<ID=SCW,Number=1,Type=Float,Description="Soft-clip quality weight value">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
@@ -547,7 +555,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
         df[col] = df[col].astype(float).round(2)
 
     for col in ['maxASsupp', 'neigh', 'neigh10kb']:
-        df[col] = [int(i) for i in df[col]]
+        df[col] = [int(i) if i == i else 0 for i in df[col]]
 
     count = 0
     recs = []
@@ -555,6 +563,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
 
     add_kind = args["add_kind"] == "True"
     small_output = args["metrics"] == "False"
+
     for idx, r in df.iterrows():
 
         if idx in seen_idx:
@@ -566,8 +575,7 @@ def to_vcf(df, args, names, outfile, n_fields=19, show_names=True,  contig_names
             seen_idx |= set(r["partners"])
 
         r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output)
-        # click.echo(r_main, err=True)
-        # quit()
+
         recs.append(r_main)
         count += 1
 

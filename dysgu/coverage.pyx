@@ -31,47 +31,6 @@ def echo(*args):
     click.echo(args, err=True)
 
 
-# class PyAlignment(object):
-#     """Picklable struct to hold the contents of pysam alignment"""
-#     __slots__ = ["reference_end", "cigar", "pos", "flag", "rname", "qname", "rnext", "pnext", "seq",
-#                  "mapq", "cigartuples",
-#                  "query_qualities", "has_SA", "tlen", "has_NM", "has_DP", "has_DN", "has_DA", "has_NP"]
-#
-#     def __init__(self, a):
-#         self.reference_end = a.reference_end
-#         self.cigar = a.cigar
-#         self.pos = a.pos
-#         self.flag = a.flag
-#         self.rname = a.rname
-#         self.qname = a.qname
-#         self.rnext = a.rnext
-#         self.pnext = a.pnext
-#         self.seq = a.seq
-#         self.mapq = a.mapq
-#         self.cigartuples = self.cigar
-#         self.query_qualities = a.query_qualities
-#         self.has_SA = a.has_tag("SA")
-#         self.tlen = a.tlen
-#         self.has_NM = False
-#         self.has_DP = False
-#         self.has_DN = False
-#         self.has_DA = False
-#         self.has_NP = False
-#
-#         for key in ("NM", "DP", "DN", "DA", "NP"):
-#             has = a.has_tag(key)
-#             if has:
-#                 setattr(self, f"has_{key}", a.get_tag(key))
-#
-#     def has_tag(self, tag):
-#         if getattr(self, f"has_{tag}", None):
-#             return True
-#         else:
-#             return False
-#     def get_tag(self, tag):
-#         return getattr(self, f"has_{tag}", None)
-
-
 def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
     """
     >>> merge_intervals( [('chr1', 1, 4), ('chr1', 2, 5), ('chr2', 3, 5)] )
@@ -139,7 +98,7 @@ def unscaled_upper_mad(xs):
 
 def mean_std(L):
     s = sum(L)
-    mean = np.median(L) #s / float(len(L))
+    mean = np.median(L)
     sq_sum = 0.0
     for v in L:
         sq_sum += (v - mean)**2.0
@@ -330,30 +289,11 @@ class GenomeScanner:
             while len(self.staged_reads) > 0:
                 yield self.staged_reads.popleft()
 
-            # if self.no_tell:
-            #     input_iter = self.input_bam
-            #     tell = self.input_bam.tell()
-            #     update_tel = True
-            #
-            # else:  # tell gets reset for normal file input
-            #     input_iter = htslib_iterator(self.input_bam, self.min_within_size, self.clip_length)
-            #     tell = 0
-            #     update_tel = False
-
             tell = 0 if self.no_tell else self.input_bam.tell()
             for aln in self.input_bam:
 
-            # for tmp in input_iter: #self.input_bam:
-
-                # if update_tel:
-                    # echo(tmp.tostring(), tell)
-                    # quit()
                 self._add_to_bin_buffer(aln, tell)
                 tell = 0 if self.no_tell else self.input_bam.tell()
-                # else:
-                #     # echo(tmp[0].tostring(), tmp[1])
-                #     # quit()
-                #     self._add_to_bin_buffer(*tmp)  # tmp is alignment, tell
 
                 while len(self.staged_reads) > 0:
                     yield self.staged_reads.popleft()
@@ -487,8 +427,6 @@ class GenomeScanner:
             self.last_tell = tell
             if not self.no_tell:
                 self.input_bam.reset()
-        # else:
-        #     ibam.close()
 
         return insert_median, insert_stdev
 
@@ -515,10 +453,8 @@ class GenomeScanner:
             self.first = 0
 
         elif len(self.read_buffer) < self.buff_size:
-            # if self.procs == 1:
             self.read_buffer[n1] = r
-            # else:
-            #     self.read_buffer[n1] = r.to_string()
+
         elif self.no_tell:
             raise BufferError("Read buffer has overflowed, increase --buffer-size")
 
@@ -536,7 +472,7 @@ class GenomeScanner:
         cdef int bin_pos = int(apos / 100)
         cdef int ref_length
         cdef str reference_name = ""
-        cdef int aend = a.reference_end #a.infer_query_length() + apos
+        cdef int aend = a.reference_end
         cdef float current_coverage
 
         if rname not in self.depth_d:
@@ -623,11 +559,9 @@ cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
     cdef float cov_val = 0
 
     with nogil:
-
         if start == end:
             total = chrom_depth[start]
             max_cov = total
-
         else:
             for i in range(start, end):
                 cov_val = chrom_depth[i]
@@ -640,49 +574,49 @@ cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
         return total, max_cov
     return total / (end - start), max_cov
 
-
-support_bands = [0.9, 0.25]  # todo check these work with long reads
-
-cpdef float adaptive_support_threshold(bunch, depth_table, allele_fraction):
-
-    pad = 500
-    max_val = -1
-
-    positions = []
-
-    bin_counts = defaultdict(int)
-    background_counts = {}
-    for r_info in bunch:
-
-        event_pos = r_info[6]
-
-        # Get bin value
-        p = int(event_pos / 100)
-        bin_counts[p] += 1
-
-        if p not in background_counts:
-            counts, _ = calculate_coverage(event_pos, event_pos, depth_table[r_info[3]])
-            background_counts[p] = counts
-        positions.append(event_pos)
-
-    max_support = len(bunch)
-    if max_support > len(support_bands) - 1:
-        thresh = allele_fraction
-    else:
-        thresh = support_bands[max_support]
-    for k, v in background_counts.items():
-        if v == 0:
-            continue
-        af = float(bin_counts[k]) / v
-        if af > max_val:
-            max_val = af
-        if af > thresh:
-            return 1
-
-    if max_val == -1:
-        return 1
-    else:
-        return 0
+#
+# support_bands = [0.9, 0.25]
+#
+# cpdef float adaptive_support_threshold(bunch, depth_table, allele_fraction):
+#
+#     pad = 500
+#     max_val = -1
+#
+#     positions = []
+#
+#     bin_counts = defaultdict(int)
+#     background_counts = {}
+#     for r_info in bunch:
+#
+#         event_pos = r_info[6]
+#
+#         # Get bin value
+#         p = int(event_pos / 100)
+#         bin_counts[p] += 1
+#
+#         if p not in background_counts:
+#             counts, _ = calculate_coverage(event_pos, event_pos, depth_table[r_info[3]])
+#             background_counts[p] = counts
+#         positions.append(event_pos)
+#
+#     max_support = len(bunch)
+#     if max_support > len(support_bands) - 1:
+#         thresh = allele_fraction
+#     else:
+#         thresh = support_bands[max_support]
+#     for k, v in background_counts.items():
+#         if v == 0:
+#             continue
+#         af = float(bin_counts[k]) / v
+#         if af > max_val:
+#             max_val = af
+#         if af > thresh:
+#             return 1
+#
+#     if max_val == -1:
+#         return 1
+#     else:
+#         return 0
 
 
 cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile, max_cov):

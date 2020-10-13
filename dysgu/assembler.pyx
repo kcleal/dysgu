@@ -1,14 +1,12 @@
 #distutils: language = c++
 #cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 """
-A basic assembler. Takes an overlap graph and merges reads in-place in a POA style. Different soft-clipped regions
-are then overlapped and 'linked'.
+A basic assembler/consensus sequence generator. Takes an overlap graph and merges reads in-place in a POA style.
 """
 
 import click
 import warnings
 import array
-import time
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -23,7 +21,8 @@ from libc.stdlib cimport abs as c_abs
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t, int64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport DiGraph, unordered_set  # robin_set,
+from dysgu.map_set_utils cimport DiGraph, unordered_set
+from dysgu.io_funcs import reverse_complement
 
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_seqi, bam_get_seq
@@ -37,16 +36,6 @@ def echo(*args):
 # DTYPE = np.int64
 # ctypedef np.int64_t DTYPE_t
 ctypedef cpp_vector[int] int_vec_t
-# ctypedef cpp_pair[int, int] get_val_result
-# ctypedef cpp_pair[int, int] cpp_item
-
-# ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
-# ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
-
-
-# ctypedef map_set_utils.Py_SimpleGraph Py_SimpleGraph_t
-# ctypedef map_set_utils.Py_DiGraph Py_DiGraph_t
-# ctypedef map_set_utils.DiGraph DiGraph_t
 
 ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
 ctypedef map_set_utils.Py_IntSet Py_IntSet
@@ -70,11 +59,58 @@ basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.',
 lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', 'n', 'n', 'n'])
 
 
+cdef trim_cigar(c, int pos, int approx_pos):
+
+    cdef int seq_index = 0
+    cdef int seq_start = 0
+
+    cdef int index = 0
+    cdef int start_index = 0
+
+    cdef int start_pos = pos
+    cdef int end_index = len(c) - 1
+    cdef bint started = False
+    cdef int opp, length
+
+    for opp, length in c:
+        if opp == 4 and index == 0:
+            seq_index += length
+
+        if opp == 1:
+            seq_index += length
+
+        elif opp == 2:
+            if not started:
+                start_pos += length
+            pos += length
+
+        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+
+            if not started:
+                if abs(pos + length - approx_pos) < 500:
+                    started = True
+                    start_pos = pos
+                    pos += length
+                    start_index = index
+                    seq_start = seq_index
+
+                else:
+                    pos += length
+                    seq_index += length
+
+            elif started and abs(pos + length - approx_pos) > 500:
+                end_index = index + 1
+                break
+
+        index += 1
+
+    return c[start_index:end_index], start_pos, seq_start
+
+
 cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2,
                        int32_t approx_position, int32_t max_distance):
 
     cdef int i = 0
-    # cdef str rseq = r.seq
 
     cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
     cdef char base
@@ -91,12 +127,17 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 
     cdef int prev_node = -1
     cdef int ref_bases = 0
+
     cdef int target_bases = 2*max_distance
-    cdef str seq  # left clip == 0, right clip == 1, insertion == 2, match == 4
+    cdef str seq
     cdef tuple k
     cdef bint done = 0
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
+    if approx_position - pos > 500:
+        cigar, current_pos, i = trim_cigar(cigar, pos, approx_position)
+
+    #
     for opp, length in cigar:
         with nogil:
         # if True:
@@ -107,16 +148,16 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
             if opp == 4:
                 if start:
 
-                    if c_abs(<int32_t>current_pos - approx_position) > max_distance:
-                         i += length
-                         continue
+                    # if c_abs(<int32_t>current_pos - approx_position) > max_distance:
+                    #      i += length
+                    #      continue
 
                     for o in range(length, 0, -1):
 
                         # Limit contig length to abs(approx_position - max_distance)
-                        if c_abs(<int32_t>current_pos - <int32_t>o - approx_position) > max_distance:
-                            i += 1
-                            continue
+                        # if c_abs(<int32_t>current_pos - <int32_t>o - approx_position) > max_distance:
+                        #     i += 1
+                        #     continue
 
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -142,9 +183,9 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                 else:
                     for o in range(1, length + 1, 1):
 
-                        if c_abs(<int32_t>current_pos + <int32_t>o - approx_position) > max_distance:
-                            done = 1
-                            break
+                        # if c_abs(<int32_t>current_pos + <int32_t>o - approx_position) > max_distance:
+                        #     done = 1
+                        #     break
 
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -203,7 +244,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                 #     echo(current_pos, current_pos + 1, "done")
                 current_pos += 1  # <-- Reference pos increases 1
 
-            elif opp == 2 or opp == 5:  # Hard clip or deletion
+            elif opp == 2: # or opp == 5:  # Hard clip or deletion
                 current_pos += length + 1
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
@@ -218,6 +259,8 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                     if current_pos < approx_position and approx_position - current_pos > max_distance:
                         i += 1
                         continue
+                    elif current_pos > approx_position and current_pos - approx_position > max_distance:
+                        break
 
                     ref_bases += 1
                     if ref_bases > target_bases:
@@ -257,11 +300,6 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
 cdef cpp_deque[int] topo_sort2(DiGraph& G):
     # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
 
-    # cdef Py_IntSet seen = map_set_utils.Py_IntSet()
-    # cdef Py_IntSet explored = map_set_utils.Py_IntSet()
-    # cdef robin_set[int] seen
-    # cdef robin_set[int] explored
-
     cdef unordered_set[int] seen
     cdef unordered_set[int] explored
 
@@ -271,10 +309,10 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
     cdef cpp_vector[int] neighbors
     cdef int v, n, w
 
-    # with nogil:
-    if True:
+    with nogil:
+
         for v in range(G.numberOfNodes()):  # process all vertices in G
-            if explored.find(v) != explored.end(): #explored.has_key(v) == 1:
+            if explored.find(v) != explored.end():
                 continue
 
             fringe.clear()
@@ -295,15 +333,14 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
 
                 neighbors = G.neighbors(w)
                 for n in neighbors:
-                    if explored.find(n) == explored.end(): #explored.has_key(n) == 0:
+                    if explored.find(n) == explored.end():
 
-                        if seen.find(n) != seen.end(): #seen.has_key(n) == 1: #CYCLE !!
+                        if seen.find(n) != seen.end(): #CYCLE !!
                             order.clear()
                             order.push_back(-1)
                             order.push_back(n)
                             order.push_back(w)
                             # return order
-                            echo("Cycle", n, w)
                             raise ValueError("Graph contains a cycle.")
                         new_nodes.push_back(n)
 
@@ -339,7 +376,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
         return path
 
     with nogil:
-    # if True:
+
         for i in range(0, len_nodes):
 
             u = nodes_to_visit[i]
@@ -370,7 +407,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
                     best_node = u
 
                 # The sum of base-qualities of previous node
-                local_score = pred.second #G.weight(pred.first, u)
+                local_score = pred.second
                 if local_score > best_local_score:
                     best_local_score = local_score
                     best_local_i = pred.first
@@ -379,15 +416,12 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
                 pred_trace2.insert(u, best_local_i)
 
     if best_node == -1:
-        return path #[]
+        return path
     # Start traceback from best scoring node, use locally best edge to trace path back
-    # path = deque([])
 
     u = best_node
     while True:
         path.push_front(u)
-        # path.appendleft(u)
-        # path2.push_back(u)
         if pred_trace2.has_key(u) == 0:
             break
         u = pred_trace2.get(u)
@@ -397,26 +431,16 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
 
 cpdef dict base_assemble(rd, int position, int max_distance):
 
-    # t0 = time.time()
-    # Note supplementary are included in assembly; helps link regions
-    # Get reads of interest
-
     cdef str seq = ""
     cdef int ref_start = -1
     cdef int ref_end = -1
     cdef int longest_left_sc, longest_right_sc
     cdef int begin = 0
 
-    # G = nk.Graph(weighted=False, directed=True)
-
-    # cdef Py_DiGraph_t G = map_set_utils.Py_DiGraph()
     cdef DiGraph G = DiGraph()
     node_dict_r = {}
 
     cdef TwoWayMap ndict_r2
-
-    # cdef Py_Int2IntVecMap node_dict2 = Py_Int2IntVecMap()
-    # cdef Py_IntVec2IntMap node_dict2_r = Py_IntVec2IntMap()
 
     cdef cpp_vector[int] node_weights
 
@@ -459,12 +483,11 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             continue
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
-        # echo(len(r.seq))
+
         add_to_graph(G, r, node_weights, node_dict_r, ndict_r2, position, max_distance)
 
-
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
-    # echo("sorted", nodes_to_visit2.size(), nodes_to_visit2[0])
+
     if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
         idx = nodes_to_visit2[1]
         idx2 = nodes_to_visit2[2]
@@ -475,19 +498,13 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         quit()
 
     cdef cpp_deque[int] path2
-    # echo("here2")
-    # echo(nodes_to_visit2.size())
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
-    # echo("here3")
+
     if path2.size() < 50:
         return {}
 
     cdef int front = path2.front()
     cdef int back = path2.back()
-
-    # node_dict = list(node_dict_r.keys())
-    # longest_left_sc = node_dict[front][2]
-    # longest_right_sc = node_dict[back][2]
 
     # vec has the form base, current_pos, offset, base-type (left-clip/right-clip/insertion)
     cdef cpp_vector[int] vec = [0, 0, 0, 0]
@@ -503,7 +520,6 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 
     cdef tuple t
     cdef int item
-    # cdef cpp_vector[int] v
 
     cdef str sequence = ""
     cdef int m, u, w
@@ -514,17 +530,6 @@ cpdef dict base_assemble(rd, int position, int max_distance):
     cdef cpp_vector[float] path_qual = [1] * path2.size()
 
     for item in path2:
-        # echo(item)
-        # t = node_dict[item]
-        # # echo(t)
-        # if t[3] != 4:
-        #     seq += t[0].lower()
-        # else:
-        #     if ref_start == -1:
-        #         ref_start = t[1]
-        #     elif t[1] > ref_end:
-        #         ref_end = t[1]
-        #     seq += t[0]
 
         ndict_r2.idx_2_vec(item, vec)
 
@@ -586,21 +591,8 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             right_clip_weight += node_weights[i]
         right_clip_weight = right_clip_weight / longest_right_sc
 
-    # echo(list(zip(list(path_qual), seq)))
-    # echo(seq)
-    # echo(left_clip_weight)
-    # echo(right_clip_weight)
-
     if start_seq != 0 or end_seq != len(seq):
         seq = seq[start_seq:end_seq]
-
-    # echo(longest_left_sc, longest_right_sc)
-    # echo(sequence)
-    # quit()
-    # assert all([i == j for i, j in zip(seq, sequence)])
-
-    # echo(seq == "tagtgatccacccacctcggcctcccaaaatgctgtgattacagacgtgagccaccacgctcagcccctttgcctagattctaacttctggcctggatttcagcgtcaagtaggagctgtactaaaaatttatgtaaGTTTTTGTCCACATCCTTGGCCCTGTGCTCTCCACTTCAGCTGGATGTTCCGTTTCCTTCACGTGCAAATTTCAGGCTTGCAGAACATGAGGGCATGGGTTCCAAGGATGCTTAAAGCCTTGCCAAACCTTAGGAACTCATTTTGGAGGCCAAATCCCTCATTACATAAGATATATTAATACACATCCACATCCCACTTGCAATGCAATTTTGTATAACTCTCTAAGAATTTAGACTTGAGTTGCATTTGACCTGTGGATACAACTAAGTCCTCCTGTGCCACTGACCTTCTCCTGCGCCTGTACAGGTGTGACCCATACAACTTACAAACAGTGCTATGTTTTGGGCACTCTTATTATCCAGATCATTTTGTAGTTTTTTGACTTCTATTGCATATCTATCTATTTCTCTTAGGAGGTcttgattccaagaagtgatgtcctggcttttaggagaaagaactttgttgggagcatggcagacactctcctctcactcccagggaccctcacccttgtacgatca")
-    # quit()
 
     return {"contig": seq,
             "left_clips": longest_left_sc,
@@ -629,13 +621,11 @@ cpdef float compute_rep(seq):
 
         for i in range(len(seq) - k):
             a = seq[i:i+k]
-
             if a in last_visited:
                 diff = i - last_visited[a]
                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
             else:
                 amount = 0
-
             if i > k:
                 tot.append(amount)
 
@@ -679,7 +669,6 @@ cdef tuple get_rep(contig_seq):
     if clip_seen != 0:
         clip_rep = clip_rep / clip_seen
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
-
 
 
 cpdef list contig_info(events):
@@ -741,7 +730,7 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
         return 0
     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
     alignment = query(str(b))
-    # echo(alignment)
+
     qs, qe = alignment.query_begin, alignment.query_end
     als, ale = alignment.target_begin, alignment.target_end_optimal
 
@@ -755,10 +744,17 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
     if expected < 2 * ol_length:  # Match score * Minimum clip length
         return 0
 
-    if not rel_diffs:
-        diff = expected - aln_s + total_overhangs  # old diff thresh = 8
-    else:
-        diff = (expected - aln_s - total_overhangs) / expected
+    rel_diff = (aln_s - total_overhangs) / expected
+    diff = expected - aln_s + total_overhangs
+
+    if aln_s > 100 and total_overhangs < qe - qs:
+        if rel_diff > 0.7:
+            if return_int:
+                return 1
+            return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
+                    alignment.aligned_target_sequence)
+        return 0
+
     if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits
         return 0
     else:
@@ -783,48 +779,55 @@ def get_upper_start_end(a):
 
 def get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end, b_rev=False):
     if insertion < 0:
-        res["mark"] = "microh"
+        res["mh"] = sa
+        res["mh_len"] = len(sa)
+        # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
+        # res["mark_seq"] = sa
+        # res["mark_ed"] = edit_dis
+        # res["mark"] = "microh"
     else:
-        res["mark"] = "ins"
-    edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
-    res["mark_seq"] = sa
-    res["mark_ed"] = edit_dis
-
-    if insertion > 0:
-        # Look for templated insertion
-        a_align = a[a_start:a_end].replace("-", "")  # Remove any deletion markers
-        b_align = b[b_start:b_end].replace("-", "")
-
-        a_query = StripedSmithWaterman(sa)
-        a_alignment = a_query(a_align)
-        b_alignment = a_query(b_align)
-
-        if a_alignment.optimal_alignment_score >= b_alignment.optimal_alignment_score:
-            cont = "A"
-            aln = a_alignment
-        else:
-            cont = "B"
-            aln = b_alignment
-
-        aqs = aln.aligned_query_sequence
-        try:
-            tqs = aln.aligned_target_sequence
-        except IndexError:
-            tqs = None  # No alignment
-
-        if tqs:
-            edit_dis = len([1 for i, j in zip(aqs, tqs) if i.upper() != j])
-            if b_rev and cont == "B":
-
-                v = "contB_rev:pos={}:ed={}:align={}".format(aln.target_begin, edit_dis, aqs)
-            else:
-                v = "cont{}:pos={}:ed={}:align={}".format(cont, aln.target_begin, edit_dis, aqs)
-            l = aln.target_end_optimal - aln.target_begin + 1
-
-            res["templated_ins_info"] = v
-            res["templated_ins_len"] = l
-
+        res["ins"] = sa
+        res["ins_len"] = len(sa)
+        # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
+        # res["mark_seq"] = sa
+        # res["mark_ed"] = edit_dis
     return res
+
+    # if insertion > 0:
+    #     # Look for templated insertion
+    #     a_align = a[a_start:a_end].replace("-", "")  # Remove any deletion markers
+    #     b_align = b[b_start:b_end].replace("-", "")
+    #
+    #     a_query = StripedSmithWaterman(sa)
+    #     a_alignment = a_query(a_align)
+    #     b_alignment = a_query(b_align)
+    #
+    #     if a_alignment.optimal_alignment_score >= b_alignment.optimal_alignment_score:
+    #         cont = "A"
+    #         aln = a_alignment
+    #     else:
+    #         cont = "B"
+    #         aln = b_alignment
+    #
+    #     aqs = aln.aligned_query_sequence
+    #     try:
+    #         tqs = aln.aligned_target_sequence
+    #     except IndexError:
+    #         tqs = None  # No alignment
+    #
+    #     if tqs:
+    #         edit_dis = len([1 for i, j in zip(aqs, tqs) if i.upper() != j])
+    #         if b_rev and cont == "B":
+    #
+    #             v = "contB_rev:pos={}:ed={}:align={}".format(aln.target_begin, edit_dis, aqs)
+    #         else:
+    #             v = "cont{}:pos={}:ed={}:align={}".format(cont, aln.target_begin, edit_dis, aqs)
+    #         l = aln.target_end_optimal - aln.target_begin + 1
+    #
+    #         res["templated_ins_info"] = v
+    #         res["templated_ins_len"] = l
+    #
+    # return res
 
 
 def get_microh_or_ins(aln_idx):
@@ -836,7 +839,9 @@ def get_microh_or_ins(aln_idx):
     b_start, b_end = get_upper_start_end(b)
 
     # Check for overlap of gap
-    res = {"mark": "blunt", "mark_seq": "", "mark_ed": "", "templated_ins_info": "", "templated_ins_len": ""}
+    #res = {"mark": "blunt", "mark_seq": "", "mark_ed": "", "templated_ins_info": "", "templated_ins_len": "", "linked": 1}
+
+    res = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1} #"templated_ins_info": "", "templated_ins_len": "", "linked": 1}
     if a_start >= b_start:
         insertion = a_start - b_end
         if insertion != 0:
@@ -856,24 +861,15 @@ def get_microh_or_ins(aln_idx):
     return res
 
 
-def link_pair_of_assemblies(a, b, clip_length):
+def link_pair_of_assemblies(a, b, svtype):
 
-    # Safest way is to try forward and reverse complement
-    m = check_contig_match(a["contig"], b["contig"], supress_seq=False)
+    if svtype == "INV":
+        b = reverse_complement(b, len(b))
 
+    m = check_contig_match(a, b, supress_seq=False)
     if m != 0:
-        a["linked"] = 1
         h = get_microh_or_ins(m)
-
     else:
+        h = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1}
 
-        m = check_contig_match(a["contig"], b["contig_rev"], supress_seq=False)
-        if m != 0:
-            a["linked"] = 1
-            h = get_microh_or_ins(m)
-        else:
-            a["linked"] = 0
-            h = {"mark": "None", "mark_seq": "", "mark_ed": "", "templated_ins_info": "",
-                 "templated_ins_len": ""}
-    a.update(h)
-    return a, b
+    return h

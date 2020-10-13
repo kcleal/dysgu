@@ -29,18 +29,18 @@
             "dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
-            "htslib-1.10.2/htslib",
-            "htslib-1.10.2/cram",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/cram",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"
         ],
         "language": "c++",
         "libraries": [
-            "htslib-1.10.2/hts"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/hts"
         ],
         "library_dirs": [
-            "htslib-1.10.2",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
@@ -48,7 +48,7 @@
         ],
         "name": "dysgu.post_call_metrics",
         "runtime_library_dirs": [
-            "htslib-1.10.2"
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib"
         ],
         "sources": [
             "dysgu/post_call_metrics.pyx"
@@ -2764,6 +2764,7 @@ static const char __pyx_k_0_0[] = "0/0";
 static const char __pyx_k_0_1[] = "0/1";
 static const char __pyx_k_1_1[] = "1/1";
 static const char __pyx_k_BCC[] = "BCC";
+static const char __pyx_k_BND[] = "BND";
 static const char __pyx_k_COV[] = "COV";
 static const char __pyx_k_DEL[] = "DEL";
 static const char __pyx_k_DUP[] = "DUP";
@@ -2779,12 +2780,14 @@ static const char __pyx_k_NXA[] = "NXA";
 static const char __pyx_k_RED[] = "RED";
 static const char __pyx_k_REP[] = "REP";
 static const char __pyx_k_RMS[] = "RMS";
+static const char __pyx_k_SCW[] = "SCW";
 static const char __pyx_k_SQC[] = "SQC";
 static const char __pyx_k_STL[] = "STL";
 static const char __pyx_k_TRA[] = "TRA";
 static const char __pyx_k_add[] = "add";
 static const char __pyx_k_alt[] = "alt";
 static const char __pyx_k_bam[] = "bam";
+static const char __pyx_k_bnd[] = "bnd";
 static const char __pyx_k_clf[] = "clf";
 static const char __pyx_k_doc[] = "__doc__";
 static const char __pyx_k_end[] = "end";
@@ -2800,6 +2803,7 @@ static const char __pyx_k_pos[] = "pos";
 static const char __pyx_k_pth[] = "pth";
 static const char __pyx_k_ref[] = "ref";
 static const char __pyx_k_rep[] = "rep";
+static const char __pyx_k_scw[] = "scw";
 static const char __pyx_k_sep[] = "sep";
 static const char __pyx_k_sqc[] = "sqc";
 static const char __pyx_k_svt[] = "svt";
@@ -3067,6 +3071,7 @@ static PyObject *__pyx_n_s_ASCII;
 static PyObject *__pyx_kp_u_Adding_GT;
 static PyObject *__pyx_n_u_BCC;
 static PyObject *__pyx_n_u_BE;
+static PyObject *__pyx_n_u_BND;
 static PyObject *__pyx_n_s_BadClipCounter;
 static PyObject *__pyx_n_s_BadClipCounter___init;
 static PyObject *__pyx_n_s_BadClipCounter_add;
@@ -3137,6 +3142,7 @@ static PyObject *__pyx_n_u_RMS;
 static PyObject *__pyx_n_u_RPOLY;
 static PyObject *__pyx_n_s_RuntimeError;
 static PyObject *__pyx_n_u_SC;
+static PyObject *__pyx_n_u_SCW;
 static PyObject *__pyx_n_u_SQ;
 static PyObject *__pyx_n_u_SQC;
 static PyObject *__pyx_n_u_SR;
@@ -3172,6 +3178,7 @@ static PyObject *__pyx_n_s_base;
 static PyObject *__pyx_n_s_bayes_gt;
 static PyObject *__pyx_n_s_best;
 static PyObject *__pyx_n_u_block_edge;
+static PyObject *__pyx_n_u_bnd;
 static PyObject *__pyx_n_s_c;
 static PyObject *__pyx_n_u_c;
 static PyObject *__pyx_n_s_c1;
@@ -3367,6 +3374,7 @@ static PyObject *__pyx_n_s_reverse;
 static PyObject *__pyx_n_s_round;
 static PyObject *__pyx_n_s_sample_qual;
 static PyObject *__pyx_n_u_sc;
+static PyObject *__pyx_n_u_scw;
 static PyObject *__pyx_n_s_searchsorted;
 static PyObject *__pyx_n_s_second_best;
 static PyObject *__pyx_n_s_self;
@@ -10276,11 +10284,11 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8apply_model(CYTHON_UNUSED 
   /* "dysgu/post_call_metrics.pyx":328
  * 
  *     c = dict(zip(
- *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL'],             # <<<<<<<<<<<<<<
- *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen']
+ *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW'],             # <<<<<<<<<<<<<<
+ *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw']
  *                  ))
  */
-  __pyx_t_2 = PyList_New(37); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 328, __pyx_L1_error)
+  __pyx_t_2 = PyList_New(39); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 328, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_INCREF(__pyx_n_u_SQC);
   __Pyx_GIVEREF(__pyx_n_u_SQC);
@@ -10393,15 +10401,21 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8apply_model(CYTHON_UNUSED 
   __Pyx_INCREF(__pyx_n_u_STL);
   __Pyx_GIVEREF(__pyx_n_u_STL);
   PyList_SET_ITEM(__pyx_t_2, 36, __pyx_n_u_STL);
+  __Pyx_INCREF(__pyx_n_u_BND);
+  __Pyx_GIVEREF(__pyx_n_u_BND);
+  PyList_SET_ITEM(__pyx_t_2, 37, __pyx_n_u_BND);
+  __Pyx_INCREF(__pyx_n_u_SCW);
+  __Pyx_GIVEREF(__pyx_n_u_SCW);
+  PyList_SET_ITEM(__pyx_t_2, 38, __pyx_n_u_SCW);
 
   /* "dysgu/post_call_metrics.pyx":329
  *     c = dict(zip(
- *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL'],
- *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen']             # <<<<<<<<<<<<<<
+ *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW'],
+ *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw']             # <<<<<<<<<<<<<<
  *                  ))
- *     echo(c)
+ * 
  */
-  __pyx_t_3 = PyList_New(37); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 329, __pyx_L1_error)
+  __pyx_t_3 = PyList_New(39); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 329, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_INCREF(__pyx_n_u_sqc);
   __Pyx_GIVEREF(__pyx_n_u_sqc);
@@ -10514,13 +10528,19 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8apply_model(CYTHON_UNUSED 
   __Pyx_INCREF(__pyx_n_u_n_small_tlen);
   __Pyx_GIVEREF(__pyx_n_u_n_small_tlen);
   PyList_SET_ITEM(__pyx_t_3, 36, __pyx_n_u_n_small_tlen);
+  __Pyx_INCREF(__pyx_n_u_bnd);
+  __Pyx_GIVEREF(__pyx_n_u_bnd);
+  PyList_SET_ITEM(__pyx_t_3, 37, __pyx_n_u_bnd);
+  __Pyx_INCREF(__pyx_n_u_scw);
+  __Pyx_GIVEREF(__pyx_n_u_scw);
+  PyList_SET_ITEM(__pyx_t_3, 38, __pyx_n_u_scw);
 
   /* "dysgu/post_call_metrics.pyx":327
  *     clf = models[model_key]
  * 
  *     c = dict(zip(             # <<<<<<<<<<<<<<
- *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL'],
- *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen']
+ *         ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW'],
+ *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw']
  */
   __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 327, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -10539,35 +10559,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8apply_model(CYTHON_UNUSED 
   __pyx_v_c = __pyx_t_1;
   __pyx_t_1 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":331
- *         ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen']
- *                  ))
- *     echo(c)             # <<<<<<<<<<<<<<
- *     X = df[[c[i] for i in cols]]
- *     X.columns = cols
- */
-  __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_echo); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 331, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  __pyx_t_2 = NULL;
-  if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
-    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_3);
-    if (likely(__pyx_t_2)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
-      __Pyx_INCREF(__pyx_t_2);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_3, function);
-    }
-  }
-  __pyx_t_1 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_2, __pyx_v_c) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_v_c);
-  __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 331, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
   /* "dysgu/post_call_metrics.pyx":332
  *                  ))
- *     echo(c)
+ * 
  *     X = df[[c[i] for i in cols]]             # <<<<<<<<<<<<<<
  *     X.columns = cols
  *     keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2}
@@ -10636,7 +10630,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8apply_model(CYTHON_UNUSED 
   __pyx_t_3 = 0;
 
   /* "dysgu/post_call_metrics.pyx":333
- *     echo(c)
+ * 
  *     X = df[[c[i] for i in cols]]
  *     X.columns = cols             # <<<<<<<<<<<<<<
  *     keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2}
@@ -27342,6 +27336,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_Adding_GT, __pyx_k_Adding_GT, sizeof(__pyx_k_Adding_GT), 0, 1, 0, 0},
   {&__pyx_n_u_BCC, __pyx_k_BCC, sizeof(__pyx_k_BCC), 0, 1, 0, 1},
   {&__pyx_n_u_BE, __pyx_k_BE, sizeof(__pyx_k_BE), 0, 1, 0, 1},
+  {&__pyx_n_u_BND, __pyx_k_BND, sizeof(__pyx_k_BND), 0, 1, 0, 1},
   {&__pyx_n_s_BadClipCounter, __pyx_k_BadClipCounter, sizeof(__pyx_k_BadClipCounter), 0, 0, 1, 1},
   {&__pyx_n_s_BadClipCounter___init, __pyx_k_BadClipCounter___init, sizeof(__pyx_k_BadClipCounter___init), 0, 0, 1, 1},
   {&__pyx_n_s_BadClipCounter_add, __pyx_k_BadClipCounter_add, sizeof(__pyx_k_BadClipCounter_add), 0, 0, 1, 1},
@@ -27412,6 +27407,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_RPOLY, __pyx_k_RPOLY, sizeof(__pyx_k_RPOLY), 0, 1, 0, 1},
   {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
   {&__pyx_n_u_SC, __pyx_k_SC, sizeof(__pyx_k_SC), 0, 1, 0, 1},
+  {&__pyx_n_u_SCW, __pyx_k_SCW, sizeof(__pyx_k_SCW), 0, 1, 0, 1},
   {&__pyx_n_u_SQ, __pyx_k_SQ, sizeof(__pyx_k_SQ), 0, 1, 0, 1},
   {&__pyx_n_u_SQC, __pyx_k_SQC, sizeof(__pyx_k_SQC), 0, 1, 0, 1},
   {&__pyx_n_u_SR, __pyx_k_SR, sizeof(__pyx_k_SR), 0, 1, 0, 1},
@@ -27447,6 +27443,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_bayes_gt, __pyx_k_bayes_gt, sizeof(__pyx_k_bayes_gt), 0, 0, 1, 1},
   {&__pyx_n_s_best, __pyx_k_best, sizeof(__pyx_k_best), 0, 0, 1, 1},
   {&__pyx_n_u_block_edge, __pyx_k_block_edge, sizeof(__pyx_k_block_edge), 0, 1, 0, 1},
+  {&__pyx_n_u_bnd, __pyx_k_bnd, sizeof(__pyx_k_bnd), 0, 1, 0, 1},
   {&__pyx_n_s_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 0, 1, 1},
   {&__pyx_n_u_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 1, 0, 1},
   {&__pyx_n_s_c1, __pyx_k_c1, sizeof(__pyx_k_c1), 0, 0, 1, 1},
@@ -27642,6 +27639,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_round, __pyx_k_round, sizeof(__pyx_k_round), 0, 0, 1, 1},
   {&__pyx_n_s_sample_qual, __pyx_k_sample_qual, sizeof(__pyx_k_sample_qual), 0, 0, 1, 1},
   {&__pyx_n_u_sc, __pyx_k_sc, sizeof(__pyx_k_sc), 0, 1, 0, 1},
+  {&__pyx_n_u_scw, __pyx_k_scw, sizeof(__pyx_k_scw), 0, 1, 0, 1},
   {&__pyx_n_s_searchsorted, __pyx_k_searchsorted, sizeof(__pyx_k_searchsorted), 0, 0, 1, 1},
   {&__pyx_n_s_second_best, __pyx_k_second_best, sizeof(__pyx_k_second_best), 0, 0, 1, 1},
   {&__pyx_n_s_self, __pyx_k_self, sizeof(__pyx_k_self), 0, 0, 1, 1},

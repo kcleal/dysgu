@@ -42,6 +42,9 @@ def merge_df(df, n_samples, tree=None, merge_within_sample=False):
     df["event_id"] = df.index
     df["contig"] = df["contigA"]
     df["contig2"] = df["contigB"]
+    # Assume:
+    df["preciseA"] = [1] * len(df)
+    df["preciseB"] = [1] * len(df)
     potential = df.to_dict("records")
 
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
@@ -154,7 +157,8 @@ def vcf_to_df(path):
     parsed["sample"] = [sample] * len(df)
     info = []
     for k in list(df[7]):
-        info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
+        if k:
+            info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
 
     n_fields = None
     for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
@@ -176,7 +180,8 @@ def vcf_to_df(path):
                "CT": ("join_type", str),
                "CIPOS95": ("cipos95A", int),
                "CIEND95": ("cipos95B", int),
-                "NMP": ("NMpri", float),
+               "NMP": ("NMpri", float),
+               "NMB": ("NMbase", float),
                "NMS": ("NMsupp", float),
                "MAPQP": ("MAPQpri", float),
                "MAPQS": ("MAPQsupp", float),
@@ -187,14 +192,38 @@ def vcf_to_df(path):
                "PE": ("pe", int),
                "SR": ("supp", int),
                "SC": ("sc", int),
+               "BND": ("bnd", int),
+               "RT": ("type", str),
                "BE": ("block_edge", int),
                "COV": ("raw_reads_10kb", float),
+               "MCOV": ("mcov", float),
                "LNK": ("linked", int),
                "CONTIGA": ("contigA", str),
-               "CONTIGB": ("contigB", str), "GC": ("gc", float), "NEIGH": ("neigh", int), "REP": ("rep", float),
-               "REPSC": ("rep_sc", float), "RB": ("ref_bases", int),
-               "SVLEN": ("svlen", int), "PS": ("plus", int), "MS": ("minus", int),
-               "PROB": ("prob", float)
+               "CONTIGB": ("contigB", str), "GC": ("gc", float),
+               "NEIGH": ("neigh", int),
+               "NEIGH10": ("neigh10kb", int),
+               "REP": ("rep", float),
+               "REPSC": ("rep_sc", float), "LPREC": ("svlen_precise", int),
+               "NEXP": ("n_expansion", int),
+               "STRIDE": ("stride", int),
+               "EXPSEQ": ("exp_seq", str),
+               "RPOLY": ("ref_poly_bases", int),
+               "GT": ("GT", str),
+               "GQ": ("GQ", float),
+               "RB": ("ref_bases", int),
+               "SVLEN": ("svlen", int),
+               "PS": ("plus", int),
+               "MS": ("minus", int),
+               "PROB": ("prob", float),
+               "NG": ("n_gaps", float),
+               "NSA": ("n_sa", float),
+               "NXA": ("n_xa", float),
+               "NMU": ("n_unmnapped_mates", int),
+               "NDC": ("n_double_clips", int),
+               "RMS": ("remap_score", int),
+               "RED": ("remap_ed", int),
+               "BCC": ("bad_clip_count", int),
+               "STL": ("n_small_tlen", int),
                }
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
 
@@ -218,6 +247,7 @@ def vcf_to_df(path):
 
 
 def view_file(args):
+
     t0 = time.time()
     if args["separate"] == "True":
         if args["out_format"] == "vcf":
@@ -226,12 +256,14 @@ def view_file(args):
         if not all(os.path.splitext(i)[1] == ".csv" for i in args["input_files"]):
             raise ValueError("All input files must have .csv extension")
 
+    args["metrics"] = "False"  # only option supported so far
+    args["contigs"] = "False"
     seen_names = sortedcontainers.SortedSet([])
     name_c = defaultdict(int)
     dfs = []
 
     header = None
-    n_fields = 19
+    n_fields = 17
     for item in args["input_files"]:
 
         if item == "-":
@@ -248,7 +280,7 @@ def view_file(args):
         else:
             name, ext = os.path.splitext(item)
             if ext != ".csv":  # assume vcf
-                df, header, n_fields = vcf_to_df(item)  # header here, assume all input has same number of fields
+                df, header, _ = vcf_to_df(item)  # header here, assume all input has same number of fields
             else:
                 df = pd.read_csv(item, index_col=None)
             name = list(set(df["sample"]))
@@ -283,7 +315,6 @@ def view_file(args):
             df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
             df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
 
-
         if args["merge_within"] == "True":
             l_before = len(df)
             df = merge_df(df, 1, {}, merge_within_sample=True)
@@ -300,13 +331,13 @@ def view_file(args):
     # df["old_indexes"] = indexes
     if args["merge_across"] == "True":
         if len(seen_names) > 1:
-            df = merge_df(df, len(seen_names), {}) #seen_names)
+            df = merge_df(df, len(seen_names), {})
 
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
     outfile = open_outfile(args)
 
     if args["out_format"] == "vcf":
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, n_fields, header=header)
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, n_fields, header=header, extended_tags=False)
         click.echo("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count), err=True)
     else:
         to_csv(df, args, seen_names, outfile)
