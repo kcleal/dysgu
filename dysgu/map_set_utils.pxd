@@ -13,7 +13,7 @@ import cython
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 
 
-from libc.stdint cimport uint32_t, uint8_t, uint64_t
+from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t
 
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
@@ -69,6 +69,24 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         int size()
         void clear()
         bint empty()
+
+
+# cdef extern from "find_reads.h" nogil:
+#     cdef cppclass CoverageTrack:
+#         CoverageTrack() nogil
+#
+#         void add(uint16_t chrom, uint16_t index_start, uint16_t index_end) nogil
+#         void set_cov_array(int chrom_length) nogil
+#         void write_track(char* out_name) nogil
+#
+#
+# cdef class Py_CoverageTrack:
+#     """DiGraph, no weight"""
+#     cdef CoverageTrack *thisptr
+#
+#     cdef void add(self, uint16_t chrom, uint16_t index_start, uint16_t index_end) nogil
+#     cdef void set_cov_array(self, int chrom_length) nogil
+#     cdef void write_track(self, char* out_name) nogil
 
 
 cdef extern from "wrap_map_set2.h" nogil:

@@ -35,7 +35,7 @@ cdef class AlignmentItem:
     """Data holder for classifying alignments into SV types"""
     cdef public int chrA, chrB, priA, priB, rA, rB, posA, endA, posB, endB, strandA, strandB, left_clipA, right_clipA,\
         left_clipB, right_clipB, breakA_precise, breakB_precise, breakA, breakB, a_qstart, a_qend, b_qstart, b_qend,\
-        query_gap, read_overlaps_mate, size_inferred
+        query_gap, read_overlaps_mate, size_inferred, query_overlap, inferred_sv_len
     cdef public str svtype, join_type
     cdef public object read_a, read_b
     def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,
@@ -73,7 +73,8 @@ cdef class AlignmentItem:
         self.breakB = -1
         self.svtype = ""
         self.join_type = ""
-        self.query_gap = -1  # used to infer insertions in split reads
+        self.query_gap = 0
+        self.inferred_sv_len = -1
         self.size_inferred = 0  # set to 1 if insertion size was inferred
 
 
@@ -101,17 +102,6 @@ cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
     seen = set([])
 
     r["bnd"] = len(generic_ins)
-    # sc = 0
-    # for vitem in generic_ins:
-    #     a = vitem.read_a
-    #     ct0 = a.cigartuples[0][0]
-    #     if ct0 == 4 or ct0 == 5:
-    #         sc += 1
-    #         continue
-    #     ct0 = a.cigartuples[-1][0]
-    #     if ct0 == 4 or ct0 == 5:
-    #         sc += 1
-    # r["sc"] = sc
 
     cdef int flag, pe_support, index
     cdef float a_bases, large_gaps, n_small_gaps
@@ -281,17 +271,6 @@ cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
     seen = set([])
 
     r["bnd"] = len(generic_ins)
-    # sc = 0
-    # for vitem in generic_ins:
-    #     a = vitem.read_a
-    #     ct0 = a.cigartuples[0][0]
-    #     if ct0 == 4 or ct0 == 5:
-    #         sc += 1
-    #         continue
-    #     ct0 = a.cigartuples[-1][0]
-    #     if ct0 == 4 or ct0 == 5:
-    #         sc += 1
-    # r["sc"] = sc
 
     cdef int flag, pe_support, index
     cdef float a_bases, large_gaps, n_small_gaps
@@ -433,10 +412,8 @@ cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
 
 
 cdef dict count_attributes(reads1, reads2, spanning, int extended_tags, float insert_ppf, generic_ins):
-
     if extended_tags:
         return extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins)
-
     else:
         return normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins)
 
@@ -529,8 +506,7 @@ cdef guess_informative_pair(aligns):
 
         a_pos = a_cigar_info[6]  # Position may have been inferred from SA tag, use this if available
         b_pos = b_cigar_info[6]
-        # echo(a_pos, b_pos, a_cigar_info, b_cigar_info)
-        if a_pos == b_pos: # and a_cigar_info[5] == -1 and b_cigar_info[5] == -1:
+        if a_pos == b_pos:
             # make sure different breaks are mapped
             if (a.cigartuples[0][0] == 4 and b.cigartuples[0][0] == 4) or (a.cigartuples[-1][0] == 4 and b.cigartuples[-1][0] == 4):
                 return None
@@ -678,7 +654,8 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
         rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
     else:  # single read mode
         rand_insert_pos = 100
-    v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
+    # v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
+    v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
 
     return v_item
 
@@ -784,7 +761,6 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     as1 = None
     as2 = None
     ref_bases = 0
-
     if to_assemble or len(spanning_alignments) > 0:
         if info["preciseA"]:
             as1 = assembler.base_assemble(u_reads, info["posA"], 500)
@@ -792,18 +768,16 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
         if info["preciseB"]:
             as2 = assembler.base_assemble(v_reads, info["posB"], 500)
             ref_bases += assign_contig_to_break(as2, info, "B", 0)
-
     info["linked"] = 0
     info["block_edge"] = 0
     info["ref_bases"] = ref_bases
     info["svlen_precise"] = svlen_precise  # if 0 then soft-clip will be remapped
-
     if info["svlen_precise"] == 0:
         corr_score = soft_clip_qual_corr(u_reads + v_reads)
         info["sqc"] = corr_score
     else:
         info["sqc"] = -1
-    # echo("info", info)
+
     return info
 
 
@@ -853,12 +827,9 @@ cdef partition_single(informative, info, insert_size, insert_stdev, insert_ppf, 
             if info:
                 sub_cluster_calls.append(info)
     else:
-        # if len(generic_insertions) > 2*len(informative):
-        #     informative += generic_insertions
-        # echo("n used for calling", len(informative), len(generic_insertions))
         info = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 1, generic_insertions)
-        # echo(info)
+
         if info:
             sub_cluster_calls.append(info)
 
@@ -873,7 +844,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
     # The group may need to be split into multiple calls using the partition_single function
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for _, i in rds]))
-    # echo("n reads", len(rds))
+
     if n_templates == 1:
         # Filter uninteresting reads
         if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
@@ -931,7 +902,6 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
                 if gi is not None:
                     generic_insertions.append(gi)
 
-    # echo("len informative/generic ins", len(informative), len(generic_insertions))
     info = {}
     cdef int min_found_support = 0
     cdef str svtype, jointype
@@ -954,7 +924,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab,
+                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab, "query_gap": 0, "query_overlap": 0
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
@@ -1227,7 +1197,10 @@ cdef void two_primary(AlignmentItem v):
 
 cdef void same_read(AlignmentItem v):
 
-    cdef int query_gap, ref_gap
+    cdef int query_gap = 0
+    cdef int ref_gap = 0
+    cdef int query_overlap = 0
+    cdef int inferred_sv_len = -1
 
     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
 
@@ -1253,24 +1226,21 @@ cdef void same_read(AlignmentItem v):
                     v.breakB = v.endB
 
                 v.svtype = "INS"
-                # Check if gap on query is bigger than gap on reference; call insertion if it is
+                # Check if gap on query is bigger than gap on reference
                 # query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
                 ref_gap = abs(v.breakB - v.breakA)
-                # if ref_gap > query_gap:
-                #     v.query_gap = ref_gap
-                # else:
-                #     v.query_gap = query_gap
 
                 if v.a_qstart > v.b_qstart:  # B is first on query seq
                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
                 else:
                     align_overlap = v.a_qend - v.b_qstart
 
-                query_gap = ref_gap - align_overlap
-                v.query_gap = query_gap
+                v.inferred_sv_len = ref_gap - align_overlap
+                if align_overlap < 0:
+                    v.query_gap = align_overlap
+                else:
+                    v.query_overlap = align_overlap
                 v.join_type = "5to3"
-                # echo(v.query_gap, ref_gap, align_overlap, v.b_qstart, v.b_qend, v.a_qstart, v.a_qend)
-
 
             elif not v.left_clipA and not v.right_clipB:
                 v.breakA = v.endA
@@ -1285,17 +1255,25 @@ cdef void same_read(AlignmentItem v):
                 ref_gap = abs(v.breakB - v.breakA)
                 if query_gap < 0:
                     ref_gap += abs(query_gap)
+                    v.query_overlap = abs(query_gap)
+                    v.query_gap = 0
+
+                else:
+                    v.query_overlap = 0
+                    v.query_gap = query_gap
+
                 if ref_gap < query_gap:
                     v.svtype = "INS"
                     v.join_type = "3to5"
-                    v.query_gap = query_gap
+                    v.inferred_sv_len = query_gap
+
                 elif v.read_overlaps_mate:
                     v.svtype = "DUP"
                     v.join_type = "5to3"
                 else:
                     v.svtype = "DEL"
                     v.join_type = "3to5"
-                    v.query_gap = ref_gap
+                    v.inferred_sv_len = ref_gap
 
             elif not v.right_clipA and not v.left_clipB:
                 v.breakA = v.posA
@@ -1429,30 +1407,20 @@ cdef void same_read(AlignmentItem v):
                     v.breakB = v.endB
 
                 v.svtype = "INS"
-                # Check if gap on query is bigger than gap on reference; call insertion if it is
+                # Check if gap on query is bigger than gap on reference
                 ref_gap = abs(v.breakA - v.breakB)
-                # if ref_gap > query_gap:
-                #     v.query_gap = ref_gap
-                # else:
-                #     v.query_gap = query_gap
-
-                # v.query_gap = v.breakB - v.breakA + v.a_qstart - v.b_qend
-                # echo("HII", v.query_gap, v.read_a.qname, v.breakB, v.breakA, v.a_qstart)
-                # quit()
-                # else:
-                #     v.svtype = "DUP"
-
-                # if v.a_qstart > v.b_qstart:  # B is first on query seq
-                #     align_overlap = v.b_qend - v.a_qstart
-                # else:
-                #     align_overlap = v.b_qstart - v.a_qend
 
                 if v.a_qstart > v.b_qstart:  # B is first on query seq
                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
                 else:
                     align_overlap = v.a_qend - v.b_qstart
 
-                v.query_gap = ref_gap - align_overlap
+                v.inferred_sv_len = ref_gap - align_overlap
+                if align_overlap < 0:
+                    v.query_gap = align_overlap
+                else:
+                    v.query_overlap = align_overlap
+
                 v.join_type = "5to3"
 
             elif not v.left_clipB and not v.right_clipA:
@@ -1462,23 +1430,30 @@ cdef void same_read(AlignmentItem v):
                 v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
-                # echo(v.a_qstart, v.a_qend, v.b_qstart, v.b_qend)
                 query_gap = v.b_qend - v.a_qstart  # as B is first
                 ref_gap = abs(v.breakA - v.breakB)
-                # echo(query_gap, ref_gap, v.read_overlaps_mate)
+
                 if query_gap < 0:
                     ref_gap += abs(query_gap)
+                    v.query_overlap = abs(query_gap)
+                    v.query_gap = 0
+
+                else:
+                    v.query_overlap = 0
+                    v.query_gap = query_gap
+
                 if ref_gap < query_gap:
                     v.svtype = "INS"
                     v.join_type = "3to5"
-                    v.query_gap = query_gap
+                    v.inferred_sv_len = query_gap
+
                 elif v.read_overlaps_mate:
                     v.svtype = "DUP"
                     v.join_type = "5to3"
                 else:
                     v.svtype = "DEL"
                     v.join_type = "3to5"
-                    v.query_gap = ref_gap
+                    v.inferred_sv_len = ref_gap
 
             elif not v.right_clipB and not v.left_clipA:
                 v.breakA = v.endA
@@ -1750,6 +1725,21 @@ cdef void translocation(AlignmentItem v):
         v.breakB_precise = 1
     v.join_type = f"{v.strandA}to{v.strandB}"
 
+    cdef int query_gap = 0
+    cdef int query_overlap = 0
+    if v.rA == v.rB:  # same read
+        if v.b_qstart < v.a_qstart:  # B is first on query
+            query_gap = v.a_qstart - v.b_qend
+            # query_gap = v.b_qstart - v.a_qend  # as A is first
+        else:
+            query_gap = v.b_qstart - v.a_qend
+        if query_gap < 0:
+            query_overlap = abs(query_gap)
+            query_gap = 0
+
+    v.query_gap = query_gap
+    v.query_overlap = query_overlap
+
 
 cdef void classify_d(AlignmentItem v):
 
@@ -1892,24 +1882,19 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     if informative[0].chrA == informative[0].chrB:
         if svtype == "INS":  # use inferred query gap to call svlen
             svlen_precise = 0
-            q_gaps = []
-            inferred_q_gaps = []
+            lens = []
+            inferred_lens = []
             for i in informative:
-                if i.query_gap != -1:
+                if i.inferred_sv_len != -1:
                     if i.size_inferred == 1:
-                        inferred_q_gaps.append(i.query_gap)
+                        inferred_lens.append(i.inferred_sv_len)
                     else:
-                        q_gaps.append(i.query_gap)
-                        # if i.query_gap < 0:
-                        #     echo(i.read_a.qname, i.query_gap)
-
-            # echo("q gaps", q_gaps)
-            # echo("inferred gaps", inferred_q_gaps)
-            if len(q_gaps) > 0:
-                svlen = int(np.mean(q_gaps))
+                        lens.append(i.inferred_sv_len)
+            if len(lens) > 0:
+                svlen = int(np.mean(lens))
                 svlen_precise = 1
-            elif len(inferred_q_gaps) > 0:
-                svlen = int(np.mean(inferred_q_gaps))
+            elif len(inferred_lens) > 0:
+                svlen = int(np.mean(inferred_lens))
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
@@ -1917,22 +1902,28 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
 
             svlen = abs(main_B_break - main_A_break)
             if not preciseA or not preciseB:
-                q_gaps = []
+                lens = []
                 for i in informative:
-                    if i.query_gap != -1:
-                        q_gaps.append(i.query_gap)
-                if len(q_gaps) > 0:
-                    svlen = int(np.median(q_gaps))
-
+                    if i.inferred_sv_len != -1:
+                        lens.append(i.inferred_sv_len)
+                if len(lens) > 0:
+                    svlen = int(np.median(i.inferred_sv_len))
         else:
             svlen = abs(main_B_break - main_A_break)
     else:
         svlen = 0
 
+    # q_gaps = int(np.mean([i.query_gap for i in informative]))
+    # if q_gaps != q_gaps:
+    #     q_gaps = 0
+    q_overlaps = int(np.mean([i.query_overlap for i in informative]))
+    if q_overlaps != q_overlaps:
+        q_overlaps = 0
+
     return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
             "preciseA": preciseA, "preciseB": preciseB, "svlen_precise": svlen_precise,
-            "svlen": svlen}
+            "svlen": svlen, "query_overlap": q_overlaps}
 
 
 cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
@@ -2190,7 +2181,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
             if svtype == "INV" or svtype == "TRA":
-                jointype = Counter([i.join_type for i in sub_informative]).most_common(1)[0][1]
+                jointype = Counter([i.join_type for i in sub_informative]).most_common(1)[0][0]
             else:
                 jointype = sub_informative[0].join_type
 
@@ -2278,7 +2269,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "preciseA": True, "preciseB": True, "svlen": svlen,
+                     "preciseA": True, "preciseB": True, "svlen": svlen, "query_overlap": 0
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []

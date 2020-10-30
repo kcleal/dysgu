@@ -426,29 +426,6 @@ class IntSet
 };
 
 
-//class StrSet
-//{
-//    public:
-//
-//        StrSet() {}
-//        ~StrSet() {}
-//
-//        int size() { return set.size(); }
-//
-//        void insert(std::string key) { set.insert(key); }
-//        void erase(std::string key) { set.erase(key); }
-//
-//        int has_key(std::string key) {
-//            if (set.find(key) == set.end()) { return 0; }
-//            else { return 1; }
-//        }
-//
-//    private:
-//        tsl::robin_set<std::string> set;
-//
-//};
-
-
 class TwoWayMap
 {
     public:

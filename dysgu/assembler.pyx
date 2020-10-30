@@ -137,27 +137,16 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
     if approx_position - pos > 500:
         cigar, current_pos, i = trim_cigar(cigar, pos, approx_position)
 
-    #
     for opp, length in cigar:
         with nogil:
-        # if True:
+
             if done:
                 break
-            # if r.qname == "m64004_190803_004451/12323053/ccs":
-            #     echo(opp, length, current_pos, current_pos + length)
+
             if opp == 4:
                 if start:
 
-                    # if c_abs(<int32_t>current_pos - approx_position) > max_distance:
-                    #      i += length
-                    #      continue
-
                     for o in range(length, 0, -1):
-
-                        # Limit contig length to abs(approx_position - max_distance)
-                        # if c_abs(<int32_t>current_pos - <int32_t>o - approx_position) > max_distance:
-                        #     i += 1
-                        #     continue
 
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -171,21 +160,14 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                             if n >= nweight.size():
                                 nweight.push_back(0)
                             ndict_r2.insert_tuple_key(key, n)
-                            # if n == 1192:
-                            #     echo("First seen4", r.qname, basemap[base], current_pos, length, prev_node)
                         nweight[n] += qual
-                        # if prev_node == n:
-                        #     echo("4", prev_node, n, o)
+
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
                         prev_node = n
 
                 else:
                     for o in range(1, length + 1, 1):
-
-                        # if c_abs(<int32_t>current_pos + <int32_t>o - approx_position) > max_distance:
-                        #     done = 1
-                        #     break
 
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
@@ -201,23 +183,16 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                                 nweight.push_back(0)
                             ndict_r2.insert_tuple_key(key, n)
 
-                            # if n == 1192:
-                            #     echo("First seen41", r.qname, basemap[base], current_pos, length, prev_node)
                         nweight[n] += qual
-                        # if prev_node == n:
-                        #     echo("4,1", prev_node, n, o)
                         if prev_node != -1:
                             G.updateEdge(prev_node, n, qual)
                         prev_node = n
 
             elif opp == 1:  # Insertion
-                # if r.qname == "m64004_190803_004451/12323053/ccs":
-                #     echo( c_abs(<int32_t>current_pos - approx_position) > max_distance, length + 1)
                 if c_abs(<int32_t>current_pos - approx_position) > max_distance:
                     i += length
                     if current_pos > approx_position:
                         break  # out of range
-                    #current_pos += 1
                     continue
 
                 for o in range(1, length + 1, 1):
@@ -240,11 +215,10 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
-                # if r.qname == "m64004_190803_004451/12323053/ccs":
-                #     echo(current_pos, current_pos + 1, "done")
+
                 current_pos += 1  # <-- Reference pos increases 1
 
-            elif opp == 2: # or opp == 5:  # Hard clip or deletion
+            elif opp == 2: # deletion
                 current_pos += length + 1
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
@@ -270,7 +244,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
-                    # 4 = matched base
+
                     key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>4)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
@@ -281,18 +255,11 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                             nweight.push_back(0)
                         ndict_r2.insert_tuple_key(key, n)
 
-                        # if n == 1192:
-                        #     echo("First seen", r.qname, basemap[base], current_pos, length, prev_node)
-
                     nweight[n] += qual
 
-                    # if prev_node == n:
-                    #     echo("match", prev_node, n, p, length, current_pos, r.qname, basemap[base])
                     if prev_node != -1:
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
-                    # if r.qname == "m64004_190803_004451/12323053/ccs":
-                    #     echo("finished pos", current_pos)
 
             start = False
 
@@ -673,7 +640,7 @@ cdef tuple get_rep(contig_seq):
 
 cpdef list contig_info(events):
 
-    cdef int i, aligned, seen, aligned_bases
+    cdef int i, aligned, seen, aligned_bases, j
     cdef float gc_count, seq_length
     cdef float sc_rep, aln_rep, sc_rep1, aln_rep1
     cdef str letter
@@ -681,16 +648,38 @@ cpdef list contig_info(events):
         e = events[i]
         gc_count = 0
         seq_length = 0
+        di_nucs = {"AT": 0, "AC": 0, "AG": 0, "AA":0, "GC": 0, "TC": 0, "TG": 0, "TT": 0, "CC": 0, "GG": 0}
         if e["contig"]:
-            seq_length += <float>len(e["contig"])
-            for letter in e["contig"]:
-                if letter == "G" or letter == "C" or letter == "c" or letter == "g":
+            cont = e["contig"].upper()
+            seq_length += <float>len(cont)
+            for letter in cont:
+                if letter == "G" or letter == "C":
                     gc_count += 1
+            if seq_length >= 2:
+                for j in range(len(cont) - 1):
+                    di = cont[j:j+2]
+                    if di in di_nucs:
+                        di_nucs[di] += 1
+
         if e["contig2"]:
-            seq_length += <float>len(e["contig2"])
-            for letter in e["contig2"]:
-                if letter == "G" or letter == "C" or letter == "c" or letter == "g":
+            cont = e["contig2"].upper()
+            seq_length += <float>len(cont)
+            for letter in cont:
+                if letter == "G" or letter == "C":
                     gc_count += 1
+            if seq_length >= 2:
+                for j in range(len(cont) - 1):
+                    di = cont[j:j+2]
+                    if di in di_nucs:
+                        di_nucs[di] += 1
+
+        # norm dinuc
+        sum_di = sum(di_nucs.values())
+        if sum_di > 0:
+            di_nucs = {k: round(v / sum_di, 3) for k, v in di_nucs.items()}
+
+        e.update(di_nucs)
+
         if seq_length > 0:
             e["gc"] = round((gc_count / seq_length) * 100, 2)
         else:

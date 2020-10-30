@@ -11,7 +11,7 @@ from libc.math cimport fabs as c_fabs
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, uint16_t
 
 
 ctypedef cpp_pair[int, int] cpp_item
@@ -20,6 +20,20 @@ ctypedef cpp_pair[long, int] cpp_long_item
 
 def echo(*args):
     click.echo(args, err=True)
+
+
+# cdef class Py_CoverageTrack:
+#     """Coverage track, writes to temp folder"""
+#     def __cinit__(self):
+#         self.thisptr = new CoverageTrack()
+#     def __dealloc__(self):
+#         del self.thisptr
+#     cdef void add(self, uint16_t chrom, uint16_t index_start, uint16_t index_end) nogil:
+#         self.thisptr.add(chrom, index_start, index_end)
+#     cdef void set_cov_array(self, int chrom_length) nogil:
+#         self.thisptr.set_cov_array(chrom_length)
+#     cdef void write_track(self, char* out_name) nogil:
+#         self.thisptr.write_track(out_name)
 
 
 cdef class Py_DiGraph:

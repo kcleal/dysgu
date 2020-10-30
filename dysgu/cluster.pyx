@@ -4,22 +4,21 @@ from __future__ import absolute_import
 import datetime
 import os
 import time
+import logging
 import numpy as np
 import random
-from collections import defaultdict
+from collections import defaultdict, Counter
 import click
 import networkx as nx
 import pysam
 import sys
-import pickle
 import resource
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, span_position_distance
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics, sv2bam
+from dysgu.map_set_utils cimport is_reciprocal_overlapping
 import itertools
 import multiprocessing
 from scipy import stats
-
 from libcpp.vector cimport vector
 
 
@@ -30,7 +29,6 @@ def echo(*args):
 def filter_potential(input_events, tree, regions_only):
     potential = []
     for i in input_events:
-
         if "posB" not in i:  # Skip events for which no posB was identified
             continue
         if "sqc" not in i:
@@ -46,18 +44,15 @@ def filter_potential(input_events, tree, regions_only):
             i["remap_score"] = 0
         if "scw" not in i or i["scw"] is None:
             i["scw"] = 0
-
         # Remove events for which both ends are in --include but no contig was found
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i["chrA"], i["posA"], i["posA"] + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i["chrB"], i["posB"], i["posB"] + 1)
         if (posA_intersects and posB_intersects) and (i["contig"] is None or i["contig2"] is None):
             continue
-
         # Remove events for which neither end is in --include (if --include provided)
         if tree and regions_only:
             if not posA_intersects and not posB_intersects:
                 continue
-
         potential.append(i)
     return potential
 
@@ -71,7 +66,6 @@ def compare_subset(potential, max_dist):
         ei = potential[idx]
         interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
         # Add another interval for large events, or translocations
-        # if ei["svtype"] != "INS":
         if ei["chrA"] != ei["chrB"] or abs(ei["posB"] - ei["posA"]) > 5:
             if ei["chrA"] != ei["chrB"]:
                 interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
@@ -85,7 +79,6 @@ def compare_subset(potential, max_dist):
 
     for idx in range(len(potential)):
         ei = potential[idx]
-
         # Overlap right hand side
         ols = list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))
         for target in ols:
@@ -108,7 +101,6 @@ cdef span_similarity(ei, ej):
         if max_span > 0:
             span_distance = abs(span1 - span2) / max_span
             return span_distance < 0.1
-
     return False
 
 
@@ -165,11 +157,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         i_id = ei["event_id"]
         j_id = ej["event_id"]
-
         if not same_sample and "sample" in ei:
             if ei["sample"] == ej["sample"]:
                 continue
-
         else:
             if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
                 continue
@@ -187,7 +177,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                       io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)
         loci_similar = False
         loci_same = False
-
         intra = ei["chrA"] == ei["chrB"] == ej["chrA"] == ej["chrB"]
 
         if intra:
@@ -199,47 +188,10 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         elif ei["chrA"] == ej["chrB"] and ei["chrB"] == ej["chrA"]:
             loci_similar, loci_same = break_distances(ei["posA"], ei["posB"], ej["posB"], ej["posA"], ei["preciseA"], ei["preciseB"], ej["preciseB"], ej["preciseA"], intra=False)
 
-
-        # similar_thresh = 250
         one_is_imprecise = False
         if ((not ei["preciseA"] or not ei["preciseB"]) and ei["svlen_precise"]) or ((not ej["preciseA"] or not ej["preciseB"]) and ej["svlen_precise"]):
             one_is_imprecise = True  # also not remapped
-        #     similar_thresh = 650
-        #
-        # if ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
-        #
-        #     # if not intra:
-        #     #     dist1 = abs(ei["posA"] - ej["posA"])
-        #     #     dist2 = abs(ei["posB"] - ej["posB"])
-        #     if dist1 < similar_thresh and dist2 < similar_thresh:
-        #         loci_similar = True
-        #         # if recpi_overlap:
-        #         #     loci_similar = True
-        #         # else:
-        #         #     align_contigs = True
-        #     if dist1 < 5 and dist2 < 5:
-        #         if not both_in_include:
-        #             loci_same = True
-        #
-        # if not loci_similar:  # Try chrA matches chrB
-        #     if ei["chrA"] == ej["chrB"] and ei["chrB"] == ej["chrA"]:  # Try chrA matches chrA
-        #         # dist1, dist2 = break_distances(ei["posA"], ei["posB"], ej["posA"], ej["posB"], ei["chrA"] == ei["chrB"])
-        #         if not intra:
-        #             dist1 = abs(ei["posA"] - ej["posB"])
-        #             dist2 = abs(ei["posB"] - ej["posA"])
-        #         if dist1 < similar_thresh and dist2 < similar_thresh:
-        #             # if recpi_overlap:
-        #                 loci_similar = True
-        #             # else:
-        #             #     align_contigs = True
-        #         if dist1 < 5 and dist2 < 5:
-        #             if not both_in_include:
-        #                 loci_same = True
 
-        # echo(loci_same, loci_similar, ei["svlen"], ej["svlen"])
-        # echo(ei)
-        # echo(ej)
-        # echo(dist1, dist2, similar_thresh)
         if not loci_similar:
             continue
 
@@ -249,9 +201,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 continue
 
         ci, ci2, cj, cj2 = "", "", "", ""
-
-        # if "contig" not in ei or "contig" not in ej:
-        #     continue
 
         if "contig" in ei:
             ci = "" if ei["contig"] is None else ei["contig"]
@@ -269,8 +218,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         else:
             spd = False
 
-        # echo("merge params", ei["posA"], ej["posB"], any_contigs_to_check, loci_same, loci_similar, recpi_overlap, spd, ei["svtype"])
-
         m = False
         ml = max(ei["svlen"], ej["svlen"])
         if ei["svtype"] == "INS":
@@ -280,10 +227,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     m = True
                 elif ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
                     m = True
-
             elif ei["remap_score"] > 0 and ej["remap_score"] > 0 and ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
                 m = True
-
             elif ei["remap_score"] == 0 or ej["remap_score"] == 0:  # merge if one break was not remapped
                 m = True
 
@@ -294,7 +239,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
 
         # Loci are similar, check contig match or reciprocal overlap
-        # echo(loci_same, i_id, j_id, ei["posA"], ej["posA"], ei["svlen"], ej["svlen"])
         if not any_contigs_to_check:
             if ml > 0:
                 l_ratio = min(ei["svlen"], ej["svlen"]) / ml
@@ -302,13 +246,11 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     G.add_edge(i_id, j_id, loci_same=loci_same)
 
         else:
-
             if ci and cj: v = ci, cj
             elif ci and cj2: v = ci, cj2
             elif ci2 and cj2: v = ci2, cj2
             elif ci2 and cj: v = ci2, cj
             else: continue
-
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
             if ei["remap_score"] == 0 or ej["remap_score"] == 0:
@@ -316,8 +258,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
 
-            # echo("assebler check", assembler.check_contig_match(v[0], v[1], return_int=True))
-            # echo("contigs", v)
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
 
@@ -365,7 +305,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
-
     components = cut_components(G)
     node_to_event = {i["event_id"]: i for i in potential}
     cdef int k
@@ -373,22 +312,11 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     for grp in components:
 
         c = [node_to_event[n] for n in grp]
-
-        # mapped_or_accurate = []
-        # unmapped = []
-        # for i in c:
-        #     if i['svlen_precise'] == 0 and i['remap_score'] == 0:
-        #         unmapped.append(i)
-        #     else:
-        #         mapped_or_accurate.append(i)
-        # best = sorted(mapped_or_accurate, key=srt_func, reverse=True) + sorted(unmapped, key=srt_func, reverse=True)
-
         best = sorted(c, key=srt_func, reverse=True)
 
         if not pick_best:
 
             w0 = best[0]  # Weighting for base result
-
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
             spanned = bool(w0["spanning"])
             remapped = bool(not w0["svlen_precise"] and w0["remap_score"] > 0)
@@ -396,14 +324,11 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             new_a = ""
             add_contig_b = bool(not w0["contig2"])
             new_b = ""
-            # svlen = w0["svlen"]
             svt = w0["svtype"]
             sqc = w0["sqc"] if "sqc" in w0 else -1
-            # echo("best", w0)
             for k in range(1, len(best)):
 
                 item = best[k]
-                # echo("item", item)
                 # Sum these
                 for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning", "n_small_tlen"):
                     if t in item:
@@ -418,33 +343,16 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                         if item["spanning"]:
                             best[0]["svlen"] = item["svlen"]
 
-                        # elif not remapped and bool(not item["svlen_precise"] and item["remap_score"] > 0) and item["svlen"] >= min_size:
-                            # item is remapped, use svlen
-                            # best[0]["svlen"] = item["svlen"]
-
                         elif min_size > w0["svlen"] < item["svlen"]:  # increase svlen size
                             best[0]["svlen"] = item["svlen"]
-                        # elif (item["svlen"] * 0.6 < svlen < item["svlen"] or min_size > svlen < item["svlen"]):  # increase svlen size
-                        #     svlen = item["svlen"]
-                        #     best[0]["svlen"] = svlen
 
                 elif item["svtype"] == "INS" and svt == "INS":
                     if not spanned:
                         if item["spanning"]:
                             best[0]["svlen"] = item["svlen"]
 
-                        # elif not remapped and bool(not item["svlen_precise"] and item["remap_score"] > 0) and item["svlen"] >= min_size:
-                            # item is remapped, use svlen
-                            # best[0]["svlen"] = item["svlen"]
-
-
                         elif item["svlen"] * 0.6 < w0["svlen"] < item["svlen"] or min_size > w0["svlen"] < item["svlen"]:  # increase svlen size
-                            # svlen = item["svlen"]
                             best[0]["svlen"] = item["svlen"]
-
-                        # echo(item["svlen"], w0["svlen"], w0["svtype"], remapped, )
-
-                # best[0]["svlen"] = svlen
 
                 if "sqc" in item and item["sqc"] != -1 and sqc == 1:
                     best[0]["sqc"] = sqc
@@ -474,59 +382,8 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             best[0]["partners"] = [i["event_id"] for i in best[1:]]
 
         found.append(best[0])
-    # for e in found:
-    #     echo(e)
+
     return found
-
-
-def elide_low_qual(events, max_dist=150):
-    return events
-    # If an imprecise insertion overlaps the edge of a del/dup/inv/tra; remove the insertion
-    # Not worth it:
-#     interval_table = defaultdict(lambda: graph.Table())
-#     to_check = []
-#     # Make a nested containment list for lookups
-#     for idx, ei in events.iterrows(): #range(len(events)):
-#         # ei = events[idx]
-#         if ei["prob"] < 0.3: # ei["remap_score"] == 0:
-#         # if ei["svtype"] == "INS" and ei["svlen_precise"] == 0 and ei["prob"] < 0.3: # ei["remap_score"] == 0:
-#             interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
-#             # if ei["posA"] != ei["posB"]:
-#             #     dist1 = abs(ei["posB"] - ei["posA"])
-#             #     ci_a = max(ei["cipos95A"], ei["cipos95A"])
-#             #     if dist1 + ci_a > max_dist:
-#             #         interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
-#         else:
-#             to_check.append(idx)
-#
-#     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
-#     if not nc:
-#         return events
-#
-#     bad_ids = set([])
-#     for idx in to_check:
-#         ei = events.loc[idx]
-#         ols = []
-#         if ei["chrA"] in nc:
-#             ols += list(nc[ei["chrA"]].find_overlap(ei["posA"], ei["posA"] + 1))
-#         if ei["chrB"] in nc:
-#             ols += list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))
-#         for target in ols:
-#             other = events.loc[target[2]]
-#             bad_ids.add(other["event_id"])
-#
-#     #return [i for i in events if i["event_id"] not in bad_ids]
-#     return events[[i not in bad_ids for i in events["event_id"]]]
-#
-# cdef add_microhomology(events):
-#     new_events = []
-#     for e in events:
-#         if e["spanning"] == 0 and "contig" in e and "contig2" in e and e["contig"] and e["contig2"]:
-#             h = assembler.link_pair_of_assemblies(e["contig"], e["contig2"], e["svtype"])
-#             new_events.append(e)
-#         else:
-#             new_events.append(e)
-#     return new_events
 
 
 def sample_level_density(potential, regions, max_dist=50):
@@ -609,12 +466,10 @@ cdef dict search_ssr_kc(ori):
 
     seq = ori.upper()
     cdef const unsigned char[:] string_view = bytes(seq.encode("ascii"))  # use for indexing
-
     cdef int str_len = len(seq)
     cdef int rep_len = min(7, str_len)
     cdef int i = 0
     cdef int t, start, count, mm, good_i, successive_bad, size, finish
-
     cdef int n_ref_repeat_bases = 0
     cdef int n_expansion = 0
     cdef int stride = 0
@@ -676,10 +531,8 @@ cdef dict search_ssr_kc(ori):
                             uppercase.append([j, j + t])
                             if lowercase and abs(lowercase[-1][1] - j) < 3:
                                 expansion_index = len(lowercase) - 1
-
                         elif uppercase[-1][1] == j:
                             uppercase[-1][1] += t
-
                         else:
                             uppercase.append([j, j + t])
 
@@ -713,11 +566,6 @@ cdef find_repeat_expansions(events, insert_stdev):
                 res["exp_seq"] = r["exp_seq"]
             res["ref_poly_bases"] += r["ref_poly_bases"]
         e.update(res)
-
-        # if e["svtype"] == "INS" and e["n_expansion"] > 0 and e['svlen_precise'] == 0:
-        #     if abs(e["svlen"]) - insert_stdev < 0:
-        #         e["svlen"] = e["n_expansion"]
-
     return events
 
 
@@ -726,8 +574,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                   ):
 
     potential_events = []
-
-
+    grp_id = event_id
     for event in call_component.call_from_block_model(infile,
                                                       component,
                                                       clip_length,
@@ -740,6 +587,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       assemble_contigs,
                                                       ):
         if event:
+            event["grp_id"] = grp_id
             event["event_id"] = event_id
             if event["chrA"] is not None:
                 event["chrA"] = infile.get_reference_name(event["chrA"])
@@ -756,7 +604,6 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
 
 class Consumer(multiprocessing.Process):
-
     def __init__(self, task_queue, result_queue, bam_path, open_mode, regions, clip_length, insert_median, insert_stdev, insert_ppf, support, lower_bound_support, merge_dist,
                  regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
         self.infile = pysam.AlignmentFile(bam_path, open_mode)
@@ -787,10 +634,8 @@ class Consumer(multiprocessing.Process):
                 self.infile.close()
                 self.task_queue.task_done()
                 break
-
             event_id, job = next_task()
             events = []
-
             potential_events, event_id = component_job(self.infile,
                                                        job,
                                                        self.regions,
@@ -811,30 +656,16 @@ class Consumer(multiprocessing.Process):
 
             if potential_events:
                 events += potential_events
-
             self.result_queue.put(events)
             self.task_queue.task_done()
 
 
-            # while True:
-            #     try:
-            #         self.result_queue.put_nowait(events)
-            #         # echo("sending back")
-            #         break
-            #     except:
-            #         time.sleep(1)
-            #         echo("waiting for queue to empty")
-            #         continue
-
 class Task:
-
     def __init__(self, job_id, job):
         self.job_id = job_id
         self.job = job
-
     def __call__(self):
         return self.job_id, self.job
-
     def __str__(self):
         return f'{self.job_id} * {len(self.job)}'
 
@@ -844,12 +675,20 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
+    temp_dir = args["working_directory"]
+    if not args["ibam"]:
+        # Make a new coverage track if one hasn't been created yet
+        coverage_tracker = sv2bam.Py_CoverageTrack(temp_dir, infile)
+    else:
+        coverage_tracker = None
 
-    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], 1, # 1 process #args["procs"],
+    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], 1,
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
-                                            min_within_size=args["min_size"])
+                                            min_within_size=args["min_size"],
+                                            coverage_tracker=coverage_tracker)
+
     insert_median, insert_stdev, read_len = -1, -1, -1
     if args["template_size"] != "":
         try:
@@ -865,8 +704,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
         max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
-        click.echo(f"Max clustering dist {max_clust_dist}", err=True)
-
+        logging.info(f"Max clustering dist {max_clust_dist}")
     else:
         max_dist, max_clust_dist = 35, 500000
         if args["merge_dist"] is None:
@@ -875,7 +713,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
-    click.echo("Minimum support {}".format(min_support), err=True)
+    logging.info("Minimum support {}".format(min_support))
     if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
         lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
     else:
@@ -883,8 +721,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
-
-    echo("lower bound suport", lower_bound_support)
 
     read_buffer = genome_scanner.read_buffer
 
@@ -906,34 +742,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             paired_end=paired_end,
                                             read_length=read_len,
                                             contigs=args["contigs"])
-    echo("graph time", time.time() - t5)
-    click.echo("graph time, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
+
+    logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
+        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+        time.time() - t5))
 
     t0 = time.time()
-    # cmp, cc = graph.get_block_components(G, node_to_name, infile, read_buffer)
 
     cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
-
-    # cdef np.ndarray[np.int64_t] a = np.empty(cmp.size(), dtype=np.int)
-    # cdef int len_a = len(a)  #.shape[0]
-    # cdef int i
-
-    # for i in range(len_a):
-    #     a[i] = cmp[i]
-
-    # cc = array.array("L", [])
-    # last_i = 0
-    # for item_idx, item in enumerate(cmp):
-    #     # a[item_idx] = item
-    #     if item == -1:
-    #         # cc.append((last_i, item_idx))
-    #         cc.append(last_i)
-    #         cc.append(item_idx)
-    #         last_i = item_idx + 1
-
-    # echo(type(cc), type(cmp))
 
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
@@ -944,16 +760,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     extended_tags = genome_scanner.extended_tags
 
-    click.echo("block components, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
     if paired_end:
         rel_diffs = False
         diffs = 15
     else:
         rel_diffs = True
         diffs = 0.15
-    # echo("len components", len(cc))
 
     if args["procs"] > 1:
         tasks = multiprocessing.JoinableQueue(maxsize=100)
@@ -974,20 +786,16 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     num_jobs = 0
     completed = 0
 
-    # for start_i, end_i in cc:
-    # for idx in range(0, len(cc), 2):
     cdef int last_i = 0
     cdef int ci, cmp_idx
     longest = 0
     for item_idx, item in enumerate(cmp):
         if item == -1:
-
-            start_i = last_i #cc[idx]
-            end_i = item_idx #cc[idx+1]
+            start_i = last_i
+            end_i = item_idx
             last_i = item_idx + 1
             if end_i - start_i > longest:
                 longest = end_i - start_i
-        # if end_i - start_i >= lower_bound_support:
 
             # todo dont copy this. use memory view slice? sending vector[int]& seems to result in copying (really slow)
             component = np.zeros(end_i - start_i)
@@ -995,10 +803,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             for cmp_idx in range(start_i, end_i):
                 component[ci] = cmp[cmp_idx]
                 ci += 1
-            # component = list(cmp[start_i: end_i])
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
-
             if res:
                 event_id += 1
                 # Res is a dict
@@ -1030,7 +836,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
                     tasks.put(Task(event_id, res))
                     num_jobs += 1
-    echo("largest component", longest)
+
     if args["procs"] > 1:
 
         for _ in range(args["procs"]):
@@ -1042,50 +848,34 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             block_edge_events += item
             completed += 1
             num_jobs -= 1
-    echo("len read buffer", len(read_buffer))
+
     del G
     del read_buffer
     cmp.clear()
-
-    echo("len block edge", len(block_edge_events))
-
-    click.echo("block components done, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
-
-    echo("components", time.time() - t0)
-    t3 = time.time()
     preliminaries = []
-
-    tremap = time.time()
-
-    block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
-                                                keep_unmapped=True if args["pl"] == "pe" else False,
-                                                keep_small=args["keep_small"] == "True",
-                                                min_support=args["min_support"])
-    # for b in block_edge_events:
-    #     echo(b)
-    echo("remapping", time.time() - tremap)
-    click.echo("remapping done, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
+    if args["remap"] == "True" and args["contigs"] == "True":
+        block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
+                                                    keep_unmapped=True if args["pl"] == "pe" else False,
+                                                    keep_small=args["keep_small"] == "True",
+                                                    min_support=args["min_support"])
 
     # Merge across calls
     if args["merge_within"] == "True":
-        tmr = time.time()
         merged = merge_events(block_edge_events, args["merge_dist"], regions, paired_end, try_rev=False, pick_best=False,
                                          debug=True, min_size=args["min_size"])
-        echo("merging all", time.time() - tmr)
     else:
         merged = block_edge_events
-
-    # merged = add_microhomology(merged)
 
     # Filter for absolute support and size here
     merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"])
               and event["su"] >= args["min_support"]]
 
-    # echo(len(merged))
+    # Add read-type information
+    for d in merged:
+        d["type"] = args["pl"]
+
+    merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome)
+
     if merged:
         for event in merged:
             # Collect coverage information
@@ -1094,37 +884,20 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             if event_dict:
                 preliminaries.append(event_dict)
 
-    t1a = time.time()
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-    t1a = time.time() - t1a
-
-    t1b = time.time()
     preliminaries = sample_level_density(preliminaries, regions)
-    t1b = time.time() - t1b
-
-    t1c = time.time()
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    t1c = time.time() - t1c
-
-    click.echo("bits and bobs, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
-
-    # nothing done here yet
-    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
-    t1d = time.time()
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
-    t1d = time.time() -t1d
-    echo("proc preliminiaries times", t1a, t1b, t1c, t1d)
+    preliminaries = post_call_metrics.CoverageAnalyser(temp_dir).process_events(preliminaries)
+    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
+
+    n_in_grp = Counter([i["grp_id"] for i in preliminaries])
+    for v in preliminaries:
+        v["n_in_grp"] = n_in_grp[v["grp_id"]]
 
     if len(preliminaries) == 0:
-        click.echo("No events found", err=True)
+        logging.critical("No events found")
         quit()
-    echo("time3", time.time() - t3)
-
-    click.echo("post call metrics, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t5), err=True)
 
     return preliminaries, extended_tags
 
@@ -1140,11 +913,7 @@ def cluster_reads(args):
         raise ValueError("Input must be a .bam/cam/sam or stdin")
 
     bam_mode = opts[kind]
-    # if args["procs"] > 1:
-    #     raise ValueError("Sorry, only single process is supported currently")
-    click.echo("Input file: {} ({}). Processes={}".format(args["sv_aligns"], kind, args["procs"]), err=True)
-    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1) #args["procs"])
-
+    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1)
     ref_genome = pysam.FastaFile(args["reference"])
 
     ibam = None
@@ -1157,16 +926,13 @@ def cluster_reads(args):
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if len(rg) > 1:
-            click.echo("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]),
-                       err=True)
+            logging.warning("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]))
         sample_name = rg[0]["SM"]
-
     else:
         sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
-        click.echo("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name), err=True)
+        logging.warning("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name))
 
-    click.echo("Sample name: {}".format(sample_name), err=True)
-
+    logging.info("Sample name: {}".format(sample_name))
     try:
         args["thresholds"] = dict(zip(["DEL", "INS", "INV", "DUP", "TRA"], (map(float, args["thresholds"].split(",")))))
     except:
@@ -1178,34 +944,26 @@ def cluster_reads(args):
         args["insert_stdev"] = istd
 
     if args["svs_out"] == "-" or args["svs_out"] is None:
-        click.echo("SVs output to stdout", err=True)
+        logging.info("Writing vcf to stdout")
         outfile = sys.stdout
     else:
-        click.echo("SVs output to {}".format(args["svs_out"]), err=True)
+        logging.info("Writing SVs to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
 
     _debug_k = []
     regions = io_funcs.overlap_regions(args["include"])
 
     # Run dysgu here:
-    t4 = time.time()
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
-    echo("evet time", time.time() - t4)
-    df = pd.DataFrame.from_records(events)
 
+    df = pd.DataFrame.from_records(events)
     df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
 
-    df = elide_low_qual(df)
-
-    click.echo("model applies, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e3),
-        time.time() - t4), err=True)
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])
         df["sample"] = [sample_name] * len(df)
         df["id"] = range(len(df))
-        m = {"pe": 1, "pacbio": 2, "nanopore": 3}
-        df["type"] = [m[args["pl"]]] * len(df)
+
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
             df[io_funcs.col_names()].to_csv(outfile, index=False)
@@ -1225,8 +983,7 @@ def cluster_reads(args):
     except:
         pass
 
-    echo(time.time() - t0)
-    click.echo("dysgu call {} complete, n={}, time={} h:m:s".format(
+    logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],
                len(df),
-               str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
+               str(datetime.timedelta(seconds=int(time.time() - t0)))))

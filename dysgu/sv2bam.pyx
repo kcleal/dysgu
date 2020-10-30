@@ -5,169 +5,97 @@ import pysam
 import time
 import datetime
 import numpy as np
-import click
-from subprocess import call
+cimport numpy as np
 from collections import deque
-import resource
+import os
 
-
-from libc.stdint cimport uint32_t, uint16_t, uint64_t
-from libcpp.deque cimport deque as cpp_deque
-from libcpp.pair cimport pair as cpp_pair
+from libc.stdint cimport uint32_t, int16_t
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport unordered_set  # robin_set,
+from dysgu.map_set_utils cimport unordered_set
 from dysgu.coverage import get_insert_params
 
-from dysgu.map_set_utils cimport hash as xxhash
-
-# from pysam.libchtslib cimport bam_hdr_t, BAM_CINS, BAM_CDEL, BAM_CSOFT_CLIP, \
-#     bam_cigar_op, bam_cigar_oplen, bam_get_qname, bam_get_cigar, \
-#     hts_open, hts_set_threads, sam_hdr_read, bam_init1, \
-#     sam_hdr_write, htsFile, bam_destroy1, hts_close, bam_aux_get, sam_write1, sam_read1, bam1_t, bam_dup1
-
-from cython.operator import dereference
-
-# ctypedef cpp_pair[uint64_t, bam1_t*] deque_item
+import logging
 
 
-# cdef int search_alignments(char* infile, char* outfile, uint32_t min_within_size, uint32_t clip_length,
-#                            int threads) nogil:
-#
-#     cdef int result
-#     cdef htsFile *fp_in = hts_open(infile, "r")
-#     if threads:
-#         result = hts_set_threads(fp_in, threads)
-#         if result != 0:
-#             raise IOError("Failed to set threads")
-#
-#     cdef bam_hdr_t* samHdr = sam_hdr_read(fp_in)  # read header
-#     cdef bam1_t* aln = bam_init1()  # initialize an alignment
-#     if not samHdr:
-#         raise IOError("Failed to read input header")
-#
-#     cdef htsFile *f_out = hts_open(outfile, "wb0")
-#
-#     result = sam_hdr_write(f_out, samHdr)
-#     if result != 0:
-#         raise IOError("Failed to write header to output")
-#
-#     cdef uint32_t max_scope = 100000
-#     cdef uint64_t total = 0
-#
-#     cdef cpp_pair[uint64_t, bam1_t*] scope_item
-#     cdef cpp_deque[deque_item] scope
-#     cdef robin_set[uint64_t] read_names
-#
-#     cdef uint16_t flag
-#     cdef uint32_t* cigar
-#     cdef uint32_t k, op, length
-#     cdef uint64_t precalculated_hash
-#     cdef bam1_t* bam_ptr
-#     cdef bam1_t bamt
-#
-#     while sam_read1(fp_in, samHdr, aln) >= 0:
-#
-#         if scope.size() > max_scope:
-#             scope_item = scope[0]
-#
-#             if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-#                 result = sam_write1(f_out, samHdr, scope_item.second)
-#                 if result < 0:
-#                     raise IOError("Problem writing alignment record")
-#                 total += 1
-#             # free(dereference(scope_item.second).data)
-#             # free(scope_item.second)
-#             bam_destroy1(scope_item.second)
-#             scope.pop_front()
-#
-#         # Process current alignment
-#         flag = dereference(aln).core.flag
-#         if flag & 1284 or dereference(aln).core.n_cigar == 0 or dereference(aln).core.l_qname == 0:
-#             continue
-#
-#         precalculated_hash = xxhash(bam_get_qname(aln), dereference(aln).core.l_qname, 0)
-#
-#         bam_ptr = bam_dup1(aln)
-#         scope.push_back(deque_item(precalculated_hash, bam_ptr))  # bam_dup1(aln)
-#
-#         if read_names.find(precalculated_hash, precalculated_hash) == read_names.end():
-#
-#             # Check for discordant of supplementary
-#             if ~flag & 2 or flag & 2048:
-#                 read_names.insert(precalculated_hash)
-#                 continue
-#
-#             # Check for SA tag
-#             if bam_aux_get(aln, "SA"):
-#                 read_names.insert(precalculated_hash)
-#                 continue
-#
-#             cigar = bam_get_cigar(aln)
-#
-#             # Check cigar
-#             # for (uint32_t k = 0; k < aln->core.n_cigar; k++):
-#             for k in range(0, dereference(aln).core.n_cigar):
-#
-#                 op = bam_cigar_op(cigar[k])
-#                 if op == -1:
-#                     break
-#                 length = bam_cigar_oplen(cigar[k])
-#                 if length == -1:
-#                     break
-#
-#                 if (op == BAM_CSOFT_CLIP ) and (length >= clip_length):  # || op == BAM_CHARD_CLIP
-#                     read_names.insert(precalculated_hash)
-#                     break
-#
-#                 if (op == BAM_CINS or op == BAM_CDEL) and (length >= min_within_size):
-#                     read_names.insert(precalculated_hash)
-#                     break
-#
-#     while scope.size() > 0:
-#         scope_item = scope[0]
-#         if read_names.find(scope_item.first, scope_item.first) != read_names.end():
-#             result = sam_write1(f_out, samHdr, scope_item.second)
-#             if result < 0:
-#                 raise IOError("Problem writing alignment record")
-#             total += 1
-#
-#         scope.pop_front()
-#
-#     result = hts_close(fp_in)
-#     if result != 0:
-#         raise IOError("Problem closing input file handle")
-#
-#     result = hts_close(f_out)
-#     if result != 0:
-#         raise IOError("Problem closing output file handle")
-#     f_out = NULL
-#
-#     bam_destroy1(aln)
-#     return total
+class Py_CoverageTrack(object):
 
+    def __init__(self, outpath, infile):
+        self.current_chrom = -1
+        self.outpath = outpath
+        self.cov_array = np.array([], dtype="int32")
+        self.infile = infile
 
-def echo(*args):
-    click.echo(args, err=True)
+    def add(self, a):
+
+        if a.flag & 1284 or a.mapq == 0 or a.cigartuples is None:  # not primary, duplicate or unmapped, low mapq
+            return
+
+        if self.current_chrom != a.rname:
+
+            self.write_track()
+            self.set_cov_array(a.rname)
+            self.current_chrom = a.rname
+
+        arr = self.cov_array
+
+        if int(a.pos  / 10) > len(arr) - 1:
+            return
+
+        index_start = a.pos
+        index_bin = int(index_start / 10)
+        for opp, length in a.cigartuples:
+            if index_bin > len(arr) - 1:
+                break
+            if opp == 2:
+                index_start += length
+                index_bin = int(index_start / 10)
+            elif opp == 0 or opp == 7 or opp == 8:
+                # if -32000 < arr[index_bin] < 32000:
+                arr[index_bin] += 1
+                index_start += length
+                index_bin = int(index_start / 10)
+                if index_bin < len(arr):
+                    arr[index_bin] -= 1
+
+    def set_cov_array(self, int rname):
+        chrom_length = self.infile.get_reference_length(self.infile.get_reference_name(rname))
+        self.cov_array = np.resize(self.cov_array, int(chrom_length / 10) + 1)
+        self.cov_array.fill(0)
+
+    def write_track(self):
+        cdef np.ndarray[int16_t, ndim=1] ca = self.cov_array
+        cdef int current_cov = 0
+        cdef int16_t v
+        cdef int i
+        if self.current_chrom != -1:
+            out_path = "{}/{}.dysgu_chrom.bin".format(self.outpath, self.infile.get_reference_name(self.current_chrom))
+            for i in range(len(ca)):
+                v = ca[i]
+                current_cov += v
+                if current_cov < 32000:
+                    ca[i] = current_cov
+                elif current_cov < 0:
+                    ca[i] = 0  # sanity check
+                elif current_cov >= 32000:
+                    ca[i] = 32000
+            ca.tofile(out_path)
+
 
 def iter_bam(bam, search, show=True):
-
     if not search:
-        click.echo("Searching input file", err=True)
         for aln in bam.fetch(until_eof=True):  # Also get unmapped reads
             yield aln
     else:
         if show:
-            click.echo("Limiting search to {}".format(search), err=True)
-
+            logging.info("Limiting search to {}".format(search))
         with open(search, "r") as bed:
             for line in bed:
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.split("\t")[:3]
                 for aln in bam.fetch(reference=chrom, start=int(start), end=int(end)):  # Also get unmapped reads
-
                     yield aln
 
 
@@ -177,9 +105,6 @@ def config(args):
     opts = {"bam": "rb", "cram": "rc", "sam": "r"}
     if kind not in opts:
         raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
-
-    click.echo("Input file: {}".format(args["bam"], kind), err=True)
-
     try:
         bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
     except:
@@ -187,10 +112,7 @@ def config(args):
 
     bam_i = iter_bam(bam, args["search"] if "search" in args else None)
 
-
-
     clip_length = args["clip_length"]
-
     send_output = None
     v = ""
     if "reads" in args and args["reads"] != "None":
@@ -199,21 +121,15 @@ def config(args):
         else:
             v = args["reads"]
         send_output = pysam.AlignmentFile(v, "wb", template=bam)
-
     out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
-
     reads_out = pysam.AlignmentFile(out_name, "wbu", template=bam)
-
-    # outbam = pysam.AlignmentFile(out_name + ".bam", "wbu", template=bam, threads=args["procs"])
 
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size, pe):
+cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size, pe, temp_dir):
 
-    # cdef uint32_t clip_length
     cdef int flag
-    # cdef str qname
     cdef long qname
     cdef list cigartuples
 
@@ -223,8 +139,6 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     cdef int flag_mask = required | restricted
 
     scope = deque([])
-
-    # read_names = set([])
     cdef unordered_set[long] read_names
 
     insert_size = []
@@ -237,6 +151,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     cdef int nn = 0
     cdef bint paired_end = 0
 
+    cov_track = Py_CoverageTrack(temp_dir, bam)
+
     for nn, r in enumerate(bam_i):
 
         if send_output:
@@ -244,18 +160,14 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
         while len(scope) > max_scope:
             qname, query = scope.popleft()
-
             if read_names.find(qname) != read_names.end():
-
-            # if query.qname.__hash__() in read_names:
                 outbam.write(query)
                 count += 1
 
         if exc_tree:  # Skip exclude regions
             if io_funcs.intersecter_int_chrom(exc_tree, r.rname, r.pos, r.pos + 1):
                 continue
-        if r.qname == "ERR894725.225329028":
-            echo(r.flag, r.has_tag("SA"), clip_length)
+
         flag = r.flag
         if flag & 1028 or r.cigartuples is None:
             continue  # Read is duplicate or unmapped
@@ -267,29 +179,24 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
                     read_length.append(r.infer_read_length())
                     insert_size.append(r.tlen)
 
-
         qname = r.qname.__hash__()
         scope.append((qname, r))
 
-        # if qname not in read_names:
+        cov_track.add(r)
+
         if read_names.find(qname) == read_names.end():
             if clip_length > 0 and map_set_utils.cigar_clip(r, clip_length):
-                # read_names.add(qname)
                 read_names.insert(qname)
             elif (~flag & 2 and flag & 1) or flag & 2048:  # Save if read is discordant or supplementary
-                # read_names.add(qname)
                 read_names.insert(qname)
             elif r.has_tag("SA"):
-                # read_names.add(qname)
                 read_names.insert(qname)
             elif any((j == 1 or j == 2) and k >= min_sv_size for j, k in r.cigartuples):
-                # read_names.add(qname)
                 read_names.insert(qname)
 
     while len(scope) > 0:
         qname, query = scope.popleft()
         if read_names.find(qname) != read_names.end():
-        # if query.qname.__hash__() in read_names:
             outbam.write(query)
             count += 1
 
@@ -297,7 +204,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     if send_output:
         send_output.close()
 
-    click.echo("Total input reads in bam {}".format(nn + 1), err=True)
+    logging.info("Total input reads in bam {}".format(nn + 1))
     insert_median, insert_stdev, approx_read_length = 0, 0, 0
 
     if paired_end:
@@ -305,63 +212,54 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
             raise ValueError("No paired end reads")
         approx_read_length = int(np.mean(read_length))
         if len(insert_size) == 0:
-            insert_median, insert_stdev = 300, 150  # args["insert_median"], args["insert_stdev"]
-            click.echo("WARNING: could not infer insert size, no 'normal' pairings found. Using arbitrary values", err=True)
+            insert_median, insert_stdev = 300, 150
+            logging.warning("Could not infer insert size, no 'normal' pairings found. Using arbitrary values")
         else:
             insert_median, insert_stdev = get_insert_params(insert_size)
             insert_median, insert_stdev = np.round(insert_median, 2), np.round(insert_stdev, 2)
-        click.echo(f"Inferred read length {approx_read_length}, "
-                       f"insert median {insert_median}, "
-                       f"insert stdev {insert_stdev}", err=True)
+        logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
 
     return count, insert_median, insert_stdev, approx_read_length
 
 
 cdef extern from "find_reads.h":
-    cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length,
-                                    int threads, int paired_end)
+    cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
+                                    int threads, int paired_end, char* temp_f)
 
 def process(args):
 
     t0 = time.time()
-
+    temp_dir = args["working_directory"]
+    assert os.path.exists(temp_dir)
     exc_tree = None
     if "exclude" in args and args["exclude"]:
-        click.echo("Excluding {} from search".format(args["exclude"]), err=True)
+        logging.info("Excluding {} from search".format(args["exclude"]))
         exc_tree = io_funcs.overlap_regions(args["exclude"])
 
+    bname = os.path.splitext(os.path.basename(args["bam"]))[0]
+    if bname == "-":
+        bname = os.path.basename(temp_dir)
 
-    out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
+    out_name = "{}/{}.{}.bam".format(temp_dir, bname, args["pfix"])
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
+    cdef bytes temp_f = temp_dir.encode("ascii")
 
-    if ("reads" not in args or args["reads"] == "None") and exc_tree is None:  # and paired_end:
-
-        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["procs"], pe)
-        if count < 0:
-            click.echo("Error reading input file", err=True)
-            quit()
-        click.echo("dysgu fetch {}, n={}, time={} h:m:s".format(args["bam"],
-                                                                count,
-                                                                str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-
-        return {}
+    if exc_tree is None:
+        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["mq"], args["procs"], pe, temp_f)
 
     else:
-        click.echo("Fetching with pysam", err=True)
-
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                args["min_size"], pe)
-
-    click.echo("dysgu fetch {} complete, n={}, time={} h:m:s".format(args["bam"],
+                                                                args["min_size"], pe, temp_dir)
+    if count < 0:
+        logging.critical("Error reading from input file, exit code {}".format(count))
+        quit()
+    elif count == 0:
+        logging.critical("No reads found")
+        quit()
+    logging.info("dysgu fetch {} written to {}, n={}, time={} h:m:s".format(args["bam"], out_name,
                                                             count,
-                                                            str(datetime.timedelta(seconds=int(time.time() - t0)))), err=True)
-    click.echo(time.time() - t0, err=True)
-    return {"insert_median": insert_median,
-            "insert_stdev": insert_stdev,
-            "read_length": read_length,
-            }
-
+                                                            str(datetime.timedelta(seconds=int(time.time() - t0)))))

@@ -32,7 +32,6 @@ Run tests::
 Requires Python>=3.6, cython and >=c++11 compiler.
 Python packages needed are listed in requirements.txt.
 
-
 Usage
 -----
 Available commands::
@@ -40,56 +39,70 @@ Available commands::
     dysgu run     # Run using default arguments, wraps fetch and call commands
     dysgu fetch   # Seperate SV reads from input bam file
     dysgu call    # SV calling
-    dysgu view    # Merge calls from multiple dysgu call runs
+    dysgu merge   # Merge calls from multiple dysgu call runs
     dysgu test    # Run basic tests
-
-Structural variant pipeline basic usage::
-
-    dysgu run your.bam > calls.vcf
-
-
-Fetching SV reads
-~~~~~~~~~~~~~~~~~
-To save time, `dysgu fetch` can be run in a stream during mapping, although here `sv_reads.bam` would
-still need to be sorted prior to running `dysgu call`::
-
-    bwa mem -a -t8 ref.fa read1.fq read2.fq | \
-        samtools view -bh - | \
-        dysgu fetch -r all_reads.bam -o sv_reads.bam  -  #  -r and -o still need sorting
-
-`fetch` can be run downstream of sorting which preserves sort order::
-
-    samtools sort your.bam | \
-        dysgu fetch -r your.bam -o sv_reads.bam  -
-
-Alternatively, run `fetch` on an existing .bam file::
-
-    dysgu fetch your.bam > sv_reads.bam
-
 
 Calling SVs
 ~~~~~~~~~~~
-For a sorted .bam or .cram file, use the `run` command with -p/--procs to specify reading threads::
 
-    dysgu run -p 8 your.bam > svs.vcf
+Paired-end reads
+****************
+To call SVs a sorted and indexed .bam/cram is needed plus an indexed reference genome. Also a working directory must
+be provided to store temporary files. There are a few different ways to run dysgu depending on the type of data you have.
+For short paired-end reads the `run` command is recommended which wraps the `fetch` and `call` commands::
 
-Input reads can be buffered which can lower run time for large memory machines. The `--buffer-size` option sets the number of alignments that will be kept in memory::
+    dysgu run samp1_temp reference.fa input.bam > svs.vcf
 
-    dysgu call --buffer-size 10000000 sv_reads.bam > results.vcf
+This will first call `fetch` that creates a temporary bam file and other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
 
-Calling can also be piped which can be useful for calling small regions. For this to work the `--buffer-size` must be set large enough to capture the input::
+Long reads
+**********
+For long-read data, the `fetch` stage may be skipped and the `call` command can be run directly - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
+temp file::
 
-    samtools view -bh your.bam chr1:150000-1501000 > dysgu call - > results.vcf
+    dysgu call --mode pacbio samp1_temp reference.fa input.bam > svs.vcf
+    dysgu call --mode nanopore samp1_temp reference.fa input.bam > svs.vcf
+
+Fetching SV reads
+~~~~~~~~~~~~~~~~~
+To save time analysing paired-end data, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
+all SV associated reads will be placed in `samp1_temp/samp1_temp.bam`, and all input alignments will be placed in all_reads.bam::
+
+    dysgu fetch -r all_reads.bam samp1_temp -
+
+SVs can be subsequently called using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
+size metrics from the main alignment file. If this is not provided dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
+
+    dysgu call --ibam all_reads.bam reference.fa samp1_temp > svs.vcf
+
+Alternatively, run `fetch` on an existing .bam file::
+
+    dysgu fetch samp1_temp input.bam
 
 
 Merging SVs from multiple files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Multiple output files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
 
-    dysgu view tumor.csv normal.csv > pair.vcf
+    dysgu merge pacbio.vcf illumina.vcf > combined.vcf
 
 For help use::
 
     dysgu --help
     dysgu command --help
 
+Resource requirements
+---------------------
+Using a single core and depending on hard-drive speed, dysgu usually takes around 1h to analyse a 30X coverage genome of short paired-end reads and
+uses < 8 GB memory. Also note that when `fetch` is utilized (run command), a large temp file is generated consisting of SV-associated reads
+which can be 10 - 15 Gb in size, to remove this on completion add `--keep-temp False`.
+
+Issues
+------
+If dysgu is taking a long time to run, this could be due to the complexity of the sample.
+Dysgu will try and generate contigs from clusters of soft-clipped reads and then remap these to the reference genome.
+In this case consider increasing the `clip-length` or setting `contigs False`, or `remap False`.
+Alternatively check your sample for anomalous sequences and adapter content.
+
+If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and
+provide manually using the `-I` option otherwise.

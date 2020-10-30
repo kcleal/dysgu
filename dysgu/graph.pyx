@@ -10,11 +10,9 @@ cimport numpy as np
 from cpython cimport array
 import array
 import re
-
-import edlib
+import logging
 
 from libcpp.vector cimport vector
-
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.map cimport map as cpp_map
 from libcpp.unordered_map cimport unordered_map
@@ -31,12 +29,9 @@ from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq
 
 from dysgu cimport map_set_utils
 from dysgu import io_funcs
-
-
 from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance, position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
-
 from dysgu.post_call_metrics import BadClipCounter
 
 ctypedef cpp_pair[int, int] cpp_item
@@ -98,10 +93,9 @@ cdef class Table:
         return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
-cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found, unordered_set[long]& homopolymers):
+cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):  # unordered_set[long]& homopolymers):
     """End minimizer
     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
-
     cdef int i = 0
     cdef int end = len(s) - m + 1
     cdef int last_idx = end - 1
@@ -109,30 +103,16 @@ cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found
     cdef long hx2
     cdef bytes s_bytes = bytes(s.encode("ascii"))
     cdef const unsigned char* sub_ptr = s_bytes
-
     with nogil:
         while i < end:
             hx2 = xxhasher(sub_ptr, m, 42)
-            # if homopolymers.find(hx2) != homopolymers.end():
-                # if m + m < end - i - 1:
-            #         hx2 = xxhasher(sub_ptr, m + m, 42)
-            #         if homopolymers.find(hx2) != homopolymers.end():
-            #             i += 1
-            #             continue
-            #     else:
-            #         i += 1 #m
-            #         continue
-
             if i == 0 or i == last_idx:
                 found.insert(hx2)
-
             while window2.size() != 0 and window2.back().first >= hx2:
                 window2.pop_back()
-
             window2.push_back(cpp_long_pair(hx2, i))
             while window2.front().second <= i - k:
                 window2.pop_front()
-
             sub_ptr += 1
             minimizer_i = window2.front().first
             found.insert(minimizer_i)
@@ -172,12 +152,10 @@ cdef class ClipScoper:
     cdef unordered_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
     # cdef object clip_table_left, clip_table_right # read_minimizers
 
-    cdef unordered_set[long] homopolymer_table
-
+    # cdef unordered_set[long] homopolymer_table
     cdef int max_dist, k, w, clip_length, current_chrom, minimizer_support_thresh, minimizer_matches
     cdef float target_density, upper_bound_n_minimizers
     cdef int n_local_minimizers
-
     cdef object rds_clip
     cdef bint minimizer_mode
 
@@ -194,13 +172,13 @@ cdef class ClipScoper:
         cdef bytes s_bytes
         cdef const unsigned char* sub_ptr
 
-        for letter in "ATCGN":
-            for s in (m, m*2):
-                poly = letter * m
-                s_bytes = bytes(poly.encode("ascii"))
-                sub_ptr = s_bytes
-                hx2 = xxhasher(sub_ptr, m, 42)
-                self.homopolymer_table.insert(hx2)
+        # for letter in "ATCGN":
+        #     for s in (m, m*2):
+        #         poly = letter * m
+        #         s_bytes = bytes(poly.encode("ascii"))
+        #         sub_ptr = s_bytes
+        #         hx2 = xxhasher(sub_ptr, m, 42)
+        #         self.homopolymer_table.insert(hx2)
 
         self.current_chrom = 0
         self.minimizer_support_thresh = minimizer_support_thresh
@@ -222,7 +200,7 @@ cdef class ClipScoper:
         cdef unordered_set[long] clip_minimizers
         cdef unordered_set[uint64_t].iterator targets_iter, targets_end
 
-        sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers, self.homopolymer_table)  # get minimizers of sequence
+        sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers) #, self.homopolymer_table)  # get minimizers of sequence
         if clip_minimizers.empty():
             return
 
@@ -257,7 +235,6 @@ cdef class ClipScoper:
             if clip_table.find(m) == clip_table.end():
                 clip_table[m].insert(pair_to_int64(position, name))
                 self.n_local_minimizers += 1
-
                 continue
 
             elif find_candidate:  # Look for suitable partners
@@ -285,7 +262,6 @@ cdef class ClipScoper:
 
             clip_table[m].insert(pair_to_int64(position, name))
 
-
     cdef void _refresh_scope(self, cpp_deque[cpp_pair[int, int]]& scope, int position, MinimizerTable& mm_table,
                              unordered_map[uint64_t, unordered_set[uint64_t]]& clip_table,
                              ):
@@ -310,10 +286,8 @@ cdef class ClipScoper:
                     set_iter_end = mm_table.get_iterator_end()
                     while set_iter != set_iter_end:
                         m = dereference(set_iter)
-
                         if clip_table.find(m) != clip_table.end():
                             clip_table[m].erase(pair_to_int64(item_position, name))
-
                             if clip_table[m].empty():
                                 self.n_local_minimizers -= 1
 
@@ -338,7 +312,7 @@ cdef class ClipScoper:
             self.scope_right.push_back(cpp_item(position, input_read))
 
     cdef void update(self, r, int input_read, int chrom, int position,
-               unordered_set[int]& clustered_nodes):  # node_name, chrom, pos, clustered_nodes
+               unordered_set[int]& clustered_nodes):
 
         clip_left, clip_right = map_set_utils.clip_sizes(r)
         # Find candidate nodes with matching minimizers
@@ -348,7 +322,6 @@ cdef class ClipScoper:
             self.clip_table_left.clear()
             self.clip_table_right.clear()
             self.current_chrom = chrom
-
         self._insert(r.seq, clip_left, clip_right, input_read, position, clustered_nodes)
 
 
@@ -380,7 +353,6 @@ cdef class PairedEndScoper:
         self.clst_dist = clst_dist
         self.max_dist = max_dist
         self.local_chrom = -1
-
         cdef cpp_map[int, LocalVal] scope
         for n in range(n_references + 1):  # Add one for special 'insertion chromosome'
             self.chrom_scope.push_back(scope)
@@ -400,10 +372,6 @@ cdef class PairedEndScoper:
         cdef vector[int] found2
         cdef vector[int] found_exact
         cdef cpp_map[int, LocalVal]* forward_scope = &self.chrom_scope[chrom2]
-        # if chrom2 == 10000000:
-        #     forward_scope = &self.chrom_scope.back()#[self.end_index]
-        # else:
-        #     forward_scope = &self.chrom_scope[chrom2]
         cdef cpp_map[int, LocalVal].iterator itr
         cdef cpp_pair[int, LocalVal] vitem
 
@@ -414,26 +382,9 @@ cdef class PairedEndScoper:
 
         if not self.loci.empty():  # Erase items out of range in local scope
 
-            # local_it = forward_scope.begin()
-            # while local_it != forward_scope.end():
-            #     vitem = dereference(local_it)
-            #     echo("before", vitem.first, vitem.second)
-            #     preincrement(local_it)
-
-
-            # lowest_pos = current_pos
-            # if current_chrom == chrom2 and pos2 < current_pos:  # Make sure only clear up to lowest position
-            #     lowest_pos = pos2
-
             local_it = self.loci.lower_bound(current_pos - self.clst_dist)
             if local_it != self.loci.begin():
-                # echo("dropping up to", dereference(local_it).first)
                 self.loci.erase(self.loci.begin(), local_it)
-
-            # if current_chrom != chrom2:  # Erase items out of range in forward scope
-            #     local_it = dereference(forward_scope).lower_bound(current_pos - self.clst_dist)
-            #     if local_it != dereference(forward_scope).begin():
-            #         dereference(forward_scope).erase(dereference(forward_scope).begin(), local_it)
 
             # Debug
             # local_it = forward_scope.begin()
@@ -465,12 +416,10 @@ cdef class PairedEndScoper:
 
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
-                            # echo(sep, sep2, self.max_dist, vitem.second.read_enum)
                             if sep < self.max_dist and sep2 < self.max_dist:
-                                if sep < 35: # and (clip_or_wr or vitem.second.clip_or_wr):
+                                if sep < 35:
                                     found_exact.push_back(node_name2)
                                 elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
-                                # else:
                                     found2.push_back(node_name2)
                             elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
                                 found2.push_back(node_name2)
@@ -508,14 +457,11 @@ cdef class PairedEndScoper:
                                 sep2 = c_abs(vitem.second.pos2 - current_pos)
                                 # echo(sep, sep2, self.max_dist, vitem.second.chrom2, vitem.second.clip_or_wr, span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
                                 # echo(sep < self.max_dist, vitem.second.chrom2 == chrom2, sep2 < self.max_dist, sep < 35, (clip_or_wr > 0 or vitem.second.clip_or_wr))
-
                                 if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
                                         sep2 < self.max_dist:
-                                    if sep < 35: # and (clip_or_wr or vitem.second.clip_or_wr):
+                                    if sep < 35:
                                         found_exact.push_back(node_name2)
-
                                     elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
-                                    # else:
                                         found2.push_back(node_name2)
 
                                 elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
@@ -566,7 +512,6 @@ cdef class PairedEndScoper:
 
 
 cdef class TemplateEdges:
-
     cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
     def __init__(self):
         pass
@@ -660,7 +605,7 @@ cdef class NodeToName:
     cdef vector[uint32_t] event_pos
 
     def __cinit__(self):  # Possibly use a vector of structs instead. Reason for doing this way was to save mem
-        # node names have the form (mmh3.hash(qname, 42), flag, pos, chrom, tell, cigar index, event pos)
+        # node names have the form (hash qname, flag, pos, chrom, tell, cigar index, event pos)
         pass
 
     cdef void append(self, long a, int b, int c, int d, long e, int f, int g) nogil:
@@ -706,7 +651,6 @@ cpdef tuple get_query_pos_from_cigartuples(r):
     cdef bint i = 0
     cdef int ref_end = r.pos
     cdef int opp, slen
-
     for opp, slen in r.cigartuples:
         if opp == 0:
             ref_end += slen
@@ -740,14 +684,13 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
     for sa_block in r.get_tag("SA").split(";"):
         if sa_block == "":
             break  # End
+
         sa = sa_block.split(",", 5)
         mq = int(sa[4])  # filter by mapq at later stage
-
         chrom2 = gettid(sa[0])
         start_pos2 = int(sa[1])
         strand = sa[2]
         cigar = sa[3]
-
         matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
         query_start, query_end, ref_start, ref_end = get_query_pos_from_cigarstring(matches, start_pos2)
 
@@ -845,7 +788,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
         #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
 
     pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
-
+    # Debug:
     # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
     # look = set(['D00360:18:H8VC6ADXX:2:1113:5589:6008', 'D00360:18:H8VC6ADXX:2:1107:19359:83854', 'D00360:18:H8VC6ADXX:2:2102:2821:89140'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
@@ -901,7 +844,6 @@ cdef int good_quality_clip(AlignedSegment r, int clip_length):
                         break
 
                 avg_qual = w_sum / float(window_length)
-                # echo(avg_qual)
                 if avg_qual > 10:
                     if not homopolymer:
                         # Make sure stretch is not homopolymer
@@ -1091,8 +1033,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int paired_end=1, int read_length=150, bint contigs=True):
 
     t0 = time.time()
-    click.echo("Building graph with clustering distance {} bp, scope length {} bp".format(max_dist, clustering_dist),
-               err=True)
+    logging.info("Building graph with clustering distance {} bp, scope length {} bp".format(max_dist, clustering_dist))
 
     cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
     cdef int event_pos, cigar_index, opp, length
@@ -1163,23 +1104,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.INSERTION))
                             added = True
 
-                            # del_was_last = 0
-
                     elif opp == 2:
-                        # Legacy code. Keep until nanopore has been tested
-                        # Check if last deletion should be extended, short alignment block are merged with the del
-                        # this only occurs until dist_to_last_sv has been reached
-                        # if del_was_last and n_aligned_bases <= target_bases:
-                        #
-                        #     if length >= min_sv_size:
-                        #         target_bases = min(150, max(100, int(length / 2)))
-                        #
-                        #         n_aligned_bases = 0
-                        #         events_to_add.back().cigar_skip = 1
-                        #
-                        #     pos2 = event_pos + length
-                        #     events_to_add.back().pos2 = pos2
-
                         if length >= min_sv_size:  # elif!
                             pos2 = event_pos + length
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
@@ -1303,18 +1228,15 @@ cdef dict get_partitions(G, nodes):
     cdef int u, v, i
     parts = []
     for u in nodes:
-
         if seen.find(u) != seen.end(): #u in seen:
             continue
 
         for v in G.neighbors(u):
-
             if seen.find(v) != seen.end(): #v in seen:
                 continue
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
                 found = BFS_local(G, u, seen)
-
                 if found:
                     parts.append(array.array("L", found))
 
@@ -1412,17 +1334,13 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
 
     if support_estimate < min_support:
         return {}
+
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
-
     support_between, support_within = count_support_between(G, partitions, min_support)
 
     if len(support_between) == 0 and len(support_within) == 0:
         if len(reads) >= min_support:
-            # echo("1parts", partitions)
-            # echo("1s_between", support_between)
-            # echo("1s_within", support_within)
-            # echo("1n2n", n2n.keys())
             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
         else:
             return {}
@@ -1431,7 +1349,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     for edge, vd in support_between.items():
         sb[edge] = vd
 
-    #
+    # Debug:
     # echo("parts", partitions)
     # echo("s_between", sb)
     # echo("s_within", support_within)
@@ -1446,4 +1364,3 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     #     echo("s_within", support_within)
 
     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-

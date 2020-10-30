@@ -2,22 +2,16 @@
 
 import os
 import pandas as pd
-import click
 import sys
 import sortedcontainers
-import pkg_resources
+import logging
 import time
 import datetime
 from collections import defaultdict
 from dysgu import io_funcs, cluster
 
 
-def echo(*args):
-    click.echo(args, err=True)
-
-
 def open_outfile(args):
-
     if args["separate"] == "True":
         outfiles = {}
         for item in args["input_files"]:
@@ -25,14 +19,12 @@ def open_outfile(args):
             outname = f"{name}.{args['post_fix']}.csv"
             outfiles[name] = open(outname, "w")
         return outfiles
-
     if args["svs_out"] == "-" or args["svs_out"] is None:
-        click.echo("SVs output to stdout", err=True)
+        logging.info("SVs output to stdout")
         outfile = sys.stdout
     else:
-        click.echo("SVs output to {}".format(args["svs_out"]), err=True)
+        logging.info("SVs output to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
-
     return outfile
 
 
@@ -46,9 +38,7 @@ def merge_df(df, n_samples, tree=None, merge_within_sample=False):
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
     potential = df.to_dict("records")
-
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
-
     if not merge_within_sample:
         found = cluster.merge_events(potential, 25, tree, try_rev=False, pick_best=False, add_partners=True,
                                      same_sample=False)
@@ -81,9 +71,7 @@ def merge_df(df, n_samples, tree=None, merge_within_sample=False):
 
 def to_csv(df, args, names, outfile):
     # Convert the partners to a human readable format
-
     keytable = io_funcs.col_names()
-
     if "partners" not in df.columns:
         if "table_name" in df.columns:
             del df["table_name"]
@@ -93,22 +81,18 @@ def to_csv(df, args, names, outfile):
         return
 
     keytable.append("partners")
-
     if args["separate"] == "False":
         p2 = []
         for idx, r in df.iterrows():
-
             if len(r["partners"]) == 0:
                 p2.append("")
                 continue
             else:
                 key = "|".join([f"{df.iloc[idx]['table_name']},{idx}" for idx in r["partners"]])
                 p2.append(key)
-
         df["partners"] = p2
 
     elif args["separate"] == "True":
-
         for k, df2 in df.groupby("table_name"):
             df2 = df2.copy()
             # Convert parnet indexes into original indexes
@@ -119,12 +103,10 @@ def to_csv(df, args, names, outfile):
                 else:
                     ori.append("|".join([f"{df.iloc[i]['table_name']},{df.iloc[i]['id']}" for i in item]))
             df2["partners"] = ori
-
             del df2["table_name"]
             if "event_id" in df:
                 del df["event_id"]
             df2[keytable].to_csv(outfile[k], index=False)
-
     else:
         del df["table_name"]
         del df["event_id"]
@@ -269,11 +251,9 @@ def view_file(args):
         if item == "-":
             df = pd.read_csv(sys.stdin)
             name = list(set(df["sample"]))
-
             if len(name) > 1:
                 raise ValueError("More than one sample in stdin")
             else:
-
                 name = name[0]
                 seen_names.add(name)
 
@@ -288,10 +268,9 @@ def view_file(args):
             if len(name) > 1:
                 raise ValueError("More than one sample in stdin")
             else:
-
                 name = name[0]
                 if name in seen_names:
-                    click.echo("Sample {} is present in more than one input file".format(name), err=True)
+                    logging.info("Sample {} is present in more than one input file".format(name))
                     bname = f"{name}_{name_c[name]}"
                     df["sample"] = [bname] * len(df)
                     df["table_name"] = [bname for _ in range(len(df))]
@@ -318,17 +297,13 @@ def view_file(args):
         if args["merge_within"] == "True":
             l_before = len(df)
             df = merge_df(df, 1, {}, merge_within_sample=True)
-            click.echo("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)), err=True)
+            logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
 
         if "partners" in df:
             del df["partners"]
-
-        # indexes += list(df.index)
         dfs.append(df)
 
     df = pd.concat(dfs)
-
-    # df["old_indexes"] = indexes
     if args["merge_across"] == "True":
         if len(seen_names) > 1:
             df = merge_df(df, len(seen_names), {})
@@ -338,10 +313,9 @@ def view_file(args):
 
     if args["out_format"] == "vcf":
         count = io_funcs.to_vcf(df, args, seen_names, outfile, n_fields, header=header, extended_tags=False)
-        click.echo("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count), err=True)
+        logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
     else:
         to_csv(df, args, seen_names, outfile)
 
-    click.echo("dysgu view complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
-                                                    time.time() - t0),
-               err=True)
+    logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
+                                                    time.time() - t0))
