@@ -323,8 +323,6 @@ class CoverageAnalyser(object):
             #     e["outer_cn"] = 1
             #     e["inner_cn"] = 1
         e["fcc"] = fc
-        echo(e)
-        echo(fc)
 
     def process_two_windows(self, e):
 
