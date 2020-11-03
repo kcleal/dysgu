@@ -21,11 +21,12 @@ import logging
 
 class Py_CoverageTrack(object):
 
-    def __init__(self, outpath, infile):
+    def __init__(self, outpath, infile, max_coverage):
         self.current_chrom = -1
         self.outpath = outpath
         self.cov_array = np.array([], dtype="int32")
         self.infile = infile
+        self.max_coverage = max_coverage
 
     def add(self, a):
 
@@ -52,7 +53,6 @@ class Py_CoverageTrack(object):
                 index_start += length
                 index_bin = int(index_start / 10)
             elif opp == 0 or opp == 7 or opp == 8:
-                # if -32000 < arr[index_bin] < 32000:
                 arr[index_bin] += 1
                 index_start += length
                 index_bin = int(index_start / 10)
@@ -65,7 +65,7 @@ class Py_CoverageTrack(object):
         self.cov_array.fill(0)
 
     def write_track(self):
-        cdef np.ndarray[int16_t, ndim=1] ca = self.cov_array
+        cdef np.ndarray[int16_t, ndim=1] ca = self.cov_array.astype("int16")
         cdef int current_cov = 0
         cdef int16_t v
         cdef int i
@@ -127,7 +127,7 @@ def config(args):
     return bam, bam_i, clip_length, send_output, reads_out
 
 
-cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size, pe, temp_dir):
+cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam, min_sv_size, pe, temp_dir, max_coverage):
 
     cdef int flag
     cdef long qname
@@ -182,6 +182,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
         qname = r.qname.__hash__()
         scope.append((qname, r))
 
+        # todo only allow writing of regions with coverage <= max_coverage
         cov_track.add(r)
 
         if read_names.find(qname) == read_names.end():
@@ -224,7 +225,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                                    int threads, int paired_end, char* temp_f)
+                                    int threads, int paired_end, char* temp_f, int max_coverage)
 
 def process(args):
 
@@ -248,12 +249,12 @@ def process(args):
     cdef bytes temp_f = temp_dir.encode("ascii")
 
     if exc_tree is None:
-        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["mq"], args["procs"], pe, temp_f)
+        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["mq"], args["procs"], pe, temp_f, args["max_cov"])
 
     else:
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                args["min_size"], pe, temp_dir)
+                                                                args["min_size"], pe, temp_dir, args["max_cov"])
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))
         quit()

@@ -37,8 +37,8 @@
             "-Wno-ignored-qualifiers"
         ],
         "include_dirs": [
-            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
+            "./dysgu",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -53,6 +53,7 @@
         "library_dirs": [
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/numpy/core/include",
+            "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/htslib",
             "/Users/kezcleal/anaconda3/lib/python3.7/site-packages/pysam/include/samtools"

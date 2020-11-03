@@ -220,9 +220,6 @@ class CoverageAnalyser(object):
         self.chrom_cov_arrays = {}
         # self.chrom_medians = {}
 
-    def process_events(self, events):
-
-        # Try and load coverage tracks
         chrom_cov_arrays = {}
         if os.path.exists(self.temp_dir):
             for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
@@ -230,22 +227,37 @@ class CoverageAnalyser(object):
                 chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
             if chrom_cov_arrays:
                 self.chrom_cov_arrays = chrom_cov_arrays
-                # for k, v in chrom_cov_arrays.items():
-                #     sub = v[v > 0]
-                #     if len(sub):
-                #         m = np.median(sub)
-                #     else:
-                #         m = 0
-                #     self.chrom_medians[k] = m
-                logging.info("Loaded chromosome coverage arrays from {}".format(self.temp_dir))
+                logging.info("Loaded n={} chromosome coverage arrays from {}".format(len(chrom_cov_arrays), self.temp_dir))
+        else:
+            logging.warning("Coverage track not loaded, working directory does not exist {}".format(self.temp_dir))
 
-        elif not chrom_cov_arrays and not self.ibam:
-            logging.warning("Warning: Skipping fcc metric, --ibam not provided or temp folder not loaded")
-            for e in events:
-                e["fcc"] = -1
-                e["inner_cn"] = 1
-                e["outer_cn"] = 1
-            return events
+    def process_events(self, events):
+
+        # Try and load coverage tracks
+        for e in events:
+            e["fcc"] = -1
+            e["inner_cn"] = -1
+            e["outer_cn"] = -1
+
+        # chrom_cov_arrays = {}
+        # if os.path.exists(self.temp_dir):
+        #     for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
+        #         chrom_name = pth.split("/")[-1].split(".")[0]
+        #         chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
+        #     if chrom_cov_arrays:
+        #         self.chrom_cov_arrays = chrom_cov_arrays
+        #         # for k, v in chrom_cov_arrays.items():
+        #         #     sub = v[v > 0]
+        #         #     if len(sub):
+        #         #         m = np.median(sub)
+        #         #     else:
+        #         #         m = 0
+        #         #     self.chrom_medians[k] = m
+        #         logging.info("Loaded chromosome coverage arrays from {}".format(self.temp_dir))
+
+        # if not self.chrom_cov_arrays:
+        #     logging.warning("Skipping fcc metric, coverage arrays not loaded from {}".format())
+        #     return events
 
         count = 0
         for e in events:
@@ -259,10 +271,6 @@ class CoverageAnalyser(object):
                 fcc = self.process_insertion(e)
             else:  # TRA
                 fcc = self.process_two_windows(e)
-            if fcc == fcc:
-                e["fcc"] = fcc
-            else:
-                e["fcc"] = -1
             count += 1
 
         return events
@@ -314,8 +322,9 @@ class CoverageAnalyser(object):
             # else:
             #     e["outer_cn"] = 1
             #     e["inner_cn"] = 1
-
-        return fc
+        e["fcc"] = fc
+        echo(e)
+        echo(fc)
 
     def process_two_windows(self, e):
 
@@ -395,8 +404,7 @@ class CoverageAnalyser(object):
             # else:
             #     e["outer_cn"] = 1
             #     e["inner_cn"] = 1
-
-        return fc
+        e['fcc'] = fc
 
     def process_insertion(self, e):
 
@@ -439,13 +447,14 @@ class CoverageAnalyser(object):
         # else:
         #     e["outer_cn"] = 1
         #     e["inner_cn"] = 1
-
-        return fcc
+        e["fcc"] = fcc
 
 
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     if end - start > 1:
-        return np.median(arr[int(start / 10): int(end / 10)])
+        m = np.median(arr[int(start / 10): int(end / 10)])
+        if m == m:
+            return m
     return -1
 
 
@@ -580,6 +589,13 @@ def get_gt_metric(events, infile, add_gt=False):
         sup = e["su"] - e["spanning"]  # spanning are counted twice
         ocn = e["outer_cn"]
         icn = e["inner_cn"]
+
+        if any((ocn < 0, icn < 0, sup < 0)):
+            e['GQ'] = '.'
+            e['SQ'] = '.'
+            e['GT'] = './.'
+            continue
+
         higher_cn = max(ocn, icn)
         lower_cn = min(icn, ocn)
 

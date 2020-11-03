@@ -69,8 +69,8 @@ def cli():
 
 
 @cli.command("run")
-@click.argument('working_directory', required=True, type=click.Path())
 @click.argument('reference', required=True, type=click.Path(exists=True))
+@click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=True))
 # @click.option('--dest', help="Folder to use/create for temp file and saving results. Defaults to current directory",
 #               default=None, type=click.Path())
@@ -172,7 +172,8 @@ def run_pipeline(ctx, **kwargs):
     if kwargs["keep_temp"] == "False":
         os.remove(tmp_file_name)
 
-    logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(seconds=int(time.time() - t0)))))
+    logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(
+        seconds=int(time.time() - t0)))))
 
 
 @cli.command("fetch")
@@ -190,12 +191,15 @@ def run_pipeline(ctx, **kwargs):
               default="stdout", type=str, show_default=True)
 # @click.option("-r2", "--reads2", help="Output read2 for fq/fasta output only", default="None", type=str,
 #               show_default=True)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore",
+              default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
+@click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
+              default=defaults["max_cov"], type=float, show_default=True)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
@@ -235,8 +239,8 @@ def get_reads(ctx, **kwargs):
 
 
 @cli.command("call")
-@click.argument('working_directory', required=True, type=click.Path())
 @click.argument('reference', required=True, type=click.Path(exists=True))
+@click.argument('working_directory', required=True, type=click.Path())
 @click.argument('sv-aligns', required=False, type=click.Path(exists=False))
 @click.option("-b", "--ibam", help="Original input file usef with 'fetch' command, used for calculating insert size parameters",
               show_default=True, default=None, required=False, type=click.Path())

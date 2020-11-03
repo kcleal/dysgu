@@ -1900,14 +1900,39 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
         elif svtype == "DEL":
 
-            svlen = abs(main_B_break - main_A_break)
+            main_svlen = abs(main_B_break - main_A_break)
+            svlen = main_svlen
             if not preciseA or not preciseB:
+                # lens = []
+                # for i in informative:
+                #     if i.inferred_sv_len != -1:
+                #         lens.append(i.inferred_sv_len)
+                #         echo(i.size_inferred)
+                # if len(lens) > 0:
+                #     svlen = int(np.median(lens))
+
                 lens = []
+                inferred_lens = []
                 for i in informative:
                     if i.inferred_sv_len != -1:
-                        lens.append(i.inferred_sv_len)
+                        if i.size_inferred == 1:
+                            inferred_lens.append(i.inferred_sv_len)
+                        else:
+                            lens.append(i.inferred_sv_len)
                 if len(lens) > 0:
-                    svlen = int(np.median(i.inferred_sv_len))
+                    svlen = int(np.mean(lens))
+                    if (svlen / main_svlen) > 0.7:
+                        svlen_precise = 1
+                    else:
+                        svlen = main_svlen
+                else:
+                    if len(inferred_lens) > 0:
+                        svlen = int(np.mean(inferred_lens))
+                    else:
+                        svlen = main_svlen
+                    if (svlen / main_svlen) <= 0.7:
+                        svlen = main_svlen
+
         else:
             svlen = abs(main_B_break - main_A_break)
     else:

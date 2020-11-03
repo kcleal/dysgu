@@ -10,6 +10,8 @@
 #include "robin_hood.h"
 #include "htslib/htslib/sam.h"
 #include "htslib/htslib/hfile.h"
+//#include "htslib/sam.h"
+//#include "htslib/hfile.h"
 #include "xxhash64.h"
 
 
@@ -20,20 +22,50 @@ class CoverageTrack
         CoverageTrack() {}
         ~CoverageTrack() {}
 
-        std::vector<int32_t> cov_array;
+        std::vector<int32_t> cov_array;  // Assume coverage never overflows int32
+        int max_coverage;
+        int index = 0;
 
         void add(int index_start, int index_end) {
-            int i = index_start / 10;
-//            if (index_start >= 0 && index_end < cov_array.size())
-            //if (cov_array[i] < 32000 && cov_array[i] > -32000) {
-            cov_array[i] += 1;
+            cov_array[index_start / 10] += 1;
             cov_array[index_end / 10] -= 1;
-            //}
+        }
+
+        bool cov_val_good(bam1_t* aln, int current_tid) {
+            // Work out the coverage value up until alignment pos. Assumes that alignments dropping out of the queue
+            // will not overlap the ones being read into the queue
+
+            if (aln->core.tid != current_tid) {
+                return true;  // Assumed, but might not be the case
+            }
+
+            int pos = aln->core.pos;
+            int target_index = (pos / 10) + 1;  // Make sure the pos bin is tested
+            int current_cov = cov_array[index];
+
+            if (target_index > index + 1) {
+                // Cumulative sum of the cov array up until start of the alignment
+                for (int i=index + 1; i < target_index; i++) {
+                    current_cov += cov_array[i];
+                    cov_array[i] = current_cov;
+                    index += 1;
+                }
+            }
+
+            assert(current_cov >= 0);
+
+            if (current_cov > max_coverage) {
+                return false;
+            }
+//            std::cerr << current_cov << std::endl;
+//            exit(0);
+            return true;
         }
 
         void set_cov_array(int chrom_length) {
             cov_array.clear();
             cov_array.resize((chrom_length / 10) + 1, 0);
+            index = 0;
         }
 
         void write_track(char* out_name) {
@@ -42,28 +74,31 @@ class CoverageTrack
 
             int current_cov = 0;
             int16_t high = 32000;
-//            int n_over_high = 0;
-            for (const auto& v: cov_array) {
-//                if (v != 0) {
-                current_cov += v;
-//                }
+
+            //for (const auto& v: cov_array) {
+            for (int i = 0; i < cov_array.size(); i++) {
+
+                if (i >= index) {
+                    int v = cov_array[i];
+                    current_cov += v;
+                } else {
+                    current_cov = cov_array[i];
+                }
+
                 if (current_cov > high) {
                     file_out.write((char *)&high, sizeof(int16_t));
-//                    n_over_high += 1;
                 } else {
                     file_out.write((char *)&current_cov, sizeof(int16_t));
                 }
             }
-//            if (n_over_high > 0) {
-//                std::cerr << "N coverage bins out of range: " << n_over_high << std::endl;
-//            }
+
             file_out.close();
         }
 };
 
 
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f) {
+                          int threads, int paired_end, char* temp_f, int max_coverage) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
@@ -107,9 +142,12 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     // Write coverage information using mosdepth style algorithm
      CoverageTrack cov_track;
+     cov_track.max_coverage = max_coverage;
+
      std::string temp_folder = temp_f;
 
     int current_tid = -1;
+    bam1_t* aln;
 
     // Read alignment into the back of scope queue
     while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
@@ -117,7 +155,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         if (scope.size() > max_scope) {
             scope_item = scope[0];
 
-            if (read_names.find(scope_item.first) != read_names.end()) {
+            // check if read is SV-read and in low coverage region, push to write queue
+            if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
+
                 write_queue.push_back(scope_item.second);
             } else {
                 bam_destroy1(scope_item.second);
@@ -137,7 +177,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         }
 
         // Process current alignment as it arrives in scope. Add rname to hash if it is an SV read. Add coverage info
-        bam1_t* aln = scope.back().second;
+        aln = scope.back().second;
         const uint16_t flag = aln->core.flag;
 
         // Skip uninteresting reads before putting on queue
@@ -224,7 +264,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     while (scope.size() > 0) {
         scope_item = scope[0];
-        if (read_names.find(scope_item.first) != read_names.end()) {
+        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
             write_queue.push_back(scope_item.second);
         } else {
             bam_destroy1(scope_item.second);
@@ -240,7 +280,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     }
 
     // write last chrom to coverage track
-
     if (current_tid >= 0 && current_tid <= n_chromosomes) { // tid can sometimes be 65535
         const char* rname = sam_hdr_tid2name(samHdr, current_tid);
         if (rname != NULL) {

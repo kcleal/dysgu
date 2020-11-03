@@ -9,6 +9,12 @@ import logging
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
+# ctypedef fused DTYPE_t:
+#     float
+#     short
+
+from dysgu.map_set_utils import echo
+
 
 def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
     """
@@ -356,6 +362,7 @@ class GenomeScanner:
 
         if rname == self.current_chrom and bin_pos == self.current_pos:
             if current_cov >= self.max_cov and not in_roi:
+            # if len(self.current_bin) >= self.max_cov and not in_roi:
                 if len(self.current_bin) > 0:
                     self.current_bin = []
                     self.reads_dropped += len(self.current_bin)
@@ -365,6 +372,7 @@ class GenomeScanner:
 
         else:  # New staged bin
             if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
+            # if len(self.current_bin) != 0 and (len(self.current_bin) < self.max_cov or in_roi):
                 self.staged_reads.append(self.current_bin)  # Send for further processing
             self.current_chrom = rname
             self.current_pos = bin_pos
@@ -398,14 +406,14 @@ cdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
     return chrom_depth[bin_start]
 
 
-cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
+cpdef calculate_coverage(int start, int end, np.int16_t[:] chrom_depth, int bin_size=10):
     # Round start and end to get index
 
-    cdef float fs = start / 100
-    cdef float fe = end / 100
+    cdef float fs = start / bin_size
+    cdef float fe = end / bin_size
 
     start = <int> fs  # Cast to int
-    end = <int > fe
+    end = <int> fe
     if start < 0:
         start = 0
     cdef int len_chrom = <int> len(chrom_depth)
@@ -433,91 +441,98 @@ cpdef calculate_coverage(int start, int end, DTYPE_t[:] chrom_depth):
     return total / (end - start), max_cov
 
 
-cpdef dict get_raw_coverage_information(r, regions, regions_depth, infile, max_cov):
+def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov):
 
-    # Check if side A in regions
-    ar = False
-    if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
-        ar = True
-    br = False
-    if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
-        br = True
+    new_events = []
 
-    kind = "extra-regional"
-    if not ar and not br:
-        if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
-            switch = True
+    for r in events:
 
-        # Skip if regions have been provided; almost always false positives?
-        # if regions is not None:
-        #     return None
+        # Check if side A in regions
+        ar = False
+        if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
+            ar = True
+        br = False
+        if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
+            br = True
 
-    switch = False
-    if (br and not ar) or (not br and ar):
-        kind = "hemi-regional"
-        if not br and ar:
-            switch = True
+        kind = "extra-regional"
+        if not ar and not br:
+            if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
+                switch = True
 
-    if ar and br:
-        if r["chrA"] == r["chrB"]:
-            rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
-            rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
-            if rA[0] == rB[0] and rA[1] == rB[1]:
-                kind = "intra_regional"
-                # Put posA first
-                if r["posA"] > r["posB"]:
-                    switch = True
+            # Skip if regions have been provided; almost always false positives?
+            # if regions is not None:
+            #     return None
+
+        switch = False
+        if (br and not ar) or (not br and ar):
+            kind = "hemi-regional"
+            if not br and ar:
+                switch = True
+
+        if ar and br:
+            if r["chrA"] == r["chrB"]:
+                rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
+                rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
+                if rA[0] == rB[0] and rA[1] == rB[1]:
+                    kind = "intra_regional"
+                    # Put posA first
+                    if r["posA"] > r["posB"]:
+                        switch = True
+                else:
+                    kind = "inter-regional"
+                    if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
+                        switch = True
             else:
                 kind = "inter-regional"
-                if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
-                    switch = True
-        else:
-            kind = "inter-regional"
 
-    if switch:
-        chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contig2"]
-        r["chrA"] = r["chrB"]
-        r["posA"] = r["posB"]
-        r["cipos95A"] = r["cipos95B"]
-        r["chrB"] = chrA
-        r["posB"] = posA
-        r["cipos95B"] = cipos95A
-        r["contig2"] = r["contig"]
-        r["contig"] = contig2
+        if switch:
+            chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contig2"]
+            r["chrA"] = r["chrB"]
+            r["posA"] = r["posB"]
+            r["cipos95A"] = r["cipos95B"]
+            r["chrB"] = chrA
+            r["posB"] = posA
+            r["cipos95B"] = cipos95A
+            r["contig2"] = r["contig"]
+            r["contig"] = contig2
 
-    max_depth = 0
-    if kind == "hemi-regional":
-        chrom_i = infile.get_tid(r["chrA"])
-        if chrom_i in regions_depth:
-            reads_10kb, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
-            reads_10kb = round(reads_10kb, 3)
+        max_depth = 0
+        if kind == "hemi-regional":
+            # chrom_i = infile.get_tid(r["chrA"])
+            chrom_i = r["chrA"]
+            if chrom_i in regions_depth.chrom_cov_arrays:
+                reads_10kb, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb = round(reads_10kb, 3)
+            else:
+                reads_10kb = 0
         else:
-            reads_10kb = 0
-    else:
-        # Calculate max
-        chrom_i = infile.get_tid(r["chrA"])
-        if chrom_i in regions_depth:
-            reads_10kb_left, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth[chrom_i])
-            reads_10kb_left = round(reads_10kb_left, 3)
-        else:
-            reads_10kb_left = 0
-        chrom_i = infile.get_tid(r["chrB"])
-        if chrom_i in regions_depth:
-            reads_10kb_right, max_depth = calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth[chrom_i])
-            reads_10kb_right = round(reads_10kb_right, 3)
-        else:
-            reads_10kb_right = 0
-        if reads_10kb_left > reads_10kb_right:
-            reads_10kb = reads_10kb_left
-        else:
-            reads_10kb = reads_10kb_right
-    #todo check this in latest version:
-    if reads_10kb >= max_cov * 0.55 and not ar and not br:
-        return None
+            # Calculate max
+            # chrom_i = infile.get_tid(r["chrA"])
+            chrom_i = r["chrA"]
+            if chrom_i in regions_depth.chrom_cov_arrays:
+                reads_10kb_left, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb_left = round(reads_10kb_left, 3)
+            else:
+                reads_10kb_left = 0
+            # chrom_i = infile.get_tid(r["chrB"])
+            chrom_i = r["chrB"]
+            if chrom_i in regions_depth.chrom_cov_arrays:
+                reads_10kb_right, max_depth = calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb_right = round(reads_10kb_right, 3)
+            else:
+                reads_10kb_right = 0
+            if reads_10kb_left > reads_10kb_right:
+                reads_10kb = reads_10kb_left
+            else:
+                reads_10kb = reads_10kb_right
 
-    r["kind"] = kind
-    r["raw_reads_10kb"] = reads_10kb
-    if r["chrA"] != r["chrB"]:
-        r["svlen"] = 1000000
-    r["mcov"] = max_depth
-    return r
+        r["kind"] = kind
+        r["raw_reads_10kb"] = reads_10kb
+        if r["chrA"] != r["chrB"]:
+            r["svlen"] = 1000000
+        r["mcov"] = max_depth
+
+        new_events.append(r)
+
+    return  new_events

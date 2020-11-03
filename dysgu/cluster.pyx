@@ -865,30 +865,42 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                          debug=True, min_size=args["min_size"])
     else:
         merged = block_edge_events
-
+    echo("pre merge", len(block_edge_events), len(merged))
+    # for item in merged:
+    #     echo(item)
+    #     echo(item["svlen"], item["su"])
     # Filter for absolute support and size here
-    merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"])
-              and event["su"] >= args["min_support"]]
+    # merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"]) and event["su"] >= args["min_support"]]
 
     # Add read-type information
     for d in merged:
         d["type"] = args["pl"]
 
+    echo("pre drop", len(merged))
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome)
 
-    if merged:
-        for event in merged:
-            # Collect coverage information
-            event_dict = coverage.get_raw_coverage_information(event, regions, genome_scanner.depth_d, infile, args["max_cov"]) # regions_depth)
+    # if merged:
+    #     for event in merged:
+    #         # Collect coverage information
+    #         event_dict =
+    #
+    #         if event_dict:
+    #             preliminaries.append(event_dict)
+    echo("LEN MERGED", len(merged))
+    coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
 
-            if event_dict:
-                preliminaries.append(event_dict)
+    preliminaries = coverage_analyser.process_events(merged)
+
+    preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])  # genome_scanner.depth_d
 
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+
     preliminaries = sample_level_density(preliminaries, regions)
+
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
-    preliminaries = post_call_metrics.CoverageAnalyser(temp_dir).process_events(preliminaries)
+
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
 
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])

@@ -66,7 +66,8 @@ def get_extra_args():
 
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
-                             "-Wno-unused-result", '-Wno-ignored-qualifiers']
+                             "-Wno-unused-result", '-Wno-ignored-qualifiers',
+                             ]
 
 ext_modules = list()
 
@@ -102,11 +103,12 @@ if htslib is None:
 
 
 libraries = [f"{htslib}/hts"]  # Library name for libhts.so
-library_dirs = [htslib, numpy.get_include()] + pysam.get_include()
-include_dirs = [numpy.get_include(), root,
+library_dirs = [htslib, numpy.get_include(), f"{htslib}/htslib"] + pysam.get_include()
+include_dirs = [numpy.get_include(), root, # htslib,
                 f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
 runtime_dirs = [htslib]  # os.path.join(root, "dysgu/htslib")
 
+# extra_link_args = ["-L ./dysgu/htslib", "-L ./dysgu/htslib/htslib"]
 
 print("Libs", libraries)
 print("Library dirs", library_dirs)
@@ -115,7 +117,7 @@ print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "post_call_metrics"]:  # "view",  # "sv2fq",
+             "map_set_utils", "cluster", "post_call_metrics"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -124,6 +126,7 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  include_dirs=include_dirs,
                                  runtime_library_dirs=runtime_dirs,
                                  extra_compile_args=extras,
+                                 # extra_link_args=extra_link_args,
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
@@ -149,7 +152,8 @@ setup(
             'ncls',
             'scikit-bio',
             'sortedcontainers',
-            'lightgbm'
+            'lightgbm',
+            'edlib',
 
         ],
     packages=["dysgu", "dysgu.tests"],
