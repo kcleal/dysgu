@@ -218,7 +218,6 @@ class CoverageAnalyser(object):
         self.pad_size = 1000
         self.temp_dir = temp_dir
         self.chrom_cov_arrays = {}
-        # self.chrom_medians = {}
 
         chrom_cov_arrays = {}
         if os.path.exists(self.temp_dir):
@@ -238,27 +237,6 @@ class CoverageAnalyser(object):
             e["fcc"] = -1
             e["inner_cn"] = -1
             e["outer_cn"] = -1
-
-        # chrom_cov_arrays = {}
-        # if os.path.exists(self.temp_dir):
-        #     for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
-        #         chrom_name = pth.split("/")[-1].split(".")[0]
-        #         chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
-        #     if chrom_cov_arrays:
-        #         self.chrom_cov_arrays = chrom_cov_arrays
-        #         # for k, v in chrom_cov_arrays.items():
-        #         #     sub = v[v > 0]
-        #         #     if len(sub):
-        #         #         m = np.median(sub)
-        #         #     else:
-        #         #         m = 0
-        #         #     self.chrom_medians[k] = m
-        #         logging.info("Loaded chromosome coverage arrays from {}".format(self.temp_dir))
-
-        # if not self.chrom_cov_arrays:
-        #     logging.warning("Skipping fcc metric, coverage arrays not loaded from {}".format())
-        #     return events
-
         count = 0
         for e in events:
             t0 = time.time()
@@ -291,37 +269,30 @@ class CoverageAnalyser(object):
         else:
             return -1
 
-        left = median(arr, start - starting_pos - 1000, start - starting_pos)
-        right = median(arr, end - starting_pos, end - starting_pos + 1000)
+        left = median(arr, start - starting_pos - self.pad_size, start - starting_pos)
+        right = median(arr, end - starting_pos, end - starting_pos + self.pad_size)
         middle = median(arr, start - starting_pos, end - starting_pos)
         if left == -1 or right == -1 or middle == -1:
             return -1
 
         sides = (left + right) / 2
-        # chrom_med = self.chrom_medians[e["chrA"]]
         fc = 0
         if e["svtype"] == "DEL":
             if sides == 0:
                 fc = 0
             else:
                 fc = middle / sides
-            # if chrom_med > 0:
-            e["outer_cn"] = sides #/ chrom_med
-            e["inner_cn"] = middle #/ chrom_med
-            # else:
-            #     e["outer_cn"] = 1
-            #     e["inner_cn"] = 1
+            e["outer_cn"] = sides
+            e["inner_cn"] = middle
+
         else:  # DUP, INV
             if middle == 0:
                 fc = 0
             else:
                 fc = sides / middle
-            # if chrom_med > 0:
-            e["outer_cn"] = middle #/ chrom_med
-            e["inner_cn"] = sides #/ chrom_med
-            # else:
-            #     e["outer_cn"] = 1
-            #     e["inner_cn"] = 1
+            e["outer_cn"] = middle
+            e["inner_cn"] = sides
+
         e["fcc"] = fc
 
     def process_two_windows(self, e):
@@ -344,11 +315,11 @@ class CoverageAnalyser(object):
         else:
             return -1
 
-        left1 = median(arr1, start - 1000, start)
-        right1 = median(arr1, start, start + 1000)
+        left1 = median(arr1, start - self.pad_size, start)
+        right1 = median(arr1, start, start + self.pad_size)
 
-        left2 = median(arr2, end - 1000, end)
-        right2 = median(arr2, end, end + 1000)
+        left2 = median(arr2, end - self.pad_size, end)
+        right2 = median(arr2, end, end + self.pad_size)
 
         if left1 == -1 or left2 == -1 or right1 == -1 or right2 == -1:
             return -1
@@ -356,52 +327,38 @@ class CoverageAnalyser(object):
         middle = (right1 + left2) / 2.
         sides = (left1 + right2) / 2.
 
-        # chrom_med_a = self.chrom_medians[e["chrA"]]
-        # if e["chrA"] != e["chrB"]:
-        #     chrom_med = (chrom_med_a + self.chrom_medians[e["chrB"]]) / 2.
-        # else:
-        #     chrom_med = chrom_med_a
-
         fc = 0
         if e["svtype"] == "DEL":
             if sides == 0:
                 fc = 0
             else:
                 fc = middle / sides
-            # if chrom_med > 0:
-            e["outer_cn"] = sides #/ chrom_med
-            e["inner_cn"] = middle #/ chrom_med
-            # else:
-            #     e["outer_cn"] = 1
-            #     e["inner_cn"] = 1
+            e["outer_cn"] = sides
+            e["inner_cn"] = middle
+
         elif e["svtype"] == "DUP":  # DUP, INV
             if middle == 0:
                 fc = 0
             else:
                 fc = sides / middle
-            # if chrom_med > 0:
-            e["outer_cn"] = middle #/ chrom_med
-            e["inner_cn"] = sides #/ chrom_med
-            # else:
-            #     e["outer_cn"] = 1
-            #     e["inner_cn"] = 1
+            e["outer_cn"] = middle
+            e["inner_cn"] = sides
+
         else:  # TRA
             # if chrom_med > 0:
             if e["join_type"] == "3to5":
-                e["outer_cn"] = sides #/ chrom_med
-                e["inner_cn"] = middle #/ chrom_med
+                e["outer_cn"] = sides
+                e["inner_cn"] = middle
             elif e["join_type"] == "5to3":
-                e["outer_cn"] = middle #/ chrom_med
-                e["inner_cn"] = sides #/ chrom_med
+                e["outer_cn"] = middle
+                e["inner_cn"] = sides
             elif e["join_type"] == "3to3":
-                e["outer_cn"] = ((left1 + left2) / 2.) #/ chrom_med
-                e["inner_cn"] = ((right1 + right2) / 2.) #/ chrom_med
+                e["outer_cn"] = ((left1 + left2) / 2.)
+                e["inner_cn"] = ((right1 + right2) / 2.)
             else:  # 5to5
-                e["outer_cn"] = ((right1 + right2) / 2.) #/ chrom_med
-                e["inner_cn"] = ((left1 + left2) / 2.) #/ chrom_med
-            # else:
-            #     e["outer_cn"] = 1
-            #     e["inner_cn"] = 1
+                e["outer_cn"] = ((right1 + right2) / 2.)
+                e["inner_cn"] = ((left1 + left2) / 2.)
+
         e['fcc'] = fc
 
     def process_insertion(self, e):
@@ -420,10 +377,10 @@ class CoverageAnalyser(object):
 
         pad = e["svlen"] if e["svlen_precise"] else 100
 
-        left = median(arr, e["posA"] - starting_pos - 1000, e["posA"] - starting_pos)
+        left = median(arr, e["posA"] - starting_pos - self.pad_size, e["posA"] - starting_pos)
         left_svlen = median(arr, e["posA"] - pad - starting_pos, e["posA"] - starting_pos)
 
-        right = median(arr, e["posA"] - starting_pos, e["posA"] - starting_pos + 1000)
+        right = median(arr, e["posA"] - starting_pos, e["posA"] - starting_pos + self.pad_size)
         right_svlen = median(arr, e["posA"] - starting_pos, e["posA"] - starting_pos + pad)
 
         fcc = -1
@@ -438,14 +395,41 @@ class CoverageAnalyser(object):
             inner = right_svlen
             outer = left
 
-        # chrom_med = self.chrom_medians[e["chrA"]]
-        # if chrom_med > 0:
-        e["outer_cn"] = outer #/ chrom_med
-        e["inner_cn"] = inner #/ chrom_med
-        # else:
-        #     e["outer_cn"] = 1
-        #     e["inner_cn"] = 1
+        e["outer_cn"] = outer
+        e["inner_cn"] = inner
         e["fcc"] = fcc
+
+    def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):
+
+        if chrom_a == chrom_b:
+            if chrom_medians[chrom_a]:
+                m = cn / chrom_medians[chrom_a]
+            else:
+                m = -1
+                logging.warning("Chromosome median {}: {}".format(chrom_a, chrom_medians[chrom_a]))
+        else:
+            m1 = chrom_medians[chrom_a]
+            m2 = chrom_medians[chrom_b]
+            if m1 and m2:
+                m = cn / ((m1 + m2) / 2)
+            else:
+                logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
+                                                                          chrom_b, chrom_medians[chrom_b]))
+        return m
+
+    def normalize_coverage_values(self, events):
+
+        if not self.chrom_cov_arrays:
+            return events
+
+        chrom_medians = {k: np.median(v[v > 0]) for k, v in self.chrom_cov_arrays.items()}
+        for e in events:
+            if e["outer_cn"] > 0:
+                e["outer_cn"] = self._get_cov(e["outer_cn"], e["chrA"], e["chrB"], chrom_medians)
+            if e["inner_cn"] > 0:
+                e["inner_cn"] = self._get_cov(e["inner_cn"], e["chrA"], e["chrB"], chrom_medians)
+
+        return events
 
 
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):

@@ -189,7 +189,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
         const uint16_t tid = aln->core.tid;
 
-        if (tid != current_tid & tid <= n_chromosomes) {  // prepare coverage array
+        if (tid != current_tid && tid <= n_chromosomes) {  // prepare coverage array
             if (current_tid != -1 ) {
                 const char* rname = sam_hdr_tid2name(samHdr, current_tid);
                 if (rname != NULL) {

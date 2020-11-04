@@ -72,8 +72,6 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=True))
-# @click.option('--dest', help="Folder to use/create for temp file and saving results. Defaults to current directory",
-#               default=None, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
 @click.option('--keep-temp', help="Keep temp files?",
@@ -98,20 +96,12 @@ def cli():
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
-# @click.option('--wd', help="Prefix for working-directory",
-#               default="dysgu_wd", type=str, show_default=True)
-# @click.option('--z-depth', help="Minimum minimizer depth across alignments",
-#               default=defaults["z_depth"], type=int, show_default=True)
-# @click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
-#               default=defaults["z_breadth"], type=int, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
 @click.option('--include', help=".bed file, limit calls to regions", default=None, type=click.Path(exists=True))
-# @click.option('--dest', help="Folder to use/create for saving results. Defaults to current directory",
-#               default=None, type=click.Path())
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
@@ -131,7 +121,7 @@ def cli():
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--overwrite", help="Overwrite temp files", default="False",
+@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
               type=str, show_default=True)
@@ -207,14 +197,14 @@ def run_pipeline(ctx, **kwargs):
               default=None, type=click.Path(exists=True))
 # @click.option('--wd', help="Prefix for working-directory",
 #               default="dysgu_wd", type=click.Path(exists=False))
-@click.option("--overwrite", help="Overwrite temp files", default="False",
+@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--pl', help="Type of input reads", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.pass_context
 def get_reads(ctx, **kwargs):
     """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
-    writes bam"""
+    saves bam file in WORKING_DIRECTORY"""
     logging.info("[dysgu-fetch] Version: {}".format(version))
     make_wd(kwargs)
 
@@ -267,12 +257,6 @@ def get_reads(ctx, **kwargs):
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
-# @click.option('--wd', help="Prefix for working-directory",
-#               default="dysgu_wd", type=click.Path(exists=False))
-# @click.option('--z-depth', help="Minimum minimizer depth across alignments",
-#               default=defaults["z_depth"], type=int, show_default=True)
-# @click.option('--z-breadth', help="Minimum number of minimizers shared between a pair of alignments",
-#               default=defaults["z_breadth"], type=int, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
@@ -280,8 +264,6 @@ def get_reads(ctx, **kwargs):
               show_default=True)
 @click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=1, show_default=True)
 @click.option('--include', help=".bed file, limit calls to regions", default=None, type=click.Path(exists=True))
-# @click.option('--dest', help="Folder to use/create for saving results. Defaults to current directory",
-#               default=None, type=click.Path())
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
@@ -301,9 +283,9 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--overwrite", help="Overwrite temp files", default="False",
+@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.75",
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):

@@ -865,15 +865,16 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                          debug=True, min_size=args["min_size"])
     else:
         merged = block_edge_events
-    logging.info("Number of SVs merged: {}".format(len(block_edge_events) - len(merged)))
+    logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     # for item in merged:
     #     echo(item)
     #     echo(item["svlen"], item["su"])
     # Filter for absolute support and size here
+
     if args["keep_small"] == "False":
         before = len(merged)
         merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"]) and event["su"] >= args["min_support"]]
-        logging.info("Number of SVs with sv-len < min-size or support < min support: {}".format(before - len(merged)))
+        logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
 
     # Add read-type information
     for d in merged:
@@ -904,6 +905,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
 
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
+
+    preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
+
 
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
     for v in preliminaries:
