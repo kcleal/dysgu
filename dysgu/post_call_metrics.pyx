@@ -10,7 +10,7 @@ from cython.operator import dereference, postincrement, postdecrement, preincrem
 from libc.math cimport fabs as c_fabs
 from libcpp.vector cimport vector as cpp_vector
 
-from dysgu.map_set_utils import echo
+from dysgu.map_set_utils import echo, timeit
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement
 from dysgu.coverage import merge_intervals
@@ -68,7 +68,7 @@ class BadClipCounter:
 
         return count
 
-
+@timeit
 def get_badclip_metric(events, bad_clip_counter, bam):
 
     bad_clip_counter.sort_arrays()
@@ -230,6 +230,7 @@ class CoverageAnalyser(object):
         else:
             logging.warning("Coverage track not loaded, working directory does not exist {}".format(self.temp_dir))
 
+    @timeit
     def process_events(self, events):
 
         # Try and load coverage tracks
@@ -433,8 +434,10 @@ class CoverageAnalyser(object):
 
 
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
-    if end - start > 1:
-        m = np.median(arr[int(start / 10): int(end / 10)])
+    s = int(start / 10)
+    e = int(end / 10)
+    if e > s:
+        m = np.median(arr[s:e])
         if m == m:
             return m
     return -1
@@ -471,7 +474,7 @@ def bayes_gt(ref, alt, is_dup):
 
     return lp_homref, lp_het, lp_homalt
 
-
+@timeit
 def get_gt_metric(events, infile, add_gt=False):
     if add_gt:
         logging.info("Adding genotype")
@@ -630,7 +633,7 @@ def get_gt_metric(events, infile, add_gt=False):
 
     return events
 
-
+@timeit
 def apply_model(df, mode, contigs, paired, thresholds):
 
     pth = os.path.dirname(os.path.abspath(__file__))

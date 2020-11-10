@@ -6,14 +6,15 @@ from libcpp.pair cimport pair as cpp_pair
 from libcpp.utility cimport pair
 from libcpp.string cimport string as cpp_string
 
-import cython
+import numpy as np
+cimport numpy as np
 
 # from pysam.libcalignmentfile cimport AlignmentFile
 # from pysam.libcalignedsegment cimport AlignedSegment
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 
 
-from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t
+from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t, int32_t
 
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
@@ -22,6 +23,9 @@ ctypedef cpp_pair[int, int] get_val_result
 # ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
 
 from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
+
+from libcpp cimport bool
+# from pysam.libcalignedsegment cimport bam1_t
 
 
 cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
@@ -71,22 +75,14 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         bint empty()
 
 
-# cdef extern from "find_reads.h" nogil:
-#     cdef cppclass CoverageTrack:
-#         CoverageTrack() nogil
-#
-#         void add(uint16_t chrom, uint16_t index_start, uint16_t index_end) nogil
-#         void set_cov_array(int chrom_length) nogil
-#         void write_track(char* out_name) nogil
-#
-#
-# cdef class Py_CoverageTrack:
-#     """DiGraph, no weight"""
-#     cdef CoverageTrack *thisptr
-#
-#     cdef void add(self, uint16_t chrom, uint16_t index_start, uint16_t index_end) nogil
-#     cdef void set_cov_array(self, int chrom_length) nogil
-#     cdef void write_track(self, char* out_name) nogil
+cdef class Py_CoverageTrack:
+    cdef public int max_coverage, current_chrom
+    cdef public str outpath
+    cdef public object cov_array #np.ndarray[np.int32, ndim=1] cov_array
+    cdef public object infile
+    # cdef void add(self, object a)
+    # cdef void set_cov_array(self, int rname)
+    # cdef void write_track(self)
 
 
 cdef extern from "wrap_map_set2.h" nogil:

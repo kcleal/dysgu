@@ -8,22 +8,23 @@ import logging
 import numpy as np
 import random
 from collections import defaultdict, Counter
-import click
 import networkx as nx
 import pysam
 import sys
 import resource
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics, sv2bam
-from dysgu.map_set_utils cimport is_reciprocal_overlapping
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack
+from dysgu.map_set_utils import timeit, echo
+import itertools
+
+
 import itertools
 import multiprocessing
 from scipy import stats
 from libcpp.vector cimport vector
 
-
-def echo(*args):
-    click.echo(args, err=True)
+from libc.stdint cimport uint8_t
 
 
 def filter_potential(input_events, tree, regions_only):
@@ -446,20 +447,43 @@ def sample_level_density(potential, regions, max_dist=50):
     return potential
 
 
-cdef bint poly_kmer(k):
-    cdef int len_k = len(k)
-    if len_k == 1:
-        return False
-    sk = set(k)
-    if len(sk) == 1:
-        return True
-    elif len_k == 4:
-        if k[:2] == k[2:]:
-            return True
-    elif len_k == 6:
-        if k[:3] == k[3:]:
-            return True
-    return False
+# cdef bint poly_kmer(k):
+#
+#     cdef int j, step
+#     if len(k) == 1:
+#         return False
+#     #sk = set(k)
+#     #if len(sk) == 1:
+#     #    return True
+#     # sk = k[0]
+#     # if all(k[j] == sk for j in range(1, len(k))):
+#     #     return True
+#
+#     if len(k) % 2 == 0:
+#         step = int(len(k) / 2)
+#         if all([k[j] == k[j+step] for j in range(step)]):
+#             return True
+#
+#     else:
+#         sk = k[0]
+#         if all([k[j] == sk for j in range(1, len(k))]):
+#             return True
+#
+#     # elif len_k == 4:
+#     #     if k[:2] == k[2:]:
+#     #         return True
+#     # elif len_k == 6:
+#     #     if k[:3] == k[3:]:
+#     #         return True
+#     return False
+
+
+cdef bint same_k(int start1, int start2, int n, const unsigned char[:] seq):
+    cdef int j
+    for j in range(n):
+        if seq[start1 + j] != seq[start2 + j]:
+            return False
+    return True
 
 
 cdef dict search_ssr_kc(ori):
@@ -475,6 +499,21 @@ cdef dict search_ssr_kc(ori):
     cdef int stride = 0
     expansion_seq = ""
 
+    # Make a simple polymer table (simple repeats that can be broken into smaller repeats)
+    # polymers = set([])
+    # bits = dict()
+    # bits[3] = ["".join(v) for v in itertools.permutations('ACTG', 3)]
+    # bits[2] = ["".join(v) for v in itertools.permutations('ACTG', 2)]
+    # bits[1] = ["A", "T", "C", "G"]
+    # for k in range(2, rep_len+1):
+    #     for j in range(1, k):
+    #         if k % j == 0:
+    #             copies = int(rep_len / j)
+    #             for c in range(2, copies+1):
+    #                 for b in bits[j]:
+    #                     polymers.add(b * c)
+
+    cdef unsigned char starting_base
     while i < str_len:
 
         if seq[i] == b"N":
@@ -487,20 +526,23 @@ cdef dict search_ssr_kc(ori):
             if start + t >= str_len:
                 break
 
-            starting_base = seq[i]
-            starting_kmer = seq[start:start + t]
+            starting_base = string_view[i]
+            starting_kmer_idx = start
 
-            if poly_kmer(starting_kmer):
-                continue
+            # if seq[start:start+t] in polymers:
+            #     continue
 
             count = 1
             mm = 0
             good_i = 0
             successive_bad = 0
             finish = 0
-            while start + t < str_len and (starting_base == seq[start+t] or mm < 2):
+            while start + t < str_len and (starting_base == string_view[start+t] or mm < 2):
                 start += t
-                if seq[start: start + t] != starting_kmer:
+                if start + t + 1 > str_len:
+                    break
+
+                if not same_k(start, starting_kmer_idx, t, string_view):
                     successive_bad += 1
                     mm += 1
                     if mm > 3 or successive_bad > 1 or count < 2:
@@ -550,14 +592,34 @@ cdef dict search_ssr_kc(ori):
                 i = finish + t
         i += 1
 
+    # if stride in polymers:
+    #     echo("STRIDE", stride)
+
     return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
 
 
-cdef find_repeat_expansions(events, insert_stdev):
+@timeit
+def find_repeat_expansions(events, insert_stdev):
+
+    tbl = {"A":0, "T": 1, "C": 2, "G": 3, "N": 4}
+    cdef uint8_t* seq_ptr
     for e in events:
         res = {"n_expansion": 0, "stride": 0, "exp_seq": "", "ref_poly_bases": 0}
         if "contig" in e and e["contig"] is not None:
+            # t0 = time.time()
+            # search_ssr_kc(e["contig"])
+            # echo(time.time() - t0)
+
             res.update(search_ssr_kc(e["contig"]))
+            # echo(res)
+            # echo(e["contig"])
+            # t0 = time.time()
+            # v = bytes(e["contig"].upper().encode("ascii"))
+            # c = np.array([tbl[i] for i in e["contig"].upper()]).astype(np.uint8)
+            # seq_ptr = v
+            # process_seq(6, 7, len(e["contig"]), seq_ptr)
+            # echo(time.time() - t0)
+            # quit()
         if "contig2" in e and e["contig2"] is not None:
             r = search_ssr_kc(e["contig2"])
             if res["n_expansion"] < r["n_expansion"]:
@@ -678,7 +740,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     temp_dir = args["working_directory"]
     if not args["ibam"]:
         # Make a new coverage track if one hasn't been created yet
-        coverage_tracker = sv2bam.Py_CoverageTrack(temp_dir, infile)
+        coverage_tracker = Py_CoverageTrack(temp_dir, infile, args["max_cov"])
     else:
         coverage_tracker = None
 
@@ -856,7 +918,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
-                                                    keep_small=args["keep_small"] == "True",
+                                                    keep_small=args["keep_small"],
                                                     min_support=args["min_support"])
 
     # Merge across calls
@@ -866,15 +928,16 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     else:
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
-    # for item in merged:
-    #     echo(item)
-    #     echo(item["svlen"], item["su"])
-    # Filter for absolute support and size here
 
-    if args["keep_small"] == "False":
-        before = len(merged)
+    # Filter for absolute support and size here
+    before = len(merged)
+    if not args["keep_small"]:
         merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"]) and event["su"] >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
+    else:
+        merged = [event for event in merged if event["su"] >= args["min_support"]]
+        logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
+
 
     # Add read-type information
     for d in merged:
@@ -891,23 +954,23 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     #             preliminaries.append(event_dict)
     # echo("LEN MERGED", len(merged))
     coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
-
+    logging.info("Cov analyser")
     preliminaries = coverage_analyser.process_events(merged)
-
+    logging.info("Cov finished")
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])  # genome_scanner.depth_d
-
+    logging.info("Cov info finished")
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-
+    logging.info("contig info finished")
     preliminaries = sample_level_density(preliminaries, regions)
-
+    logging.info("density finished")
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-
+    logging.info("repeat expansion finished")
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
-
-    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["gt"] == "True")
-
+    logging.info("bcc finished")
+    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["no_gt"])
+    logging.info("gt finished")
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-
+    logging.info("norm cov finished")
 
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
     for v in preliminaries:

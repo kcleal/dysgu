@@ -56,9 +56,14 @@ def make_wd(args, call_func=False):
     temp_dir = args["working_directory"]
     if not os.path.exists(temp_dir):
         os.mkdir(temp_dir)
-    elif args["overwrite"] == "False":
+    elif not args["overwrite"]:
         if (call_func and args["ibam"] is None) or not call_func:
             raise ValueError("Working directory already exists. Add --overwrite=True to proceed")
+
+
+def clean_up(args, tmp_file_name):
+    if args["rm_temp"]:
+        os.remove(tmp_file_name)
 
 
 @click.group(chain=False, invoke_without_command=False)
@@ -72,10 +77,8 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=True))
-@click.option('--pfix', help="Post-fix to add to temp alignment files",
-              default="dysgu_reads", type=str)
-@click.option('--keep-temp', help="Keep temp files?",
-              default="True", type=click.Choice(["True", "False"]))
+@click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
+# @click.option('--rm-temp', help="Remove temp bam file after completion", is_flag=True, flag_value=True, default=False)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
@@ -115,14 +118,10 @@ def cli():
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help="Try and remap anomalous contigs to find additional small SVs", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--gt", help="Add genotype to SVs", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
+@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
+@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
               type=str, show_default=True)
 @click.pass_context
@@ -159,8 +158,8 @@ def run_pipeline(ctx, **kwargs):
     ctx.obj["procs"] = 1
 
     cluster.cluster_reads(ctx.obj)
-    if kwargs["keep_temp"] == "False":
-        os.remove(tmp_file_name)
+
+    # clean_up(ctx.obj)
 
     logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(
         seconds=int(time.time() - t0)))))
@@ -179,8 +178,6 @@ def run_pipeline(ctx, **kwargs):
               default="None", type=str, show_default=True)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
               default="stdout", type=str, show_default=True)
-# @click.option("-r2", "--reads2", help="Output read2 for fq/fasta output only", default="None", type=str,
-#               show_default=True)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore",
               default=defaults["clip_length"],
               type=int, show_default=True)
@@ -195,10 +192,7 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
               default=None, type=click.Path(exists=True))
-# @click.option('--wd', help="Prefix for working-directory",
-#               default="dysgu_wd", type=click.Path(exists=False))
-@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option('--pl', help="Type of input reads", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.pass_context
@@ -260,8 +254,7 @@ def get_reads(ctx, **kwargs):
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
-              default="False", type=click.Choice(["True", "False"]),
-              show_default=True)
+              default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=1, show_default=True)
 @click.option('--include', help=".bed file, limit calls to regions", default=None, type=click.Path(exists=True))
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
@@ -277,14 +270,10 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help="Try and remap anomalous contigs to find additional small SVs", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--metrics", help="Output metrics of each event in the .vcf file", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--gt", help="Add genotype to SVs", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("-x", "--overwrite", help="Overwrite temp files", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
+@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
+@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.75",
               type=str, show_default=True)
 @click.pass_context

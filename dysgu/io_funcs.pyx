@@ -592,7 +592,7 @@ def to_vcf(df, args, names, outfile, n_fields=17, show_names=True,  contig_names
     jobs = []
 
     add_kind = args["add_kind"] == "True"
-    small_output = args["metrics"] == "False"
+    small_output = not args["metrics"]
 
     for idx, r in df.iterrows():
 
