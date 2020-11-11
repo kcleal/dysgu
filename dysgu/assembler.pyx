@@ -21,7 +21,9 @@ from libc.stdlib cimport abs as c_abs
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t, int64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport DiGraph, unordered_set
+from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map
+from dysgu.map_set_utils cimport hash as xxhasher
+from dysgu.map_set_utils import timeit
 from dysgu.io_funcs import reverse_complement
 
 from pysam.libcalignedsegment cimport AlignedSegment
@@ -574,33 +576,51 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 
 cpdef float compute_rep(seq):
 
-    last_visited = {}
-    tot = []
+    # last_visited = {}
+
+    cdef unordered_map[float, int] last_visited
+    cdef cpp_vector[float] tot
 
     cdef int k, i, diff
     cdef float decay, max_amount, amount
-    cdef str a
+    # cdef str a
+    # cdef int a
+
+    cdef bytes s_bytes = bytes(seq.encode("ascii"))
+    cdef const unsigned char* sub_ptr = s_bytes
 
     for k in (2, 3, 4, 5, 6):
 
         decay = 0.25 * 1/k
         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
-
+        sub_ptr = s_bytes
         for i in range(len(seq) - k):
-            a = seq[i:i+k]
-            if a in last_visited:
+            # a = seq[i:i+k]
+            # echo(a, xxhasher(sub_ptr, k, 42))
+            a = xxhasher(sub_ptr, k, 42)
+
+            if last_visited.find(a) != last_visited.end():
+
+            # if a in last_visited:
                 diff = i - last_visited[a]
                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
             else:
                 amount = 0
             if i > k:
-                tot.append(amount)
+                tot.push_back(amount)
+                #tot.append(amount)
 
             last_visited[a] = i
+            # last_visited[a] = i
+            sub_ptr += 1
 
-    if len(tot) == 0:
+    if tot.size() == 0:
         return 0
-    return sum(tot) / len(tot)
+    cdef float t = 0
+    for amount in tot:
+        t += amount
+
+    return t / tot.size()
 
 
 cdef tuple get_rep(contig_seq):
@@ -637,48 +657,44 @@ cdef tuple get_rep(contig_seq):
         clip_rep = clip_rep / clip_seen
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
+@timeit
+def contig_info(events):
 
-cpdef list contig_info(events):
-
-    cdef int i, aligned, seen, aligned_bases, j
-    cdef float gc_count, seq_length
-    cdef float sc_rep, aln_rep, sc_rep1, aln_rep1
-    cdef str letter
     for i in range(len(events)):
         e = events[i]
         gc_count = 0
         seq_length = 0
-        di_nucs = {"AT": 0, "AC": 0, "AG": 0, "AA":0, "GC": 0, "TC": 0, "TG": 0, "TT": 0, "CC": 0, "GG": 0}
+        # di_nucs = {"AT": 0, "AC": 0, "AG": 0, "AA":0, "GC": 0, "TC": 0, "TG": 0, "TT": 0, "CC": 0, "GG": 0}
         if e["contig"]:
             cont = e["contig"].upper()
-            seq_length += <float>len(cont)
+            seq_length += len(cont)
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
-            if seq_length >= 2:
-                for j in range(len(cont) - 1):
-                    di = cont[j:j+2]
-                    if di in di_nucs:
-                        di_nucs[di] += 1
+            # if seq_length >= 2:
+            #     for j in range(len(cont) - 1):
+            #         di = cont[j:j+2]
+            #         if di in di_nucs:
+            #             di_nucs[di] += 1
 
         if e["contig2"]:
             cont = e["contig2"].upper()
-            seq_length += <float>len(cont)
+            seq_length += len(cont)
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
-            if seq_length >= 2:
-                for j in range(len(cont) - 1):
-                    di = cont[j:j+2]
-                    if di in di_nucs:
-                        di_nucs[di] += 1
+            # if seq_length >= 2:
+            #     for j in range(len(cont) - 1):
+            #         di = cont[j:j+2]
+            #         if di in di_nucs:
+            #             di_nucs[di] += 1
 
         # norm dinuc
-        sum_di = sum(di_nucs.values())
-        if sum_di > 0:
-            di_nucs = {k: round(v / sum_di, 3) for k, v in di_nucs.items()}
-
-        e.update(di_nucs)
+        # sum_di = sum(di_nucs.values())
+        # if sum_di > 0:
+        #     di_nucs = {k: round(v / sum_di, 3) for k, v in di_nucs.items()}
+        #
+        # e.update(di_nucs)
 
         if seq_length > 0:
             e["gc"] = round((gc_count / seq_length) * 100, 2)

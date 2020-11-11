@@ -972,6 +972,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
     logging.info("norm cov finished")
 
+    preliminaries = post_call_metrics.compressability(preliminaries)
+
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
     for v in preliminaries:
         v["n_in_grp"] = n_in_grp[v["grp_id"]]

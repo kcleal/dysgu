@@ -226,7 +226,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             uint32_t op = bam_cigar_op(cigar[k]);
             uint32_t length = bam_cigar_oplen(cigar[k]);
 
-            if (~sv_read) {
+            if (!sv_read) {
                 if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
                     sv_read = true;
@@ -247,7 +247,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             }
         }
 
-        if (~sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
+        if (!sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
 
             // Check for discordant of supplementary
             if ((~flag & 2 && flag & 1) || flag & 2048) {

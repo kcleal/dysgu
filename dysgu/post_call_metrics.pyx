@@ -15,6 +15,7 @@ from dysgu import re_map
 from dysgu.io_funcs import reverse_complement
 from dysgu.coverage import merge_intervals
 
+import zlib
 import math
 import array
 import pickle
@@ -23,6 +24,8 @@ import glob
 import click
 import gzip
 import pandas as pd
+import warnings
+
 pd.options.mode.chained_assignment = None
 
 from skbio.alignment import StripedSmithWaterman
@@ -437,9 +440,11 @@ cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     s = int(start / 10)
     e = int(end / 10)
     if e > s:
-        m = np.median(arr[s:e])
-        if m == m:
-            return m
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            m = np.median(arr[s:e])
+            if m == m:
+                return m
     return -1
 
 
@@ -632,6 +637,27 @@ def get_gt_metric(events, infile, add_gt=False):
         e.update(result)
 
     return events
+
+@timeit
+def compressability(events):
+
+    for e in events:
+        c1 = []
+        if "contig" in e and e["contig"]:
+            cont = e["contig"].upper().encode("ascii")
+            b = bytes(cont)
+            c1.append(len(zlib.compress(b)) / len(b))
+        if "contig2" in e and e["contig2"]:
+            cont = e["contig2"].upper().encode("ascii")
+            b = bytes(cont)
+            c1.append(len(zlib.compress(b)) / len(b))
+        if c1:
+            e["compress"] = round((sum(c1) / len(c1)) * 100, 2)
+            # echo(e["chrA"], e["posA"], e["svtype"], e["compress"])
+        else:
+            e["compress"] = 0
+    return events
+
 
 @timeit
 def apply_model(df, mode, contigs, paired, thresholds):

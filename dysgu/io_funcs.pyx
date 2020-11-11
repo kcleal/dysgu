@@ -171,7 +171,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
-                "query_overlap", "inner_cn", "outer_cn"
+                "query_overlap", "inner_cn", "outer_cn", "compress"
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B",
@@ -180,7 +180,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
          "raw_reads_10kb", "mcov",
           "linked", "contigA", "contigB",  "gc", "neigh", "neigh10kb", "rep", "rep_sc", "svlen_precise", "ref_bases", "svlen", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
-                "query_overlap", "inner_cn", "outer_cn"
+                "query_overlap", "inner_cn", "outer_cn", "compress"
             ]
 
 
@@ -289,11 +289,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
             fmt_keys += ":PROB"
 
     elif extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN"
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP"
         if "prob" in r:
             fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN"
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP"
         if "prob" in r:
             fmt_keys += ":PROB"
 
@@ -338,7 +338,7 @@ def get_fmt(r, extended, small_output):
                                       r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3)
+                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"]
 
              ]
         if "prob" in r:
@@ -351,7 +351,7 @@ def get_fmt(r, extended, small_output):
                                   r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                round(r["inner_cn"], 3), round(r["outer_cn"], 3)
+                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"]
              ]
         if "prob" in r:
             v.append(r["prob"])
@@ -473,6 +473,7 @@ def to_vcf(df, args, names, outfile, n_fields=17, show_names=True,  contig_names
 ##FORMAT=<ID=FAS,Number=1,Type=Integer,Description="Forward soft-clip to alignment score">
 ##FORMAT=<ID=ICN,Number=1,Type=Float,Description="Inner copy number">
 ##FORMAT=<ID=OCN,Number=1,Type=Float,Description="Outer copy number">
+##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
@@ -553,6 +554,7 @@ def to_vcf(df, args, names, outfile, n_fields=17, show_names=True,  contig_names
 ##FORMAT=<ID=FAS,Number=1,Type=Integer,Description="Forward soft-clip to alignment score">
 ##FORMAT=<ID=ICN,Number=1,Type=Float,Description="Inner copy number">
 ##FORMAT=<ID=OCN,Number=1,Type=Float,Description="Outer copy number">
+##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 

@@ -16,6 +16,8 @@ from libcpp.vector cimport vector
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.map cimport map as cpp_map
 from libcpp.unordered_map cimport unordered_map
+from dysgu.map_set_utils cimport unordered_map as robin_map
+
 from libcpp.string cimport string
 from libcpp.deque cimport deque as cpp_deque
 
@@ -149,7 +151,7 @@ cdef class ClipScoper:
     cdef MinimizerTable read_minimizers_left, read_minimizers_right
 
     # Hashmap key is minimizer val, value is a set of chrom pos + node name packed as a 64 int
-    cdef unordered_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
+    cdef robin_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
     # cdef object clip_table_left, clip_table_right # read_minimizers
 
     # cdef unordered_set[long] homopolymer_table
@@ -193,7 +195,7 @@ cdef class ClipScoper:
         self.minimizer_mode = False
 
     cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position,
-                                     unordered_map[uint64_t, unordered_set[uint64_t]]& clip_table,
+                                     robin_map[uint64_t, unordered_set[uint64_t]]& clip_table,
                                      # clip_table,
                                      unordered_set[int]& clustered_nodes):
 
@@ -263,7 +265,7 @@ cdef class ClipScoper:
             clip_table[m].insert(pair_to_int64(position, name))
 
     cdef void _refresh_scope(self, cpp_deque[cpp_pair[int, int]]& scope, int position, MinimizerTable& mm_table,
-                             unordered_map[uint64_t, unordered_set[uint64_t]]& clip_table,
+                             robin_map[uint64_t, unordered_set[uint64_t]]& clip_table,
                              ):
         # Remove out of scope reads and minimizers
         cdef int item_position, name
@@ -512,7 +514,7 @@ cdef class PairedEndScoper:
 
 
 cdef class TemplateEdges:
-    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
+    cdef robin_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
     def __init__(self):
         pass
 
@@ -527,14 +529,14 @@ cdef class TemplateEdges:
 
     def iterate_map(self):
 
-        cdef unordered_map[string, vector[int]].iterator it = self.templates_s.begin()
+        cdef robin_map[string, vector[int]].iterator it = self.templates_s.begin()
         cdef string first
         cdef vector[int] second
         while it != self.templates_s.end():
             first = dereference(it).first
             second = dereference(it).second
             yield str(dereference(it).first), list(dereference(it).second)  # Array values are flag, node name, query start
-            postincrement(it)
+            preincrement(it)
 
 
 cdef void add_template_edges(G, TemplateEdges template_edges):
