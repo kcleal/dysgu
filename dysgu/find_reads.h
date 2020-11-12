@@ -181,7 +181,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
         // Skip uninteresting reads before putting on queue
         // unmapped, not primary, duplicate
-        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0 ) {  // || aln -> core.qual < mapq_thresh
+        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0 || aln -> core.qual < mapq_thresh ) {
             // Next item will overwrite this record
             continue;
         }
@@ -215,11 +215,10 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         // add alignment to coverage track, check for indels and soft-clips
         const uint32_t* cigar = bam_get_cigar(aln);
         bool sv_read = false;
-        bool to_check = true;
-
-        if (aln -> core.qual < mapq_thresh) {
-            to_check = false;
-        }
+//        bool to_check = true;
+//        if (aln -> core.qual < mapq_thresh) {
+//            to_check = false;
+//        }
 
         if (read_names.find(precalculated_hash) != read_names.end()) { sv_read = true; }
 
@@ -230,7 +229,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             uint32_t op = bam_cigar_op(cigar[k]);
             uint32_t length = bam_cigar_oplen(cigar[k]);
 
-            if (!sv_read && to_check) {
+            if (!sv_read) {
                 if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
                     read_names.insert(precalculated_hash);
                     sv_read = true;
@@ -251,7 +250,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             }
         }
 
-        if (!sv_read && to_check) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
+        if (!sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
 
             // Check for discordant of supplementary
             if ((~flag & 2 && flag & 1) || flag & 2048) {

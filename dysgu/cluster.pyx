@@ -923,6 +923,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
                                                     keep_small=args["keep_small"],
                                                     min_support=args["min_support"])
+    else:
+        for e in block_edge_events:
+            e["remapped"] = 0
+            e["remap_score"] = 0
+            e["remap_ed"] = 0
+            e["scw"] = 0
+            if 'svlen_precise' not in e:
+                e['svlen_precise'] = 1
 
     # Merge across calls
     if args["merge_within"] == "True":

@@ -45,20 +45,15 @@ cdef class Py_CoverageTrack:
         self.max_coverage = max_coverage
 
     def add(self, a):
-
-        if a.flag & 1284 or a.cigartuples is None:  # not primary, duplicate or unmapped, or a.mapq == 0?
+        if a.flag & 1284 or a.cigartuples is None or a.mapq == 0:  # not primary, duplicate or unmapped?
             return
 
         if self.current_chrom != a.rname:
-
             self.write_track()
             self.set_cov_array(a.rname)
             self.current_chrom = a.rname
 
-        # cdef np.ndarray[np.int32_t, ndim=1] arr = self.cov_array
-
         cdef int32_t[:] arr = self.cov_array
-
         if int(a.pos  / 10) > len(arr) - 1:
             return
 
