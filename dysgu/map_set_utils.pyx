@@ -46,7 +46,7 @@ cdef class Py_CoverageTrack:
 
     def add(self, a):
 
-        if a.flag & 1284 or a.mapq == 0 or a.cigartuples is None:  # not primary, duplicate or unmapped, low mapq
+        if a.flag & 1284 or a.cigartuples is None:  # not primary, duplicate or unmapped, or a.mapq == 0?
             return
 
         if self.current_chrom != a.rname:

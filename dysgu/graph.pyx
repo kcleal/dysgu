@@ -514,7 +514,7 @@ cdef class PairedEndScoper:
 
 
 cdef class TemplateEdges:
-    cdef robin_map[string, vector[int]] templates_s  # Better memory efficiency than dict -> use robinmap?
+    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict, robin map was buggy for itertaing
     def __init__(self):
         pass
 
@@ -529,14 +529,14 @@ cdef class TemplateEdges:
 
     def iterate_map(self):
 
-        cdef robin_map[string, vector[int]].iterator it = self.templates_s.begin()
+        cdef unordered_map[string, vector[int]].iterator it = self.templates_s.begin()
         cdef string first
         cdef vector[int] second
         while it != self.templates_s.end():
             first = dereference(it).first
             second = dereference(it).second
             yield str(dereference(it).first), list(dereference(it).second)  # Array values are flag, node name, query start
-            preincrement(it)
+            postincrement(it)
 
 
 cdef void add_template_edges(G, TemplateEdges template_edges):

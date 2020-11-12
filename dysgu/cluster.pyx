@@ -847,17 +847,18 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     num_jobs = 0
     completed = 0
-
+    components_seen = 0
     cdef int last_i = 0
     cdef int ci, cmp_idx
-    longest = 0
+    # longest = 0
     for item_idx, item in enumerate(cmp):
         if item == -1:
+            components_seen += 1
             start_i = last_i
             end_i = item_idx
             last_i = item_idx + 1
-            if end_i - start_i > longest:
-                longest = end_i - start_i
+            # if end_i - start_i > longest:
+            #     longest = end_i - start_i
 
             # todo dont copy this. use memory view slice? sending vector[int]& seems to result in copying (really slow)
             component = np.zeros(end_i - start_i)
@@ -910,6 +911,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             block_edge_events += item
             completed += 1
             num_jobs -= 1
+
+    logging.info("Number of components {}".format(components_seen))
 
     del G
     del read_buffer
