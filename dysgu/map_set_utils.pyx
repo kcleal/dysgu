@@ -16,6 +16,7 @@ from libc.math cimport fabs as c_fabs
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 from libc.stdint cimport uint32_t, uint16_t, int16_t, int32_t
 
+import math
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
@@ -256,7 +257,7 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
         return True
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
+cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
@@ -285,6 +286,36 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2) nogil:
         return 1
     return 0
 
+
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh) nogil:
+    # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+    cdef int span1, span2, max_span
+    cdef float span_distance, position_distance, center1, center2
+    if x1 == x2:
+        span1 = 1
+        center1 = x1
+    else:
+        span1 = c_abs(x2 - x1)
+        center1 = (x1 + x2) / 2
+    if y1 == y2:
+        span2 = 1
+        center2 = y2
+    else:
+        span2 = c_abs(y2 - y1)
+        center2 = (y1 + y2) / 2
+
+    max_span = max(span1, span2)
+
+    # norm = 500 * math.log(max_span + 1)  # best is 50 0.3 for paired end
+    # norm = 900  # best for paired end is 100, 0.3
+    position_distance = c_fabs(center1 - center2) / norm
+    if position_distance > 2000:
+        return 0
+
+    span_distance = <float>c_abs(span1 - span2) / max_span
+    if position_distance + span_distance < thresh: #0.3:
+        return 1
+    return 0
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py

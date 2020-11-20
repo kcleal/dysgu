@@ -768,9 +768,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             args["merge_dist"] = max_clust_dist
         logging.info(f"Max clustering dist {max_clust_dist}")
     else:
-        max_dist, max_clust_dist = 35, 500000
-        if args["merge_dist"] is None:
-            args["merge_dist"] = 50
+        if args["mode"] == "pacbio":
+            max_dist, max_clust_dist = 35, 500000
+            if args["merge_dist"] is None:
+                args["merge_dist"] = 50
+        elif args["mode"] == "nanopore":
+            max_dist, max_clust_dist = 100, 500000
+            if args["merge_dist"] is None:
+                args["merge_dist"] = 150
 
     event_id = 0
     block_edge_events = []
@@ -803,7 +808,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             debug=None,
                                             paired_end=paired_end,
                                             read_length=read_len,
-                                            contigs=args["contigs"])
+                                            contigs=args["contigs"],
+                                            norm_thresh=args["dist_norm"],
+                                            spd_thresh=args["spd"])
 
     logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
         int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),

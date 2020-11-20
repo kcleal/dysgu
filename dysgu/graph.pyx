@@ -351,10 +351,16 @@ cdef class PairedEndScoper:
     cdef cpp_map[int, LocalVal] loci  # Track the local breaks and mapping locations
     cdef vector[cpp_map[int, LocalVal]] chrom_scope  # Track the mate-pair breaks and locations
 
-    def __init__(self, max_dist, clst_dist, n_references):
+    cdef float norm
+    cdef float thresh
+
+    def __init__(self, max_dist, clst_dist, n_references, norm, thresh):
         self.clst_dist = clst_dist
         self.max_dist = max_dist
         self.local_chrom = -1
+        self.norm = norm
+        self.thresh = thresh
+
         cdef cpp_map[int, LocalVal] scope
         for n in range(n_references + 1):  # Add one for special 'insertion chromosome'
             self.chrom_scope.push_back(scope)
@@ -412,20 +418,28 @@ cdef class PairedEndScoper:
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
                         # if node_name == 9:
-                        #     echo("1", node_name, node_name2, current_pos, pos2, current_chrom, chrom2, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
+                        # echo("-->", node_name, node_name2, current_pos, pos2, pos2 - current_pos, vitem.second.pos2 - vitem.first,
+                                 # is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2),
+                                 # span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2),
+                                 # )
                         #     echo(read_enum, vitem.second.read_enum, read_enum == INSERTION, vitem.second.read_enum == DELETION)
                         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
+                            # echo("mad dist", self.max_dist, sep, sep2)
                             if sep < self.max_dist and sep2 < self.max_dist:
                                 if sep < 35:
                                     found_exact.push_back(node_name2)
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
                                     found2.push_back(node_name2)
-                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
                                 found2.push_back(node_name2)
 
+                        elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                            found2.push_back(node_name2)
+
+                        # echo("")
                     if sep >= self.max_dist:
                         break  # No more to find
 
@@ -463,11 +477,14 @@ cdef class PairedEndScoper:
                                         sep2 < self.max_dist:
                                     if sep < 35:
                                         found_exact.push_back(node_name2)
-                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
                                         found2.push_back(node_name2)
 
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
                                     found2.push_back(node_name2)
+
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                                found2.push_back(node_name2)
 
                         if local_it == forward_scope.begin() or sep >= self.max_dist:
                             break
@@ -1032,7 +1049,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int min_sv_size=30,
                             int minimizer_support_thresh=2, int minimizer_breadth=3,
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
-                            int paired_end=1, int read_length=150, bint contigs=True):
+                            int paired_end=1, int read_length=150, bint contigs=True,
+                            float norm_thresh=100, float spd_thresh=0.3):
 
     t0 = time.time()
     logging.info("Building graph with clustering distance {} bp, scope length {} bp".format(max_dist, clustering_dist))
@@ -1048,7 +1066,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
 
     # Infers long-range connections, outside local scope using pe information
-    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences)
+    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh)
 
     bad_clip_counter = BadClipCounter(infile.header.nreferences)
 

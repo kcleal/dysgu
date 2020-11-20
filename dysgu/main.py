@@ -27,10 +27,64 @@ defaults = {
             "max_tlen": 1000,
             "z_depth": 2,
             "z_breadth": 2,
+            "dist_norm": 100,
+            "mq": 1,
             "regions_only": "False",
             "soft_search": "True",
-            "default_long_support": 2
+            "default_long_support": 2,
+            "pl": "pe"
             }
+
+
+presets = {"nanopore": {"mq": 20,
+                        "min_support": 2,
+                        "dist_norm": 900,
+                        "max_cov": 150,
+                        "pl": "nanopore"},
+           "pacbio": {"mq": 20,
+                      "min_support": 2,
+                      "dist_norm": 900,
+                      "max_cov": 150,
+                      "pl": "pacbio"},
+           "pe": {"mq": defaults["mq"],
+                  "min_support": defaults["min_support"],
+                  "dist_norm": defaults["dist_norm"],
+                  "max_cov": defaults["max_cov"],
+                  "pl": defaults["pl"]},
+           }
+
+new_options_set = {}
+
+
+def add_option_set(ctx, param, value):
+    new_options_set[param.name] = value
+
+
+def show_params(kwargs):
+    logging.info("mode {}, max-cov {}, mq {}, min_support {}, dist-norm {}, contigs {}".format(
+        kwargs["mode"],
+        kwargs["max_cov"],
+        kwargs["mq"],
+        kwargs["min_support"],
+        kwargs["dist_norm"],
+        kwargs["contigs"]
+    ))
+
+
+def apply_preset(kwargs):
+    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+        kwargs["paired"] = "False"
+
+    for k, v in presets[kwargs["mode"]].items():
+        if k in new_options_set and new_options_set[k] is not None:
+            kwargs[k] = new_options_set[k]
+        else:
+            kwargs[k] = v
+
+    for k, v in defaults.items():
+        if k in kwargs and kwargs[k] is None:
+            kwargs[k] = v
+
 
 version = pkg_resources.require("dysgu")[0].version
 
@@ -82,23 +136,24 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
-                             "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
-@click.option('--pl', help="Type of input reads. Needed when --mode is not used", default="pe",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
+                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200"
+                             "nanopore: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 900",
+              default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
-              default=defaults["max_cov"], type=float, show_default=True)
+@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded  [default: {defaults['max_cov']}]", type=float, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
-@click.option('--min-support', help="Minimum number of reads per SV",
-              default=defaults["min_support"], type=int, show_default=True)
+@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
-@click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
-              type=int, show_default=True)
+@click.option('--mq', help=f"Minimum map quality < threshold are discarded  [default: {defaults['mq']}]",
+              type=int, callback=add_option_set)
+@click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
+@click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
@@ -109,7 +164,7 @@ def cli():
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
+@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired"
                                    "reads, or 50 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
@@ -132,12 +187,9 @@ def run_pipeline(ctx, **kwargs):
     logging.info("[dysgu-run] Version: {}".format(version))
     make_wd(kwargs)
 
-    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
-        kwargs["paired"] = "False"
-        kwargs["max_cov"] = 150
-        kwargs["mq"] = 20
-        kwargs["min_support"] = 2
-        kwargs["pl"] = kwargs["mode"]
+    apply_preset(kwargs)
+
+    show_params(kwargs)
 
     ctx = apply_ctx(ctx, kwargs)
     pfix = kwargs["pfix"]
@@ -193,8 +245,8 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
               default=None, type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option('--pl', help="Type of input reads", default="pe",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.pass_context
 def get_reads(ctx, **kwargs):
     """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
@@ -202,24 +254,8 @@ def get_reads(ctx, **kwargs):
     logging.info("[dysgu-fetch] Version: {}".format(version))
     make_wd(kwargs)
 
-    # if kwargs["output"] in "-,stdout" and (kwargs["reads"] in "-,stdout" or kwargs["reads2"] in "-,stdout"):
-    #     raise ValueError("--output and --reads/--reads2 both set to stdout")
-    #
-    # if kwargs["out_format"] in "fq,fasta":
-    #     if kwargs["reads"] in "-,stdout" and kwargs["reads2"] != "None":
-    #         raise ValueError("-r is set to stdout but -r2 is set to TEXT")
-    #     if kwargs["reads2"] in "-,stdout":
-    #         raise ValueError("-r2 can not be stdout")
-    #
-    # if kwargs["out_format"] == "bam" and kwargs["reads2"] != "None":
-    #     raise ValueError("--out-format is bam, cannot except -r2")
-
     ctx = apply_ctx(ctx, kwargs)
     return sv2bam.process(ctx.obj)
-    # if kwargs["out_format"] == "bam":
-    #     return sv2bam.process(ctx.obj)
-    # else:
-    #     return sv2fq.process(ctx.obj)
 
 
 @cli.command("call")
@@ -234,23 +270,23 @@ def get_reads(ctx, **kwargs):
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. If custom options are needed use --pl instead."
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
                              "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
-@click.option('--pl', help="Type of input reads. Needed when --mode is not used", default="pe",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
-              default=defaults["max_cov"], type=float, show_default=True)
+@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded  [default: {defaults['max_cov']}]", type=float, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
-@click.option('--min-support', help="Minimum number of reads per SV",
-              default=defaults["min_support"], type=int, show_default=True)
+@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
-@click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
-              type=int, show_default=True)
+@click.option('--mq', help=f"Minimum map quality < threshold are discarded  [default: {defaults['mq']}]",
+              type=int, callback=add_option_set)
+@click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
+@click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions-only', help="If --include is provided, call only events within target regions",
@@ -293,12 +329,9 @@ def call_events(ctx, **kwargs):
 
     logging.info("Input file is: {}".format(kwargs["sv_aligns"]))
 
-    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
-        kwargs["paired"] = "False"
-        kwargs["max_cov"] = 150
-        kwargs["mq"] = 20
-        kwargs["min_support"] = 2
-        kwargs["pl"] = kwargs["mode"]
+    apply_preset(kwargs)
+
+    show_params(kwargs)
 
     ctx = apply_ctx(ctx, kwargs)
 

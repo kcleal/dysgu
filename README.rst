@@ -11,7 +11,7 @@ For convenience use the install script::
 
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu
-    bash INSTALL.sh -j4
+    bash INSTALL.sh
 
 To build from source::
 
@@ -51,7 +51,7 @@ To call SVs a sorted and indexed .bam/cram is needed plus an indexed reference g
 be provided to store temporary files. There are a few different ways to run dysgu depending on the type of data you have.
 For short paired-end reads the `run` command is recommended which wraps the `fetch` and `call` commands::
 
-    dysgu run samp1_temp reference.fa input.bam > svs.vcf
+    dysgu run reference.fa samp1_temp input.bam > svs.vcf
 
 This will first call `fetch` that creates a temporary bam file and other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
 
@@ -60,8 +60,8 @@ Long reads
 For long-read data, the `fetch` stage may be skipped and the `call` command can be run directly - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
 temp file::
 
-    dysgu call --mode pacbio samp1_temp reference.fa input.bam > svs.vcf
-    dysgu call --mode nanopore samp1_temp reference.fa input.bam > svs.vcf
+    dysgu call --mode pacbio reference.fa samp1_temp input.bam > svs.vcf
+    dysgu call --mode nanopore reference.fa samp1_temp input.bam > svs.vcf
 
 Fetching SV reads
 ~~~~~~~~~~~~~~~~~
@@ -73,7 +73,7 @@ all SV associated reads will be placed in `samp1_temp/samp1_temp.bam`, and all i
 SVs can be subsequently called using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
 size metrics from the main alignment file. If this is not provided dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
 
-    dysgu call --ibam all_reads.bam reference.fa samp1_temp > svs.vcf
+    dysgu call --ibam reference.fa all_reads.bam samp1_temp > svs.vcf
 
 Alternatively, run `fetch` on an existing .bam file::
 
