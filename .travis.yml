@@ -22,6 +22,9 @@ install:
 script:
   - python setup.py test
 
+before_install:
+  - chmod +x {project}/ci/linux-deps
+  - chmod +x {project}/ci/osx-deps
 
 jobs:
   include:
@@ -66,5 +69,5 @@ jobs:
       - |
         if [ "${TRAVIS_TAG:-}" != "" ]; then
           python3 -m pip install twine -U
-          python3 -m twine upload --repository testpypi --skip-existing wheelhouse/*
+#          python3 -m twine upload --repository testpypi --skip-existing wheelhouse/*
         fi

@@ -57,7 +57,7 @@ This will first call `fetch` that creates a temporary bam file and other analysi
 
 Long reads
 **********
-For long-read data, the `fetch` stage may be skipped and the `call` command can be run directly - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
+For long-read data, the `fetch` stage may be skipped and the `call` command can be run instead - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
 temp file::
 
     dysgu call --mode pacbio reference.fa samp1_temp input.bam > svs.vcf
