@@ -93,7 +93,7 @@ For help use::
 
 Resource requirements
 ---------------------
-Using a single core and depending on hard-drive speed, dysgu usually takes around 1h to analyse a 30X coverage genome of short paired-end reads and
+Using a single core and depending on hard-drive speed, dysgu usually takes around 1h to analyse a 30X coverage genome of 150 bp paired-end reads and
 uses < 8 GB memory. Also note that when `fetch` is utilized (run command), a large temp file is generated consisting of SV-associated reads
 which can be 10 - 15 Gb in size, to remove this on completion add `--keep-temp False`.
 
