@@ -65,7 +65,7 @@ temp file::
 
 Fetching SV reads
 ~~~~~~~~~~~~~~~~~
-To save time analysing paired-end data, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
+To save time, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
 all SV associated reads will be placed in `samp1_temp/samp1_temp.bam`, and all input alignments will be placed in all_reads.bam::
 
     dysgu fetch -r all_reads.bam samp1_temp -
