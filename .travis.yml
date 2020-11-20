@@ -23,8 +23,8 @@ script:
   - python setup.py test
 
 before_install:
-  - chmod +x {project}/ci/linux-deps
-  - chmod +x {project}/ci/osx-deps
+  - chmod +x dysgu/ci/linux-deps
+  - chmod +x dysgu/ci/osx-deps
 
 jobs:
   include:

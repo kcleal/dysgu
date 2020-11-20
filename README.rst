@@ -71,7 +71,7 @@ all SV associated reads will be placed in `samp1_temp/samp1_temp.bam`, and all i
     dysgu fetch -r all_reads.bam samp1_temp -
 
 SVs can be subsequently called using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
-size metrics from the main alignment file. If this is not provided dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
+size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
 
     dysgu call --ibam reference.fa all_reads.bam samp1_temp > svs.vcf
 
