@@ -35,9 +35,9 @@ jobs:
       - CIBW_TEST_COMMAND="{project}/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
     services: docker
-    before_install:
-      - chmod +x dysgu/ci/linux-deps
-      - chmod +x dysgu/ci/osx-deps
+#    before_install:
+#      - chmod +x dysgu/ci/linux-deps
+#      - chmod +x dysgu/ci/osx-deps
     install:
       - python3 -m pip install cibuildwheel
     script:
