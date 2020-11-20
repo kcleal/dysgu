@@ -19,8 +19,8 @@ install:
   - cd ../../
   - python setup.py install
 
-#script:
-#  - python setup.py test
+script:
+  - python setup.py test
 
 jobs:
   include:
@@ -65,5 +65,5 @@ jobs:
       - |
         if [ "${TRAVIS_TAG:-}" != "" ]; then
           python3 -m pip install twine -U
-#          python3 -m twine upload --repository testpypi --skip-existing wheelhouse/*
+          python3 -m twine upload --repository testpypi --skip-existing wheelhouse/*
         fi

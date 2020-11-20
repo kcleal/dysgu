@@ -49,7 +49,7 @@ Paired-end reads
 ****************
 To call SVs a sorted and indexed .bam/cram is needed plus an indexed reference genome. Also a working directory must
 be provided to store temporary files. There are a few different ways to run dysgu depending on the type of data you have.
-For short paired-end reads the `run` command is recommended which wraps the `fetch` and `call` commands::
+For paired-end reads the `run` command is recommended which wraps the `fetch` and `call` commands::
 
     dysgu run reference.fa samp1_temp input.bam > svs.vcf
 
