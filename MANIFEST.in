@@ -2,7 +2,9 @@ include dysgu/*
 include dysgu/tests/*
 include *.rst
 include *.md
+include *.yml
 graft dysgu/htslib
+include ci/*
 #include htslib/*.o
 #include htslib/*.c
 #include htslib/*.h
