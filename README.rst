@@ -29,7 +29,7 @@ Run tests::
 
     $ dysgu test
 
-Requires Python>=3.6, cython and >=c++11 compiler.
+Requires Python>=3.7, cython and >=c++11 compiler.
 Python packages needed are listed in requirements.txt.
 
 Usage
