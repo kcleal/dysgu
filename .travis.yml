@@ -19,8 +19,9 @@ install:
   - cd ../../
   - python setup.py install
 
-#script:
-#  - python setup.py test
+script:
+  - python setup.py test
+
 
 jobs:
   include:
