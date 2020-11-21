@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 yum install -y openssl11-devel

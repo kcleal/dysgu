@@ -31,8 +31,8 @@ jobs:
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
       - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
-      - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
-      - CIBW_TEST_COMMAND="{project}/ci/test"
+      - CIBW_BEFORE_BUILD_LINUX="dysgu/ci/linux-deps"
+      - CIBW_TEST_COMMAND="dysgu/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
     services: docker
 #    before_install:
@@ -56,8 +56,8 @@ jobs:
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
       - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
-      - CIBW_BEFORE_BUILD_MACOS="{project}/ci/osx-deps"
-      - CIBW_TEST_COMMAND="{project}/ci/test"
+      - CIBW_BEFORE_BUILD_MACOS="dysgu/ci/osx-deps"
+      - CIBW_TEST_COMMAND="dysgu/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1"
       - LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
       - CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
