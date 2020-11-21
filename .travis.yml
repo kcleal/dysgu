@@ -39,6 +39,10 @@ jobs:
         - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
         - CIBW_TEST_COMMAND="{project}/ci/test"
         - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
+      before_install:
+        - pip install -U pip
+        - export PYTHONPATH=$PYTHONPATH:$(pwd)
+        - python setup.py install
       install:
         - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
