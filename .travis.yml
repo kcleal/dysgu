@@ -42,12 +42,17 @@ jobs:
       before_install:
         - pip install -U pip
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
-        - python --version
-        - pip install -r requirements.txt
+        - python3 --version
+
+#        - python3 -m pip install cython
         #- python3 setup.py install
       install:
-        #- python3 -m pip install cython
+        - python3 -m pip install -r requirements.txt
+        - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
+      before_script:
+        - python3 --version
+        - python3 -c "import cython"
       script:
         - python3 -m cibuildwheel --output-dir wheelhouse
 
