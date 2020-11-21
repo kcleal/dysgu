@@ -1,16 +1,16 @@
-#language: python
-#dist: bionic
-#python:
-#  - "3.7"
-#  - "3.8"
-#
-#addons:
-#  homebrew:
-#    packages:
-#    - openssl
-#
-#install:
-#  - sudo apt-get install libcurl4-openssl-dev
+language: python
+dist: bionic
+python:
+  - "3.7"
+  - "3.8"
+
+addons:
+  homebrew:
+    packages:
+    - openssl
+
+install:
+  - sudo apt-get install libcurl4-openssl-dev
 #  - pip install -r requirements.txt
 #  - cd ./dysgu/htslib
 #  - autoheader && autoconf
