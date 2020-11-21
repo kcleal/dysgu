@@ -40,6 +40,7 @@ jobs:
         - CIBW_TEST_COMMAND="{project}/ci/test"
         - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
       before_install:
+        - echo "before_install"
         - pip install -U pip
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
         - python3 --version
@@ -47,13 +48,17 @@ jobs:
 #        - python3 -m pip install cython
         #- python3 setup.py install
       install:
+        - echo "install:"
         - python3 -m pip install -r requirements.txt
         - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
       before_script:
+        - echo "before script:"
         - python3 --version
         - python3 -c "import cython"
       script:
+        - echo "script:"
+        - python3 -c "import cython"
         - python3 -m cibuildwheel --output-dir wheelhouse
 
 #    - sudo: required

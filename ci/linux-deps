@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "STARTING LINUX-DEPS"
+
+ls
+
 yum install -y openssl11-devel
 yum install -y libffi libffi-devel zlib-devel
 yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
@@ -7,10 +11,16 @@ yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 which python
 python --version
 
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python get-pip.py
+#curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+#python get-pip.py
 
 python -m pip install pip --upgrade
+
+which pip
+
+pip install numpy
+
+cat requirements.txt
 pip install -r requirements.txt
 
 git submodule init
