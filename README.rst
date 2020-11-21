@@ -82,7 +82,7 @@ Alternatively, run `fetch` on an existing .bam file::
 
 Merging SVs from multiple files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Multiple output files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
+Multiple output vcf files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
 
     dysgu merge pacbio.vcf illumina.vcf > combined.vcf
 
