@@ -1,12 +1,11 @@
 notifications:
   email: false
 
+language: python
 
-matrix:
+jobs:
   include:
-    - os: linux
-      language: python
-      dist: bionic
+    - name: "Python 3.7.0 on Xenial Linux"
       python: "3.7"
       sudo: required
       services:
@@ -19,18 +18,23 @@ matrix:
         - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
         - CIBW_TEST_COMMAND="{project}/ci/test"
         - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
+      install:
+        - python3 -m pip install cibuildwheel
+      script:
+        - python3 -m cibuildwheel --output-dir wheelhouse
+
 #    - sudo: required
 #      services:
 #        - docker
 #      env: DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
 #           PLAT=manylinux2010_x86_64
 
-install:
-  - docker pull $DOCKER_IMAGE
-
-script:
-  - docker run --rm -e PLAT=$PLAT -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/ci/linux-deps
-  - ls wheelhouse/
+#install:
+#  - docker pull $DOCKER_IMAGE
+#
+#script:
+#  - docker run --rm -e PLAT=$PLAT -v `pwd`:/io $DOCKER_IMAGE $PRE_CMD /io/ci/linux-deps
+#  - ls wheelhouse/
 
 #language: python
 #dist: bionic
