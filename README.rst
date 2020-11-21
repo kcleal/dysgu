@@ -95,12 +95,12 @@ Resource requirements
 ---------------------
 Using a single core and depending on hard-drive speed, dysgu usually takes around 1h to analyse a 30X coverage genome of 150 bp paired-end reads and
 uses < 8 GB memory. Also note that when `fetch` is utilized (run command), a large temp file is generated consisting of SV-associated reads
-which can be 10 - 15 Gb in size, to remove this on completion add `--keep-temp False`.
+which can be 5 - 15 Gb in size, to remove this on completion add `--keep-temp False`.
 
 Issues
 ------
 If dysgu is taking a long time to run, this could be due to the complexity of the sample.
-Dysgu will try and generate contigs from clusters of soft-clipped reads and then remap these to the reference genome.
+Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome.
 In this case consider increasing the `clip-length` or setting `contigs False`, or `remap False`.
 Alternatively check your sample for anomalous sequences and adapter content.
 
