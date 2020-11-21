@@ -8,6 +8,7 @@ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python get-pip.py
 
 python -m pip install pip --upgrade
+pip install -r requirements.txt
 
 git submodule init
 git submodule update
@@ -37,4 +38,4 @@ autoconf
 make
 
 cd ../../
-pip install -r requirements.txt
+#pip install -r requirements.txt
