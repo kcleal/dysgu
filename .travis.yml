@@ -40,6 +40,7 @@ jobs:
         - CIBW_TEST_COMMAND="{project}/ci/test"
         - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
       install:
+        - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
       script:
         - python3 -m cibuildwheel --output-dir wheelhouse
