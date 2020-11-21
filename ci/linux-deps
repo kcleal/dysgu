@@ -5,7 +5,8 @@ yum install -y libffi libffi-devel zlib-devel
 yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
 which python
-which python3
+python --version
+
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python get-pip.py
 
@@ -32,6 +33,9 @@ make
 make install
 cd ..
 rm -rf curl-7.73.0
+
+ls
+
 
 cd dysgu/htslib
 autoheader

@@ -4,6 +4,10 @@ notifications:
 
 matrix:
   include:
+    - os: linux
+      language: python
+      dist: bionic
+      python: "3.7"
     - sudo: required
       services:
         - docker
