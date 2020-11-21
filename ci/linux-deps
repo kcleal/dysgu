@@ -4,6 +4,9 @@ yum install -y openssl11-devel
 yum install -y libffi libffi-devel zlib-devel
 yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+
 python -m pip install pip --upgrade
 
 git submodule init

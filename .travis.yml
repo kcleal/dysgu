@@ -1,16 +1,19 @@
-language: python
-dist: bionic
-python:
-  - "3.7"
-  - "3.8"
+notifications:
+  email: false
 
-addons:
-  homebrew:
-    packages:
-    - openssl
-
-install:
-  - sudo apt-get install libcurl4-openssl-dev
+#language: python
+#dist: bionic
+#python:
+#  - "3.7"
+#  - "3.8"
+#
+#addons:
+#  homebrew:
+#    packages:
+#    - openssl
+#
+#install:
+#  - sudo apt-get install libcurl4-openssl-dev
 #  - pip install -r requirements.txt
 #  - cd ./dysgu/htslib
 #  - autoheader && autoconf
@@ -27,6 +30,8 @@ install:
 jobs:
   include:
   - os: linux
+    language: python
+    dist: bionic
     python: "3.7"
     env:
       - CIBW_SKIP="pp* cp27-* cp34-* *i686*"
@@ -35,9 +40,7 @@ jobs:
       - CIBW_TEST_COMMAND="{project}/ci/test"
       - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
     services: docker
-#    before_install:
-#      - chmod +x dysgu/ci/linux-deps
-#      - chmod +x dysgu/ci/osx-deps
+
     install:
       - python3 -m pip install cibuildwheel
     script:
