@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+#cython: language_level=3, boundscheck=True, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
 import logging
 import numpy as np
@@ -47,20 +47,28 @@ class BadClipCounter:
 
     def count_near(self, int chrom, int start, int end):
 
-        cdef int [:] a = self.clip_pos_arr[chrom]
-        if len(a) == 0:
+        py_a = self.clip_pos_arr[chrom]
+        cdef int len_a = len(py_a)
+        if chrom < 0 or chrom >= len_a or len_a == 0:
             return 0
 
-        idx = np.searchsorted(a, start)
+        cdef int[:] a = py_a
+
+        if start < 0:
+            start = 0
+
+        cdef int i = np.searchsorted(py_a, start)
+        if i < 0:
+            i = 0
+        if i >= len_a - 1:
+            return 0
 
         # search forward and backwards
-        cdef int i = idx
-        cdef int len_a = len(a)
         cdef int count = 0
         cdef int p
 
         while True:
-            if i < 0 or i == len_a:
+            if i >= len_a:
                 break
             p = a[i]
             if p <= end:
@@ -75,6 +83,7 @@ class BadClipCounter:
 def get_badclip_metric(events, bad_clip_counter, bam):
 
     bad_clip_counter.sort_arrays()
+    logging.info("Arrays sorted")
     new_events = []
     for e in events:
 

@@ -27,6 +27,12 @@ from cython.operator cimport dereference as deref, preincrement as inc #derefere
 from libcpp cimport bool
 # from pysam.libcalignedsegment cimport bam1_t
 
+ctypedef enum ReadEnum_t:
+    DISCORDANT = 0
+    SPLIT = 1
+    DELETION = 2
+    INSERTION = 3
+    BREAKEND = 4
 
 cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
     #static uint64_t hash(const void* input, uint64_t length, uint64_t seed)
@@ -221,7 +227,7 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh) nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end) # nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil

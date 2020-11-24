@@ -353,13 +353,15 @@ cdef class PairedEndScoper:
 
     cdef float norm
     cdef float thresh
+    cdef bint paired_end
 
-    def __init__(self, max_dist, clst_dist, n_references, norm, thresh):
+    def __init__(self, max_dist, clst_dist, n_references, norm, thresh, paired_end):
         self.clst_dist = clst_dist
         self.max_dist = max_dist
         self.local_chrom = -1
         self.norm = norm
         self.thresh = thresh
+        self.paired_end = paired_end
 
         cdef cpp_map[int, LocalVal] scope
         for n in range(n_references + 1):  # Add one for special 'insertion chromosome'
@@ -372,7 +374,7 @@ cdef class PairedEndScoper:
         self.loci.clear()
 
     cdef vector[int] find_other_nodes(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                                      ReadEnum_t read_enum) nogil:
+                                      ReadEnum_t read_enum): # nogil:
 
         cdef int idx, i, count_back, steps, node_name2
         cdef int sep = 0
@@ -418,10 +420,9 @@ cdef class PairedEndScoper:
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
                         # if node_name == 9:
-                        # echo("-->", node_name, node_name2, current_pos, pos2, pos2 - current_pos, vitem.second.pos2 - vitem.first,
-                                 # is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2),
-                                 # span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2),
-                                 # )
+                        # echo("-->", node_name, node_name2, current_chrom == chrom2, current_pos, pos2, pos2 - current_pos, vitem.second.pos2 - vitem.first,
+                        #          is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2),
+                        #          )
                         #     echo(read_enum, vitem.second.read_enum, read_enum == INSERTION, vitem.second.read_enum == DELETION)
                         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
 
@@ -431,12 +432,12 @@ cdef class PairedEndScoper:
                             if sep < self.max_dist and sep2 < self.max_dist:
                                 if sep < 35:
                                     found_exact.push_back(node_name2)
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                                     found2.push_back(node_name2)
-                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                                 found2.push_back(node_name2)
 
-                        elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                        elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                             found2.push_back(node_name2)
 
                         # echo("")
@@ -471,19 +472,18 @@ cdef class PairedEndScoper:
                             if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
                                 sep = c_abs(vitem.first - pos2)
                                 sep2 = c_abs(vitem.second.pos2 - current_pos)
-                                # echo(sep, sep2, self.max_dist, vitem.second.chrom2, vitem.second.clip_or_wr, span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2))
-                                # echo(sep < self.max_dist, vitem.second.chrom2 == chrom2, sep2 < self.max_dist, sep < 35, (clip_or_wr > 0 or vitem.second.clip_or_wr))
+
                                 if sep < self.max_dist and vitem.second.chrom2 == chrom2 and \
                                         sep2 < self.max_dist:
                                     if sep < 35:
                                         found_exact.push_back(node_name2)
-                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                                         found2.push_back(node_name2)
 
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                                     found2.push_back(node_name2)
 
-                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh):
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end):
                                 found2.push_back(node_name2)
 
                         if local_it == forward_scope.begin() or sep >= self.max_dist:
@@ -1066,7 +1066,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
 
     # Infers long-range connections, outside local scope using pe information
-    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh)
+    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end)
 
     bad_clip_counter = BadClipCounter(infile.header.nreferences)
 

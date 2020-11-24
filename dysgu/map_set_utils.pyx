@@ -287,7 +287,8 @@ cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:
     return 0
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh) nogil:
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,
+                                 bint paired_end): # nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
@@ -306,14 +307,18 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
 
     max_span = max(span1, span2)
 
-    # norm = 500 * math.log(max_span + 1)  # best is 50 0.3 for paired end
-    # norm = 900  # best for paired end is 100, 0.3
-    position_distance = c_fabs(center1 - center2) / norm
+    position_distance = c_fabs(center1 - center2)
     if position_distance > 2000:
         return 0
 
     span_distance = <float>c_abs(span1 - span2) / max_span
-    if position_distance + span_distance < thresh: #0.3:
+
+    if not paired_end or read_enum == SPLIT:
+        if (position_distance / norm) + span_distance < thresh:
+            return 1
+        return 0
+
+    if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3
         return 1
     return 0
 
