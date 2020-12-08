@@ -632,6 +632,8 @@ cdef class NodeToName:
         self.f.push_back(b)
         self.p.push_back(c)
         self.c.push_back(d)
+        if e == -1:  # means to look in read buffer instead
+            e = 0
         self.t.push_back(e)
         self.cigar_index.push_back(f)
         self.event_pos.push_back(g)
@@ -777,14 +779,17 @@ cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     clip_scope.update(r, node_name, chrom, pos, clustered_nodes)
     if not clustered_nodes.empty():
         for other_node in clustered_nodes:
+            # if r.qname == "V300082976L4C001R0311226430":
+            #     echo("--clusterclipped", r.flag, node_name, other_node)
+
             if not G.hasEdge(node_name, other_node):
                 G.addEdge(node_name, other_node, 2)
 
 
 cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
                        NodeToName node_to_name, genome_scanner,
-                       int flag, int chrom, long tell, int cigar_index, int event_pos,
-                       int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum):
+                       int flag, int chrom, tell, int cigar_index, int event_pos,
+                       int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum, p1_overlaps, p2_overlaps):
 
     # Adds relevant information to graph and other data structures for further processing
     cdef vector[int] other_nodes  # Other alignments to add edges between
@@ -792,12 +797,14 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     cdef uint64_t v = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)  # Hash qname to save mem
 
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
-    genome_scanner.add_to_buffer(r, node_name)  # Add read to buffer
+    genome_scanner.add_to_buffer(r, node_name, tell)  # Add read to buffer
 
     if read_enum < 2:  # Prevents joining up within-read svs with between-read svs
         template_edges.add(r.qname, flag, node_name, r.query_alignment_start)
 
-    if read_enum != BREAKEND:
+    both_overlap = p1_overlaps and p2_overlaps
+
+    if read_enum != BREAKEND and not both_overlap:
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
@@ -805,15 +812,16 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
         # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
         #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
-
-    pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
+    if not both_overlap:
+        pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
     # Debug:
     # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
-    # look = set(['D00360:18:H8VC6ADXX:2:1113:5589:6008', 'D00360:18:H8VC6ADXX:2:1107:19359:83854', 'D00360:18:H8VC6ADXX:2:2102:2821:89140'])
+    # look = set(['V300082976L4C001R0311226430'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
     # if r.qname in look:
-    # if r.qname == "D00360:18:H8VC6ADXX:2:2216:4148:62530":
+    # if r.qname == "HISEQ2500-10:539:CAV68ANXX:7:2214:16836:93172":
     #     echo("@", r.flag, node_name, event_pos, pos2, list(other_nodes), cigar_index)
+    #     echo(both_overlap, "enum", read_enum, p1_overlaps, p2_overlaps)
     #     quit()
     if not other_nodes.empty():
         for other_node in other_nodes:
@@ -934,14 +942,17 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         chrom2 = rnext
         pos2 = pnext
 
+        current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
+        next_overlaps_roi = False
+        if current_overlaps_roi:  # check if both sides of SV are in overlaps regions
+            next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1)
+
         # Special treatment of supplementary and local reads; need to decide where the partner is
         # Either use the rnext:pnext or a site(s) listed in the SA tag: The rnext:pext can often be at the
         # same loci as the read which leads to problems when linking w=2 edges
 
         add_primary_link = 1
         add_insertion_link = 0
-
-        current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
 
         good_clip = good_quality_clip(r, 15)
         if not good_clip:
@@ -971,8 +982,8 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             pass  # rnext and pnext set as above
 
         if read_enum == BREAKEND:
-            if current_overlaps_roi and io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1):
-                # Probably too many reads in ROI to reliably separate out non-soft-clipped reads
+            if current_overlaps_roi and next_overlaps_roi:
+                # Probably too many reads in ROI to reliably separate out break end reads
                 return
             if good_clip and cigar_clip(r, clip_l):
                 read_enum = BREAKEND
@@ -987,10 +998,11 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 pos2 = event_pos
 
         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                               tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
+                               tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi)
 
     ###
     else:  # Single end
+        current_overlaps_roi, next_overlaps_roi = False, False  # not supported yet
         if read_enum == SPLIT:
             # Use SA tag to get chrom2 and pos2
             if r.has_tag("SA"):
@@ -1005,13 +1017,15 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     event_pos, chrom, pos2, chrom2, _ = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
                     cigar_index = 0
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                   tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
+                                           tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
+                                           current_overlaps_roi, next_overlaps_roi)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
                     cigar_index = len(r.cigartuples) - 1
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                           tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
+                                           tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
+                                           current_overlaps_roi, next_overlaps_roi)
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
@@ -1019,7 +1033,8 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             else:
                 pos2 = event_pos
             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                   tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum)
+                                   tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
+                                   current_overlaps_roi, next_overlaps_roi)
 
 
 cdef struct CigarEvent:
@@ -1342,6 +1357,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     cdef int support_estimate = 0
     cdef int v
     for v in component:
+
         if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
         # Need to keep a record of all node info, and cigar indexes
@@ -1358,9 +1374,11 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
     support_between, support_within = count_support_between(G, partitions, min_support)
+    # if 166 in list(component):
+    #     echo("hi", support_between, support_within, n2n, reads, partitions)
 
     if len(support_between) == 0 and len(support_within) == 0:
-        if len(reads) >= min_support:
+        if len(n2n) >= min_support or len(reads) >= min_support:
             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
         else:
             return {}

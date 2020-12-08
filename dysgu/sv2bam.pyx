@@ -38,7 +38,7 @@ def iter_bam(bam, search, show=True):
 def config(args):
 
     kind = args["bam"].split(".")[-1]
-    opts = {"bam": "rb", "cram": "rc", "sam": "r"}
+    opts = {"bam": "rb", "cram": "rc", "sam": "r", "-": "r", "stdin": "r"}
     if kind not in opts:
         raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
     try:
@@ -57,8 +57,9 @@ def config(args):
         else:
             v = args["reads"]
         send_output = pysam.AlignmentFile(v, "wb", template=bam)
-    out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
-    reads_out = pysam.AlignmentFile(out_name, "wbu", template=bam)
+        logging.info("Sending all reads to: {}".format(args["reads"]))
+    #out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
+    reads_out = pysam.AlignmentFile(args["outname"], "wbu", template=bam)
 
     return bam, bam_i, clip_length, send_output, reads_out
 
@@ -87,7 +88,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     cdef int nn = 0
     cdef bint paired_end = 0
 
-    cov_track = Py_CoverageTrack(temp_dir, bam)
+    cov_track = Py_CoverageTrack(temp_dir, bam, max_coverage)
 
     for nn, r in enumerate(bam_i):
 
@@ -173,21 +174,25 @@ def process(args):
         logging.info("Excluding {} from search".format(args["exclude"]))
         exc_tree = io_funcs.overlap_regions(args["exclude"])
 
-    bname = os.path.splitext(os.path.basename(args["bam"]))[0]
-    if bname == "-":
-        bname = os.path.basename(temp_dir)
+    if not args["output"]:
+        bname = os.path.splitext(os.path.basename(args["bam"]))[0]
+        if bname == "-":
+            bname = os.path.basename(temp_dir)
+        out_name = "{}/{}.{}.bam".format(temp_dir, bname, args["pfix"])
 
-    out_name = "{}/{}.{}.bam".format(temp_dir, bname, args["pfix"])
+    else:
+        out_name = args["output"]
+
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string = args["bam"].encode("ascii")
     cdef bytes outfile_string = out_name.encode("ascii")
     cdef bytes temp_f = temp_dir.encode("ascii")
 
-    if exc_tree is None:
+    if exc_tree is None and args["reads"] == "None":
         count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["mq"], args["procs"], pe, temp_f, args["max_cov"])
-
     else:
+        args["outname"] = out_name
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
                                                                 args["min_size"], pe, temp_dir, args["max_cov"])

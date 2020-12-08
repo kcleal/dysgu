@@ -96,7 +96,12 @@ cdef n_aligned_bases(ct):
 cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
     r = {"su": 0,  "pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
-         "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0}
+         "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0, "n_gaps": []}
+
+    # r = {"su": 0, "pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
+    #      "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
+    #      "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0, "n_xa": [],
+    #      "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0}
 
     paired_end = set([])
     seen = set([])
@@ -136,7 +141,8 @@ cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
             r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
-        r["n_gaps"].append(n_small_gaps / a_bases)
+        if a_bases > 0:
+            r["n_gaps"].append(n_small_gaps / a_bases)
 
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
             r["supp"] += 1
@@ -202,7 +208,8 @@ cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
             r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
-        r["n_gaps"].append(n_small_gaps / a_bases)
+        if a_bases > 0:
+            r["n_gaps"].append(n_small_gaps / a_bases)
 
         if flag & 2304:  # Supplementary
             r["supp"] += 2
@@ -292,7 +299,8 @@ cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
             r["n_xa"].append(a.get_tag("XA").count(";"))
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
-        r["n_gaps"].append(n_small_gaps / a_bases)
+        if a_bases > 0:
+            r["n_gaps"].append(n_small_gaps / a_bases)
 
         if flag & 2:  # paired-end implied
             r["NP"] += 1
@@ -353,7 +361,8 @@ cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
         if a.has_tag("XA"):
             r["n_xa"].append(a.get_tag("XA").count(";"))
 
-        r["n_gaps"].append(n_small_gaps / a_bases)
+        if a_bases > 0:
+            r["n_gaps"].append(n_small_gaps / a_bases)
         if flag & 2:
             r["NP"] += 1
 
@@ -2317,7 +2326,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
 
     cdef int j, int_node
-    cdef long int p
+    cdef uint64_t p
     cdef uint64_t v
     cdef AlignedSegment a
     aligns = []
@@ -2327,13 +2336,16 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         if int_node in buffered_reads:
             aligns.append((n, buffered_reads[int_node]))
             continue
-
+        # click.echo(n, err=True)
         p = n[4]
         node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
         infile.seek(p)
-
-        a = next(infile)
+        try:
+            a = next(infile)
+        except StopIteration:
+            return aligns
         v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+
         if (v, a.flag, a.pos, a.rname, p) == node:
             aligns.append((n, a))
             if add_to_buffer:
@@ -2342,7 +2354,10 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         else:  # Try next few reads, not sure why this occurs
             steps = 0
             while steps < 5:
-                a = next(infile)
+                try:
+                    a = next(infile)
+                except StopIteration:
+                    return aligns
                 steps += 1
                 v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
                 if (v, a.flag, a.pos, a.rname, p) == node:
@@ -2425,6 +2440,9 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                 else:
                     events += res
 
+    # if 6271 in data["n2n"]:
+    #     for e in events:
+    #         echo(e["chrA"], e["posA"], e["chrB"], e["posB"])
     return events
 
 
@@ -2442,6 +2460,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     elif n_parts == 0:
         # Possible single read only
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
+
         if len(rds) < lower_bound_support:
             return []
 

@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 import click
-from click.testing import CliRunner
 import os
 import time
 from multiprocessing import cpu_count
+from subprocess import run
 import pkg_resources
 import warnings
 from dysgu import cluster, view, sv2bam
@@ -32,7 +32,9 @@ defaults = {
             "regions_only": "False",
             "soft_search": "True",
             "default_long_support": 2,
-            "pl": "pe"
+            "pl": "pe",
+            "remap": "True",
+            "drop_gaps": "True",
             }
 
 
@@ -40,17 +42,20 @@ presets = {"nanopore": {"mq": 20,
                         "min_support": 2,
                         "dist_norm": 900,
                         "max_cov": 150,
-                        "pl": "nanopore"},
+                        "pl": "nanopore",
+                        "remap": "False"},
            "pacbio": {"mq": 20,
                       "min_support": 2,
                       "dist_norm": 600,
                       "max_cov": 150,
-                      "pl": "pacbio"},
+                      "pl": "pacbio",
+                      "remap": "False"},
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
                   "dist_norm": defaults["dist_norm"],
                   "max_cov": defaults["max_cov"],
-                  "pl": defaults["pl"]},
+                  "pl": defaults["pl"],
+                  "remap": defaults["remap"]},
            }
 
 new_options_set = {}
@@ -72,6 +77,7 @@ def show_params(kwargs):
 
 
 def apply_preset(kwargs):
+
     if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
         kwargs["paired"] = "False"
 
@@ -164,6 +170,8 @@ def cli():
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired"
                                    "reads, or 50 bp for single-end reads",
               default=None, type=int, show_default=False)
@@ -171,13 +179,12 @@ def cli():
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--remap", help="Try and remap anomalous contigs to find additional small SVs", default="True",
-              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=float, callback=add_option_set)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.4,0.45,0.6,0.5,0.75",
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.7",
               type=str, show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
@@ -202,13 +209,14 @@ def run_pipeline(ctx, **kwargs):
     # Get SV reads
     ctx.obj["output"] = tmp_file_name
     ctx.obj["out_format"] = "vcf"
+    ctx.obj["reads"] = "None"
     sv2bam.process(ctx.obj)
 
     # Call SVs
     ctx.obj["ibam"] = kwargs["bam"]
     ctx.obj["sv_aligns"] = tmp_file_name
     ctx.obj["procs"] = 1
-
+    logging.info("Input file is: {}".format(tmp_file_name))
     cluster.cluster_reads(ctx.obj)
 
     # clean_up(ctx.obj)
@@ -229,7 +237,7 @@ def run_pipeline(ctx, **kwargs):
 @click.option("-r", "--reads", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
               default="None", type=str, show_default=True)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
-              default="stdout", type=str, show_default=True)
+              type=str)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore",
               default=defaults["clip_length"],
               type=int, show_default=True)
@@ -297,6 +305,8 @@ def get_reads(ctx, **kwargs):
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
                                    "reads, or 50 bp for single-end reads",
               default=None, type=int, show_default=False)
@@ -304,13 +314,12 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--remap", help="Try and remap anomalous contigs to find additional small SVs", default="True",
-              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=float, callback=add_option_set)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.75",
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.7",
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
@@ -348,7 +357,7 @@ def call_events(ctx, **kwargs):
 @click.option("--merge-within", help="Perform additional merge within input samples, prior to --merge-across",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Distance threshold for merging",
-              default=25, type=int, show_default=True)
+              default=250, type=int, show_default=True)
 @click.option("--separate", help="Keep merged tables separate, adds --post-fix to file names, csv format only",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",
@@ -372,10 +381,47 @@ def view_data(ctx, **kwargs):
 @click.pass_context
 def test_command(ctx, **kwargs):
     """Run dysgu tests"""
+    pwd = os.getcwd()
     logging.info("[dysgu-test] Version: {}".format(version))
     tests_path = os.path.dirname(__file__) + "/tests"
-    runner = CliRunner()
-    t = [tests_path + '/small.bam']
-    result = runner.invoke(run_pipeline, t)
-    assert result.exit_code == 0
+    # runner = CliRunner()
+    tests = []
+    tests.append(["dysgu run",
+                  "-x --drop-gaps False",
+                  "-o " + pwd + '/test.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test',
+                  tests_path + '/small.bam'])
+    tests.append(["dysgu run",
+                  "-x --drop-gaps False --mode pacbio",
+                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test',
+              tests_path + '/small.bam'])
+    tests.append(["dysgu merge",
+                  pwd + '/test.dysgu{}.vcf'.format(version),
+                  pwd + '/test2.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test.merge.dysgu{}.vcf'.format(version)])
+
+    for t in tests:
+        c = " ".join(t)
+        v = run(c, shell=True, capture_output=True, check=True)
+        if v.returncode != 0:
+            raise RuntimeError(t, "finished with non zero: {}".format(v))
+        else:
+            click.echo("PASS: " + c, err=True)
+    # result = runner.invoke(run_pipeline, t)
+    # click.echo(result, err=True)
+    # assert result.exit_code == 0
+
+    # runner = CliRunner()
+    # t = ["-x --mode pacbio",
+    #      "-o " + tests_path + '/test2.vcf',
+    #      tests_path + '/ref.fa',
+    #      tests_path + '/wd_test',
+    #      tests_path + '/small.bam']
+    #
+    # result = runner.invoke(run_pipeline, t)
+    # assert result.exit_code == 0
+
     logging.info("Run test complete")

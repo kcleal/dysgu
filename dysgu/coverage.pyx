@@ -198,7 +198,8 @@ class GenomeScanner:
             seen_reads = set([])  # Avoid reading same alignment twice, shouldn't happen anyway
             for c, s, e in itv:
 
-                tell = -1
+                tell = -1  # buffer first read because tell till likely be wrong
+                # tell = 0 if self.no_tell else self.input_bam.tell()
                 for a in self.input_bam.fetch(c, int(s), int(e)):
 
                     name = a.qname.__hash__(), a.flag, a.pos
@@ -206,6 +207,8 @@ class GenomeScanner:
                         continue
 
                     self._add_to_bin_buffer(a, tell)
+                    tell = 0 if self.no_tell else self.input_bam.tell()
+
                     seen_reads.add(name)
 
                     while len(self.staged_reads) > 0:
@@ -309,9 +312,9 @@ class GenomeScanner:
             quit()
         logging.info(f"Total input reads {total_reads}")
 
-    def add_to_buffer(self, r, n1):
+    def add_to_buffer(self, r, n1, tell):
 
-        if self.first == 1:
+        if self.first == 1 or tell == -1:
             # Not possible to get tell position from first read in region, so put into buffer instead
             self.read_buffer[n1] = r
             self.first = 0

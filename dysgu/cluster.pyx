@@ -30,6 +30,7 @@ from libc.stdint cimport uint8_t
 def filter_potential(input_events, tree, regions_only):
     potential = []
     for i in input_events:
+
         if "posB" not in i:  # Skip events for which no posB was identified
             continue
         if "sqc" not in i:
@@ -48,6 +49,7 @@ def filter_potential(input_events, tree, regions_only):
         # Remove events for which both ends are in --include but no contig was found
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i["chrA"], i["posA"], i["posA"] + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i["chrB"], i["posB"], i["posB"] + 1)
+
         if (posA_intersects and posB_intersects) and (i["contig"] is None or i["contig2"] is None):
             continue
         # Remove events for which neither end is in --include (if --include provided)
@@ -320,7 +322,10 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             w0 = best[0]  # Weighting for base result
             weight = w0["pe"] + w0["supp"] + w0["spanning"]
             spanned = bool(w0["spanning"])
-            remapped = bool(not w0["svlen_precise"] and w0["remap_score"] > 0)
+            if "svlen_precise" in w0:
+                remapped = bool(not w0["svlen_precise"] and w0["remap_score"] > 0)
+            else:
+                remapped = False
             add_contig_a = bool(not w0["contig"])
             new_a = ""
             add_contig_b = bool(not w0["contig2"])
@@ -335,7 +340,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                     if t in item:
                         best[0][t] += item[t]
 
-                if item["maxASsupp"] > w0["maxASsupp"]:
+                if "maxASsupp" in item and item["maxASsupp"] > w0["maxASsupp"]:
                     best[0]["maxASsupp"] = item["maxASsupp"]
 
                 if item["svtype"] == "DEL" and svt == "DEL":
@@ -592,9 +597,6 @@ cdef dict search_ssr_kc(ori):
                 i = finish + t
         i += 1
 
-    # if stride in polymers:
-    #     echo("STRIDE", stride)
-
     return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
 
 
@@ -648,6 +650,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       extended_tags,
                                                       assemble_contigs,
                                                       ):
+
         if event:
             event["grp_id"] = grp_id
             event["event_id"] = event_id
@@ -817,7 +820,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
         time.time() - t5))
 
     t0 = time.time()
-
     cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
 
     if insert_median != -1:
@@ -826,7 +828,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             insert_ppf = 0
     else:
         insert_ppf = -1
-
     extended_tags = genome_scanner.extended_tags
 
     if paired_end:
@@ -875,6 +876,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                 ci += 1
 
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+
             if res:
                 event_id += 1
                 # Res is a dict
@@ -919,7 +921,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             completed += 1
             num_jobs -= 1
 
-    logging.info("Number of components {}".format(components_seen))
+    logging.info("Number of components {}, n candidates {}".format(components_seen, len(block_edge_events)))
 
     del G
     del read_buffer
@@ -930,6 +932,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
                                                     keep_small=args["keep_small"],
                                                     min_support=args["min_support"])
+        logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
     else:
         for e in block_edge_events:
             e["remapped"] = 0
@@ -946,7 +949,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     else:
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
-
+    logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
     # Filter for absolute support and size here
     before = len(merged)
     if not args["keep_small"]:
@@ -961,7 +964,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     for d in merged:
         d["type"] = args["pl"]
 
-    merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome)
+    merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
     # if merged:
     #     for event in merged:
@@ -983,7 +986,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     logging.info("density finished")
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
     logging.info("repeat expansion finished")
-    preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile)
+    preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
     logging.info("bcc finished")
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["no_gt"])
     logging.info("gt finished")
@@ -1013,8 +1016,24 @@ def cluster_reads(args):
     if kind not in opts:
         raise ValueError("Input must be a .bam/cam/sam or stdin")
 
+    if kind == "stdin" and args["include"] is not None:
+        raise ValueError("Cannot use stdin and include (an indexed bam is needed)")
+
     bam_mode = opts[kind]
     infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1)
+
+    has_index = True
+    try:
+        infile.check_index()
+    except ValueError:
+        has_index = False
+    logging.info("Input file has index {}".format(has_index))
+    if not has_index and args["include"] is not None:
+        logging.info("Indexing input alignment file")
+        infile.close()
+        pysam.index(args["sv_aligns"])
+        infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1)
+
     ref_genome = pysam.FastaFile(args["reference"])
 
     ibam = None
@@ -1050,12 +1069,14 @@ def cluster_reads(args):
     else:
         logging.info("Writing SVs to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
-
+    logging.info("Running pipeline")
     _debug_k = []
     regions = io_funcs.overlap_regions(args["include"])
 
     # Run dysgu here:
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
+
+    logging.info("Extended tags: {}".format(extended_tags))
 
     df = pd.DataFrame.from_records(events)
     df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
@@ -1067,7 +1088,10 @@ def cluster_reads(args):
 
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
-            df[io_funcs.col_names()].to_csv(outfile, index=False)
+            cols = io_funcs.col_names(extended_tags, not args["metrics"])
+            fmt = cols.pop()
+            cols += fmt
+            df[cols].to_csv(outfile, index=False)
         else:
             contig_header_lines = ""
             for item in infile.header["SQ"]:
@@ -1077,12 +1101,12 @@ def cluster_reads(args):
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
                             extended_tags=extended_tags)
 
-    infile.close()
-    ref_genome.close()
-    try:
-        ibam.close()
-    except:
-        pass
+    # infile.close()
+    # ref_genome.close()
+    # try:
+    #     ibam.close()
+    # except:
+    #     pass
 
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],

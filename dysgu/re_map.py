@@ -1,9 +1,8 @@
 from skbio.alignment import StripedSmithWaterman
-from dysgu.map_set_utils import is_overlapping
+from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
 
 import edlib
-import click
 import logging
 
 
@@ -132,6 +131,7 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=Tr
         e["remap_score"] = 0
         e["remap_ed"] = 0
         e["scw"] = 0
+
         if 'svlen_precise' not in e:
             e['svlen_precise'] = 1
 
@@ -361,8 +361,10 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=Tr
     return new_events
 
 
-def drop_svs_near_reference_gaps(events, paired_end, ref_genome):
+def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
 
+    if not drop_gaps:
+        return events
     ref_locs = []
     for count, e in enumerate(events):
 
@@ -405,6 +407,6 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome):
             bad_i |= s_gi
 
     new_events = [events[i] for i in range(len(events)) if i not in bad_i]
-    logging.info("N near gaps gropped {}".format(len(bad_i)))
+    logging.info("N near gaps dropped {}".format(len(bad_i)))
 
     return new_events

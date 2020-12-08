@@ -12,8 +12,9 @@ from libcpp.vector cimport vector as cpp_vector
 
 from dysgu.map_set_utils import echo, timeit
 from dysgu import re_map
-from dysgu.io_funcs import reverse_complement
+from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
 from dysgu.coverage import merge_intervals
+
 
 import zlib
 import math
@@ -80,20 +81,25 @@ class BadClipCounter:
         return count
 
 @timeit
-def get_badclip_metric(events, bad_clip_counter, bam):
+def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
     bad_clip_counter.sort_arrays()
     logging.info("Arrays sorted")
     new_events = []
     for e in events:
-
+        count = 0
         if e["chrA"] == e["chrB"] and abs(e["posB"] - e["posA"]) < 500:
             start = min(e["posA"], e["posB"]) - 500
             end = max(e["posA"], e["posB"]) + 500
-            count = bad_clip_counter.count_near(bam.gettid(e["chrA"]), start, end)
+            if not intersecter_str_chrom(regions, e["chrA"], e["posA"], e["posA"] + 1) and \
+                not intersecter_str_chrom(regions, e["chrB"], e["posB"], e["posB"] + 1):
+                count = bad_clip_counter.count_near(bam.gettid(e["chrA"]), start, end)
         else:
-            c1 = bad_clip_counter.count_near(bam.gettid(e["chrA"]), e["posA"] - 500, e["posA"] + 500)
-            c2 = bad_clip_counter.count_near(bam.gettid(e["chrB"]), e["posB"] - 500, e["posB"] + 500)
+            c1, c2 = 0, 0
+            if not intersecter_str_chrom(regions, e["chrA"], e["posA"], e["posA"] + 1):
+                c1 = bad_clip_counter.count_near(bam.gettid(e["chrA"]), e["posA"] - 500, e["posA"] + 500)
+            if not intersecter_str_chrom(regions, e["chrB"], e["posB"], e["posB"] + 1):
+                c2 = bad_clip_counter.count_near(bam.gettid(e["chrB"]), e["posB"] - 500, e["posB"] + 500)
             count = c1 + c2
 
         e["bad_clip_count"] = count
@@ -131,7 +137,7 @@ def get_badclip_metric(events, bad_clip_counter, bam):
                     clip_res = re_map.get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
                     if clip_res:
                         cont = e[cont]
-                        if cont:
+                        if cont and len(cont) < 1000:
                             fc = clip_res[0]
                             rc = reverse_complement(fc, len(fc))
                             query = StripedSmithWaterman(cont, gap_extend_penalty=1, suppress_sequences=True)
@@ -689,8 +695,8 @@ def apply_model(df, mode, contigs, paired, thresholds):
     clf = models[model_key]
 
     c = dict(zip(
-        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS'],
-        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas']
+        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG'],
+        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp"]
                  ))
 
     X = df[[c[i] for i in cols]]

@@ -51,7 +51,7 @@ To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference 
 be provided to store temporary files. There are a few ways to run dysgu depending on the type of data you have.
 For paired-end data the `run` command is recommended which wraps `fetch` and `call`::
 
-    dysgu run reference.fa samp1_temp input.bam > svs.vcf
+    dysgu run reference.fa temp_dir input.bam > svs.vcf
 
 This will first call `fetch` that creates a temporary bam file and other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
 
@@ -60,20 +60,23 @@ Long reads
 For long-read data, the `fetch` stage may be skipped and the `call` command can be run instead - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
 temp file::
 
-    dysgu call --mode pacbio reference.fa samp1_temp input.bam > svs.vcf
-    dysgu call --mode nanopore reference.fa samp1_temp input.bam > svs.vcf
+    dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
+    dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
+
+The --mode=pacbio option works best with read from the SequelII platform, for older platforms use --mode=nanopore or use custom
+settings.
 
 Fetching SV reads
 ~~~~~~~~~~~~~~~~~
 To save time, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
-all SV associated reads will be placed in `samp1_temp/samp1_temp.bam`, and all input alignments will be placed in all_reads.bam::
+all SV associated reads will be placed in `temp_dir/temp_dir.dysgu_reads.bam`, and all input alignments will be placed in all_reads.bam::
 
-    dysgu fetch -r all_reads.bam samp1_temp -
+    dysgu fetch -r all_reads.bam temp_dir -
 
 SVs can be subsequently called using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
 size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
 
-    dysgu call --ibam reference.fa all_reads.bam samp1_temp > svs.vcf
+    dysgu call --ibam all_reads.bam reference.fa temp_dir temp_dir/temp_dir.dysgu_reads.bam > svs.vcf
 
 Alternatively, run `fetch` on an existing .bam file::
 
