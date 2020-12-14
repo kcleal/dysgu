@@ -39,7 +39,7 @@ jobs:
         - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
         - CIBW_TEST_COMMAND="{project}/ci/test"
         - pwd
-        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include:./dysgu/htslib' LIBRARY_PATH='/root/lib:./dysgu/htslib' LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./dysgu/htslib"
+        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include:./dysgu/htslib' INCLUDE_PATH='/root/include:./dysgu/htslib' LIBRARY_PATH='/root/lib:./dysgu/htslib' LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./dysgu/htslib"
       before_install:
         - echo "before_install"
         - pip install -U pip
