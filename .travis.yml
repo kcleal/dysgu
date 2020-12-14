@@ -45,13 +45,14 @@ jobs:
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
         - python3 --version
 
-#        - python3 -m pip install cython
-        #- python3 setup.py install
       install:
         - echo "install:"
         - python3 -m pip install -r requirements.txt
         - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
+        - export PATH="dysgu/htslib:$PATH"
+        - echo $PATH
+        - echo dysgu/htslib/lib*
       before_script:
         - echo "before script:"
         - python3 --version
