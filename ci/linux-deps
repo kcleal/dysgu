@@ -54,5 +54,8 @@ make
 
 cd ../../
 
+export PATH="./dysgu/htslib:$PATH"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./dysgu/htslib
+echo $PATH
+echo ./dysgu/htslib/lib*
 echo "LINUX-DEPS DONE"
-#pip install -r requirements.txt

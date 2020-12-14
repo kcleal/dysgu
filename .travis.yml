@@ -50,9 +50,7 @@ jobs:
         - python3 -m pip install -r requirements.txt
         - python3 -m pip install cython
         - python3 -m pip install cibuildwheel
-        - export PATH="dysgu/htslib:$PATH"
-        - echo $PATH
-        - echo dysgu/htslib/lib*
+
       before_script:
         - echo "before script:"
         - python3 --version
