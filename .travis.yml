@@ -38,7 +38,7 @@ jobs:
         - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
         - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
         - CIBW_TEST_COMMAND="{project}/ci/test"
-        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='$C_INCLUDE_PATH:/root/include:{project}/dysgu/htslib' INCLUDE_PATH='$INCLUDE_PATH:/root/include:{project}/dysgu/htslib' LIBRARY_PATH='$LIBRARY_PATH:/root/lib:{project}/dysgu/htslib' LD_LIBRARY_PATH='$LD_LIBRARY_PATH:{project}/dysgu/htslib'"
+        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' LIBRARY_PATH='/root/lib:$pwd/dysgu/htslib' LD_LIBRARY_PATH='$pwd/dysgu/htslib'"
       before_install:
         - echo "before_install"
         - pip install -U pip
@@ -47,6 +47,9 @@ jobs:
 
       install:
         - echo "install environment variables"
+        - pwd
+        - echo $TRAVIS_BUILD_DIR
+        - ls $TRAVIS_BUILD_DIR
         - echo $C_INCLUDE_PATH
         - echo $INCLUDE_PATH
         - echo $LIBRARY_PATH
@@ -61,6 +64,7 @@ jobs:
         - python3 -c "import cython"
       script:
         - echo "script:"
+        - pwd
         - python3 -c "import cython"
         - python3 -m cibuildwheel --output-dir wheelhouse
 
