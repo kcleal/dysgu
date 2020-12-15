@@ -55,5 +55,7 @@ make
 
 cd ../../
 
+yum install htslib
+
 echo "LINUX-DEPS DONE"
 #pip install -r requirements.txt

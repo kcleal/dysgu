@@ -38,7 +38,7 @@ jobs:
         - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
         - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
         - CIBW_TEST_COMMAND="{project}/ci/test"
-        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib:$TRAVIS_BUILD_DIR/dysgu/htslib' LD_LIBRARY_PATH='$LD_LIBRARY_PATH:$TRAVIS_BUILD_DIR/dysgu/htslib'"
+        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
         - LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TRAVIS_BUILD_DIR/dysgu/htslib"
         #- CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' LIBRARY_PATH='/root/lib:$pwd/dysgu/htslib' LD_LIBRARY_PATH='/root/lib:$TRAVIS_BUILD_DIR/dysgu/htslib'"
       before_install:
