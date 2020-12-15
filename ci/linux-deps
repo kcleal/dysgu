@@ -52,10 +52,7 @@ autoheader
 autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2
 make
-
+make install
 cd ../../
 
-yum install htslib
-
 echo "LINUX-DEPS DONE"
-#pip install -r requirements.txt
