@@ -2,6 +2,8 @@
 dysgu-SV
 ========
 
+[![Build Status](https://travis-ci.com/kcleal/dysgu.svg?token=ggp1k8nRaRrwARctVfix&branch=master)](https://travis-ci.com/kcleal/dysgu)
+
 dysgu (pronounced *duss-key*) is a collection of tools for calling structural variants.
 
 
