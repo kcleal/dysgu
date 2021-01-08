@@ -2,9 +2,9 @@
 dysgu-SV
 ========
 
-[Build Status](https://travis-ci.com/kcleal/dysgu.svg?token=ggp1k8nRaRrwARctVfix&branch=master)](https://travis-ci.com/kcleal/dysgu)
+[![Build Status](https://travis-ci.com/kcleal/dysgu.svg?token=ggp1k8nRaRrwARctVfix&branch=master)](https://travis-ci.com/kcleal/dysgu)
 
-dysgu (pronounced *duss-gi*) is a set of tools for calling structural variants in paired-end or long read sequencing data.
+dysgu (pronounced *duss-key*) is a set of tools for calling structural variants in paired-end or long read sequencing data.
 
 
 Installation
