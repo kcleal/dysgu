@@ -1,6 +1,6 @@
 cython
 click
-numpy
+numpy>=1.16.5
 pandas
 pysam
 networkx>=2.4

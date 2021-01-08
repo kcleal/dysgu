@@ -1,71 +1,70 @@
 notifications:
   email: false
-
 language: python
 python:
-  - "3.7"
-  - "3.8"
-
+- '3.7'
+- '3.8'
 addons:
   homebrew:
     packages:
     - openssl
-
 install:
-  - sudo apt-get install libcurl4-openssl-dev
-  - pip install -r requirements.txt
-  - cd dysgu/htslib
-  - autoheader && autoconf
-  - ./configure --enable-s3 --disable-lzma --disable-bz2
-  - make
-  - cd ../../
-  - CYTHONIZE=1 python setup.py install
-
+- sudo apt-get install libcurl4-openssl-dev
+- pip install -r requirements.txt
+- cd dysgu/htslib
+- autoheader && autoconf
+- "./configure --enable-s3 --disable-lzma --disable-bz2"
+- make
+- cd ../../
+- CYTHONIZE=1 python setup.py install
 script:
-  - python setup.py test
-
+- python setup.py test
 jobs:
   include:
-    - name: "Python 3.7.0 on Xenial Linux"
-      python: "3.7"
-      sudo: required
-      services:
-        - docker
-      env:
-        - DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
-        - PLAT=manylinux2010_x86_64
-        - CIBW_SKIP="pp* cp27-* cp34-* cp35-* cp36-* *i686*"
-        - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
-        - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
-        - CIBW_TEST_COMMAND="{project}/ci/test"
-        - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
-        - LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TRAVIS_BUILD_DIR/dysgu/htslib"
-        #- CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11' C_INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' INCLUDE_PATH='/root/include:$pwd/dysgu/htslib' LIBRARY_PATH='/root/lib:$pwd/dysgu/htslib' LD_LIBRARY_PATH='/root/lib:$TRAVIS_BUILD_DIR/dysgu/htslib'"
-      before_install:
-        - echo "before_install"
-        - pip install -U pip
-        - export PYTHONPATH=$PYTHONPATH:$(pwd)
-        - python3 --version
+  - name: Python 3.7.0 on Xenial Linux
+    python: '3.7'
+    sudo: required
+    services:
+    - docker
+    env:
+    - DOCKER_IMAGE=quay.io/pypa/manylinux2010_x86_64
+    - PLAT=manylinux2010_x86_64
+    - CIBW_SKIP="pp* cp27-* cp34-* cp35-* cp36-* *i686*"
+    - CIBW_MANYLINUX_X86_64_IMAGE=manylinux2014
+    - CIBW_BEFORE_BUILD_LINUX="{project}/ci/linux-deps"
+    - CIBW_TEST_COMMAND="{project}/ci/test"
+    - CIBW_ENVIRONMENT="CYTHONIZE=1 LDFLAGS='-L/usr/lib64/openssl11' CPPFLAGS='-I/usr/include/openssl11'
+      C_INCLUDE_PATH='/root/include' LIBRARY_PATH='/root/lib'"
+    - LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$TRAVIS_BUILD_DIR/dysgu/htslib"
+    before_install:
+    - echo "before_install"
+    - pip install -U pip
+    - export PYTHONPATH=$PYTHONPATH:$(pwd)
+    - python3 --version
+    install:
+    - echo "install environment variables"
+    - pwd
+    - echo $TRAVIS_BUILD_DIR/dysgu/htslib
+    - ls $TRAVIS_BUILD_DIR
+    - echo $C_INCLUDE_PATH
+    - echo $INCLUDE_PATH
+    - echo $LIBRARY_PATH
+    - echo $LD_LIBRARY_PATH
+    - python3 -m pip install -r requirements.txt
+    - python3 -m pip install cython
+    - python3 -m pip install cibuildwheel
+    before_script:
+    - echo "before script:"
+    - python3 --version
+    - python3 -c "import cython"
+    script:
+    - echo "script:"
+    - pwd
+    - python3 -c "import cython"
+    - python3 -m cibuildwheel --output-dir wheelhouse
 
-      install:
-        - echo "install environment variables"
-        - pwd
-        - echo $TRAVIS_BUILD_DIR/dysgu/htslib
-        - ls $TRAVIS_BUILD_DIR
-        - echo $C_INCLUDE_PATH
-        - echo $INCLUDE_PATH
-        - echo $LIBRARY_PATH
-        - echo $LD_LIBRARY_PATH
-        - python3 -m pip install -r requirements.txt
-        - python3 -m pip install cython
-        - python3 -m pip install cibuildwheel
-
-      before_script:
-        - echo "before script:"
-        - python3 --version
-        - python3 -c "import cython"
-      script:
-        - echo "script:"
-        - pwd
-        - python3 -c "import cython"
-        - python3 -m cibuildwheel --output-dir wheelhouse
+deploy:
+  provider: testpypi
+  username: __token__
+  password:
+    secure: gP36YlPEzkYJUhyAAo/R8OsuOKuSsr3/eSj4Fba4B2esJZUXe+OH5ZVXBbPeZw/bJj4HEcQlw0QqDcprGCr7/y5W0XqsoxZOg1XtYc67mrvpkwEZyT+XiQdqrS+BrMvKQaGfaq9tn4eHPYCYRMVY7D9NDKqmXSHi67F/2Hq0KlVGbdzdot/mukRfXrujtoBeU7pJji5ewT4St+Zs20JFkDrxt6Y/DjrTkkePq9OBHDEdeqFTOVUN9r9HE8qwKYqnfEJjF0FsJ0CJK+uJ2dC1aiCQ50MRuJkQ2J818h2HIKAYdXuji5UQ+2pGYF4uIMtIy70Y8qEyRHcTED1Gp+Ghen8KxnVhZ3pOTQp7iURMoL7RhORE7fPHB7yiU/2RYjwT9DGd3JADQJAFAZOYEzSOQ1cldZPidJ61wBxJWlVF63UnhRc0W/kp9cSIcfpTswZ8EApYsb11mlwHI9rE852gR4973MuW83GfsvqwEgl4peWG+GFjUJkQ0Rj883f/wgMov8uf4NZU4vBsXUe9W5JQdCDh3bIZ7MF1RH7aLxae+v6+5LZ/0WRpeCUDMuWU+vbaDTrzjed4AGaqgoVg8V/1BvllQxNsUaaMq4H7gYpHdaztF+t8+obkquWeZ+MdQjbpd/e8FUlTKUZH0czl9MBSOD0yXA6TOmGEB9HdrI8C2L8=
