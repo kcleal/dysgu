@@ -64,7 +64,9 @@ jobs:
     - python3 -m cibuildwheel --output-dir wheelhouse
 
 deploy:
-  provider: testpypi
+  provider: pypi
+  server: https://testpypi.python.org/pypi
   username: __token__
   password:
     secure: gP36YlPEzkYJUhyAAo/R8OsuOKuSsr3/eSj4Fba4B2esJZUXe+OH5ZVXBbPeZw/bJj4HEcQlw0QqDcprGCr7/y5W0XqsoxZOg1XtYc67mrvpkwEZyT+XiQdqrS+BrMvKQaGfaq9tn4eHPYCYRMVY7D9NDKqmXSHi67F/2Hq0KlVGbdzdot/mukRfXrujtoBeU7pJji5ewT4St+Zs20JFkDrxt6Y/DjrTkkePq9OBHDEdeqFTOVUN9r9HE8qwKYqnfEJjF0FsJ0CJK+uJ2dC1aiCQ50MRuJkQ2J818h2HIKAYdXuji5UQ+2pGYF4uIMtIy70Y8qEyRHcTED1Gp+Ghen8KxnVhZ3pOTQp7iURMoL7RhORE7fPHB7yiU/2RYjwT9DGd3JADQJAFAZOYEzSOQ1cldZPidJ61wBxJWlVF63UnhRc0W/kp9cSIcfpTswZ8EApYsb11mlwHI9rE852gR4973MuW83GfsvqwEgl4peWG+GFjUJkQ0Rj883f/wgMov8uf4NZU4vBsXUe9W5JQdCDh3bIZ7MF1RH7aLxae+v6+5LZ/0WRpeCUDMuWU+vbaDTrzjed4AGaqgoVg8V/1BvllQxNsUaaMq4H7gYpHdaztF+t8+obkquWeZ+MdQjbpd/e8FUlTKUZH0czl9MBSOD0yXA6TOmGEB9HdrI8C2L8=
+  skip_existing: true
