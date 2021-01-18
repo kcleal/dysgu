@@ -933,7 +933,8 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab, "query_gap": 0, "query_overlap": 0
+                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab, "query_gap": 0, "query_overlap": 0,
+                     "jitter": ((posA_95 + posB_95) / 2) / svlen if svlen > 0 else -1,
                      })
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
@@ -1957,7 +1958,7 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
             "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
             "preciseA": preciseA, "preciseB": preciseB, "svlen_precise": svlen_precise,
-            "svlen": svlen, "query_overlap": q_overlaps}
+            "svlen": svlen, "query_overlap": q_overlaps, "jitter": ((cipos95A + cipos95B) / 2) / svlen if svlen > 0 else -1}
 
 
 cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
@@ -2300,9 +2301,11 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
         svlen = int(np.mean([i[4] for i in spanning_alignments]))
+
         info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
                      "join_type": "3to5",
                      "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
+                     "jitter": ((posA_95 + posB_95) / 2) / svlen if svlen > 0 else -1,
                      "preciseA": True, "preciseB": True, "svlen": svlen, "query_overlap": 0
                      })
         u_reads = [i[5] for i in spanning_alignments]

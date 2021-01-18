@@ -171,7 +171,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
          "raw_reads_10kb", "mcov",
           "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
-                "inner_cn", "outer_cn", "compress", "prob"]
+                "inner_cn", "outer_cn", "compress", "ref_rep", "prob"]
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
@@ -180,7 +180,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
          "raw_reads_10kb", "mcov",
           "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
-                "inner_cn", "outer_cn", "compress", "prob"]
+                "inner_cn", "outer_cn", "compress", "ref_rep", "prob"]
             ]
 
 
@@ -188,9 +188,13 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
     # Pick best row (best support, or highest prob if available
     rep, repsc, lenprec = 0, 0, 1
+    mean_prob, max_prob = None, None
     if len(format_f) > 1:
 
         best = sorted([(int(v["su"]), k) for k, v in df_rows.items()], reverse=True)[0][1]
+        probs = [v["prob"] for k, v in df_rows.items()]
+        mean_prob = np.mean(probs)
+        max_prob = np.max(probs)
         r = df_rows[best]
         gc = r["gc"]
         if not small_output:
@@ -270,7 +274,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         info_extras += [
                     f"REP={'%.3f' % float(rep)}",
                     f"REPSC={'%.3f' % float(repsc)}",
-                    f"LPREC={lenprec}"]
+                    f"LPREC={lenprec}",
+                    ]
 
     info_extras += [
                     f"GC={gc}",
@@ -287,17 +292,20 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
                     f"BND={bnd}",
                     f"RT={read_kind}"]
 
+    if mean_prob is not None:
+        info_extras += [f"MeanPROB={mean_prob}", f"MaxPROB={max_prob}"]
+
     if small_output:
         fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
         # if "prob" in r:
         #     fmt_keys += ":PROB"
 
     elif extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:PROB"
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
         # if "prob" in r:
         #     fmt_keys += ":PROB"
     else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:PROB"
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
         # if "prob" in r:
         #     fmt_keys += ":PROB"
 
@@ -339,7 +347,7 @@ def get_fmt(r, extended, small_output):
                                       r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], r['prob']
+                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
 
              ]
         return v
@@ -350,7 +358,7 @@ def get_fmt(r, extended, small_output):
                                   r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], r['prob']
+                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
              ]
         return v
 
@@ -423,6 +431,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=EXPSEQ,Number=1,Type=String,Description="Expansion sequence">
 ##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##INFO=<ID=OL,Number=1,Type=Integer,Description="Query overlap in bp">
+##INFO=<ID=MeanPROB,Number=1,Type=Float,Description="Mean probability of event being true across samples">
+##INFO=<ID=MaxPROB,Number=1,Type=Float,Description="Max probability of event being true across samples">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
@@ -472,6 +482,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=ICN,Number=1,Type=Float,Description="Inner copy number">
 ##FORMAT=<ID=OCN,Number=1,Type=Float,Description="Outer copy number">
 ##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
+##FORMAT=<ID=RR,Number=1,Type=Float,Description="Repeat score for reference">
+##FORMAT=<ID=JIT,Number=1,Type=Float,Description="SV length jitter">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
@@ -508,6 +520,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=EXPSEQ,Number=1,Type=String,Description="Expansion sequence">
 ##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##INFO=<ID=OL,Number=1,Type=Integer,Description="Query overlap in bp">
+##INFO=<ID=MeanPROB,Number=1,Type=Float,Description="Mean probability of event being true across samples">
+##INFO=<ID=MaxPROB,Number=1,Type=Float,Description="Max probability of event being true across samples">
 ##ALT=<ID=DEL,Description="Deletion">
 ##ALT=<ID=DUP,Description="Duplication">
 ##ALT=<ID=INV,Description="Inversion">
@@ -553,6 +567,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=ICN,Number=1,Type=Float,Description="Inner copy number">
 ##FORMAT=<ID=OCN,Number=1,Type=Float,Description="Outer copy number">
 ##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
+##FORMAT=<ID=RR,Number=1,Type=Float,Description="Repeat score for reference">
+##FORMAT=<ID=JIT,Number=1,Type=Float,Description="SV length jitter">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 

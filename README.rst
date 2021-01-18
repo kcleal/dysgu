@@ -19,9 +19,6 @@ To build from source::
 
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu/dysgu/htslib
-    autoheader
-    autoconf
-    ./configure
     make
     cd ../../
     pip install -r requirements.txt

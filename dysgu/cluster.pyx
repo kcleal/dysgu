@@ -146,8 +146,8 @@ cdef break_distances(i_a, i_b, j_a, j_b, i_a_precise, i_b_precise, j_a_precise, 
     return dist_a_close and dist_b_close, dist_a_same and dist_b_same
 
 
-def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15, same_sample=True,
-                     debug=False):
+def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
+                     same_sample=True, aggressive_ins_merge=False, debug=False):
 
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
@@ -224,16 +224,19 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         m = False
         ml = max(ei["svlen"], ej["svlen"])
         if ei["svtype"] == "INS":
-            # if both have been remapped, make sure size is similar
-            if ei["spanning"] > 0 or ej["spanning"] > 0:
-                if paired_end:
-                    m = True
-                elif ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
-                    m = True
-            elif ei["remap_score"] > 0 and ej["remap_score"] > 0 and ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
+            if aggressive_ins_merge:
                 m = True
-            elif ei["remap_score"] == 0 or ej["remap_score"] == 0:  # merge if one break was not remapped
-                m = True
+            else:
+                # if both have been remapped, make sure size is similar
+                if ei["spanning"] > 0 or ej["spanning"] > 0:
+                    if paired_end:
+                        m = True
+                    elif ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
+                        m = True
+                elif ei["remap_score"] > 0 and ej["remap_score"] > 0 and ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
+                    m = True
+                elif ei["remap_score"] == 0 or ej["remap_score"] == 0:  # merge if one break was not remapped
+                    m = True
 
         elif ei["svtype"] != "INS" and (recpi_overlap or spd) and not both_in_include:
             m = True
@@ -287,7 +290,7 @@ cpdef srt_func(c):
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
-                 rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0,
+                 rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0, aggressive_ins_merge=False,
                  skip_imprecise=False):
     """Try and merge similar events, use overlap of both breaks points
     """
@@ -299,6 +302,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     # Cluster events on graph
     G = nx.Graph()
     G = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
+                         aggressive_ins_merge=aggressive_ins_merge,
                          debug=debug)
 
     found = []
@@ -994,6 +998,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     logging.info("norm cov finished")
 
     preliminaries = post_call_metrics.compressability(preliminaries)
+
+    preliminaries = post_call_metrics.ont_ref_repetitiveness(preliminaries, args["mode"], ref_genome)
 
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
     for v in preliminaries:

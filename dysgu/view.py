@@ -43,6 +43,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
     if not merge_within_sample:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
+                                     aggressive_ins_merge=True,
                                      same_sample=False)
         ff = defaultdict(set)
         for f in found:
@@ -222,6 +223,8 @@ def vcf_to_df(path):
                "OCN": ("outer_cn", float),
                "CMP": ("compress", float),
                "FCC": ("fcc", float),
+               "RR": ("rep_ref", float),
+               "JIT": ("jitter", float)
                }
 
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)

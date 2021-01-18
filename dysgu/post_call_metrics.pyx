@@ -14,7 +14,7 @@ from dysgu.map_set_utils import echo, timeit
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
 from dysgu.coverage import merge_intervals
-
+from dysgu.assembler import compute_rep
 
 import zlib
 import math
@@ -450,6 +450,24 @@ class CoverageAnalyser(object):
 
         return events
 
+@timeit
+def ont_ref_repetitiveness(events, mode, ref_genome):
+
+    for e in events:
+        e["ref_rep"] = 0
+
+    if mode == "pe":
+        return events
+
+    for e in events:
+        if e["svlen"] < 150 and e["svtype"] == "DEL":
+            try:
+                ref_seq = ref_genome.fetch(e["chrA"], e["posA"], e["posB"]).upper()
+                e["ref_rep"] = compute_rep(ref_seq)
+            except ValueError:  # out or range, needs fixing
+                continue
+
+    return events
 
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     s = int(start / 10)
@@ -695,8 +713,8 @@ def apply_model(df, mode, contigs, paired, thresholds):
     clf = models[model_key]
 
     c = dict(zip(
-        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG'],
-        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp"]
+        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT'],
+        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp", 'ref_rep', 'jitter']
                  ))
 
     X = df[[c[i] for i in cols]]

@@ -67,6 +67,7 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
+                             "-Wno-deprecated-declarations"
                              ]
 
 ext_modules = list()
@@ -139,7 +140,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.0.8',
+    version='1.0.10',
     python_requires='>=3.7',
     install_requires=[
             'cython',

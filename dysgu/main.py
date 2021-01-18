@@ -118,7 +118,8 @@ def make_wd(args, call_func=False):
         os.mkdir(temp_dir)
     elif not args["overwrite"]:
         if (call_func and args["ibam"] is None) or not call_func:
-            raise ValueError("Working directory already exists. Add --overwrite=True to proceed")
+            raise ValueError("Working directory already exists. Add --overwrite=True to proceed, "
+                             "or supply --ibam to re-use temp files in working directory")
 
 
 def clean_up(args, tmp_file_name):
