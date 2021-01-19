@@ -398,7 +398,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
     return path
 
 
-cpdef dict base_assemble(rd, int position, int max_distance):
+cdef dict get_consensus(rd, int position, int max_distance):
 
     cdef str seq = ""
     cdef int ref_start = -1
@@ -412,40 +412,6 @@ cpdef dict base_assemble(rd, int position, int max_distance):
     cdef TwoWayMap ndict_r2
 
     cdef cpp_vector[int] node_weights
-
-    if len(rd) == 1:
-        r = rd[0]
-        rseq = r.seq
-        ct = r.cigartuples
-        if rseq is None or ct is None:
-            return {}
-        longest_left_sc = 0
-        longest_right_sc = 0
-        seq = ""
-        begin = 0
-        for opp, length in ct:
-            if opp == 4 or opp == 1:
-                seq += rseq[begin:begin + length].lower()
-                if opp == 4:
-                    if begin == 0:
-                        longest_left_sc = length
-                    else:
-                        longest_right_sc = length
-                begin += length
-
-            elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
-                seq += rseq[begin:begin + length]
-                begin += length
-
-        return {"contig": seq,
-                "left_clips": longest_left_sc,
-                "right_clips": longest_right_sc,
-                "ref_bases": len(seq) - longest_left_sc - longest_right_sc,
-                "ref_start": r.pos,
-                "ref_end": r.reference_end,
-                "bamrname": r.rname,
-                "left_weight": 0,
-                "right_weight": 0}
 
     for r in rd:
         if r.seq is None:
@@ -572,6 +538,47 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             "bamrname": rd[0].rname,
             "left_weight": left_clip_weight,
             "right_weight": right_clip_weight}
+
+
+cpdef dict base_assemble(rd, int position, int max_distance):
+
+    if len(rd) == 1:
+        r = rd[0]
+        rseq = r.seq
+        ct = r.cigartuples
+        if rseq is None or ct is None:
+            return {}
+
+        if len(rseq) <= 250:
+            longest_left_sc = 0
+            longest_right_sc = 0
+            seq = ""
+            begin = 0
+            for opp, length in ct:
+                if opp == 4 or opp == 1:
+                    seq += rseq[begin:begin + length].lower()
+                    if opp == 4:
+                        if begin == 0:
+                            longest_left_sc = length
+                        else:
+                            longest_right_sc = length
+                    begin += length
+
+                elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+                    seq += rseq[begin:begin + length]
+                    begin += length
+
+            return {"contig": seq,
+                    "left_clips": longest_left_sc,
+                    "right_clips": longest_right_sc,
+                    "ref_bases": len(seq) - longest_left_sc - longest_right_sc,
+                    "ref_start": r.pos,
+                    "ref_end": r.reference_end,
+                    "bamrname": r.rname,
+                    "left_weight": 0,
+                    "right_weight": 0}
+
+    return get_consensus(rd, position, max_distance)
 
 
 cpdef float compute_rep(seq):

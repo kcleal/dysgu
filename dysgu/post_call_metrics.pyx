@@ -451,21 +451,16 @@ class CoverageAnalyser(object):
         return events
 
 @timeit
-def ont_ref_repetitiveness(events, mode, ref_genome):
+def ref_repetitiveness(events, mode, ref_genome):
 
     for e in events:
-        e["ref_rep"] = 0
-
-    if mode == "pe":
-        return events
-
-    for e in events:
+        e["ref_rep"] = -1
         if e["svlen"] < 150 and e["svtype"] == "DEL":
             try:
                 ref_seq = ref_genome.fetch(e["chrA"], e["posA"], e["posB"]).upper()
-                e["ref_rep"] = compute_rep(ref_seq)
             except ValueError:  # out or range, needs fixing
                 continue
+            e["ref_rep"] = compute_rep(ref_seq)
 
     return events
 

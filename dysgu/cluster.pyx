@@ -999,7 +999,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     preliminaries = post_call_metrics.compressability(preliminaries)
 
-    preliminaries = post_call_metrics.ont_ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+    preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
 
     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
     for v in preliminaries:

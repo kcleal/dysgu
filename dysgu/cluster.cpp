@@ -3462,6 +3462,7 @@ static const char __pyx_k_check_contig_match[] = "check_contig_match";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_get_badclip_metric[] = "get_badclip_metric";
 static const char __pyx_k_get_reference_name[] = "get_reference_name";
+static const char __pyx_k_ref_repetitiveness[] = "ref_repetitiveness";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
 static const char __pyx_k_Max_clustering_dist[] = "Max clustering dist ";
 static const char __pyx_k_connectedComponents[] = "connectedComponents";
@@ -3481,7 +3482,6 @@ static const char __pyx_k_contiguous_and_direct[] = "<contiguous and direct>";
 static const char __pyx_k_intersecter_str_chrom[] = "intersecter_str_chrom";
 static const char __pyx_k_MemoryView_of_r_object[] = "<MemoryView of %r object>";
 static const char __pyx_k_find_repeat_expansions[] = "find_repeat_expansions";
-static const char __pyx_k_ont_ref_repetitiveness[] = "ont_ref_repetitiveness";
 static const char __pyx_k_MemoryView_of_r_at_0x_x[] = "<MemoryView of %r at 0x%x>";
 static const char __pyx_k_contiguous_and_indirect[] = "<contiguous and indirect>";
 static const char __pyx_k_Cannot_index_with_type_s[] = "Cannot index with type '%s'";
@@ -3934,7 +3934,6 @@ static PyObject *__pyx_n_s_nx;
 static PyObject *__pyx_n_s_obj;
 static PyObject *__pyx_n_s_ols;
 static PyObject *__pyx_n_s_one_is_imprecise;
-static PyObject *__pyx_n_s_ont_ref_repetitiveness;
 static PyObject *__pyx_n_s_open;
 static PyObject *__pyx_n_s_open_mode;
 static PyObject *__pyx_n_s_opts;
@@ -4002,6 +4001,7 @@ static PyObject *__pyx_n_s_reduce_cython;
 static PyObject *__pyx_n_s_reduce_ex;
 static PyObject *__pyx_n_s_ref_genome;
 static PyObject *__pyx_n_u_ref_poly_bases;
+static PyObject *__pyx_n_s_ref_repetitiveness;
 static PyObject *__pyx_n_u_reference;
 static PyObject *__pyx_n_s_regions;
 static PyObject *__pyx_n_s_regions_only;
@@ -23687,7 +23687,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
  * 
  *     preliminaries = post_call_metrics.compressability(preliminaries)             # <<<<<<<<<<<<<<
  * 
- *     preliminaries = post_call_metrics.ont_ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+ *     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
  */
   __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_post_call_metrics); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1000, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
@@ -23715,13 +23715,13 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
   /* "dysgu/cluster.pyx":1002
  *     preliminaries = post_call_metrics.compressability(preliminaries)
  * 
- *     preliminaries = post_call_metrics.ont_ref_repetitiveness(preliminaries, args["mode"], ref_genome)             # <<<<<<<<<<<<<<
+ *     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)             # <<<<<<<<<<<<<<
  * 
  *     n_in_grp = Counter([i["grp_id"] for i in preliminaries])
  */
   __Pyx_GetModuleGlobalName(__pyx_t_20, __pyx_n_s_post_call_metrics); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 1002, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_20);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_ont_ref_repetitiveness); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1002, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_20, __pyx_n_s_ref_repetitiveness); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1002, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
   __pyx_t_20 = __Pyx_PyObject_Dict_GetItem(__pyx_v_args, __pyx_n_u_mode); if (unlikely(!__pyx_t_20)) __PYX_ERR(0, 1002, __pyx_L1_error)
@@ -23780,7 +23780,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
   __pyx_t_5 = 0;
 
   /* "dysgu/cluster.pyx":1004
- *     preliminaries = post_call_metrics.ont_ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+ *     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
  * 
  *     n_in_grp = Counter([i["grp_id"] for i in preliminaries])             # <<<<<<<<<<<<<<
  *     for v in preliminaries:
@@ -42211,7 +42211,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_obj, __pyx_k_obj, sizeof(__pyx_k_obj), 0, 0, 1, 1},
   {&__pyx_n_s_ols, __pyx_k_ols, sizeof(__pyx_k_ols), 0, 0, 1, 1},
   {&__pyx_n_s_one_is_imprecise, __pyx_k_one_is_imprecise, sizeof(__pyx_k_one_is_imprecise), 0, 0, 1, 1},
-  {&__pyx_n_s_ont_ref_repetitiveness, __pyx_k_ont_ref_repetitiveness, sizeof(__pyx_k_ont_ref_repetitiveness), 0, 0, 1, 1},
   {&__pyx_n_s_open, __pyx_k_open, sizeof(__pyx_k_open), 0, 0, 1, 1},
   {&__pyx_n_s_open_mode, __pyx_k_open_mode, sizeof(__pyx_k_open_mode), 0, 0, 1, 1},
   {&__pyx_n_s_opts, __pyx_k_opts, sizeof(__pyx_k_opts), 0, 0, 1, 1},
@@ -42279,6 +42278,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_reduce_ex, __pyx_k_reduce_ex, sizeof(__pyx_k_reduce_ex), 0, 0, 1, 1},
   {&__pyx_n_s_ref_genome, __pyx_k_ref_genome, sizeof(__pyx_k_ref_genome), 0, 0, 1, 1},
   {&__pyx_n_u_ref_poly_bases, __pyx_k_ref_poly_bases, sizeof(__pyx_k_ref_poly_bases), 0, 1, 0, 1},
+  {&__pyx_n_s_ref_repetitiveness, __pyx_k_ref_repetitiveness, sizeof(__pyx_k_ref_repetitiveness), 0, 0, 1, 1},
   {&__pyx_n_u_reference, __pyx_k_reference, sizeof(__pyx_k_reference), 0, 1, 0, 1},
   {&__pyx_n_s_regions, __pyx_k_regions, sizeof(__pyx_k_regions), 0, 0, 1, 1},
   {&__pyx_n_s_regions_only, __pyx_k_regions_only, sizeof(__pyx_k_regions_only), 0, 0, 1, 1},
