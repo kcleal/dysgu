@@ -454,7 +454,8 @@ class CoverageAnalyser(object):
 def ref_repetitiveness(events, mode, ref_genome):
 
     for e in events:
-        e["ref_rep"] = -1
+        if "ref_rep" not in e:
+            e["ref_rep"] = -1
         if e["svlen"] < 150 and e["svtype"] == "DEL":
             try:
                 ref_seq = ref_genome.fetch(e["chrA"], e["posA"], e["posB"]).upper()

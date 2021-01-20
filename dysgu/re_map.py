@@ -1,6 +1,7 @@
 from skbio.alignment import StripedSmithWaterman
 from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
+from dysgu.assembler import compute_rep
 
 import edlib
 import logging
@@ -345,6 +346,17 @@ def remap_soft_clips(events, ref_genome, min_sv_len, input_bam, keep_unmapped=Tr
                             # switch if nessasary
                             if e['posA'] > e['posB']:
                                 e = switch_sides(e)
+
+                            if e["svtype"] == "DEL":
+                                ref_start = e["posA"]
+                                ref_end = e["posB"]
+
+                                start_idx = ref_start - gstart
+                                start_idx = 0 if start_idx < 0 else start_idx
+                                end_idx = ref_end - gstart
+
+                                ref_seq_clipped = ref_seq_big[start_idx:end_idx]
+                                e["ref_rep"] = compute_rep(ref_seq_clipped)
 
                             new_events.append(e)
                             added = 1
