@@ -43,13 +43,15 @@ presets = {"nanopore": {"mq": 20,
                         "dist_norm": 900,
                         "max_cov": 150,
                         "pl": "nanopore",
-                        "remap": "False"},
+                        "remap": "False",
+                        "clip_length": -1},
            "pacbio": {"mq": 20,
                       "min_support": 2,
                       "dist_norm": 600,
                       "max_cov": 150,
                       "pl": "pacbio",
-                      "remap": "False"},
+                      "remap": "False",
+                      "clip_length": -1},
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
                   "dist_norm": defaults["dist_norm"],
@@ -139,7 +141,6 @@ def cli():
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=True))
 @click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
-# @click.option('--rm-temp', help="Remove temp bam file after completion", is_flag=True, flag_value=True, default=False)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)

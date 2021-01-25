@@ -695,22 +695,16 @@ def apply_model(df, mode, contigs, paired, thresholds):
     pth = f"{pth}/dysgu_model.1.pkl.gz"
     models = pickle.load(gzip.open(pth, "rb"))
 
-    if paired == "False":
-        col_key = f"pacbio_cols"
-        model_key = f"pacbio_classifier"
-        if contigs == "False":
-            col_key += "_no_contigs"
-            model_key += "_no_contigs"
-    else:
-        col_key = f"pe_cols"
-        model_key = f"pe_classifier"
+    # i.e. key is "nanopore_classifier_no_contigs"
+    col_key = f"{mode}_cols{'_no_contigs' if not contigs else ''}"
+    model_key = f"{mode}_classifier{'_no_contigs' if not contigs else ''}"
 
     cols = models[col_key]
     clf = models[model_key]
 
     c = dict(zip(
-        ['SQC', 'CIPOS95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT'],
-        ['sqc', 'cipos95A', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp", 'ref_rep', 'jitter']
+        ['NMS',    'SQC', 'CIPOS95',  'CIEND95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT'],
+        ['NMsupp', 'sqc', 'cipos95A', 'cipos95B', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp", 'ref_rep', 'jitter']
                  ))
 
     X = df[[c[i] for i in cols]]
@@ -718,13 +712,14 @@ def apply_model(df, mode, contigs, paired, thresholds):
     keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2}
 
     X["SVTYPE"] = [keys[i] for i in X["SVTYPE"]]
-    X["SVLEN"] = [i if i == i else -1 for i in X["SVLEN"]]
+    X["SVLEN"] = [i if i == i and i is not None else -1 for i in X["SVLEN"]]
 
     for c in models["cats"]:  # categorical data
         if c in X:
-            X[c] = [i if i == i else 0 for i in X[c]]
+            X[c] = [i if i == i and i is not None else 0 for i in X[c]]
             X[c] = X[c].astype("category")
 
+    X.to_csv("~/Desktop/test.csv")
     pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
 

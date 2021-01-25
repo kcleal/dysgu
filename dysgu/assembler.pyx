@@ -98,11 +98,18 @@ cdef trim_cigar(c, int pos, int approx_pos):
 
                 else:
                     pos += length
-                    seq_index += length
+                seq_index += length
 
-            elif started and abs(pos + length - approx_pos) > 500:
-                end_index = index + 1
-                break
+            # elif started and abs(pos + length - approx_pos) > 500:
+            #     end_index = index + 1
+            #     break
+            else:
+                if abs(pos + length - approx_pos) > 500:
+                    end_index = index + 1
+                    break
+                else:
+                    pos += length
+                    seq_index += length
 
         index += 1
 
@@ -153,6 +160,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, n
                         qual = quals[i]
                         base = bam_seqi(char_ptr_rseq, i)
                         i += 1
+
                         # 0 = left soft clip
                         key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>0)
                         if ndict_r2.has_tuple_key(key):
@@ -504,6 +512,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
         for i in range(len(seq), len(seq) - longest_right_sc, -1):
             if path_qual[i] < 0.5:
                 end_seq = i
+        end_seq = min(len(seq) - longest_right_sc + 300, end_seq)
         longest_right_sc -= len(seq) - end_seq
 
     start_seq = 0
@@ -511,6 +520,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
         for i in range(longest_left_sc):
             if path_qual[i] < 0.5:
                 start_seq = i
+        start_seq = max(start_seq, longest_left_sc - 300)
         longest_left_sc -= start_seq
 
     # Average quality weight over soft-clip portion
@@ -540,16 +550,105 @@ cdef dict get_consensus(rd, int position, int max_distance):
             "right_weight": right_clip_weight}
 
 
+cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
+
+    ct = r.cigartuples
+    seq = r.seq
+    cdef int seq_index = 0
+    cdef int seq_start = 0
+
+    cdef int index = 0  # current cigar index
+    cdef int start_index = 0  # index into cigar
+
+    cdef int start_pos = r.pos  # starting genome position of cigar at start_index
+    cdef int pos = start_pos  # current genome position
+    cdef int end_index = len(ct) - 1
+    cdef bint started = False
+    cdef int opp, length
+
+    longest_left_sc = 0
+    longest_right_sc = 0
+
+    parts = []
+    for opp, length in ct:
+
+        if opp == 4 and index == 0:
+            if abs(pos - approx_pos) < 50:
+                # include clipped but trim
+                longest_left_sc = 150 if length >= 150 else length
+                parts.append(seq[length - 150 if length - 150 > 0 else 0: length])
+            seq_index += length
+            index += 1
+            continue
+        if opp == 4 and index > 0:
+            longest_right_sc = 150 if length >= 150 else length
+            e = 150 if length > 150 else length
+            parts.append(seq[seq_index: seq_index + e])
+            break
+
+        if opp == 1:
+            if started:
+                parts.append(r.seq[seq_index:seq_index + length].lower())
+            seq_index += length
+
+        elif opp == 2:
+            if not started:
+                start_pos += length
+            pos += length
+
+        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+
+            if not started:
+                if abs(pos + length - approx_pos) < 300:
+                    parts.append(r.seq[seq_index:seq_index + length])  # upper implied
+
+                    started = True
+                    start_pos = pos
+                    pos += length
+                    start_index = index
+                    seq_start = seq_index
+
+                else:
+                    pos += length
+
+                seq_index += length
+
+            else:
+                if abs(pos + length - approx_pos) > 300:
+                    end_index = index + 1
+                    break
+                else:
+                    parts.append(r.seq[seq_index:seq_index + length])
+                    pos += length
+                    seq_index += length
+
+        index += 1
+
+    return {"contig": "".join(parts),
+            "left_clips": longest_left_sc,
+            "right_clips": longest_right_sc,
+            "ref_bases": len(seq) - longest_left_sc - longest_right_sc,
+            "ref_start": r.pos,
+            "ref_end": r.reference_end,
+            "bamrname": r.rname,
+            "left_weight": 0,
+            "right_weight": 0}
+
+
 cpdef dict base_assemble(rd, int position, int max_distance):
 
     if len(rd) == 1:
+
         r = rd[0]
         rseq = r.seq
         ct = r.cigartuples
         if rseq is None or ct is None:
             return {}
 
-        if len(rseq) <= 250:
+        if len(rseq) > 250:
+            return trim_sequence_from_cigar(r, position, max_distance)
+
+        else:
             longest_left_sc = 0
             longest_right_sc = 0
             seq = ""
@@ -738,7 +837,7 @@ def contig_info(events):
 
 
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
-    if not a or not b:
+    if not a or not b or len(a) > 5000 or len(b) > 5000:
         return 0
     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
     alignment = query(str(b))
