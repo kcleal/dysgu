@@ -607,25 +607,12 @@ cdef dict search_ssr_kc(ori):
 @timeit
 def find_repeat_expansions(events, insert_stdev):
 
-    tbl = {"A":0, "T": 1, "C": 2, "G": 3, "N": 4}
     cdef uint8_t* seq_ptr
     for e in events:
         res = {"n_expansion": 0, "stride": 0, "exp_seq": "", "ref_poly_bases": 0}
         if "contig" in e and e["contig"] is not None:
-            # t0 = time.time()
-            # search_ssr_kc(e["contig"])
-            # echo(time.time() - t0)
-
             res.update(search_ssr_kc(e["contig"]))
-            # echo(res)
-            # echo(e["contig"])
-            # t0 = time.time()
-            # v = bytes(e["contig"].upper().encode("ascii"))
-            # c = np.array([tbl[i] for i in e["contig"].upper()]).astype(np.uint8)
-            # seq_ptr = v
-            # process_seq(6, 7, len(e["contig"]), seq_ptr)
-            # echo(time.time() - t0)
-            # quit()
+
         if "contig2" in e and e["contig2"] is not None:
             r = search_ssr_kc(e["contig2"])
             if res["n_expansion"] < r["n_expansion"]:
@@ -970,32 +957,24 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
-    # if merged:
-    #     for event in merged:
-    #         # Collect coverage information
-    #         event_dict =
-    #
-    #         if event_dict:
-    #             preliminaries.append(event_dict)
-    # echo("LEN MERGED", len(merged))
     coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
-    logging.info("Cov analyser")
+    # logging.info("Cov analyser")
     preliminaries = coverage_analyser.process_events(merged)
-    logging.info("Cov finished")
+    # logging.info("Cov finished")
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])  # genome_scanner.depth_d
-    logging.info("Cov info finished")
+    # logging.info("Cov info finished")
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-    logging.info("contig info finished")
+    # logging.info("contig info finished")
     preliminaries = sample_level_density(preliminaries, regions)
-    logging.info("density finished")
+    # logging.info("density finished")
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    logging.info("repeat expansion finished")
+    # logging.info("repeat expansion finished")
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
-    logging.info("bcc finished")
+    # logging.info("bcc finished")
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["no_gt"])
-    logging.info("gt finished")
+    # logging.info("gt finished")
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-    logging.info("norm cov finished")
+    # logging.info("norm cov finished")
 
     preliminaries = post_call_metrics.compressability(preliminaries)
 

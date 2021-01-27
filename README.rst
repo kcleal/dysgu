@@ -2,20 +2,24 @@
 dysgu-SV
 ========
 
-[![Build Status](https://travis-ci.com/kcleal/dysgu.svg?token=ggp1k8nRaRrwARctVfix&branch=master)](https://travis-ci.com/kcleal/dysgu)
-
 dysgu (pronounced *duss-key*) is a set of tools for calling structural variants in paired-end or long read sequencing data.
 
 
 Installation
 ------------
-For convenience use the install script::
+Dysgu requires Python>=3.7 and has been tested on linux and MacOS.
+The list of python packages needed can be found in requirements.txt.
+To install::
+
+    pip install dysgu
+
+To build from source, a >=c++11 compiler is needed. For convenience use the install script::
 
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu
     bash INSTALL.sh
 
-To build from source::
+Or manually::
 
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu/dysgu/htslib
@@ -28,8 +32,6 @@ Run tests::
 
     $ dysgu test
 
-Requires Python>=3.7, cython and >=c++11 compiler.
-Python packages needed are listed in requirements.txt.
 
 Usage
 -----
@@ -46,27 +48,30 @@ Calling SVs
 
 Paired-end reads
 ****************
-To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome in fasta format. Also a working directory must
+To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
 be provided to store temporary files. There are a few ways to run dysgu depending on the type of data you have.
 For paired-end data the `run` command is recommended which wraps `fetch` and `call`::
 
     dysgu run reference.fa temp_dir input.bam > svs.vcf
 
-This will first call `fetch` that creates a temporary bam file and other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
+This will first call `fetch` which will create a temporary bam file plus other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
 
 Long reads
 **********
-For long-read data, the `fetch` stage may be skipped and the `call` command can be run instead - `run` is sometimes faster (PacBio Sequal II reads mainly) but involves the creation of a large
-temp file::
+For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
+For PacBio Sequel II HiFi reads, the `run` command is recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
-The --mode=pacbio option works best with read from the SequelII platform, for older platforms use --mode=nanopore or use custom
-settings.
 
 Fetching SV reads
 ~~~~~~~~~~~~~~~~~
+To separate SV-associated reads, use `fetch` on an existing .bam file::
+
+    dysgu fetch samp1_temp input.bam
+
+
 To save time, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
 all SV associated reads will be placed in `temp_dir/temp_dir.dysgu_reads.bam`, and all input alignments will be placed in all_reads.bam::
 
@@ -76,10 +81,6 @@ SVs can be subsequently called using the `call` command. Additionally, the `--ib
 size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
 
     dysgu call --ibam all_reads.bam reference.fa temp_dir temp_dir/temp_dir.dysgu_reads.bam > svs.vcf
-
-Alternatively, run `fetch` on an existing .bam file::
-
-    dysgu fetch samp1_temp input.bam
 
 
 Merging SVs from multiple files
@@ -95,15 +96,14 @@ For help use::
 
 Resource requirements
 ---------------------
-Using a single core and depending on hard-drive speed, dysgu usually takes around 1h to analyse a 30X coverage genome of 150 bp paired-end reads and
-uses < 8 GB memory. Also note that when `fetch` is utilized (run command), a large temp file is generated consisting of SV-associated reads
-which can be 5 - 15 Gb in size, to remove this on completion add `--keep-temp False`.
+Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and
+uses < 8 GB memory. Also note that when `fetch` is utilized (or using run command), a large temp file is generated consisting of SV-associated reads >5 Gb in size.
 
 Issues
 ------
 If dysgu is taking a long time to run, this could be due to the complexity of the sample.
 Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome.
-In this case consider increasing the `clip-length` or setting `contigs False`, or `remap False`.
+In this case consider increasing the `clip-length` or setting `--contigs False`, or `--remap False`.
 Alternatively check your sample for anomalous sequences and adapter content.
 
 If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and

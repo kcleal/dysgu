@@ -8,6 +8,7 @@ cimport numpy as np
 from numpy.random import normal
 import itertools
 from dysgu import assembler
+from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard
 from dysgu.post_call_metrics cimport soft_clip_qual_corr
@@ -25,10 +26,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 np.random.seed(1)
-
-
-def echo(*args):
-    click.echo(args, err=True)
 
 
 cdef class AlignmentItem:
@@ -97,11 +94,6 @@ cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
     r = {"su": 0,  "pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
          "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
          "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0, "n_gaps": []}
-
-    # r = {"su": 0, "pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
-    #      "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
-    #      "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0, "n_xa": [],
-    #      "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0}
 
     paired_end = set([])
     seen = set([])
@@ -436,41 +428,6 @@ cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
         end = event_pos + cigartuples[cigar_index][1]
         return end
 
-    #     original_end = end
-    #     cigar_skip = 0
-    #     idx = cigar_index + 1
-    #     n_aligned_bases = 0
-    #     target_bases = target_bases = min(150, max(100, int((end - event_pos) / 2)))
-    #
-    #     for idx in range(cigar_index + 1, len(cigartuples)):
-    #     #while idx < len(cigartuples):
-    #
-    #         opp, length = cigartuples[idx]
-    #         # echo(opp, length, n_aligned_bases, target_bases)
-    #         if opp == 1:  # insertion
-    #             if length >= 30:
-    #                 break
-    #             # idx += 1
-    #
-    #         elif opp == 2:
-    #             if length >= 30:
-    #                 target_bases = min(150, max(100, int(length / 2)))
-    #                 n_aligned_bases = 0
-    #                 cigar_skip = 1
-    #             # idx += 1
-    #             end += length
-    #
-    #         elif opp == 0:
-    #             n_aligned_bases += length
-    #             if n_aligned_bases > target_bases:
-    #                 break
-    #             end += length
-    #             # idx += 1
-    # if cigar_skip == 1:
-    #     return end
-    # else:
-    #     return original_end  # use original cigar end point
-
 
 cdef guess_informative_pair(aligns):
 
@@ -663,7 +620,6 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
         rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
     else:  # single read mode
         rand_insert_pos = 100
-    # v_item.query_gap = 0 if rand_insert_pos < 0 else rand_insert_pos
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
 
     return v_item
@@ -962,8 +918,6 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         # Remove low support calls
         if not attrs:
             return {}
-        # if support < min_support:
-        #     return {}
 
         info.update(attrs)
         info["contig"] = None
@@ -1919,13 +1873,6 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
             main_svlen = abs(main_B_break - main_A_break)
             svlen = main_svlen
             if not preciseA or not preciseB:
-                # lens = []
-                # for i in informative:
-                #     if i.inferred_sv_len != -1:
-                #         lens.append(i.inferred_sv_len)
-                #         echo(i.size_inferred)
-                # if len(lens) > 0:
-                #     svlen = int(np.median(lens))
 
                 lens = []
                 inferred_lens = []
@@ -1955,9 +1902,6 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     else:
         svlen = 0
 
-    # q_gaps = int(np.mean([i.query_gap for i in informative]))
-    # if q_gaps != q_gaps:
-    #     q_gaps = 0
     q_overlaps = int(np.mean([i.query_overlap for i in informative]))
     if q_overlaps != q_overlaps:
         q_overlaps = 0
@@ -2354,7 +2298,7 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         if int_node in buffered_reads:
             aligns.append((n, buffered_reads[int_node]))
             continue
-        # click.echo(n, err=True)
+
         p = n[4]
         node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
         infile.seek(p)
@@ -2458,9 +2402,6 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                 else:
                     events += res
 
-    # if 6271 in data["n2n"]:
-    #     for e in events:
-    #         echo(e["chrA"], e["posA"], e["chrB"], e["posB"])
     return events
 
 

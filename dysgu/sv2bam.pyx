@@ -9,7 +9,7 @@ cimport numpy as np
 from collections import deque
 import os
 
-from libc.stdint cimport uint32_t, int16_t
+from libc.stdint cimport uint32_t
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
@@ -58,7 +58,7 @@ def config(args):
             v = args["reads"]
         send_output = pysam.AlignmentFile(v, "wb", template=bam)
         logging.info("Sending all reads to: {}".format(args["reads"]))
-    #out_name = "-" if (args["output"] == "-" or args["output"] == "stdout") else args["output"]
+
     reads_out = pysam.AlignmentFile(args["outname"], "wbu", template=bam)
 
     return bam, bam_i, clip_length, send_output, reads_out

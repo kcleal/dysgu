@@ -18,22 +18,19 @@ from libcpp.pair cimport pair as cpp_pair
 
 from libc.math cimport exp
 from libc.stdlib cimport abs as c_abs
-from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t, int64_t
+from libc.stdint cimport int32_t, uint64_t
 
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils import timeit
+from dysgu.map_set_utils import timeit, echo
 from dysgu.io_funcs import reverse_complement
 
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_seqi, bam_get_seq
-from cython.operator import dereference
 
 import numpy as np
 
-def echo(*args):
-    click.echo(args, err=True)
 
 # DTYPE = np.int64
 # ctypedef np.int64_t DTYPE_t
@@ -682,15 +679,11 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 
 cpdef float compute_rep(seq):
 
-    # last_visited = {}
-
     cdef unordered_map[float, int] last_visited
     cdef cpp_vector[float] tot
 
     cdef int k, i, diff
     cdef float decay, max_amount, amount
-    # cdef str a
-    # cdef int a
 
     cdef bytes s_bytes = bytes(seq.encode("ascii"))
     cdef const unsigned char* sub_ptr = s_bytes
@@ -701,23 +694,17 @@ cpdef float compute_rep(seq):
         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
         sub_ptr = s_bytes
         for i in range(len(seq) - k):
-            # a = seq[i:i+k]
-            # echo(a, xxhasher(sub_ptr, k, 42))
+
             a = xxhasher(sub_ptr, k, 42)
-
             if last_visited.find(a) != last_visited.end():
-
-            # if a in last_visited:
                 diff = i - last_visited[a]
                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
             else:
                 amount = 0
             if i > k:
                 tot.push_back(amount)
-                #tot.append(amount)
 
             last_visited[a] = i
-            # last_visited[a] = i
             sub_ptr += 1
 
     if tot.size() == 0:
@@ -763,25 +750,19 @@ cdef tuple get_rep(contig_seq):
         clip_rep = clip_rep / clip_seen
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
-@timeit
+# @timeit
 def contig_info(events):
 
     for i in range(len(events)):
         e = events[i]
         gc_count = 0
         seq_length = 0
-        # di_nucs = {"AT": 0, "AC": 0, "AG": 0, "AA":0, "GC": 0, "TC": 0, "TG": 0, "TT": 0, "CC": 0, "GG": 0}
         if e["contig"]:
             cont = e["contig"].upper()
             seq_length += len(cont)
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
-            # if seq_length >= 2:
-            #     for j in range(len(cont) - 1):
-            #         di = cont[j:j+2]
-            #         if di in di_nucs:
-            #             di_nucs[di] += 1
 
         if e["contig2"]:
             cont = e["contig2"].upper()
@@ -789,18 +770,6 @@ def contig_info(events):
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
-            # if seq_length >= 2:
-            #     for j in range(len(cont) - 1):
-            #         di = cont[j:j+2]
-            #         if di in di_nucs:
-            #             di_nucs[di] += 1
-
-        # norm dinuc
-        # sum_di = sum(di_nucs.values())
-        # if sum_di > 0:
-        #     di_nucs = {k: round(v / sum_di, 3) for k, v in di_nucs.items()}
-        #
-        # e.update(di_nucs)
 
         if seq_length > 0:
             e["gc"] = round((gc_count / seq_length) * 100, 2)
@@ -877,32 +846,32 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
                 alignment.aligned_target_sequence)
 
 
-def get_upper_start_end(a):
-    a_start, a_end = -1, 0
-    for idx, l in enumerate(a):
-        if l.isupper():
-            if a_start == -1:
-                a_start = idx
-            if idx > a_end:
-                a_end = idx
-    return a_start, a_end + 1
+# def get_upper_start_end(a):
+#     a_start, a_end = -1, 0
+#     for idx, l in enumerate(a):
+#         if l.isupper():
+#             if a_start == -1:
+#                 a_start = idx
+#             if idx > a_end:
+#                 a_end = idx
+#     return a_start, a_end + 1
 
 
-def get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end, b_rev=False):
-    if insertion < 0:
-        res["mh"] = sa
-        res["mh_len"] = len(sa)
-        # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
-        # res["mark_seq"] = sa
-        # res["mark_ed"] = edit_dis
-        # res["mark"] = "microh"
-    else:
-        res["ins"] = sa
-        res["ins_len"] = len(sa)
-        # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
-        # res["mark_seq"] = sa
-        # res["mark_ed"] = edit_dis
-    return res
+# def get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end, b_rev=False):
+#     if insertion < 0:
+#         res["mh"] = sa
+#         res["mh_len"] = len(sa)
+#         # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
+#         # res["mark_seq"] = sa
+#         # res["mark_ed"] = edit_dis
+#         # res["mark"] = "microh"
+#     else:
+#         res["ins"] = sa
+#         res["ins_len"] = len(sa)
+#         # edit_dis = len([1 for i, j in zip(sa, sb) if i != j])
+#         # res["mark_seq"] = sa
+#         # res["mark_ed"] = edit_dis
+#     return res
 
     # if insertion > 0:
     #     # Look for templated insertion
@@ -941,46 +910,46 @@ def get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end
     # return res
 
 
-def get_microh_or_ins(aln_idx):
-    qs, qe, als, ale, q_cigar, q_aln, t_aln = aln_idx
-    a = q_aln  # Use actual alignment sequence - keep deletions and insertions in place
-    b = t_aln
+# def get_microh_or_ins(aln_idx):
+#     qs, qe, als, ale, q_cigar, q_aln, t_aln = aln_idx
+#     a = q_aln  # Use actual alignment sequence - keep deletions and insertions in place
+#     b = t_aln
+#
+#     a_start, a_end = get_upper_start_end(a)
+#     b_start, b_end = get_upper_start_end(b)
+#
+#     # Check for overlap of gap
+#     #res = {"mark": "blunt", "mark_seq": "", "mark_ed": "", "templated_ins_info": "", "templated_ins_len": "", "linked": 1}
+#
+#     res = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1} #"templated_ins_info": "", "templated_ins_len": "", "linked": 1}
+#     if a_start >= b_start:
+#         insertion = a_start - b_end
+#         if insertion != 0:
+#             v = slice(*sorted([a_start, b_end]))
+#             sa = a[v]
+#             sb = b[v]
+#             res = get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end)
+#
+#     else:
+#         insertion = b_start - a_end
+#         if insertion != 0:
+#             v = slice(*sorted([b_start, a_end]))
+#             sa = a[v]
+#             sb = b[v]
+#             res = get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end)
+#
+#     return res
 
-    a_start, a_end = get_upper_start_end(a)
-    b_start, b_end = get_upper_start_end(b)
 
-    # Check for overlap of gap
-    #res = {"mark": "blunt", "mark_seq": "", "mark_ed": "", "templated_ins_info": "", "templated_ins_len": "", "linked": 1}
-
-    res = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1} #"templated_ins_info": "", "templated_ins_len": "", "linked": 1}
-    if a_start >= b_start:
-        insertion = a_start - b_end
-        if insertion != 0:
-            v = slice(*sorted([a_start, b_end]))
-            sa = a[v]
-            sb = b[v]
-            res = get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end)
-
-    else:
-        insertion = b_start - a_end
-        if insertion != 0:
-            v = slice(*sorted([b_start, a_end]))
-            sa = a[v]
-            sb = b[v]
-            res = get_mark_result(res, insertion, a, b, sa, sb, a_start, a_end, b_start, b_end)
-
-    return res
-
-
-def link_pair_of_assemblies(a, b, svtype):
-
-    if svtype == "INV":
-        b = reverse_complement(b, len(b))
-
-    m = check_contig_match(a, b, supress_seq=False)
-    if m != 0:
-        h = get_microh_or_ins(m)
-    else:
-        h = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1}
-
-    return h
+# def link_pair_of_assemblies(a, b, svtype):
+#
+#     if svtype == "INV":
+#         b = reverse_complement(b, len(b))
+#
+#     m = check_contig_match(a, b, supress_seq=False)
+#     if m != 0:
+#         h = get_microh_or_ins(m)
+#     else:
+#         h = {"mh": "", "mh_len": 0, "ins": "", "ins_len": 0,  "linked": 1}
+#
+#     return h

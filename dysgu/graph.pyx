@@ -152,9 +152,7 @@ cdef class ClipScoper:
 
     # Hashmap key is minimizer val, value is a set of chrom pos + node name packed as a 64 int
     cdef robin_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
-    # cdef object clip_table_left, clip_table_right # read_minimizers
 
-    # cdef unordered_set[long] homopolymer_table
     cdef int max_dist, k, w, clip_length, current_chrom, minimizer_support_thresh, minimizer_matches
     cdef float target_density, upper_bound_n_minimizers
     cdef int n_local_minimizers
@@ -173,14 +171,6 @@ cdef class ClipScoper:
         cdef long hx2
         cdef bytes s_bytes
         cdef const unsigned char* sub_ptr
-
-        # for letter in "ATCGN":
-        #     for s in (m, m*2):
-        #         poly = letter * m
-        #         s_bytes = bytes(poly.encode("ascii"))
-        #         sub_ptr = s_bytes
-        #         hx2 = xxhasher(sub_ptr, m, 42)
-        #         self.homopolymer_table.insert(hx2)
 
         self.current_chrom = 0
         self.minimizer_support_thresh = minimizer_support_thresh
@@ -779,8 +769,6 @@ cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     clip_scope.update(r, node_name, chrom, pos, clustered_nodes)
     if not clustered_nodes.empty():
         for other_node in clustered_nodes:
-            # if r.qname == "V300082976L4C001R0311226430":
-            #     echo("--clusterclipped", r.flag, node_name, other_node)
 
             if not G.hasEdge(node_name, other_node):
                 G.addEdge(node_name, other_node, 2)

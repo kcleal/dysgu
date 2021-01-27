@@ -80,7 +80,7 @@ class BadClipCounter:
 
         return count
 
-@timeit
+# @timeit
 def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
     bad_clip_counter.sort_arrays()
@@ -248,7 +248,7 @@ class CoverageAnalyser(object):
         else:
             logging.warning("Coverage track not loaded, working directory does not exist {}".format(self.temp_dir))
 
-    @timeit
+    # @timeit
     def process_events(self, events):
 
         # Try and load coverage tracks
@@ -450,7 +450,7 @@ class CoverageAnalyser(object):
 
         return events
 
-@timeit
+# @timeit
 def ref_repetitiveness(events, mode, ref_genome):
 
     for e in events:
@@ -508,7 +508,7 @@ def bayes_gt(ref, alt, is_dup):
 
     return lp_homref, lp_het, lp_homalt
 
-@timeit
+# @timeit
 def get_gt_metric(events, infile, add_gt=False):
     if add_gt:
         logging.info("Adding genotype")
@@ -626,15 +626,6 @@ def get_gt_metric(events, infile, add_gt=False):
             ref = int(higher_cn - sup)
             if ref < 0:
                 ref = 0
-        # echo(e["svtype"], higher_cn, lower_cn, support_reads, ref)
-        # elif e["svtype"] == "INS" or e["svtype"] == "INV"  or e["svtype"] == "DUP":
-        #     support_reads = int(())
-        #
-        # else:
-        #     e['GQ'] = '.'
-        #     e['SQ'] = '.'
-        #     e['GT'] = './.'
-        #     continue
 
         gt_lplist = bayes_gt(ref, support_reads, e["svtype"] == "DUP")
         best, second_best = sorted([ (i, e) for i, e in enumerate(gt_lplist) ], key=lambda x: x[1], reverse=True)[0:2]
@@ -667,7 +658,7 @@ def get_gt_metric(events, infile, add_gt=False):
 
     return events
 
-@timeit
+# @timeit
 def compressability(events):
 
     for e in events:
@@ -682,13 +673,12 @@ def compressability(events):
             c1.append(len(zlib.compress(b)) / len(b))
         if c1:
             e["compress"] = round((sum(c1) / len(c1)) * 100, 2)
-            # echo(e["chrA"], e["posA"], e["svtype"], e["compress"])
         else:
             e["compress"] = 0
     return events
 
 
-@timeit
+# @timeit
 def apply_model(df, mode, contigs, paired, thresholds):
 
     pth = os.path.dirname(os.path.abspath(__file__))
@@ -719,7 +709,6 @@ def apply_model(df, mode, contigs, paired, thresholds):
             X[c] = [i if i == i and i is not None else 0 for i in X[c]]
             X[c] = X[c].astype("category")
 
-    X.to_csv("~/Desktop/test.csv")
     pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
 
