@@ -196,7 +196,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         mean_prob = np.mean(probs)
         max_prob = np.max(probs)
         r = df_rows[best]
-        gc = r["gc"]
+        gc = round(r["gc"], 2)
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
@@ -228,7 +228,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         bnd = r["bnd"]
         wr = r["spanning"]
         # probs = r["Prob"]
-        gc = r["gc"]
+        gc = round(r["gc"], 2)
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
@@ -344,10 +344,10 @@ def get_fmt(r, extended, small_output):
     elif extended:
         v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
                                       r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
+                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
 
              ]
         return v
@@ -355,10 +355,10 @@ def get_fmt(r, extended, small_output):
     else:
         v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), r['linked'], r['neigh'], r['neigh10kb'],
+                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
                                   r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), r["compress"], round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
+                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
              ]
         return v
 
@@ -613,7 +613,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
             continue
 
         format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields, small_output_f)
-        if "partners" in r:
+        if "partners" in r and r["partners"] is not None:
             seen_idx |= set(r["partners"])
 
         r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output_f)

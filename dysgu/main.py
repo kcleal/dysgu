@@ -58,6 +58,7 @@ presets = {"nanopore": {"mq": 20,
                   "max_cov": defaults["max_cov"],
                   "pl": defaults["pl"],
                   "remap": defaults["remap"]},
+
            }
 
 new_options_set = {}
@@ -142,6 +143,8 @@ def cli():
 @click.argument('bam', required=True, type=click.Path(exists=True))
 @click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
+@click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
+              show_default=True)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
@@ -186,7 +189,7 @@ def cli():
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.7",
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
@@ -210,7 +213,7 @@ def run_pipeline(ctx, **kwargs):
 
     # Get SV reads
     ctx.obj["output"] = tmp_file_name
-    ctx.obj["out_format"] = "vcf"
+    # ctx.obj["out_format"] = "vcf"
     ctx.obj["reads"] = "None"
     sv2bam.process(ctx.obj)
 
@@ -321,7 +324,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.6,0.5,0.7",
+@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):

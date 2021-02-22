@@ -14,7 +14,7 @@ import sys
 import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
 from dysgu.map_set_utils import timeit, echo
 import itertools
 
@@ -24,33 +24,35 @@ import multiprocessing
 from scipy import stats
 from libcpp.vector cimport vector
 
-from libc.stdint cimport uint8_t
+
+ctypedef EventResult EventResult_t
 
 
 def filter_potential(input_events, tree, regions_only):
     potential = []
+    cdef EventResult_t i
     for i in input_events:
 
-        if "posB" not in i:  # Skip events for which no posB was identified
+        # if "posB" not in i:  # Skip events for which no posB was identified
+        #     continue
+        if i.sqc is None:
+            i.sqc = -1
+        if i.svtype == "INS" and i.svlen_precise == 0 and not i.contig and not i.contig2:
             continue
-        if "sqc" not in i:
-            i["sqc"] = -1
-        if i["svtype"] == "INS" and "svlen_precise" in i and i["svlen_precise"] == 0 and not i["contig"] and not i["contig2"]:
-            continue
-        if "contig" not in i or i["contig"] == "":
-            i["contig"] = None
+        # if "contig" not in i or i["contig"] == "":
+        #     i["contig"] = None
 
-        if "bnd" not in i or i["bnd"] is None:
-            i["bnd"] = 0
-        if "remap_score" not in i or i["remap_score"] is None:
-            i["remap_score"] = 0
-        if "scw" not in i or i["scw"] is None:
-            i["scw"] = 0
+        # if i.bnd is None:
+        #     i.bnd = 0
+        # if "remap_score" not in i or i["remap_score"] is None:
+        #     i["remap_score"] = 0
+        # if "scw" not in i or i["scw"] is None:
+        #     i["scw"] = 0
         # Remove events for which both ends are in --include but no contig was found
-        posA_intersects = io_funcs.intersecter_str_chrom(tree, i["chrA"], i["posA"], i["posA"] + 1)
-        posB_intersects = io_funcs.intersecter_str_chrom(tree, i["chrB"], i["posB"], i["posB"] + 1)
+        posA_intersects = io_funcs.intersecter_str_chrom(tree, i.chrA, i.posA, i.posA + 1)
+        posB_intersects = io_funcs.intersecter_str_chrom(tree, i.chrB, i.posB, i.posB + 1)
 
-        if (posA_intersects and posB_intersects) and (i["contig"] is None or i["contig2"] is None):
+        if (posA_intersects and posB_intersects) and (i.contig is None or i.contig2 is None):
             continue
         # Remove events for which neither end is in --include (if --include provided)
         if tree and regions_only:
@@ -67,23 +69,23 @@ def compare_subset(potential, max_dist):
     # Make a nested containment list for interval intersection
     for idx in range(len(potential)):
         ei = potential[idx]
-        interval_table[ei["chrA"]].add(ei["posA"] - ei["cipos95A"] - max_dist, ei["posA"] + ei["cipos95A"] + max_dist, idx)
+        interval_table[ei.chrA].add(ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx)
         # Add another interval for large events, or translocations
-        if ei["chrA"] != ei["chrB"] or abs(ei["posB"] - ei["posA"]) > 5:
-            if ei["chrA"] != ei["chrB"]:
-                interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
+        if ei.chrA != ei.chrB or abs(ei.posB - ei.posA) > 5:
+            if ei.chrA != ei.chrB:
+                interval_table[ei.chrB].add(ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx)
             else:
-                dist1 = abs(ei["posB"] - ei["posA"])
-                ci_a = max(ei["cipos95A"], ei["cipos95A"])
+                dist1 = abs(ei.posB - ei.posA)
+                ci_a = max(ei.cipos95A, ei.cipos95A)
                 if dist1 + ci_a > max_dist:
-                    interval_table[ei["chrB"]].add(ei["posB"] - ei["cipos95B"] - max_dist, ei["posB"] + ei["cipos95B"] + max_dist, idx)
+                    interval_table[ei.chrB].add(ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx)
 
     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
 
     for idx in range(len(potential)):
         ei = potential[idx]
         # Overlap right hand side
-        ols = list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))
+        ols = list(nc[ei.chrB].find_overlap(ei.posB, ei.posB + 1))
         for target in ols:
             jdx = target[2]
             ej = potential[jdx]
@@ -96,10 +98,10 @@ def compare_all(potential):
         yield potential[idx], potential[jdx], idx, jdx
 
 
-cdef span_similarity(ei, ej):
-    if ei["svtype"] != "INS":
-        span1 = abs(ei["posB"] - ei["posA"])
-        span2 = abs(ej["posB"] - ej["posA"])
+cdef span_similarity(EventResult_t ei, EventResult_t ej):
+    if ei.svtype != "INS":
+        span1 = abs(ei.posB - ei.posA)
+        span2 = abs(ej.posB - ej.posA)
         max_span = max(span1, span2)
         if max_span > 0:
             span_distance = abs(span1 - span2) / max_span
@@ -156,12 +158,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
     seen = set([])
     pad = 100
+    # cdef EventResult_t ei, ej
     for ei, ej, idx, jdx in event_iter:
 
-        i_id = ei["event_id"]
-        j_id = ej["event_id"]
-        if not same_sample and "sample" in ei:
-            if ei["sample"] == ej["sample"]:
+        i_id = ei.event_id
+        j_id = ej.event_id
+        if not same_sample: # and "sample" in ei:
+            if ei.sample == ej.sample:
                 continue
         else:
             if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
@@ -170,29 +173,29 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         seen.add((i_id, j_id))
 
         fail = False
-        if ei["svtype"] != ej["svtype"]:
+        if ei.svtype != ej.svtype:
             fail = True
         if fail:
             continue
 
         # Check if events point to the same loci
-        both_in_include = io_funcs.intersecter_str_chrom(tree, ei["chrA"], ei["posA"], ei["posA"] + 1) and \
-                      io_funcs.intersecter_str_chrom(tree, ei["chrB"], ei["posB"], ei["posB"] + 1)
+        both_in_include = io_funcs.intersecter_str_chrom(tree, ei.chrA, ei.posA, ei.posA + 1) and \
+                      io_funcs.intersecter_str_chrom(tree, ei.chrB, ei.posB, ei.posB + 1)
         loci_similar = False
         loci_same = False
-        intra = ei["chrA"] == ei["chrB"] == ej["chrA"] == ej["chrB"]
+        intra = ei.chrA == ei.chrB == ej.chrA == ej.chrB
 
         if intra:
-            loci_similar, loci_same = break_distances(ei["posA"], ei["posB"], ej["posA"], ej["posB"], ei["preciseA"], ei["preciseB"], ej["preciseA"], ej["preciseB"])
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB)
 
-        elif ei["chrA"] == ej["chrA"] and ei["chrB"] == ej["chrB"]:  # Try chrA matches chrA
-            loci_similar, loci_same = break_distances(ei["posA"], ei["posB"], ej["posA"], ej["posB"], ei["preciseA"], ei["preciseB"], ej["preciseA"], ej["preciseB"], intra=False)
+        elif ei.chrA == ej.chrA and ei.chrB == ej.chrB:  # Try chrA matches chrA
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB, intra=False)
 
-        elif ei["chrA"] == ej["chrB"] and ei["chrB"] == ej["chrA"]:
-            loci_similar, loci_same = break_distances(ei["posA"], ei["posB"], ej["posB"], ej["posA"], ei["preciseA"], ei["preciseB"], ej["preciseB"], ej["preciseA"], intra=False)
+        elif ei.chrA == ej.chrB and ei.chrB == ej.chrA:
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, intra=False)
 
         one_is_imprecise = False
-        if ((not ei["preciseA"] or not ei["preciseB"]) and ei["svlen_precise"]) or ((not ej["preciseA"] or not ej["preciseB"]) and ej["svlen_precise"]):
+        if ((not ei.preciseA or not ei.preciseB) and ei.svlen_precise) or ((not ej.preciseA or not ej.preciseB) and ej.svlen_precise):
             one_is_imprecise = True  # also not remapped
 
         if not loci_similar:
@@ -203,17 +206,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 G.add_edge(i_id, j_id, loci_same=loci_same)
                 continue
 
-        ci, ci2, cj, cj2 = "", "", "", ""
+        ci = ei.contig
+        ci2 = ei.contig2
 
-        if "contig" in ei:
-            ci = "" if ei["contig"] is None else ei["contig"]
-            ci2 = "" if ei["contig2"] is None else ei["contig2"]
-        if "contig" in ej:
-            cj = "" if ej["contig"] is None else ej["contig"]
-            cj2 = "" if ej["contig2"] is None else ej["contig2"]
-        any_contigs_to_check = any((ei["contig"], ei["contig2"])) and any((ej["contig"], ej["contig2"]))
+        cj = ej.contig
+        cj2 = ej.contig2
 
-        recpi_overlap = is_reciprocal_overlapping(ei["posA"], ei["posB"], ej["posA"], ej["posB"])
+        any_contigs_to_check = any((ci, ci2)) and any((cj, cj2))
+        recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
         if paired_end:
@@ -222,23 +222,23 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             spd = False
 
         m = False
-        ml = max(ei["svlen"], ej["svlen"])
-        if ei["svtype"] == "INS":
+        ml = max(ei.svlen, ej.svlen)
+        if ei.svtype == "INS":
             if aggressive_ins_merge:
                 m = True
             else:
                 # if both have been remapped, make sure size is similar
-                if ei["spanning"] > 0 or ej["spanning"] > 0:
+                if ei.spanning > 0 or ej.spanning > 0:
                     if paired_end:
                         m = True
-                    elif ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
+                    elif ml > 0 and min(ei.svlen, ej.svlen) / ml > 0.8:
                         m = True
-                elif ei["remap_score"] > 0 and ej["remap_score"] > 0 and ml > 0 and min(ei["svlen"], ej["svlen"]) / ml > 0.8:
+                elif ei.remap_score > 0 and ej.remap_score > 0 and ml > 0 and min(ei.svlen, ej.svlen) / ml > 0.8:
                     m = True
-                elif ei["remap_score"] == 0 or ej["remap_score"] == 0:  # merge if one break was not remapped
+                elif ei.remap_score == 0 or ej.remap_score == 0:  # merge if one break was not remapped
                     m = True
 
-        elif ei["svtype"] != "INS" and (recpi_overlap or spd) and not both_in_include:
+        elif ei.svtype != "INS" and (recpi_overlap or spd) and not both_in_include:
             m = True
 
         if not m:
@@ -247,7 +247,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
-                l_ratio = min(ei["svlen"], ej["svlen"]) / ml
+                l_ratio = min(ei.svlen, ej.svlen) / ml
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
 
@@ -259,7 +259,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             else: continue
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
-            if ei["remap_score"] == 0 or ej["remap_score"] == 0:
+            if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
@@ -281,12 +281,13 @@ def cut_components(G):
 
 
 cpdef srt_func(c):
-    if "type" in c and c["type"] != "1":  # assume long read is != "1", either pacbio or nanopore
-        return 100 + c["su"]
-    if "su" in c:
-        return c["su"]
+    # if "type" in c and c["type"] != "1":  # assume long read is != "1", either pacbio or nanopore
+    if c.type != "pe" and c.type != "":
+        return 100 + c.su
+    # if "su" in c:
+    return c.su
     # over weight spanning
-    return c["pe"] + c["supp"] + (c["spanning"] * 10) + c["sc"]
+    # return c["pe"] + c["supp"] + (c["spanning"] * 10) + c["sc"]
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
@@ -306,14 +307,15 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                          debug=debug)
 
     found = []
+    # cdef EventResult_t item, w0
     for item in potential:  # Add singletons, non-merged
-        if not G.has_node(item["event_id"]):
+        if not G.has_node(item.event_id):
             found.append(item)
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
     components = cut_components(G)
-    node_to_event = {i["event_id"]: i for i in potential}
+    node_to_event = {i.event_id: i for i in potential}
     cdef int k
     # Only keep edges with loci_same==False if removing the edge leads to an isolated node
     for grp in components:
@@ -323,75 +325,103 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
         if not pick_best:
 
-            w0 = best[0]  # Weighting for base result
-            weight = w0["pe"] + w0["supp"] + w0["spanning"]
-            spanned = bool(w0["spanning"])
-            if "svlen_precise" in w0:
-                remapped = bool(not w0["svlen_precise"] and w0["remap_score"] > 0)
+            w0 = best[0]
+            # Weighting for base result
+            weight = w0.pe + w0.supp + w0.spanning
+            spanned = bool(w0.spanning)
+            if w0.svlen_precise >= 0:
+                remapped = bool(not w0.svlen_precise and w0.remap_score > 0)
             else:
                 remapped = False
-            add_contig_a = bool(not w0["contig"])
+            add_contig_a = bool(not w0.contig)
             new_a = ""
-            add_contig_b = bool(not w0["contig2"])
+            add_contig_b = bool(not w0.contig2)
             new_b = ""
-            svt = w0["svtype"]
-            sqc = w0["sqc"] if "sqc" in w0 else -1
+            svt = w0.svtype
+            sqc = w0.sqc #w0["sqc"] if "sqc" in w0 else -1
             for k in range(1, len(best)):
 
                 item = best[k]
                 # Sum these
-                for t in ("pe", "supp", "sc", "su", "NP", "block_edge", "plus", "minus", "spanning", "n_small_tlen"):
-                    if t in item:
-                        best[0][t] += item[t]
+                w0.pe += item.pe
+                w0.supp += item.supp
+                w0.sc += item.sc
+                w0.su += item.su
+                w0.NP += item.NP
+                w0.block_edge += item.block_edge
+                w0.plus += item.plus
+                w0.minus += item.minus
+                w0.spanning += item.spanning
+                w0.n_small_tlen += item.n_small_tlen
 
-                if "maxASsupp" in item and item["maxASsupp"] > w0["maxASsupp"]:
-                    best[0]["maxASsupp"] = item["maxASsupp"]
+                if item.maxASsupp > w0.maxASsupp:
+                    w0.maxASsupp = item.maxASsupp
 
-                if item["svtype"] == "DEL" and svt == "DEL":
+                if item.svtype == "DEL" and svt == "DEL":
                     if not spanned:
 
-                        if item["spanning"]:
-                            best[0]["svlen"] = item["svlen"]
+                        if item.spanning:
+                            w0.svlen = item.svlen
 
-                        elif min_size > w0["svlen"] < item["svlen"]:  # increase svlen size
-                            best[0]["svlen"] = item["svlen"]
+                        elif min_size > w0.svlen < item.svlen:  # increase svlen size
+                            w0.svlen = item.svlen
 
-                elif item["svtype"] == "INS" and svt == "INS":
+                elif item.svtype == "INS" and svt == "INS":
                     if not spanned:
-                        if item["spanning"]:
-                            best[0]["svlen"] = item["svlen"]
+                        if item.spanning:
+                            w0.svlen = item.svlen
 
-                        elif item["svlen"] * 0.6 < w0["svlen"] < item["svlen"] or min_size > w0["svlen"] < item["svlen"]:  # increase svlen size
-                            best[0]["svlen"] = item["svlen"]
+                        elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:  # increase svlen size
+                            w0.svlen = item.svlen
 
-                if "sqc" in item and item["sqc"] != -1 and sqc == 1:
-                    best[0]["sqc"] = sqc
-                    sqc = item["sqc"]
+                if item.sqc != -1 and sqc == 1:
+                    w0.sqc = sqc
+                    sqc = item.sqc
 
                 # Average weight these
-                wt = item["pe"] + item["supp"] + item["spanning"]
-                for t in ("DN", "MAPQsupp", "MAPQpri", "DApri", "DAsupp", "DP", "NMpri", "NMsupp"):
-                    if t in best[0]:
-                        denom = weight + wt
-                        if denom == 0:
-                            weighted_av = 0
-                        else:
-                            weighted_av = ((w0[t] * weight) + (item[t] * wt)) / denom
-                        best[0][t] = weighted_av
+                wt = item.pe + item.supp + item.spanning
+                denom = weight + wt
 
-                if add_contig_a and item["contig"] and len(item["contig"]) > len(new_a):
-                    new_a = item["contig"]
-                if add_contig_b and item["contig2"] and len(item["contig2"]) > len(new_b):
-                    new_b = item["contig2"]
+                def norm_vals(a, wt_a, b, wt_b, denom):
+                    if denom > 0 and a is not None and b is not None:
+                        return ((a * wt_a) + (b * wt_b)) / denom
+                    return a
+
+                if denom > 0:
+                    w0.DN = norm_vals(w0.DN, weight, item.DN, wt, denom)
+                    w0.MAPQsupp = norm_vals(w0.MAPQsupp, weight, item.MAPQsupp, wt, denom)
+                    w0.MAPQpri = norm_vals(w0.MAPQpri, weight, item.MAPQpri, wt, denom)
+                    w0.DApri = norm_vals(w0.DApri, weight, item.DApri, wt, denom)
+                    w0.DAsupp = norm_vals(w0.DAsupp, weight, item.DAsupp, wt, denom)
+                    w0.DP = norm_vals(w0.DP, weight, item.DP, wt, denom)
+                    w0.NMpri = norm_vals(w0.NMpri, weight, item.NMpri, wt, denom)
+                    w0.NMsupp = norm_vals(w0.NMsupp, weight, item.NMsupp, wt, denom)
+
+                    # w0.DN = ((w0.DN * weight) + (item.DN * wt)) / denom
+                    # w0.MAPQsupp = ((w0.MAPQsupp * weight) + (item.MAPQsupp * wt)) / denom
+                    # w0.MAPQpri = ((w0.MAPQpri * weight) + (item.MAPQpri * wt)) / denom
+                    # w0.DApri = ((w0.DApri * weight) + (item.DApri * wt)) / denom
+                    # w0.DAsupp = ((w0.DAsupp * weight) + (item.DAsupp * wt)) / denom
+                    # w0.DP = ((w0.DP * weight) + (item.DP * wt)) / denom
+                    # w0.NMpri = ((w0.NMpri * weight) + (item.NMpri * wt)) / denom
+                    # w0.NMsupp = ((w0.NMsupp * weight) + (item.NMsupp * wt)) / denom
+
+                # reset to combined weight?
+                # weight = w0.pe + w0.supp + w0.spanning
+
+                if add_contig_a and item.contig and len(item.contig) > len(new_a):
+                    new_a = item.contig
+                if add_contig_b and item.contig2 and len(item.contig2) > len(new_b):
+                    new_b = item.contig2
 
             if add_contig_a and new_a:
-                best[0]["contig"] = new_a
+                w0.contig = new_a
             if add_contig_b and new_b:
-                best[0]["contig2"] = new_b
+                w0.contig2 = new_b
         if add_partners:
-            best[0]["partners"] = [i["event_id"] for i in best[1:]]
+            w0.partners = [i.event_id for i in best[1:]]
 
-        found.append(best[0])
+        found.append(w0)
 
     return found
 
@@ -401,15 +431,16 @@ def sample_level_density(potential, regions, max_dist=50):
     interval_table = defaultdict(lambda: graph.Table())
 
     # Make a nested containment list for faster lookups
+    cdef EventResult_t ei
     for idx in range(len(potential)):
         ei = potential[idx]
 
         # Only find density for non-region calls, otherwise too dense to be meaningful
-        if not io_funcs.intersecter_str_chrom(regions, ei["chrA"], ei["posA"], ei["posA"] + 1):
-            interval_table[ei["chrA"]].add(ei["posA"] - max_dist, ei["posA"] + max_dist, idx)
+        if not io_funcs.intersecter_str_chrom(regions, ei.chrA, ei.posA, ei.posA + 1):
+            interval_table[ei.chrA].add(ei.posA - max_dist, ei.posA + max_dist, idx)
 
-        if not io_funcs.intersecter_str_chrom(regions, ei["chrB"], ei["posB"], ei["posB"] + 1):
-            interval_table[ei["chrB"]].add(ei["posB"] - max_dist, ei["posB"] + max_dist, idx)
+        if not io_funcs.intersecter_str_chrom(regions, ei.chrB, ei.posB, ei.posB + 1):
+            interval_table[ei.chrB].add(ei.posB - max_dist, ei.posB + max_dist, idx)
 
     nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
 
@@ -419,23 +450,23 @@ def sample_level_density(potential, regions, max_dist=50):
         # Overlap right hand side # list(tree[chrom].find_overlap(start, end))
         neighbors = 0.
         count = 0.
-        if ei["chrA"] == ei["chrB"] and abs(ei["posB"] - ei["posA"]) < 2:
+        if ei.chrA == ei.chrB and abs(ei.posB - ei.posA) < 2:
             expected = 2
         else:
             expected = 1
-        if not io_funcs.intersecter_str_chrom(regions, ei["chrA"], ei["posA"], ei["posA"] + 1):
-            neighbors += len(list(nc[ei["chrA"]].find_overlap(ei["posA"], ei["posA"] + 1))) - expected
+        if not io_funcs.intersecter_str_chrom(regions, ei.chrA, ei.posA, ei.posA + 1):
+            neighbors += len(list(nc[ei.chrA].find_overlap(ei.posA, ei.posA + 1))) - expected
             count += 1
 
-        if not io_funcs.intersecter_str_chrom(regions, ei["chrB"], ei["posB"], ei["posB"] + 1):
-            neighbors += len(list(nc[ei["chrB"]].find_overlap(ei["posB"], ei["posB"] + 1))) - expected
+        if not io_funcs.intersecter_str_chrom(regions, ei.chrB, ei.posB, ei.posB + 1):
+            neighbors += len(list(nc[ei.chrB].find_overlap(ei.posB, ei.posB + 1))) - expected
             count += 1
 
         # Merge overlapping intervals
         neighbors_10kb = 0.
         count_10kb = 0
-        large_itv = coverage.merge_intervals(((ei["chrA"], ei["posA"], ei["posA"] + 1),
-                                              (ei["chrB"], ei["posB"], ei["posB"] + 1)), pad=10000)
+        large_itv = coverage.merge_intervals(((ei.chrA, ei.posA, ei.posA + 1),
+                                              (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
 
         for c, s, e in large_itv:
             if not io_funcs.intersecter_str_chrom(regions, c, s, e):
@@ -445,46 +476,15 @@ def sample_level_density(potential, regions, max_dist=50):
         if neighbors < 0:
             neighbors = 0
         if count > 0:
-            ei["neigh"] = neighbors / count
+            ei.neigh = neighbors / count
         else:
-            ei["neigh"] = 0
+            ei.neigh = 0
         if count_10kb > 0:
-            ei["neigh10kb"] = neighbors_10kb / count_10kb
+            ei.neigh10kb = neighbors_10kb / count_10kb
         else:
-            ei["neigh10kb"] = 0
+            ei.neigh10kb = 0
 
     return potential
-
-
-# cdef bint poly_kmer(k):
-#
-#     cdef int j, step
-#     if len(k) == 1:
-#         return False
-#     #sk = set(k)
-#     #if len(sk) == 1:
-#     #    return True
-#     # sk = k[0]
-#     # if all(k[j] == sk for j in range(1, len(k))):
-#     #     return True
-#
-#     if len(k) % 2 == 0:
-#         step = int(len(k) / 2)
-#         if all([k[j] == k[j+step] for j in range(step)]):
-#             return True
-#
-#     else:
-#         sk = k[0]
-#         if all([k[j] == sk for j in range(1, len(k))]):
-#             return True
-#
-#     # elif len_k == 4:
-#     #     if k[:2] == k[2:]:
-#     #         return True
-#     # elif len_k == 6:
-#     #     if k[:3] == k[3:]:
-#     #         return True
-#     return False
 
 
 cdef bint same_k(int start1, int start2, int n, const unsigned char[:] seq):
@@ -507,20 +507,6 @@ cdef dict search_ssr_kc(ori):
     cdef int n_expansion = 0
     cdef int stride = 0
     expansion_seq = ""
-
-    # Make a simple polymer table (simple repeats that can be broken into smaller repeats)
-    # polymers = set([])
-    # bits = dict()
-    # bits[3] = ["".join(v) for v in itertools.permutations('ACTG', 3)]
-    # bits[2] = ["".join(v) for v in itertools.permutations('ACTG', 2)]
-    # bits[1] = ["A", "T", "C", "G"]
-    # for k in range(2, rep_len+1):
-    #     for j in range(1, k):
-    #         if k % j == 0:
-    #             copies = int(rep_len / j)
-    #             for c in range(2, copies+1):
-    #                 for b in bits[j]:
-    #                     polymers.add(b * c)
 
     cdef unsigned char starting_base
     while i < str_len:
@@ -607,20 +593,27 @@ cdef dict search_ssr_kc(ori):
 @timeit
 def find_repeat_expansions(events, insert_stdev):
 
-    cdef uint8_t* seq_ptr
+    cdef EventResult_t e
     for e in events:
-        res = {"n_expansion": 0, "stride": 0, "exp_seq": "", "ref_poly_bases": 0}
-        if "contig" in e and e["contig"] is not None:
-            res.update(search_ssr_kc(e["contig"]))
+        e.n_expansion = 0
+        e.stride = 0
+        e.exp_seq = ""
+        e.ref_poly_bases = 0
+        if e.contig:
+            r = search_ssr_kc(e.contig)
+            e.n_expansion = r["n_expansion"]
+            e.stride = r["stride"]
+            e.exp_seq = r["exp_seq"]
+            e.ref_poly_bases += r["ref_poly_bases"]
 
-        if "contig2" in e and e["contig2"] is not None:
-            r = search_ssr_kc(e["contig2"])
-            if res["n_expansion"] < r["n_expansion"]:
-                res["n_expansion"] = r["n_expansion"]
-                res["stride"] = r["stride"]
-                res["exp_seq"] = r["exp_seq"]
-            res["ref_poly_bases"] += r["ref_poly_bases"]
-        e.update(res)
+        if e.contig2:
+            r = search_ssr_kc(e.contig2)
+            if e.n_expansion < r["n_expansion"]:
+                e.n_expansion = r["n_expansion"]
+                e.stride = r["stride"]
+                e.exp_seq = r["exp_seq"]
+                e.ref_poly_bases += r["ref_poly_bases"]
+
     return events
 
 
@@ -630,6 +623,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
     potential_events = []
     grp_id = event_id
+    cdef EventResult_t event
     for event in call_component.call_from_block_model(infile,
                                                       component,
                                                       clip_length,
@@ -643,12 +637,12 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       ):
 
         if event:
-            event["grp_id"] = grp_id
-            event["event_id"] = event_id
-            if event["chrA"] is not None:
-                event["chrA"] = infile.get_reference_name(event["chrA"])
-            if event["chrB"] is not None:
-                event["chrB"] = infile.get_reference_name(event["chrB"])
+            event.grp_id = grp_id
+            event.event_id = event_id
+            if event.chrA is not None:
+                event.chrA = infile.get_reference_name(event.chrA)
+            if event.chrB is not None:
+                event.chrB = infile.get_reference_name(event.chrB)
             potential_events.append(event)
             event_id += 1
     if not potential_events:
@@ -812,7 +806,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     t0 = time.time()
     cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
-
+    logging.info("connected components done")
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
         if insert_ppf < 0:
@@ -919,19 +913,11 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     cmp.clear()
     preliminaries = []
     if args["remap"] == "True" and args["contigs"] == "True":
-        block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome, args["min_size"], infile,
+        block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
-                                                    keep_small=args["keep_small"],
                                                     min_support=args["min_support"])
         logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
-    else:
-        for e in block_edge_events:
-            e["remapped"] = 0
-            e["remap_score"] = 0
-            e["remap_ed"] = 0
-            e["scw"] = 0
-            if 'svlen_precise' not in e:
-                e['svlen_precise'] = 1
+
 
     # Merge across calls
     if args["merge_within"] == "True":
@@ -944,16 +930,17 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     # Filter for absolute support and size here
     before = len(merged)
     if not args["keep_small"]:
-        merged = [event for event in merged if (event["svlen"] >= args["min_size"] or event["chrA"] != event["chrB"]) and event["su"] >= args["min_support"]]
+        merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and event.su >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
     else:
-        merged = [event for event in merged if event["su"] >= args["min_support"]]
+        merged = [event for event in merged if event.su >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
 
 
     # Add read-type information
+    cdef EventResult_t d
     for d in merged:
-        d["type"] = args["pl"]
+        d.type = args["pl"]
 
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
@@ -980,9 +967,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
 
-    n_in_grp = Counter([i["grp_id"] for i in preliminaries])
-    for v in preliminaries:
-        v["n_in_grp"] = n_in_grp[v["grp_id"]]
+    n_in_grp = Counter([d.grp_id for d in preliminaries])
+    for d in preliminaries:
+        d.n_in_grp = n_in_grp[d.grp_id]
 
     if len(preliminaries) == 0:
         logging.critical("No events found")
@@ -1063,7 +1050,13 @@ def cluster_reads(args):
 
     logging.info("Extended tags: {}".format(extended_tags))
 
-    df = pd.DataFrame.from_records(events)
+    df = pd.DataFrame.from_records([e.to_dict() for e in events])
+    if not extended_tags:
+        for cl in ("DN", "DP", "DApri", "DAsupp"):
+            del df[cl]
+    # echo(df.columns)
+    # echo(extended_tags)
+    # quit()
     df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
 
     if len(df) > 0:

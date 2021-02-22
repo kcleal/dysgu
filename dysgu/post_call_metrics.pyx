@@ -4,7 +4,7 @@ import logging
 import numpy as np
 cimport numpy as np
 
-from dysgu.map_set_utils cimport unordered_map
+from dysgu.map_set_utils cimport unordered_map, EventResult
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 
 from libc.math cimport fabs as c_fabs
@@ -32,6 +32,9 @@ pd.options.mode.chained_assignment = None
 from skbio.alignment import StripedSmithWaterman
 import time
 from libc.stdint cimport int16_t
+
+
+ctypedef EventResult EventResult_t
 
 
 class BadClipCounter:
@@ -86,73 +89,72 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
     bad_clip_counter.sort_arrays()
     logging.info("Arrays sorted")
     new_events = []
+    cdef EventResult_t e
     for e in events:
         count = 0
-        if e["chrA"] == e["chrB"] and abs(e["posB"] - e["posA"]) < 500:
-            start = min(e["posA"], e["posB"]) - 500
-            end = max(e["posA"], e["posB"]) + 500
-            if not intersecter_str_chrom(regions, e["chrA"], e["posA"], e["posA"] + 1) and \
-                not intersecter_str_chrom(regions, e["chrB"], e["posB"], e["posB"] + 1):
-                count = bad_clip_counter.count_near(bam.gettid(e["chrA"]), start, end)
+        if e.chrA == e.chrB and abs(e.posB - e.posA) < 500:
+
+            start = min(int(e.posA), int(e.posB)) - 500
+            end = max(int(e.posA), int(e.posB)) + 500
+            if not intersecter_str_chrom(regions, e.chrA, e.posA, e.posA + 1) and \
+                not intersecter_str_chrom(regions, e.chrB, e.posB, e.posB + 1):
+                count = bad_clip_counter.count_near(bam.gettid(e.chrA), start, end)
         else:
             c1, c2 = 0, 0
-            if not intersecter_str_chrom(regions, e["chrA"], e["posA"], e["posA"] + 1):
-                c1 = bad_clip_counter.count_near(bam.gettid(e["chrA"]), e["posA"] - 500, e["posA"] + 500)
-            if not intersecter_str_chrom(regions, e["chrB"], e["posB"], e["posB"] + 1):
-                c2 = bad_clip_counter.count_near(bam.gettid(e["chrB"]), e["posB"] - 500, e["posB"] + 500)
+            if not intersecter_str_chrom(regions, e.chrA, e.posA, e.posA + 1):
+                c1 = bad_clip_counter.count_near(bam.gettid(e.chrA), e.posA - 500, e.posA + 500)
+            if not intersecter_str_chrom(regions, e.chrB, e.posB, e.posB + 1):
+                c2 = bad_clip_counter.count_near(bam.gettid(e.chrB), e.posB - 500, e.posB + 500)
             count = c1 + c2
 
-        e["bad_clip_count"] = count
-        e["ras"] = 0
-        e["fas"] = 0
+        e.bad_clip_count = count
+        e.ras = 0
+        e.fas = 0
 
-
-        if e["spanning"] > 0:
+        if e.spanning > 0:
             new_events.append(e)
             continue
 
         clip_res = None
-        cont = None
+        # cont = None
 
         max_score_rev = 0
         max_score_forward = 0
 
-        for cont, idx in (("contig", "A"), ("contig2", "B")):
-            if cont in e and e[cont]:
+        if e.contig and len(e.contig) < 1000:
+            break_position = e.posA
+            clip_res = re_map.get_clipped_seq(e.contig, e.posA, e.contig_ref_start, e.contig_ref_end)
+            if clip_res:
+                fc = clip_res[0]
+                rc = reverse_complement(fc, len(fc))
+                query = StripedSmithWaterman(e.contig, gap_extend_penalty=1, suppress_sequences=True)
+                align = query(rc)
 
-                if e[cont + "_ref_start"]:
-                    break_position = e["pos" + idx]
+                if align.optimal_alignment_score > max_score_rev:
+                    max_score_rev = align.optimal_alignment_score
 
-                    k = cont + idx + "clip_res"
-                    if k in e:
-                        clip_res = e[k]
-                    # clip_res = e[]
-                    # if "contigAclip_res" in e:
-                    #     clip_res = e["contigAclip_res"]
-                    #     cont = e["contig"]
-                    # elif "contig2Bclip_res" in e:
-                    #     clip_res = e["contig2Bclip_res"]
-                    #     cont = e["contig2"]
+                align = query(fc)
+                if align.optimal_alignment_score > max_score_forward:
+                    max_score_forward = align.optimal_alignment_score
 
-                    clip_res = re_map.get_clipped_seq(e[cont], break_position, e[cont + "_ref_start"], e[cont + "_ref_end"])
-                    if clip_res:
-                        cont = e[cont]
-                        if cont and len(cont) < 1000:
-                            fc = clip_res[0]
-                            rc = reverse_complement(fc, len(fc))
-                            query = StripedSmithWaterman(cont, gap_extend_penalty=1, suppress_sequences=True)
-                            align = query(rc)
+        if e.contig2 and len(e.contig2) < 1000:
+            break_position = e.posB
+            clip_res = re_map.get_clipped_seq(e.contig2, e.posB, e.contig2_ref_start, e.contig2_ref_end)
+            if clip_res:
+                fc = clip_res[0]
+                rc = reverse_complement(fc, len(fc))
+                query = StripedSmithWaterman(e.contig2, gap_extend_penalty=1, suppress_sequences=True)
+                align = query(rc)
 
-                            if align.optimal_alignment_score > max_score_rev:
-                                max_score_rev = align.optimal_alignment_score
+                if align.optimal_alignment_score > max_score_rev:
+                    max_score_rev = align.optimal_alignment_score
 
-                            align = query(fc)
-                            if align.optimal_alignment_score > max_score_forward:
-                                max_score_forward = align.optimal_alignment_score
+                align = query(fc)
+                if align.optimal_alignment_score > max_score_forward:
+                    max_score_forward = align.optimal_alignment_score
 
-
-        e["ras"] = max_score_rev
-        e["fas"] = max_score_forward
+        e.ras = max_score_rev
+        e.fas = max_score_forward
 
         new_events.append(e)
 
@@ -252,19 +254,20 @@ class CoverageAnalyser(object):
     def process_events(self, events):
 
         # Try and load coverage tracks
+        cdef EventResult_t e
         for e in events:
-            e["fcc"] = -1
-            e["inner_cn"] = -1
-            e["outer_cn"] = -1
+            e.fcc = -1
+            e.inner_cn = -1
+            e.outer_cn = -1
         count = 0
         for e in events:
             t0 = time.time()
-            if e["svtype"] == "DEL" or e["svtype"] == "DUP" or e["svtype"] == "INV":
-                if e["svlen"] > 2000 or abs(e["posB"] - e["posA"]) > 2000:
+            if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
+                if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
                     fcc = self.process_two_windows(e)
                 else:
                     fcc = self.process_one_window(e)
-            elif e["svtype"] == "INS":
+            elif e.svtype == "INS":
                 fcc = self.process_insertion(e)
             else:  # TRA
                 fcc = self.process_two_windows(e)
@@ -272,16 +275,16 @@ class CoverageAnalyser(object):
 
         return events
 
-    def process_one_window(self, e):
+    def process_one_window(self, EventResult_t e):
 
-        start, end = e["posA"], e["posB"]
+        start, end = e.posA, e.posB
         if end < start:
             s = start
             start = end
             end = s
         if self.chrom_cov_arrays:
-            if e["chrA"] in self.chrom_cov_arrays:
-                arr = self.chrom_cov_arrays[e["chrA"]]
+            if e.chrA in self.chrom_cov_arrays:
+                arr = self.chrom_cov_arrays[e.chrA]
                 starting_pos = 0
             else:
                 return -1
@@ -296,39 +299,39 @@ class CoverageAnalyser(object):
 
         sides = (left + right) / 2
         fc = 0
-        if e["svtype"] == "DEL":
+        if e.svtype == "DEL":
             if sides == 0:
                 fc = 0
             else:
                 fc = middle / sides
-            e["outer_cn"] = sides
-            e["inner_cn"] = middle
+            e.outer_cn = sides
+            e.inner_cn = middle
 
         else:  # DUP, INV
             if middle == 0:
                 fc = 0
             else:
                 fc = sides / middle
-            e["outer_cn"] = middle
-            e["inner_cn"] = sides
+            e.outer_cn = middle
+            e.inner_cn = sides
 
-        e["fcc"] = fc
+        e.fcc = fc
 
-    def process_two_windows(self, e):
+    def process_two_windows(self, EventResult_t e):
 
-        start, end = e["posA"], e["posB"]
-        if e["chrA"] == e["chrB"] and end < start:
+        start, end = e.posA, e.posB
+        if e.chrA == e.chrB and end < start:
             s = start
             start = end
             end = s
         arr1, arr2 = None, None
         if self.chrom_cov_arrays:
             try:
-                arr1 = self.chrom_cov_arrays[e["chrA"]]
-                if e["chrA"] == e["chrB"]:
+                arr1 = self.chrom_cov_arrays[e.chrA]
+                if e.chrA == e.chrB:
                     arr2 = arr1
                 else:
-                    arr2 = self.chrom_cov_arrays[e["chrB"]]
+                    arr2 = self.chrom_cov_arrays[e.chrB]
             except KeyError:
                 return -1
         else:
@@ -347,60 +350,60 @@ class CoverageAnalyser(object):
         sides = (left1 + right2) / 2.
 
         fc = 0
-        if e["svtype"] == "DEL":
+        if e.svtype == "DEL":
             if sides == 0:
                 fc = 0
             else:
                 fc = middle / sides
-            e["outer_cn"] = sides
-            e["inner_cn"] = middle
+            e.outer_cn = sides
+            e.inner_cn = middle
 
-        elif e["svtype"] == "DUP":  # DUP, INV
+        elif e.svtype == "DUP":  # DUP, INV
             if middle == 0:
                 fc = 0
             else:
                 fc = sides / middle
-            e["outer_cn"] = middle
-            e["inner_cn"] = sides
+            e.outer_cn = middle
+            e.inner_cn = sides
 
         else:  # TRA
             # if chrom_med > 0:
-            if e["join_type"] == "3to5":
-                e["outer_cn"] = sides
-                e["inner_cn"] = middle
-            elif e["join_type"] == "5to3":
-                e["outer_cn"] = middle
-                e["inner_cn"] = sides
-            elif e["join_type"] == "3to3":
-                e["outer_cn"] = ((left1 + left2) / 2.)
-                e["inner_cn"] = ((right1 + right2) / 2.)
+            if e.join_type == "3to5":
+                e.outer_cn = sides
+                e.inner_cn = middle
+            elif e.join_type == "5to3":
+                e.outer_cn = middle
+                e.inner_cn = sides
+            elif e.join_type == "3to3":
+                e.outer_cn = ((left1 + left2) / 2.)
+                e.inner_cn = ((right1 + right2) / 2.)
             else:  # 5to5
-                e["outer_cn"] = ((right1 + right2) / 2.)
-                e["inner_cn"] = ((left1 + left2) / 2.)
+                e.outer_cn = ((right1 + right2) / 2.)
+                e.inner_cn = ((left1 + left2) / 2.)
 
-        e['fcc'] = fc
+        e.fcc = fc
 
-    def process_insertion(self, e):
+    def process_insertion(self, EventResult_t e):
 
-        if e["svlen"] > 10000:
+        if e.svlen > 10000:
             return -1
 
         if self.chrom_cov_arrays:
-            if e["chrA"] in self.chrom_cov_arrays:
-                arr = self.chrom_cov_arrays[e["chrA"]]
+            if e.chrA in self.chrom_cov_arrays:
+                arr = self.chrom_cov_arrays[e.chrA]
                 starting_pos = 0
             else:
                 return -1
         else:
             return -1
 
-        pad = e["svlen"] if e["svlen_precise"] else 100
+        pad = e.svlen if e.svlen_precise else 100
 
-        left = median(arr, e["posA"] - starting_pos - self.pad_size, e["posA"] - starting_pos)
-        left_svlen = median(arr, e["posA"] - pad - starting_pos, e["posA"] - starting_pos)
+        left = median(arr, e.posA - starting_pos - self.pad_size, e.posA - starting_pos)
+        left_svlen = median(arr, e.posA - pad - starting_pos, e.posA - starting_pos)
 
-        right = median(arr, e["posA"] - starting_pos, e["posA"] - starting_pos + self.pad_size)
-        right_svlen = median(arr, e["posA"] - starting_pos, e["posA"] - starting_pos + pad)
+        right = median(arr, e.posA - starting_pos, e.posA - starting_pos + self.pad_size)
+        right_svlen = median(arr, e.posA - starting_pos, e.posA - starting_pos + pad)
 
         fcc = -1
         inner = 1
@@ -414,9 +417,9 @@ class CoverageAnalyser(object):
             inner = right_svlen
             outer = left
 
-        e["outer_cn"] = outer
-        e["inner_cn"] = inner
-        e["fcc"] = fcc
+        e.outer_cn = outer
+        e.inner_cn = inner
+        e.fcc = fcc
 
     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):
 
@@ -442,28 +445,30 @@ class CoverageAnalyser(object):
             return events
 
         chrom_medians = {k: np.median(v[v > 0]) for k, v in self.chrom_cov_arrays.items()}
+        cdef EventResult_t e
         for e in events:
-            if e["outer_cn"] > 0:
-                e["outer_cn"] = self._get_cov(e["outer_cn"], e["chrA"], e["chrB"], chrom_medians)
-            if e["inner_cn"] > 0:
-                e["inner_cn"] = self._get_cov(e["inner_cn"], e["chrA"], e["chrB"], chrom_medians)
+            if e.outer_cn > 0:
+                e.outer_cn = self._get_cov(e.outer_cn, e.chrA, e.chrB, chrom_medians)
+            if e.inner_cn > 0:
+                e.inner_cn = self._get_cov(e.inner_cn, e.chrA, e.chrB, chrom_medians)
 
         return events
 
 # @timeit
 def ref_repetitiveness(events, mode, ref_genome):
-
+    cdef EventResult_t e
     for e in events:
-        if "ref_rep" not in e:
-            e["ref_rep"] = -1
-        if e["svlen"] < 150 and e["svtype"] == "DEL":
+        # if "ref_rep" not in e:
+        e.ref_rep = 0 #-1
+        if e.svlen < 150 and e.svtype == "DEL":
             try:
-                ref_seq = ref_genome.fetch(e["chrA"], e["posA"], e["posB"]).upper()
-            except ValueError:  # out or range, needs fixing
+                ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
+            except ValueError:  # todo out or range, needs fixing
                 continue
-            e["ref_rep"] = compute_rep(ref_seq)
+            e.ref_rep = compute_rep(ref_seq)
 
     return events
+
 
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     s = int(start / 10)
@@ -510,13 +515,14 @@ def bayes_gt(ref, alt, is_dup):
 
 # @timeit
 def get_gt_metric(events, infile, add_gt=False):
+    cdef EventResult_t e
     if add_gt:
         logging.info("Adding genotype")
     else:
         for e in events:
-            e['GQ'] = '.'
-            e['SQ'] = '.'
-            e['GT'] = './.'
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
         return events
 
 
@@ -524,111 +530,28 @@ def get_gt_metric(events, infile, add_gt=False):
     pad = 50
     for e in events:
 
-        # if infile is None or not add_gt:
-        #     e["GT"] = "./."
-        #     e["GQ"] = -1
-        #     continue
-        #
-        # regions = [[e["chrA"], e["posA"] - pad, e["posA"] + pad]]
-        #
-        # if e["svtype"] != "INS":
-        #     sep = abs(e["posB"] - e["posA"])
-        #     if e["chrB"] == e["chrA"] and sep < 1000:
-        #         if e["posB"] >= e["posA"]:
-        #             regions[0][-1] = e["posB"] + pad
-        #         else:
-        #             regions[0][0] = e["posB"] - pad
-        #     else:
-        #         regions.append([e["chrB"], e["posB"] - pad, e["posB"] + pad])
-        #
-        # d = set([])
-        # probable_sv_reads = set([])
-        #
-        # svlen = e["svlen"] + 1e-6
-        # wr = e["spanning"] > 0
-        # deletion = e["svtype"] == "DEL"
-        # posA = []
-        #
-        # fail = False
-        # for chrom, start, end in regions:
-        #
-        #     target_pos = start + pad
-        #     try:
-        #         fetch = infile.fetch(chrom, start, end)
-        #     except:
-        #         fail = True
-        #         break
-        #
-        #     for r in fetch:
-        #         ct = r.cigartuples
-        #
-        #         if ct and r.flag & 2 and r.mapq > 10:
-        #             if not r.pos <= target_pos <= r.reference_end:
-        #                 continue
-        #             if wr or e["svlen"] < 50:
-        #                 current_pos = r.pos
-        #                 first = True
-        #                 for opp, length in ct:
-        #                     if opp == 4 or opp == 5:
-        #                         if (first and abs(target_pos - current_pos) < 100) or \
-        #                             (not first and abs(current_pos + length - target_pos) < 100):
-        #                             probable_sv_reads.add(r.qname)
-        #                             break
-        #                     elif opp == 2:
-        #                         if deletion and abs(target_pos - current_pos) < 100 and min(svlen, length) / max(svlen, length) > 0.8:
-        #                             probable_sv_reads.add(r.qname)
-        #                             break
-        #                         current_pos += length
-        #                     elif opp == 1:
-        #                         if not deletion and abs(target_pos - current_pos) < 100 and min(svlen, length) / max(svlen, length) > 0.8:
-        #                             probable_sv_reads.add(r.qname)
-        #                             break
-        #                         current_pos += 1
-        #
-        #                     elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
-        #                         current_pos += length
-        #                     first = False
-        #                 else:
-        #                     d.add(r.qname)
-        #             else:
-        #                 first, last = ct[0][0], ct[-1][0]
-        #                 if first == 4 or first == 5 or last == 4 or last == 5:
-        #                     probable_sv_reads.add(r.qname)
-        #                 else:
-        #                     d.add(r.qname)
-        #
-        # if fail or len(d) == 0 and len(probable_sv_reads) == 0:
-        #     e["GT"] = "./."
-        #     e["GQ"] = -1
-        #     continue
-        #
-        # ref = len(d.difference(probable_sv_reads))
-
-        result = {}
-        sup = e["su"] - e["spanning"]  # spanning are counted twice
-        ocn = e["outer_cn"]
-        icn = e["inner_cn"]
+        sup = e.su - e.spanning  # spanning are counted twice
+        ocn = e.outer_cn
+        icn = e.inner_cn
 
         if any((ocn < 0, icn < 0, sup < 0)):
-            e['GQ'] = '.'
-            e['SQ'] = '.'
-            e['GT'] = './.'
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
             continue
 
         higher_cn = max(ocn, icn)
         lower_cn = min(icn, ocn)
 
-        # if e["svtype"] == "DEL" or e["svtype"] == "DUP":
-
         support_reads = max(int((higher_cn - lower_cn)), sup)
         ref = int(lower_cn)
-        if e["svtype"] == "INS":
+        if e.svtype == "INS":
             ref = int(higher_cn - sup)
             if ref < 0:
                 ref = 0
 
-        gt_lplist = bayes_gt(ref, support_reads, e["svtype"] == "DUP")
-        best, second_best = sorted([ (i, e) for i, e in enumerate(gt_lplist) ], key=lambda x: x[1], reverse=True)[0:2]
+        gt_lplist = bayes_gt(ref, support_reads, e.svtype == "DUP")
+        best, second_best = sorted([(i, j) for i, j in enumerate(gt_lplist)], key=lambda x: x[1], reverse=True)[0:2]
         gt_idx = best[0]
 
         gt_sum = 0
@@ -642,39 +565,38 @@ def get_gt_metric(events, infile, add_gt=False):
             gt_sum_log = math.log(gt_sum, 10)
             sample_qual = abs(-10 * (gt_lplist[0] - gt_sum_log)) # phred-scaled probability site is non-reference in this sample
             phred_gq = min(-10 * (second_best[1] - best[1]), 200)
-            result['GQ'] = int(phred_gq)
-            result['SQ'] = sample_qual
+            e.GQ = int(phred_gq)
+            e.SQ = sample_qual
             if gt_idx == 1:
-                result['GT'] = '0/1'
+                e.GT = '0/1'
             elif gt_idx == 2:
-                result['GT'] = '1/1'
+                e.GT = '1/1'
             elif gt_idx == 0:
-                result['GT'] = '0/0'
+                e.GT = '0/0'
         else:
-            result['GQ'] = '.'
-            result['SQ'] = '.'
-            result['GT'] = './.'
-        e.update(result)
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
 
     return events
 
 # @timeit
 def compressability(events):
-
+    cdef EventResult_t e
     for e in events:
         c1 = []
-        if "contig" in e and e["contig"]:
-            cont = e["contig"].upper().encode("ascii")
+        if e.contig:
+            cont = e.contig.upper().encode("ascii")
             b = bytes(cont)
             c1.append(len(zlib.compress(b)) / len(b))
-        if "contig2" in e and e["contig2"]:
-            cont = e["contig2"].upper().encode("ascii")
+        if e.contig2:
+            cont = e.contig2.upper().encode("ascii")
             b = bytes(cont)
             c1.append(len(zlib.compress(b)) / len(b))
         if c1:
-            e["compress"] = round((sum(c1) / len(c1)) * 100, 2)
+            e.compress = round((sum(c1) / len(c1)) * 100, 2)
         else:
-            e["compress"] = 0
+            e.compress = 0
     return events
 
 

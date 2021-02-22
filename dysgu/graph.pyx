@@ -11,6 +11,7 @@ from cpython cimport array
 import array
 import re
 import logging
+import dataclasses
 
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair as cpp_pair
@@ -159,7 +160,7 @@ cdef class ClipScoper:
     cdef object rds_clip
     cdef bint minimizer_mode
 
-    """Keeps track of which reads are in scope. Maximum distance depends on the template insert_median"""
+    """Keeps track of which reads are in scope"""
     def __cinit__(self, int max_dist, int k, int m, int clip_length, int minimizer_support_thresh,
                  int minimizer_breadth, int read_length):
         self.max_dist = max_dist
@@ -167,7 +168,6 @@ cdef class ClipScoper:
         self.w = m
         self.clip_length = clip_length
 
-        # fill out homopolymer table
         cdef long hx2
         cdef bytes s_bytes
         cdef const unsigned char* sub_ptr
@@ -364,7 +364,7 @@ cdef class PairedEndScoper:
         self.loci.clear()
 
     cdef vector[int] find_other_nodes(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                                      ReadEnum_t read_enum): # nogil:
+                                      ReadEnum_t read_enum) nogil:
 
         cdef int idx, i, count_back, steps, node_name2
         cdef int sep = 0
@@ -1362,11 +1362,12 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
     support_between, support_within = count_support_between(G, partitions, min_support)
-    # if 166 in list(component):
-    #     echo("hi", support_between, support_within, n2n, reads, partitions)
 
     if len(support_between) == 0 and len(support_within) == 0:
-        if len(n2n) >= min_support or len(reads) >= min_support:
+        # single paired end template can have 3 nodes e.g. two reads plus supplementary
+        if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+            return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+        elif len(reads) >= min_support:
             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
         else:
             return {}

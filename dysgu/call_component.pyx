@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+#cython: language_level=3, boundscheck=True, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
@@ -10,7 +10,7 @@ import itertools
 from dysgu import assembler
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult
 from dysgu.post_call_metrics cimport soft_clip_qual_corr
 
 import warnings
@@ -22,10 +22,14 @@ from pysam.libchtslib cimport bam_get_qname
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import fcluster
 
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 np.random.seed(1)
+
+
+ctypedef EventResult EventResult_t
 
 
 cdef class AlignmentItem:
@@ -90,333 +94,195 @@ cdef n_aligned_bases(ct):
     return float(aligned), float(large_gaps), float(n_small_gaps)
 
 
-cdef dict extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
-    r = {"su": 0,  "pe": 0, "supp": 0, "sc": 0, "DP": [], "DApri": [], "DN": [], "NMpri": [], "NP": 0, "DAsupp": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "spanning": len(spanning), "NMbase": [],
-         "n_sa": [], "double_clips": 0, "n_xa": [], "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0, "n_gaps": []}
+cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert_ppf, generic_ins,
+                       EventResult_t er):
+
+    cdef float DP = 0
+    cdef float DApri = 0
+    cdef float DN = 0
+    cdef float DAsupp = 0
+
+    cdef float NMpri = 0
+    cdef float NMsupp = 0
+    cdef int maxASsupp = 0
+    cdef float MAPQpri = 0
+    cdef float MAPQsupp = 0
+    cdef float NMbase = 0
+    cdef int n_sa = 0
+    cdef int n_xa = 0
+    cdef float n_gaps = 0
+
+    cdef int total_pri = 0
 
     paired_end = set([])
     seen = set([])
 
-    r["bnd"] = len(generic_ins)
+    er.spanning = len(spanning)
+    er.bnd = len(generic_ins)
 
-    cdef int flag, pe_support, index
+    cdef int flag, index, this_as
     cdef float a_bases, large_gaps, n_small_gaps
 
     for index, a in enumerate(itertools.chain(reads1, reads2)):
 
         qname = a.qname
-        if qname not in seen:  # Add these once for each pair, its common across all alignments of template
-            if a.has_tag("DP"):
-                r["DP"].append(float(a.get_tag("DP")))
-            if a.has_tag("DN"):
-                r["DN"].append(float(a.get_tag("DN")))
+        if qname not in seen:
             seen.add(qname)
 
-        pe_support = 0
+        if extended_tags:
+            if a.has_tag("DP"):
+                DP  += float(a.get_tag("DP"))
+            if a.has_tag("DN"):
+                DN += float(a.get_tag("DN"))
+
         flag = a.flag
         if flag & 2:
-            r["NP"] += 1
+            er.NP += 1
         if a.flag & 1 and a.tlen and abs(a.tlen) < insert_ppf:
-            r["n_small_tlen"] += 1
+            er.n_small_tlen += 1
         if paired_end and flag & 8:
-            r["n_unmapped_mates"] += 1
+            er.n_unmapped_mates += 1
 
         left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
-            r["double_clips"] += 1
+            er.double_clips += 1
 
         has_sa = a.has_tag("SA")
         if has_sa:
-            r["n_sa"].append(a.get_tag("SA").count(";"))
+            n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
-            r["n_xa"].append(a.get_tag("XA").count(";"))
+            n_xa += a.get_tag("XA").count(";")
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         if a_bases > 0:
-            r["n_gaps"].append(n_small_gaps / a_bases)
+            n_gaps += n_small_gaps / a_bases
 
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("DA"):
-                r["DAsupp"].append(float(a.get_tag("DA")))
+            er.supp += 1
+            MAPQsupp += a.mapq
+            if extended_tags and a.has_tag("DA"):
+                DAsupp += float(a.get_tag("DA"))
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
+                    NMsupp += float(a.get_tag("NM")) / a_bases
+
             if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
+                this_as = a.get_tag("AS")
+                if this_as > maxASsupp:
+                    maxASsupp = this_as
 
         else:  # Primary reads
-            r["MAPQpri"].append(a.mapq)
+            total_pri += 1
+
+            MAPQpri += a.mapq
             if index >= len(reads2) and qname in paired_end:  # If two primary reads from same pair
-                r["pe"] += 1
-                pe_support = 1
+                er.pe += 1
             else:
                 paired_end.add(qname)
 
-            if a.has_tag("DA"):
-                r["DApri"].append(float(a.get_tag("DA")))
+            if extended_tags and a.has_tag("DA"):
+                DApri += float(a.get_tag("DA"))
             if a.has_tag("NM"):
                 if a_bases:
                     nm = float(a.get_tag("NM"))
-                    r["NMpri"].append(nm / a_bases)
-                    r["NMbase"].append((nm - large_gaps) / a_bases)
-                else:
-                    r["NMpri"].append(0)
+                    NMpri += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
 
         if flag & 16:
-            r["minus"] += 1
+            er.minus += 1
         else:
-            r["plus"] += 1
+            er.plus += 1
 
         ct = a.cigartuples
         if ct[0][0] == 4 or ct[-1][0] == 4:
-            r["sc"] += 1
+            er.sc += 1
 
     for a in spanning:
 
         qname = a.qname
-        if qname not in seen:  # Add these once for each pair, its common across all alignments of template
-            if a.has_tag("DP"):
-                r["DP"].append(float(a.get_tag("DP")))
-            if a.has_tag("DN"):
-                r["DN"].append(float(a.get_tag("DN")))
+        if qname not in seen:
             seen.add(qname)
 
+        if extended_tags:
+            if a.has_tag("DP"):
+                DP += float(a.get_tag("DP"))
+            if a.has_tag("DN"):
+                DN += float(a.get_tag("DN"))
+
         flag = a.flag
         if flag & 2:
-            r["NP"] += 1
+            er.NP += 1
 
         left_clip, right_clip = clip_sizes_hard(a)
         if left_clip > 0 and right_clip > 0:
-            r["double_clips"] += 1
+            er.double_clips += 1
 
         if a.has_tag("SA"):
-            r["n_sa"].append(a.get_tag("SA").count(";"))
+            n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
-            r["n_xa"].append(a.get_tag("XA").count(";"))
+            n_xa += a.get_tag("XA").count(";")
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
         if a_bases > 0:
-            r["n_gaps"].append(n_small_gaps / a_bases)
+            n_gaps += n_small_gaps / a_bases
 
         if flag & 2304:  # Supplementary
-            r["supp"] += 2
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("DA"):
-                r["DAsupp"].append(float(a.get_tag("DA")))
+            er.supp += 1
+            MAPQsupp += a.mapq
+            if extended_tags and a.has_tag("DA"):
+                DAsupp += float(a.get_tag("DA"))
             if a.has_tag("NM"):
                 if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
+                    NMsupp += float(a.get_tag("NM")) / a_bases
+
             if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
+                this_as = a.get_tag("AS")
+                if this_as > maxASsupp:
+                    maxASsupp = this_as
 
         else:  # Primary reads
-            r["MAPQpri"].append(a.mapq)
+            MAPQpri += a.mapq
+            total_pri += 1
             if qname in paired_end:  # If two primary reads from same pair
-                r["pe"] += 2
+                er.pe += 2
             else:
                 paired_end.add(qname)
-            if a.has_tag("DA"):
-                r["DApri"].append(float(a.get_tag("DA")))
+            if extended_tags and a.has_tag("DA"):
+                DApri += float(a.get_tag("DA"))
             if a.has_tag("NM"):
                 if a_bases:
                     nm = float(a.get_tag("NM"))
-                    r["NMpri"].append(nm / a_bases)
-                    r["NMbase"].append((nm - large_gaps) / a_bases)
-                else:
-                    r["NMpri"].append(0)
+                    NMpri += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
 
         if flag & 16:
-            r["minus"] += 1
+            er.minus += 1
         else:
-            r["plus"] += 1
+            er.plus += 1
 
-    cdef str k
-    for k in ("NMpri", "NMsupp", "NMbase", "n_gaps"):
-        if len(r[k]) > 0:
-            r[k] = np.mean(r[k]) * 100
-        else:
-            r[k] = 0
-    for k in ("DP", "DApri", "DN", "DAsupp", "MAPQpri", "MAPQsupp", "n_sa", "n_xa"):
-        if len(r[k]) > 0:
-            r[k] = np.mean(r[k])
-        else:
-            r[k] = 0
+    cdef int tot = er.supp + total_pri
 
-    if len(r["maxASsupp"]) > 0:
-        r["maxASsupp"] = int(max(r["maxASsupp"]))
-    else:
-        r["maxASsupp"] = 0
-    if len(reads2) == 0:
-        r["pe"] = len(reads1)
-    r["su"] = r["pe"] + r["supp"] + (2*r["spanning"]) + r["bnd"]
-    return r
+    er.NMpri = (NMpri / total_pri) * 100 if total_pri > 0 else 0
+    er.NMsupp = (NMsupp / er.supp) * 100 if er.supp > 0 else 0
+    er.NMbase = (NMbase / tot) * 100 if tot > 0 else 0
+    er.n_gaps = (n_gaps / tot) * 100 if tot > 0 else 0
 
-
-cdef dict normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins):
-
-    r = {"su": 0, "pe": 0, "supp": 0, "sc": 0, "NMpri": [], "NMsupp": [],
-         "maxASsupp": [], "MAPQpri": [], "MAPQsupp": [], "plus": 0, "minus": 0, "NP": 0,
-         "spanning": len(spanning), "NMbase": [], "n_gaps": [], "n_sa": [], "double_clips": 0, "n_xa": [],
-         "n_unmapped_mates": 0, "n_small_tlen": 0, "bnd": 0}
-
-    paired_end = set([])
-    seen = set([])
-
-    r["bnd"] = len(generic_ins)
-
-    cdef int flag, pe_support, index
-    cdef float a_bases, large_gaps, n_small_gaps
-
-    for index, a in enumerate(itertools.chain(reads1, reads2)):
-
-        qname = a.qname
-        flag = a.flag
-        has_sa = a.has_tag("SA")
-        pe_support = 0
-
-        left_clip, right_clip = clip_sizes_hard(a)
-        if left_clip > 0 and right_clip > 0:
-            r["double_clips"] += 1
-
-        if has_sa:
-            r["n_sa"].append(a.get_tag("SA").count(";"))
-        if a.has_tag("XA"):
-            r["n_xa"].append(a.get_tag("XA").count(";"))
-
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
-        if a_bases > 0:
-            r["n_gaps"].append(n_small_gaps / a_bases)
-
-        if flag & 2:  # paired-end implied
-            r["NP"] += 1
-        if a.flag & 1 and a.tlen and abs(a.tlen) < insert_ppf:
-            r["n_small_tlen"] += 1
-
-        if paired_end and flag & 8:
-            r["n_unmapped_mates"] += 1
-
-        if flag & 2304:  # Supplementary
-            r["supp"] += 1
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        else:  # primary
-            r["MAPQpri"].append(a.mapq)
-            if index >= len(reads1):
-                if qname in paired_end:  # If two primary reads from same pair
-                    r["pe"] += 1
-                    pe_support = 1
-            else:
-                paired_end.add(qname)
-
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    r["NMpri"].append(nm / a_bases)
-                    r["NMbase"].append((nm - large_gaps) / a_bases)
-                else:
-                    r["NMpri"].append(0)
-
-        if flag & 16:
-            r["minus"] += 1
-        else:
-            r["plus"] += 1
-
-        ct = a.cigartuples
-        if ct[0][0] == 4 or ct[-1][0] == 4:
-            r["sc"] += 1
-
-    for a in spanning:  # Same but dont count softclip
-        qname = a.qname
-        flag = a.flag
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
-
-        left_clip, right_clip = clip_sizes_hard(a)
-        if left_clip > 0 and right_clip > 0:
-            r["double_clips"] += 1
-
-        if a.has_tag("SA"):
-            r["n_sa"].append(a.get_tag("SA").count(";"))
-        if a.has_tag("XA"):
-            r["n_xa"].append(a.get_tag("XA").count(";"))
-
-        if a_bases > 0:
-            r["n_gaps"].append(n_small_gaps / a_bases)
-        if flag & 2:
-            r["NP"] += 1
-
-        if not flag & 256:  # Primary reads
-            r["MAPQpri"].append(a.mapq)
-            if qname in paired_end:  # If two primary reads from same pair
-                r["pe"] += 2
-            else:
-                paired_end.add(qname)
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    r["NMpri"].append(nm / a_bases)
-                    r["NMbase"].append((nm - large_gaps) / a_bases)
-                else:
-                    r["NMpri"].append(0)
-
-        elif flag & 2304:  # Supplementary
-            r["supp"] += 2
-            r["MAPQsupp"].append(a.mapq)
-            if a.has_tag("NM"):
-                if a_bases:
-                    r["NMsupp"].append(float(a.get_tag("NM")) / a_bases)
-                else:
-                    r["NMsupp"].append(0)
-            if a.has_tag("AS"):
-                r["maxASsupp"].append(float(a.get_tag("AS")))
-
-        if flag & 16:
-            r["minus"] += 1
-        else:
-            r["plus"] += 1
-
-    cdef str k
-    for k in ("NMpri", "NMsupp", "NMbase", "n_gaps"):
-        if len(r[k]) > 0:
-            r[k] = np.mean(r[k]) * 100
-        else:
-            r[k] = 0
-    for k in ("MAPQpri", "MAPQsupp", "n_sa", "n_xa"):
-        if len(r[k]) > 0:
-            r[k] = np.mean(r[k])
-        else:
-            r[k] = 0
-    if len(r["maxASsupp"]) > 0:
-        r["maxASsupp"] = int(max(r["maxASsupp"]))
-    else:
-        r["maxASsupp"] = 0
-
-    if len(reads2) == 0:  # hack to stop generic insertions having low support
-        r["pe"] = len(reads1)
-
-    r["su"] = r["pe"] + r["supp"] + (2*r["spanning"]) + r["bnd"]
-
-    return r
-
-
-cdef dict count_attributes(reads1, reads2, spanning, int extended_tags, float insert_ppf, generic_ins):
     if extended_tags:
-        return extended_attrs(reads1, reads2, spanning, insert_ppf, generic_ins)
-    else:
-        return normal_attrs(reads1, reads2, spanning, insert_ppf, generic_ins)
+        er.DP = DP / tot if tot > 0 else 0
+        er.DN = DN / tot if tot > 0 else 0
+        er.DApri = DApri / total_pri if total_pri > 0 else 0
+        er.DAsupp = DAsupp / er.supp if er.supp > 0 else 0
+
+    er.MAPQpri = MAPQpri / total_pri if total_pri > 0 else 0
+    er.MAPQsupp = MAPQsupp / er.supp if er.supp > 0 else 0
+    er.n_sa = n_sa / tot if tot > 0 else 0
+    er.n_xa = n_xa / tot if tot > 0 else 0
+
+    er.maxASsupp = maxASsupp
+
+    if len(reads2) == 0:
+        er.pe = len(reads1)
+    er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
@@ -625,17 +491,17 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     return v_item
 
 
-def assign_contig_to_break(asmb, info, side, spanning):
+cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
     if not asmb:
         return 0
-    ref_bases  = 0
+    cdef int ref_bases = 0
     if spanning:
-        info["contig"] = asmb["contig"]
+        er.contig = asmb["contig"]
         ref_bases += asmb["ref_bases"]
-        info["contig_ref_start"] = asmb["ref_start"]
-        info["contig_ref_end"] = asmb["ref_end"]
-        info["contig_left_weight"] = 0
-        info["contig_right_weight"] = 0
+        er.contig_ref_start = asmb["ref_start"]
+        er.contig_ref_end = asmb["ref_end"]
+        er.contig_left_weight = 0
+        er.contig_right_weight = 0
     elif asmb["left_clips"] or asmb["right_clips"]:
         if asmb["left_clips"] > asmb["right_clips"]:
             asmb_pos = asmb["ref_start"]
@@ -643,30 +509,48 @@ def assign_contig_to_break(asmb, info, side, spanning):
             asmb_pos = asmb["ref_end"]
         if side == "A":
             other_cont = "contig2"
-            other_pos = info["posB"]
-            other_chrom = info["chrB"]
+            other_pos = er.posB
+            other_chrom = er.chrB
             current_cont = "contig"
-            current_pos = info["posA"]
-            current_chrom = info["chrA"]
+            current_pos = er.posA
+            current_chrom = er.chrA
         else:
             other_cont = "contig"
-            other_pos = info["posA"]
-            other_chrom = info["chrA"]
+            other_pos = er.posA
+            other_chrom = er.chrA
             current_cont = "contig2"
-            current_pos = info["posB"]
-            current_chrom = info["chrB"]
+            current_pos = er.posB
+            current_chrom = er.chrB
         if other_chrom == current_chrom and abs(asmb_pos - other_pos) < abs(asmb_pos - current_pos):
-            info[other_cont] = asmb["contig"]
-            info[other_cont + "_ref_start"] = asmb["ref_start"]
-            info[other_cont + "_ref_end"] = asmb["ref_end"]
-            info[other_cont + "_left_weight"] = asmb["left_weight"]
-            info[other_cont + "_right_weight"] = asmb["right_weight"]
+            # Assign contig to opposite side
+            if side == "A":
+                er.contig2 = asmb["contig"]
+                er.contig2_ref_start = asmb["ref_start"]
+                er.contig2_ref_end = asmb["ref_end"]
+                er.contig2_left_weight = asmb["left_weight"]
+                er.contig2_right_weight = asmb["right_weight"]
+            else:
+                er.contig = asmb["contig"]
+                er.contig_ref_start = asmb["ref_start"]
+                er.contig_ref_end = asmb["ref_end"]
+                er.contig_left_weight = asmb["left_weight"]
+                er.contig_right_weight = asmb["right_weight"]
+
         else:
-            info[current_cont] = asmb["contig"]
-            info[current_cont + "_ref_start"] = asmb["ref_start"]
-            info[current_cont + "_ref_end"] = asmb["ref_end"]
-            info[current_cont + "_left_weight"] = asmb["left_weight"]
-            info[current_cont + "_right_weight"] = asmb["right_weight"]
+            # assign contigs to current side
+            if side == "A":
+                er.contig = asmb["contig"]
+                er.contig_ref_start = asmb["ref_start"]
+                er.contig_ref_end = asmb["ref_end"]
+                er.contig_left_weight = asmb["left_weight"]
+                er.contig_right_weight = asmb["right_weight"]
+            else:
+                er.contig2 = asmb["contig"]
+                er.contig2_ref_start = asmb["ref_start"]
+                er.contig2_ref_end = asmb["ref_end"]
+                er.contig2_left_weight = asmb["left_weight"]
+                er.contig2_right_weight = asmb["right_weight"]
+
         ref_bases += asmb["ref_bases"]
     return ref_bases
 
@@ -674,7 +558,8 @@ def assign_contig_to_break(asmb, info, side, spanning):
 cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble, spanning_alignments,
                       extended_tags, svlen_precise, generic_ins):
 
-    info = {}
+    cdef EventResult_t er = EventResult()
+
     precise_a = []
     precise_b = []
     u_reads = []
@@ -696,57 +581,50 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
 
     call_informative = Counter([(itm.svtype, itm.join_type) for itm in si]).most_common()
     svtype, jointype = call_informative[0][0]
-    info.update(make_call(si, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev))
 
-    if len(info) < 2:
-        return
+    make_call(si, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
 
     min_found_support = call_informative[0][1]
 
     if len(sub_informative) > 0:
-        attrs = count_attributes(u_reads, v_reads, [], extended_tags, insert_ppf, generic_ins)
+        count_attributes2(u_reads, v_reads, [], extended_tags, insert_ppf, generic_ins, er)
     else:
-        attrs = count_attributes([], [], [], extended_tags, insert_ppf, generic_ins)
+        count_attributes2([], [], [], extended_tags, insert_ppf, generic_ins, er)
 
-    if not attrs:
-        return
-
-    info.update(attrs)
-
-    info["contig"] = None
-    info["contig_left_weight"] = 0
-    info["contig_right_weight"] = 0
-    info["contig2"] = None
-    info["contig2_left_weight"] = 0
-    info["contig2_right_weight"] = 0
-    info["contig_ref_start"] = None
-    info["contig_ref_end"] = None
-    info["contig2_ref_start"] = None
-    info["contig2_ref_end"] = None
+    er.contig = None
+    er.contig_left_weight = 0
+    er.contig_right_weight = 0
+    er.contig2 = None
+    er.contig2_left_weight = 0
+    er.contig2_right_weight = 0
+    er.contig_ref_start = -1
+    er.contig_ref_end = -1
+    er.contig2_ref_start = -1
+    er.contig2_ref_end = -1
     as1 = None
     as2 = None
     ref_bases = 0
     if to_assemble or len(spanning_alignments) > 0:
-        if info["preciseA"]:
-            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
-            ref_bases += assign_contig_to_break(as1, info, "A", spanning_alignments)
-        if info["preciseB"]:
-            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
-            ref_bases += assign_contig_to_break(as2, info, "B", 0)
-    info["linked"] = 0
-    info["block_edge"] = 0
-    info["ref_bases"] = ref_bases
-    info["svlen_precise"] = svlen_precise  # if 0 then soft-clip will be remapped
-    if info["svlen_precise"] == 0:
+        if er.preciseA:
+            as1 = assembler.base_assemble(u_reads, er.posA, 500)
+            ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
+        if er.preciseB:
+            as2 = assembler.base_assemble(v_reads, er.posB, 500)
+            ref_bases += assign_contig_to_break(as2, er, "B", 0)
+    er.linked = 0
+    er.block_edge = 0
+    er.ref_bases = ref_bases
+    er.svlen_precise = svlen_precise  # if 0 then soft-clip will be remapped
+    if er.svlen_precise == 0:
         corr_score = soft_clip_qual_corr(u_reads + v_reads)
-        info["sqc"] = corr_score
+        er.sqc = corr_score
     else:
-        info["sqc"] = -1
+        er.sqc = -1
 
-    return info
+    return er
 
 
-cdef partition_single(informative, info, insert_size, insert_stdev, insert_ppf, spanning_alignments,
+cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                       min_support, extended_tags, to_assemble, generic_insertions):
 
     # spanning alignments is empty
@@ -771,7 +649,7 @@ cdef partition_single(informative, info, insert_size, insert_stdev, insert_ppf, 
                     try_cluster = True
 
     sub_cluster_calls = []
-
+    cdef EventResult_t er
     if try_cluster:
         try:
             Z = linkage(coords, 'single')
@@ -787,16 +665,14 @@ cdef partition_single(informative, info, insert_size, insert_stdev, insert_ppf, 
             clusters_d[cluster_id].append(v_item)
         blocks = clusters_d.values()
         for sub_informative in blocks:
-            info = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
+            er = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                     spanning_alignments, extended_tags, 1, generic_insertions)
-            if info:
-                sub_cluster_calls.append(info)
+            sub_cluster_calls.append(er)
     else:
-        info = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
+        er = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 1, generic_insertions)
 
-        if info:
-            sub_cluster_calls.append(info)
+        sub_cluster_calls.append(er)
 
     return sub_cluster_calls
 
@@ -815,7 +691,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
-            return {}
+            return []
 
     # Group by template name to check for split reads
     informative = []  # make call from these
@@ -867,10 +743,10 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
                 if gi is not None:
                     generic_insertions.append(gi)
 
-    info = {}
     cdef int min_found_support = 0
     cdef str svtype, jointype
-
+    cdef bint passed
+    cdef EventResult_t er
     if len(spanning_alignments) > 0:
 
         # make call from spanning alignments if possible
@@ -892,12 +768,22 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         else:
             jitter = -1
 
-        info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
-                     "join_type": "3to5",
-                     "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "preciseA": True, "preciseB": True, "svlen": svlen if svlen >= ab else ab, "query_gap": 0, "query_overlap": 0,
-                     "jitter": jitter,
-                     })
+        er = EventResult()
+        er.svtype = "DEL" if svtype_m == 2 else "INS"
+        er.join_type = "3to5"
+        er.chrA = chrom
+        er.chrB = chrom
+        er.posA = posA
+        er.posB = posB
+        er.cipos95A = posA_95
+        er.cipos95B = posB_95
+        er.preciseA = True
+        er.preciseB = True
+        er.svlen = svlen if svlen >= ab else ab
+        er.query_gap = 0
+        er.query_overlap = 0
+        er.jitter = jitter
+
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
         min_found_support = len(spanning_alignments)
@@ -912,44 +798,39 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
             if v_item.read_b is not None:
                 informative_reads.append(v_item.read_b)
 
-        attrs = count_attributes(informative_reads, [], [i[5] for i in spanning_alignments], extended_tags, insert_ppf, generic_insertions)
-        support = attrs["su"]
+        count_attributes2(informative_reads, [], [i[5] for i in spanning_alignments], extended_tags, insert_ppf, generic_insertions, er)
 
-        # Remove low support calls
-        if not attrs:
-            return {}
+        er.contig = None
+        er.contig_left_weight = 0
+        er.contig_right_weight = 0
+        er.contig2 = None
+        er.contig2_left_weight = 0
+        er.contig2_right_weight = 0
 
-        info.update(attrs)
-        info["contig"] = None
-        info["contig_left_weight"] = 0
-        info["contig_right_weight"] = 0
-        info["contig2"] = None
-        info["contig2_left_weight"] = 0
-        info["contig2_right_weight"] = 0
         as1 = None
         as2 = None
         ref_bases = 0
 
         if to_assemble: # or len(spanning_alignments) > 0:
-            if info["preciseA"]:
-                as1 = assembler.base_assemble(u_reads, info["posA"], 500)
-                ref_bases += assign_contig_to_break(as1, info, "A", spanning_alignments)
-            if info["preciseB"]:
-                as2 = assembler.base_assemble(v_reads, info["posB"], 500)
-                ref_bases += assign_contig_to_break(as2, info, "B", 0)
+            if er.preciseA:
+                as1 = assembler.base_assemble(u_reads, er.posA, 500)
+                ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
+            if er.preciseB:
+                as2 = assembler.base_assemble(v_reads, er.posB, 500)
+                ref_bases += assign_contig_to_break(as2, er, "B", 0)
             if not as1 and len(generic_insertions) > 0:
-                as1 = assembler.base_assemble([item.read_a for item in generic_insertions], info["posA"], 500)
-                ref_bases += assign_contig_to_break(as1, info, "A", 0)
+                as1 = assembler.base_assemble([item.read_a for item in generic_insertions], er.posA, 500)
+                ref_bases += assign_contig_to_break(as1, er, "A", 0)
 
-        info["linked"] = 0
-        info["block_edge"] = 0
-        info["ref_bases"] = ref_bases
-        info["sqc"] = -1  # not calculated
+        er.linked = 0
+        er.block_edge = 0
+        er.ref_bases = ref_bases
+        er.sqc = -1  # not calculated
 
-        return info
+        return er
 
     elif len(informative) > 0:
-        return partition_single(informative, info, insert_size, insert_stdev, insert_ppf, spanning_alignments,
+        return partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                                 min_support, extended_tags, to_assemble, [])
 
     elif len(generic_insertions) > 0:
@@ -1800,8 +1681,8 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
     return main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen
 
 
-cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointype,
-                    int insert_size, int insert_stdev):
+cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointype,
+                    int insert_size, int insert_stdev, EventResult_t er):
     # Inspired by mosdepth algorithm +1 for start -1 for end using intervals where break site could occur
     # Use insert size to set a limit on where break site could occur
     cdef int limit = insert_size + insert_stdev
@@ -1910,10 +1791,22 @@ cdef dict make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         jitter = ((cipos95A + cipos95B) / 2) / svlen
     else:
         jitter = -1
-    return {"svtype": svtype, "join_type": jointype, "chrA": informative[0].chrA, "chrB": informative[0].chrB,
-            "cipos95A": cipos95A, "cipos95B": cipos95B, "posA": main_A_break, "posB": main_B_break,
-            "preciseA": preciseA, "preciseB": preciseB, "svlen_precise": svlen_precise,
-            "svlen": svlen, "query_overlap": q_overlaps, "jitter": jitter}
+
+    er.svtype = svtype
+    er.join_type = jointype
+    er.chrA = informative[0].chrA
+    er.chrB = informative[0].chrB
+
+    er.cipos95A = cipos95A
+    er.cipos95B = cipos95B
+    er.posA = main_A_break
+    er.posB = main_B_break
+    er.preciseA = preciseA
+    er.preciseB = preciseB
+    er.svlen_precise = svlen_precise
+    er.svlen = svlen
+    er.query_overlap = q_overlaps
+    er.jitter = jitter
 
 
 cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
@@ -2026,50 +1919,50 @@ def sort_by_length(x):
     return len(x)
 
 
-cdef assemble_partitioned_reads(info, u_reads, v_reads, int block_edge, int assemble):
+cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int block_edge, int assemble):
 
     as1 = None
     as2 = None
     if assemble:
-        if info["preciseA"]:
-            as1 = assembler.base_assemble(u_reads, info["posA"], 500)
+        if er.preciseA:
+            as1 = assembler.base_assemble(u_reads, er.posA, 500)
             if as1:
-                if info["spanning"] == 0 and not (as1['left_clips'] or as1['right_clips']):
+                if er.spanning == 0 and not (as1['left_clips'] or as1['right_clips']):
                     as1 = None
-        if (info["spanning"] == 0 or as1 is None) and info["preciseB"]:
-            as2 = assembler.base_assemble(v_reads, info["posB"], 500)
+        if (er.spanning == 0 or as1 is None) and er.preciseB:
+            as2 = assembler.base_assemble(v_reads, er.posB, 500)
             if as2 :
                 if not (as2['left_clips'] or as2['right_clips']):
                     as2 = None
 
-    info["linked"] = 0
-    info["block_edge"] = block_edge
-    info["contig"] = None
-    info["contig_left_weight"] = 0
-    info["contig_ref_start"] = None
-    info["contig_ref_end"] = None
-    info["contig_right_weight"] = 0
-    info["contig2"] = None
-    info["contig2_left_weight"] = 0
-    info["contig2_right_weight"] = 0
-    info["contig2_ref_start"] = None
-    info["contig2_ref_end"] = None
+    er.linked = 0
+    er.block_edge = block_edge
+    er.contig = None
+    er.contig_left_weight = 0
+    er.contig_ref_start = -1
+    er.contig_ref_end = -1
+    er.contig_right_weight = 0
+    er.contig2 = None
+    er.contig2_left_weight = 0
+    er.contig2_right_weight = 0
+    er.contig2_ref_start = -1
+    er.contig2_ref_end = -1
     rbases = 0
     if as1 is not None and "contig" in as1:
-        info["contig"] = as1["contig"]
+        er.contig = as1["contig"]
         rbases += as1["ref_bases"]
-        info["contig_ref_start"] = as1["ref_start"]
-        info["contig_ref_end"] = as1["ref_end"]
-        info["contig_left_weight"] = as1["left_weight"]
-        info["contig_right_weight"] = as1["right_weight"]
+        er.contig_ref_start = as1["ref_start"]
+        er.contig_ref_end = as1["ref_end"]
+        er.contig_left_weight = as1["left_weight"]
+        er.contig_right_weight = as1["right_weight"]
     if as2 is not None and "contig" in as2:
-        info["contig2"] = as2["contig"]
+        er.contig2 = as2["contig"]
         rbases += as2["ref_bases"]
-        info["contig2_ref_start"] = as2["ref_start"]
-        info["contig2_ref_end"] = as2["ref_end"]
-        info["contig2_left_weight"] = as2["left_weight"]
-        info["contig2_right_weight"] = as2["right_weight"]
-    info["ref_bases"] = rbases
+        er.contig2_ref_start = as2["ref_start"]
+        er.contig2_ref_end = as2["ref_end"]
+        er.contig2_left_weight = as2["left_weight"]
+        er.contig2_right_weight = as2["right_weight"]
+    er.ref_bases = rbases
 
 
 cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float insert_ppf, int min_support, int block_edge, int assemble, int extended_tags):
@@ -2151,7 +2044,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
             informative.append(v_item)
 
     if not informative:
-        return {}
+        return []
 
     svtypes_counts = [[], [], [], []]
     for i in informative:
@@ -2167,6 +2060,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
     svtypes_res = sorted(svtypes_counts, key=sort_by_length, reverse=True)
 
     results = []
+    cdef EventResult_t er
     for sub_informative in svtypes_res:
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
@@ -2188,15 +2082,16 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
                 u_reads.append(v_item.read_a)
                 v_reads.append(v_item.read_b)
 
-            info = make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev)
-            attrs = count_attributes(u_reads, v_reads, [], extended_tags, insert_ppf, [])
-            if not attrs or attrs["su"] < min_support:
+            er = EventResult()
+
+            make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
+
+            count_attributes2(u_reads, v_reads, [], extended_tags, insert_ppf, [], er)
+            if er.su < min_support:
                 continue
 
-            info.update(attrs)
-            assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
-
-            results.append(info)
+            assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
+            results.append(er)
 
     return results
 
@@ -2239,7 +2134,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
                                         event_pos + a.cigartuples[cigar_index][1],
                                         a))
 
-    info = {}
+    # info = {}
     cdef str svtype, jointype
 
     if len(spanning_alignments) > 0:
@@ -2247,6 +2142,7 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
 
     # make call from spanning alignments if possible
+    cdef EventResult_t er
     if len(spanning_alignments) > 0:
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
@@ -2261,25 +2157,34 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
             jitter = ((posA_95 + posB_95) / 2) / svlen
         else:
             jitter = -1
-        info.update({"svtype": "DEL" if svtype_m == 2 else "INS",
-                     "join_type": "3to5",
-                     "chrA": chrom, "chrB": chrom, "posA": posA, "posB": posB, "cipos95A": posA_95, "cipos95B": posB_95,
-                     "jitter": jitter,
-                     "preciseA": True, "preciseB": True, "svlen": svlen, "query_overlap": 0
-                     })
+
+        er = EventResult()
+        er.svtype = "DEL" if svtype_m == 2 else "INS"
+        er.join_type = "3to5"
+        er.chrA = chrom
+        er.chrB = chrom
+        er.posA = posA
+        er.posB = posB
+        er.cipos95A = posA_95
+        er.cipos95B = posB_95,
+        er.jitter = jitter,
+        er.preciseA = True
+        er.preciseB = True
+        er.svlen = svlen
+        er.query_overlap = 0
+
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
-        attrs = count_attributes(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags, insert_ppf, [])
-        if not attrs or attrs["su"] < min_support:
-            return {}
+        count_attributes2(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags, insert_ppf, [], er)
+        # if not attrs or attrs["su"] < min_support:
+        if er.su < min_support:
+            return []
 
-        info.update(attrs)
-        assemble_partitioned_reads(info, u_reads, v_reads, block_edge, assemble)
+        assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
 
-        return [info]
+        return [er]
 
     else:
-
         results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
 
         return results
@@ -2379,7 +2284,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
                 res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
                 if res:
-                    if isinstance(res, dict):
+                    if isinstance(res, EventResult):
                         events.append(res)
                     else:
                         events += res
@@ -2397,7 +2302,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
 
             if res:
-                if isinstance(res, dict):
+                if isinstance(res, EventResult):
                     events.append(res)
                 else:
                     events += res

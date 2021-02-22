@@ -1166,6 +1166,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap;
 struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet;
+struct __pyx_obj_5dysgu_13map_set_utils_EventResult;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct__iter_bam;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_1___pyx_f_5dysgu_6sv2bam_get_reads;
 struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_2_genexpr;
@@ -1206,7 +1207,7 @@ typedef npy_clongdouble __pyx_t_5numpy_clongdouble_t;
  */
 typedef npy_cdouble __pyx_t_5numpy_complex_t;
 
-/* "map_set_utils.pxd":30
+/* "map_set_utils.pxd":31
  * # from pysam.libcalignedsegment cimport bam1_t
  * 
  * ctypedef enum ReadEnum_t:             # <<<<<<<<<<<<<<
@@ -1222,8 +1223,8 @@ enum __pyx_t_5dysgu_13map_set_utils_ReadEnum_t {
 };
 typedef enum __pyx_t_5dysgu_13map_set_utils_ReadEnum_t __pyx_t_5dysgu_13map_set_utils_ReadEnum_t;
 
-/* "map_set_utils.pxd":19
- * from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t, int32_t
+/* "map_set_utils.pxd":20
+ * 
  * 
  * ctypedef cpp_vector[int] int_vec_t             # <<<<<<<<<<<<<<
  * ctypedef cpp_pair[int, int] get_val_result
@@ -1231,7 +1232,7 @@ typedef enum __pyx_t_5dysgu_13map_set_utils_ReadEnum_t __pyx_t_5dysgu_13map_set_
  */
 typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
 
-/* "map_set_utils.pxd":20
+/* "map_set_utils.pxd":21
  * 
  * ctypedef cpp_vector[int] int_vec_t
  * ctypedef cpp_pair[int, int] get_val_result             # <<<<<<<<<<<<<<
@@ -1240,7 +1241,7 @@ typedef std::vector<int>  __pyx_t_5dysgu_13map_set_utils_int_vec_t;
  */
 typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_get_val_result;
 
-/* "map_set_utils.pxd":84
+/* "map_set_utils.pxd":85
  * 
  * 
  * cdef class Py_CoverageTrack:             # <<<<<<<<<<<<<<
@@ -1257,7 +1258,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_CoverageTrack {
 };
 
 
-/* "map_set_utils.pxd":125
+/* "map_set_utils.pxd":126
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1271,7 +1272,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "map_set_utils.pxd":154
+/* "map_set_utils.pxd":155
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1285,7 +1286,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "map_set_utils.pxd":180
+/* "map_set_utils.pxd":181
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1299,7 +1300,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "map_set_utils.pxd":202
+/* "map_set_utils.pxd":203
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1310,6 +1311,106 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
   PyObject_HEAD
   struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet *__pyx_vtab;
   IntSet *thisptr;
+};
+
+
+/* "map_set_utils.pxd":237
+ * 
+ * 
+ * cdef class EventResult:             # <<<<<<<<<<<<<<
+ *     """Data holder for classifying alignments into SV types"""
+ *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, grp_id, event_id, n_expansion, stride, ref_poly_bases
+ */
+struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
+  PyObject_HEAD
+  int32_t contig_ref_start;
+  int32_t contig_ref_end;
+  int32_t contig2_ref_start;
+  int32_t contig2_ref_end;
+  int32_t grp_id;
+  int32_t event_id;
+  int32_t n_expansion;
+  int32_t stride;
+  int32_t ref_poly_bases;
+  float contig_left_weight;
+  float contig_right_weight;
+  float contig2_left_weight;
+  float contig2_right_weight;
+  float ref_rep;
+  float compress;
+  int32_t su;
+  int32_t pe;
+  int32_t supp;
+  int32_t sc;
+  int32_t NP;
+  int32_t maxASsupp;
+  int32_t plus;
+  int32_t minus;
+  int32_t spanning;
+  int32_t double_clips;
+  int32_t n_unmapped_mates;
+  int32_t n_small_tlen;
+  int32_t bnd;
+  int32_t ras;
+  int32_t fas;
+  int32_t cipos95A;
+  int32_t cipos95B;
+  float DP;
+  float DApri;
+  float DN;
+  float NMpri;
+  float DAsupp;
+  float NMsupp;
+  float MAPQpri;
+  float MAPQsupp;
+  float NMbase;
+  float n_sa;
+  float n_xa;
+  float n_gaps;
+  int32_t posA;
+  int32_t posB;
+  int32_t svlen;
+  int32_t query_gap;
+  int32_t query_overlap;
+  int32_t block_edge;
+  int32_t ref_bases;
+  int32_t remap_score;
+  int32_t bad_clip_count;
+  int32_t remap_ed;
+  int32_t n_in_grp;
+  float jitter;
+  float sqc;
+  float scw;
+  float outer_cn;
+  float inner_cn;
+  float fcc;
+  float rep;
+  float rep_sc;
+  float gc;
+  float neigh;
+  float neigh10kb;
+  float raw_reads_10kb;
+  float mcov;
+  int preciseA;
+  int preciseB;
+  int linked;
+  int modified;
+  int remapped;
+  int8_t svlen_precise;
+  PyObject *contig;
+  PyObject *contig2;
+  PyObject *svtype;
+  PyObject *join_type;
+  PyObject *chrA;
+  PyObject *chrB;
+  PyObject *exp_seq;
+  PyObject *sample;
+  PyObject *type;
+  PyObject *partners;
+  PyObject *GQ;
+  PyObject *SQ;
+  PyObject *GT;
+  PyObject *kind;
 };
 
 
@@ -1374,7 +1475,7 @@ struct __pyx_obj_5dysgu_6sv2bam___pyx_scope_struct_2_genexpr {
 
 
 
-/* "map_set_utils.pxd":125
+/* "map_set_utils.pxd":126
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1395,7 +1496,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph;
 
 
-/* "map_set_utils.pxd":154
+/* "map_set_utils.pxd":155
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1417,7 +1518,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph;
 
 
-/* "map_set_utils.pxd":180
+/* "map_set_utils.pxd":181
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1436,7 +1537,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap {
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap *__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap;
 
 
-/* "map_set_utils.pxd":202
+/* "map_set_utils.pxd":203
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -2203,6 +2304,7 @@ static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = 0;
 static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = 0;
+static PyTypeObject *__pyx_ptype_5dysgu_13map_set_utils_EventResult = 0;
 static int (*__pyx_f_5dysgu_13map_set_utils_cigar_clip)(PyObject *, int); /*proto*/
 
 /* Module declarations from 'dysgu.sv2bam' */
@@ -8955,22 +9057,24 @@ static int __Pyx_modinit_type_import_code(void) {
   __pyx_ptype_5numpy_ufunc = __Pyx_ImportType(__pyx_t_1, "numpy", "ufunc", sizeof(PyUFuncObject), __Pyx_ImportType_CheckSize_Ignore);
    if (!__pyx_ptype_5numpy_ufunc) __PYX_ERR(1, 764, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(3, 84, __pyx_L1_error)
+  __pyx_t_1 = PyImport_ImportModule("dysgu.map_set_utils"); if (unlikely(!__pyx_t_1)) __PYX_ERR(3, 85, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_ptype_5dysgu_13map_set_utils_Py_CoverageTrack = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_CoverageTrack", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_CoverageTrack), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_CoverageTrack) __PYX_ERR(3, 84, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_CoverageTrack) __PYX_ERR(3, 85, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_DiGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(3, 125, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(3, 125, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph) __PYX_ERR(3, 126, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_DiGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_DiGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_DiGraph)) __PYX_ERR(3, 126, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_SimpleGraph", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(3, 154, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(3, 154, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph) __PYX_ERR(3, 155, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_SimpleGraph->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph)) __PYX_ERR(3, 155, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_Int2IntMap", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(3, 180, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(3, 180, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap) __PYX_ERR(3, 181, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_Int2IntMap*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_Int2IntMap->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_Int2IntMap)) __PYX_ERR(3, 181, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "Py_IntSet", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet), __Pyx_ImportType_CheckSize_Warn);
-   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(3, 202, __pyx_L1_error)
-  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(3, 202, __pyx_L1_error)
+   if (!__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet) __PYX_ERR(3, 203, __pyx_L1_error)
+  __pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet = (struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_IntSet*)__Pyx_GetVtable(__pyx_ptype_5dysgu_13map_set_utils_Py_IntSet->tp_dict); if (unlikely(!__pyx_vtabptr_5dysgu_13map_set_utils_Py_IntSet)) __PYX_ERR(3, 203, __pyx_L1_error)
+  __pyx_ptype_5dysgu_13map_set_utils_EventResult = __Pyx_ImportType(__pyx_t_1, "dysgu.map_set_utils", "EventResult", sizeof(struct __pyx_obj_5dysgu_13map_set_utils_EventResult), __Pyx_ImportType_CheckSize_Warn);
+   if (!__pyx_ptype_5dysgu_13map_set_utils_EventResult) __PYX_ERR(3, 237, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_RefNannyFinishContext();
   return 0;

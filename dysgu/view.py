@@ -9,7 +9,7 @@ import time
 import datetime
 from collections import defaultdict
 from dysgu import io_funcs, cluster
-import click
+from dysgu.map_set_utils import echo, EventResult
 
 
 def open_outfile(args, names_dict):
@@ -29,6 +29,14 @@ def open_outfile(args, names_dict):
     return outfile
 
 
+class dotdict(dict):
+    """dot.notation access to dictionary attributes"""
+    # https://stackoverflow.com/questions/2352181/how-to-use-a-dot-to-access-members-of-dictionary
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
     logging.info("Merge distance: {} bp".format(merge_dist))
     df.reset_index(inplace=True)
@@ -39,7 +47,10 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
     # Assume:
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
-    potential = df.to_dict("records")
+    potential = [dotdict(i) for i in df.to_dict("records")]
+
+    # potential = [EventResult().from_dict(i) for i in potential]
+
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
     if not merge_within_sample:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
@@ -47,8 +58,10 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
                                      same_sample=False)
         ff = defaultdict(set)
         for f in found:
-            if "partners" not in f:
-                ff[f["event_id"]] = []
+            echo(f.partners)
+            if f.partners is None:
+                ff[f.event_id] = set([])
+                # ff[f["event_id"]] = []
             else:
                 # Remove partners from same sample
                 current = f["table_name"]
@@ -240,6 +253,7 @@ def vcf_to_df(path):
                     df[k] = df[k].astype(dtype)
                 except ValueError:
                     logging.info("Problem for feature {}, could not intepret as {}".format(k, dtype))
+                    echo(list(df[k]))
                     quit()
     if "contigA" not in df:
         df["contigA"] = [""] * len(df)

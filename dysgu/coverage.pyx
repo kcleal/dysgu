@@ -452,15 +452,15 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
 
         # Check if side A in regions
         ar = False
-        if io_funcs.intersecterpy(regions, r["chrA"], r["posA"], r["posA"] + 1):
+        if io_funcs.intersecterpy(regions, r.chrA, r.posA, r.posA + 1):
             ar = True
         br = False
-        if io_funcs.intersecterpy(regions, r["chrB"], r["posB"], r["posB"] + 1):
+        if io_funcs.intersecterpy(regions, r.chrB, r.posB, r.posB + 1):
             br = True
 
         kind = "extra-regional"
         if not ar and not br:
-            if r["chrA"] == r["chrB"] and r["posA"] > r["posB"]:  # Put non-region first
+            if r.chrA == r.chrB and r.posA > r.posB:  # Put non-region first
                 switch = True
 
             # Skip if regions have been provided; almost always false positives?
@@ -474,54 +474,54 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
                 switch = True
 
         if ar and br:
-            if r["chrA"] == r["chrB"]:
-                rA = list(regions[r["chrA"]].find_overlap(r["posA"], r["posA"] + 1))[0]
-                rB = list(regions[r["chrB"]].find_overlap(r["posB"], r["posB"] + 1))[0]
+            if r.chrA == r.chrB:
+                rA = list(regions[r.chrA].find_overlap(r.posA, r.posA + 1))[0]
+                rB = list(regions[r.chrB].find_overlap(r.posB, r.posB + 1))[0]
                 if rA[0] == rB[0] and rA[1] == rB[1]:
                     kind = "intra_regional"
                     # Put posA first
-                    if r["posA"] > r["posB"]:
+                    if r.posA > r.posB:
                         switch = True
                 else:
                     kind = "inter-regional"
-                    if r["chrA"] != sorted([r["chrA"], r["chrB"]])[0]:
+                    if r.chrA != sorted([r.chrA, r.chrB])[0]:
                         switch = True
             else:
                 kind = "inter-regional"
 
         if switch:
-            chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contig2"]
-            r["chrA"] = r["chrB"]
-            r["posA"] = r["posB"]
-            r["cipos95A"] = r["cipos95B"]
-            r["chrB"] = chrA
-            r["posB"] = posA
-            r["cipos95B"] = cipos95A
-            r["contig2"] = r["contig"]
-            r["contig"] = contig2
+            chrA, posA, cipos95A, contig2 = r.chrA, r.posA, r.cipos95A, r.contig2
+            r.chrA = r.chrB
+            r.posA = r.posB
+            r.cipos95A = r.cipos95B
+            r.chrB = chrA
+            r.posB = posA
+            r.cipos95B = cipos95A
+            r.contig2 = r.contig
+            r.contig = contig2
 
         max_depth = 0
         if kind == "hemi-regional":
             # chrom_i = infile.get_tid(r["chrA"])
-            chrom_i = r["chrA"]
+            chrom_i = r.chrA
             if chrom_i in regions_depth.chrom_cov_arrays:
-                reads_10kb, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb, max_depth = calculate_coverage(r.posA - 10000, r.posA + 10000, regions_depth.chrom_cov_arrays[chrom_i])
                 reads_10kb = round(reads_10kb, 3)
             else:
                 reads_10kb = 0
         else:
             # Calculate max
             # chrom_i = infile.get_tid(r["chrA"])
-            chrom_i = r["chrA"]
+            chrom_i = r.chrA
             if chrom_i in regions_depth.chrom_cov_arrays:
-                reads_10kb_left, max_depth = calculate_coverage(r["posA"] - 10000, r["posA"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb_left, max_depth = calculate_coverage(r.posA - 10000, r.posA + 10000, regions_depth.chrom_cov_arrays[chrom_i])
                 reads_10kb_left = round(reads_10kb_left, 3)
             else:
                 reads_10kb_left = 0
             # chrom_i = infile.get_tid(r["chrB"])
-            chrom_i = r["chrB"]
+            chrom_i = r.chrB
             if chrom_i in regions_depth.chrom_cov_arrays:
-                reads_10kb_right, max_depth = calculate_coverage(r["posB"] - 10000, r["posB"] + 10000, regions_depth.chrom_cov_arrays[chrom_i])
+                reads_10kb_right, max_depth = calculate_coverage(r.posB - 10000, r.posB + 10000, regions_depth.chrom_cov_arrays[chrom_i])
                 reads_10kb_right = round(reads_10kb_right, 3)
             else:
                 reads_10kb_right = 0
@@ -530,12 +530,12 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
             else:
                 reads_10kb = reads_10kb_right
 
-        r["kind"] = kind
-        r["raw_reads_10kb"] = reads_10kb
-        if r["chrA"] != r["chrB"]:
-            r["svlen"] = 1000000
-        r["mcov"] = max_depth
+        r.kind = kind
+        r.raw_reads_10kb = reads_10kb
+        if r.chrA != r.chrB:
+            r.svlen = 1000000
+        r.mcov = max_depth
 
         new_events.append(r)
 
-    return  new_events
+    return new_events

@@ -14,7 +14,8 @@ cimport numpy as np
 # from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 
 
-from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t, int32_t
+from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t, int32_t, int8_t
+
 
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
@@ -227,7 +228,22 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end) # nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end) nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil
+
+
+cdef class EventResult:
+    """Data holder for classifying alignments into SV types"""
+    cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, grp_id, event_id, n_expansion, stride, ref_poly_bases
+    cdef public float contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress
+
+    cdef public int32_t su, pe, supp, sc, NP, maxASsupp, plus, minus, spanning, double_clips, n_unmapped_mates, n_small_tlen, bnd, ras, fas, cipos95A, cipos95B
+    cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
+
+    cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
+    cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov
+    cdef public bint preciseA, preciseB, linked, modified, remapped
+    cdef public int8_t svlen_precise
+    cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind

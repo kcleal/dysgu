@@ -21,7 +21,7 @@ from libc.stdlib cimport abs as c_abs
 from libc.stdint cimport int32_t, uint64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map
+from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map, EventResult
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils import timeit, echo
 from dysgu.io_funcs import reverse_complement
@@ -38,6 +38,8 @@ ctypedef cpp_vector[int] int_vec_t
 
 ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
 ctypedef map_set_utils.Py_IntSet Py_IntSet
+
+ctypedef EventResult EventResult_t
 
 
 cdef extern from "wrap_map_set2.h" nogil:
@@ -753,42 +755,43 @@ cdef tuple get_rep(contig_seq):
 # @timeit
 def contig_info(events):
 
+    cdef EventResult_t e
     for i in range(len(events)):
         e = events[i]
         gc_count = 0
         seq_length = 0
-        if e["contig"]:
-            cont = e["contig"].upper()
+        if e.contig:
+            cont = e.contig.upper()
             seq_length += len(cont)
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
 
-        if e["contig2"]:
-            cont = e["contig2"].upper()
+        if e.contig2:
+            cont = e.contig2.upper()
             seq_length += len(cont)
             for letter in cont:
                 if letter == "G" or letter == "C":
                     gc_count += 1
 
         if seq_length > 0:
-            e["gc"] = round((gc_count / seq_length) * 100, 2)
+            e.gc = round((gc_count / seq_length) * 100, 2)
         else:
-            e["gc"] = 0
+            e.gc = 0
 
         sc_rep = 0
         aln_rep = 0
         aligned = 0
         seen = 0
-        if e["contig"]:
-            aln_rep1, sc_rep1, aligned_bases = get_rep(e["contig"])
+        if e.contig:
+            aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig)
             sc_rep += sc_rep1
             aln_rep += aln_rep1
             aligned += aligned_bases
             seen += 1
 
-        if e["contig2"]:
-            aln_rep1, sc_rep1, aligned_bases = get_rep(e["contig2"])
+        if e.contig2:
+            aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig2)
             seen += 1
             sc_rep += sc_rep1
             aln_rep += aln_rep1
@@ -798,9 +801,9 @@ def contig_info(events):
             aln_rep = aln_rep / seen
             sc_rep = sc_rep / seen
 
-        e["rep"] = round(aln_rep, 3)
-        e["rep_sc"] = round(sc_rep, 3)
-        e["ref_bases"] = aligned
+        e.rep = round(aln_rep, 3)
+        e.rep_sc = round(sc_rep, 3)
+        e.ref_bases = aligned
 
     return events
 

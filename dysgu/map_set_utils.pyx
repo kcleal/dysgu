@@ -288,10 +288,12 @@ cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:
 
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,
-                                 bint paired_end): # nogil:
+                                 bint paired_end) nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
+    if read_enum == BREAKEND:
+        return 0
     if x1 == x2:
         span1 = 1
         center1 = x1
@@ -314,6 +316,7 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
     span_distance = <float>c_abs(span1 - span2) / max_span
 
     if not paired_end or read_enum == SPLIT:
+        # span position distance:
         if (position_distance / norm) + span_distance < thresh:
             return 1
         return 0
@@ -321,6 +324,7 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
     if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3
         return 1
     return 0
+
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
@@ -340,3 +344,21 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
         center2 = (y1 + y2) / 2
     return c_fabs(center1 - center2)
 
+
+cdef class EventResult:
+    """Data holder for classifying alignments into SV types"""
+    def __cinit__(self):
+        self.svlen_precise = 1
+
+    def to_dict(self):
+        return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict"}
+
+    def from_dict(self, d):
+        allowed = set(dir(self))
+        for k, v in d.items():
+            if k in allowed:
+                self.__setattr__(k, v)
+        return self
+
+    def __repr__(self):
+        return str(self.to_dict())
