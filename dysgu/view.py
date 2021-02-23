@@ -37,17 +37,27 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
+def set_numeric(d):
+    numeric = ['svlen_precise', 'n_expansion', 'stride', 'ref_poly_bases', 'ref_rep', 'compress',
+               'su', 'pe', 'supp', 'sc', 'NP', 'maxASsupp', 'plus', 'minus', 'spanning', 'double_clips',
+               'n_unmapped_mates', 'block_edge',
+               'n_small_tlen', 'bnd', 'ras', 'fas', 'cipos95A', 'cipos95B']
+    for k in numeric:
+        if k not in d or d[k] is None:
+            d[k] = 0
+    return d
+
+
 def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
     logging.info("Merge distance: {} bp".format(merge_dist))
     df.reset_index(inplace=True)
     df["event_id"] = df.index
-    # click.echo(df.columns, err=True)
     df["contig"] = df["contigA"]
     df["contig2"] = df["contigB"]
     # Assume:
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
-    potential = [dotdict(i) for i in df.to_dict("records")]
+    potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
 
     # potential = [EventResult().from_dict(i) for i in potential]
 
@@ -57,8 +67,8 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
                                      aggressive_ins_merge=True,
                                      same_sample=False)
         ff = defaultdict(set)
+
         for f in found:
-            echo(f.partners)
             if f.partners is None:
                 ff[f.event_id] = set([])
                 # ff[f["event_id"]] = []
@@ -66,15 +76,22 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
                 # Remove partners from same sample
                 current = f["table_name"]
                 targets = set([])
-                # others = []
+                passed = True
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
                     if t_name != current and t_name not in targets and len(targets) < n_samples:
-                        ff[f["event_id"]].add(item)
-                        ff[item].add(f["event_id"])
+                        #ff[f["event_id"]].add(item)
+                        #ff[item].add(f["event_id"])
                         targets.add(t_name)
-                    else:  # Merged with self event. Happens with clusters of SVs with small spacing
+                    else:  # Merged with self event. Can happen with clusters of SVs with small spacing
                         bad_i.add(item)
+                        passed = False
+                if passed:  # enumerate support between components
+                    g = f["partners"] + [f["event_id"]]
+                    for t1 in g:
+                        for t2 in g:
+                            if t2 != t1:
+                                ff[t1].add(t2)
 
         df = df.drop(bad_i)
         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
@@ -209,7 +226,8 @@ def vcf_to_df(path):
                "NEIGH": ("neigh", int),
                "NEIGH10": ("neigh10kb", int),
                "REP": ("rep", float),
-               "REPSC": ("rep_sc", float), "LPREC": ("svlen_precise", int),
+               "REPSC": ("rep_sc", float),
+               "LPREC": ("svlen_precise", int),
                "NEXP": ("n_expansion", int),
                "STRIDE": ("stride", int),
                "EXPSEQ": ("exp_seq", str),

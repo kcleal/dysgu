@@ -419,6 +419,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             if add_contig_b and new_b:
                 w0.contig2 = new_b
         if add_partners:
+            # echo([i.event_id for i in best[1:]])
             w0.partners = [i.event_id for i in best[1:]]
 
         found.append(w0)

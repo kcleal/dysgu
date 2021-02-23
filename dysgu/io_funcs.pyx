@@ -5,7 +5,7 @@
 import numpy as np
 cimport numpy as np
 import logging
-import click
+from map_set_utils import echo
 from collections import defaultdict
 import ncls
 import pkg_resources
@@ -105,15 +105,6 @@ def mk_dest(d):
             os.mkdir(d)
         except:
             raise OSError("Couldn't create directory {}".format(d))
-
-
-
-# def get_bed_regions(bed):
-#     b = [tuple([int(j) if j.isdigit() else j for j in i.strip().split("\t")[:3]]) for i in open(bed, "r")
-#          if i[0] != "#" and len(i) > 0 and "\t" in i]
-#     if len(b) == 0:
-#         raise ValueError("Bed regions not formatted correctly")
-#     return b
 
 
 def overlap_regionspy(bed):
@@ -274,7 +265,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         info_extras += [
                     f"REP={'%.3f' % float(rep)}",
                     f"REPSC={'%.3f' % float(repsc)}",
-                    f"LPREC={lenprec}",
+
                     ]
 
     info_extras += [
@@ -290,10 +281,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
                     f"SR={sr}",
                     f"SC={sc}",
                     f"BND={bnd}",
+                    f"LPREC={lenprec}",
                     f"RT={read_kind}"]
 
     if mean_prob is not None:
-        info_extras += [f"MeanPROB={mean_prob}", f"MaxPROB={max_prob}"]
+        info_extras += [f"MeanPROB={round(mean_prob, 3)}", f"MaxPROB={round(max_prob, 3)}"]
 
     if small_output:
         fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
@@ -375,7 +367,6 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
                 r["partners"] = []
             else:
                 r["partners"] = [int(i.split(",")[1]) for i in r["partners"].split("|")]
-
         for idx in r["partners"]:
             r2 = df.loc[idx]  # iloc
             cols[r2["table_name"]] = r2
