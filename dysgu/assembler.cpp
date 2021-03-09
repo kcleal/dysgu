@@ -39,8 +39,8 @@
         ],
         "include_dirs": [
             "dysgu",
-            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "./dysgu",
+            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -10987,7 +10987,8 @@ static PyObject *__pyx_pf_5dysgu_9assembler_base_assemble(CYTHON_UNUSED PyObject
 static PyObject *__pyx_pw_5dysgu_9assembler_3compute_rep(PyObject *__pyx_self, PyObject *__pyx_v_seq); /*proto*/
 static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON_UNUSED int __pyx_skip_dispatch) {
   robin_hood::unordered_map<float,int>  __pyx_v_last_visited;
-  std::vector<float>  __pyx_v_tot;
+  float __pyx_v_tot_amount;
+  float __pyx_v_total_seen;
   int __pyx_v_k;
   int __pyx_v_i;
   int __pyx_v_diff;
@@ -10997,7 +10998,7 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
   PyObject *__pyx_v_s_bytes = 0;
   unsigned char const *__pyx_v_sub_ptr;
   uint64_t __pyx_v_a;
-  float __pyx_v_t;
+  double __pyx_v_x;
   float __pyx_r;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -11010,23 +11011,37 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
   Py_ssize_t __pyx_t_8;
   Py_ssize_t __pyx_t_9;
   int __pyx_t_10;
-  double __pyx_t_11;
-  std::vector<float> ::iterator __pyx_t_12;
-  float __pyx_t_13;
-  std::vector<float> ::size_type __pyx_t_14;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("compute_rep", 0);
 
-  /* "dysgu/assembler.pyx":690
+  /* "dysgu/assembler.pyx":686
+ *     cdef unordered_map[float, int] last_visited
+ *     # cdef cpp_vector[float] tot
+ *     cdef float tot_amount = 0             # <<<<<<<<<<<<<<
+ *     cdef float total_seen = 0
+ *     cdef int k, i, diff
+ */
+  __pyx_v_tot_amount = 0.0;
+
+  /* "dysgu/assembler.pyx":687
+ *     # cdef cpp_vector[float] tot
+ *     cdef float tot_amount = 0
+ *     cdef float total_seen = 0             # <<<<<<<<<<<<<<
+ *     cdef int k, i, diff
+ *     cdef float decay, max_amount, amount
+ */
+  __pyx_v_total_seen = 0.0;
+
+  /* "dysgu/assembler.pyx":691
  *     cdef float decay, max_amount, amount
  * 
  *     cdef bytes s_bytes = bytes(seq.encode("ascii"))             # <<<<<<<<<<<<<<
  *     cdef const unsigned char* sub_ptr = s_bytes
  * 
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_seq, __pyx_n_s_encode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 690, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_seq, __pyx_n_s_encode); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 691, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11040,26 +11055,26 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_Call2Args(__pyx_t_2, __pyx_t_3, __pyx_n_u_ascii) : __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_n_u_ascii);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 690, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 691, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 690, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyBytes_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 691, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_s_bytes = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "dysgu/assembler.pyx":691
+  /* "dysgu/assembler.pyx":692
  * 
  *     cdef bytes s_bytes = bytes(seq.encode("ascii"))
  *     cdef const unsigned char* sub_ptr = s_bytes             # <<<<<<<<<<<<<<
  * 
  *     for k in (2, 3, 4, 5, 6):
  */
-  __pyx_t_4 = __Pyx_PyBytes_AsUString(__pyx_v_s_bytes); if (unlikely((!__pyx_t_4) && PyErr_Occurred())) __PYX_ERR(0, 691, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyBytes_AsUString(__pyx_v_s_bytes); if (unlikely((!__pyx_t_4) && PyErr_Occurred())) __PYX_ERR(0, 692, __pyx_L1_error)
   __pyx_v_sub_ptr = __pyx_t_4;
 
-  /* "dysgu/assembler.pyx":693
+  /* "dysgu/assembler.pyx":694
  *     cdef const unsigned char* sub_ptr = s_bytes
  * 
  *     for k in (2, 3, 4, 5, 6):             # <<<<<<<<<<<<<<
@@ -11070,62 +11085,62 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
   for (;;) {
     if (__pyx_t_5 >= 5) break;
     #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-    __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 693, __pyx_L1_error)
+    __pyx_t_1 = PyTuple_GET_ITEM(__pyx_t_2, __pyx_t_5); __Pyx_INCREF(__pyx_t_1); __pyx_t_5++; if (unlikely(0 < 0)) __PYX_ERR(0, 694, __pyx_L1_error)
     #else
-    __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 693, __pyx_L1_error)
+    __pyx_t_1 = PySequence_ITEM(__pyx_t_2, __pyx_t_5); __pyx_t_5++; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 694, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     #endif
-    __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 693, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_1); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 694, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_v_k = __pyx_t_6;
 
-    /* "dysgu/assembler.pyx":695
+    /* "dysgu/assembler.pyx":696
  *     for k in (2, 3, 4, 5, 6):
  * 
  *         decay = 0.25 * 1/k             # <<<<<<<<<<<<<<
  *         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
- *         sub_ptr = s_bytes
+ * 
  */
     __pyx_t_7 = (0.25 * 1.0);
     if (unlikely(__pyx_v_k == 0)) {
       PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-      __PYX_ERR(0, 695, __pyx_L1_error)
+      __PYX_ERR(0, 696, __pyx_L1_error)
     }
     __pyx_v_decay = (__pyx_t_7 / ((double)__pyx_v_k));
 
-    /* "dysgu/assembler.pyx":696
+    /* "dysgu/assembler.pyx":697
  * 
  *         decay = 0.25 * 1/k
  *         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer             # <<<<<<<<<<<<<<
+ * 
  *         sub_ptr = s_bytes
- *         for i in range(len(seq) - k):
  */
     __pyx_v_max_amount = (exp((-__pyx_v_decay)) * __pyx_v_k);
 
-    /* "dysgu/assembler.pyx":697
- *         decay = 0.25 * 1/k
+    /* "dysgu/assembler.pyx":699
  *         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
+ * 
  *         sub_ptr = s_bytes             # <<<<<<<<<<<<<<
  *         for i in range(len(seq) - k):
  * 
  */
-    __pyx_t_4 = __Pyx_PyBytes_AsUString(__pyx_v_s_bytes); if (unlikely((!__pyx_t_4) && PyErr_Occurred())) __PYX_ERR(0, 697, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyBytes_AsUString(__pyx_v_s_bytes); if (unlikely((!__pyx_t_4) && PyErr_Occurred())) __PYX_ERR(0, 699, __pyx_L1_error)
     __pyx_v_sub_ptr = __pyx_t_4;
 
-    /* "dysgu/assembler.pyx":698
- *         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
+    /* "dysgu/assembler.pyx":700
+ * 
  *         sub_ptr = s_bytes
  *         for i in range(len(seq) - k):             # <<<<<<<<<<<<<<
  * 
  *             a = xxhasher(sub_ptr, k, 42)
  */
-    __pyx_t_8 = PyObject_Length(__pyx_v_seq); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 698, __pyx_L1_error)
+    __pyx_t_8 = PyObject_Length(__pyx_v_seq); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 700, __pyx_L1_error)
     __pyx_t_9 = (__pyx_t_8 - __pyx_v_k);
     __pyx_t_8 = __pyx_t_9;
     for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_8; __pyx_t_6+=1) {
       __pyx_v_i = __pyx_t_6;
 
-      /* "dysgu/assembler.pyx":700
+      /* "dysgu/assembler.pyx":702
  *         for i in range(len(seq) - k):
  * 
  *             a = xxhasher(sub_ptr, k, 42)             # <<<<<<<<<<<<<<
@@ -11134,119 +11149,127 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
  */
       __pyx_v_a = XXHash64::hash(__pyx_v_sub_ptr, __pyx_v_k, 42);
 
-      /* "dysgu/assembler.pyx":701
+      /* "dysgu/assembler.pyx":703
  * 
  *             a = xxhasher(sub_ptr, k, 42)
  *             if last_visited.find(a) != last_visited.end():             # <<<<<<<<<<<<<<
  *                 diff = i - last_visited[a]
- *                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+ *                 #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
  */
       __pyx_t_10 = ((__pyx_v_last_visited.find(__pyx_v_a) != __pyx_v_last_visited.end()) != 0);
       if (__pyx_t_10) {
 
-        /* "dysgu/assembler.pyx":702
+        /* "dysgu/assembler.pyx":704
  *             a = xxhasher(sub_ptr, k, 42)
  *             if last_visited.find(a) != last_visited.end():
  *                 diff = i - last_visited[a]             # <<<<<<<<<<<<<<
- *                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
- *             else:
+ *                 #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+ * 
  */
         __pyx_v_diff = (__pyx_v_i - (__pyx_v_last_visited[__pyx_v_a]));
 
-        /* "dysgu/assembler.pyx":703
- *             if last_visited.find(a) != last_visited.end():
- *                 diff = i - last_visited[a]
- *                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount             # <<<<<<<<<<<<<<
- *             else:
- *                 amount = 0
+        /* "dysgu/assembler.pyx":707
+ *                 #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+ * 
+ *                 x = exp(-decay * diff)             # <<<<<<<<<<<<<<
+ *                 amount = (k * x) / max_amount
+ * 
  */
-        __pyx_t_7 = (__pyx_v_diff * exp(((-__pyx_v_decay) * __pyx_v_diff)));
-        if (unlikely(__pyx_v_diff == 0)) {
-          PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-          __PYX_ERR(0, 703, __pyx_L1_error)
-        }
-        __pyx_t_11 = ((__pyx_t_7 / ((double)__pyx_v_diff)) * __pyx_v_k);
+        __pyx_v_x = exp(((-__pyx_v_decay) * __pyx_v_diff));
+
+        /* "dysgu/assembler.pyx":708
+ * 
+ *                 x = exp(-decay * diff)
+ *                 amount = (k * x) / max_amount             # <<<<<<<<<<<<<<
+ * 
+ *             else:
+ */
+        __pyx_t_7 = (__pyx_v_k * __pyx_v_x);
         if (unlikely(__pyx_v_max_amount == 0)) {
           PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-          __PYX_ERR(0, 703, __pyx_L1_error)
+          __PYX_ERR(0, 708, __pyx_L1_error)
         }
-        __pyx_v_amount = (__pyx_t_11 / ((double)__pyx_v_max_amount));
+        __pyx_v_amount = (__pyx_t_7 / ((double)__pyx_v_max_amount));
 
-        /* "dysgu/assembler.pyx":701
+        /* "dysgu/assembler.pyx":703
  * 
  *             a = xxhasher(sub_ptr, k, 42)
  *             if last_visited.find(a) != last_visited.end():             # <<<<<<<<<<<<<<
  *                 diff = i - last_visited[a]
- *                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+ *                 #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
  */
         goto __pyx_L7;
       }
 
-      /* "dysgu/assembler.pyx":705
- *                 amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+      /* "dysgu/assembler.pyx":711
+ * 
  *             else:
  *                 amount = 0             # <<<<<<<<<<<<<<
  *             if i > k:
- *                 tot.push_back(amount)
+ *                 # tot.push_back(amount)
  */
       /*else*/ {
         __pyx_v_amount = 0.0;
       }
       __pyx_L7:;
 
-      /* "dysgu/assembler.pyx":706
+      /* "dysgu/assembler.pyx":712
  *             else:
  *                 amount = 0
  *             if i > k:             # <<<<<<<<<<<<<<
- *                 tot.push_back(amount)
- * 
+ *                 # tot.push_back(amount)
+ *                 tot_amount += amount
  */
       __pyx_t_10 = ((__pyx_v_i > __pyx_v_k) != 0);
       if (__pyx_t_10) {
 
-        /* "dysgu/assembler.pyx":707
- *                 amount = 0
+        /* "dysgu/assembler.pyx":714
  *             if i > k:
- *                 tot.push_back(amount)             # <<<<<<<<<<<<<<
- * 
+ *                 # tot.push_back(amount)
+ *                 tot_amount += amount             # <<<<<<<<<<<<<<
+ *                 total_seen += 1
  *             last_visited[a] = i
  */
-        try {
-          __pyx_v_tot.push_back(__pyx_v_amount);
-        } catch(...) {
-          __Pyx_CppExn2PyErr();
-          __PYX_ERR(0, 707, __pyx_L1_error)
-        }
+        __pyx_v_tot_amount = (__pyx_v_tot_amount + __pyx_v_amount);
 
-        /* "dysgu/assembler.pyx":706
+        /* "dysgu/assembler.pyx":715
+ *                 # tot.push_back(amount)
+ *                 tot_amount += amount
+ *                 total_seen += 1             # <<<<<<<<<<<<<<
+ *             last_visited[a] = i
+ *             sub_ptr += 1
+ */
+        __pyx_v_total_seen = (__pyx_v_total_seen + 1.0);
+
+        /* "dysgu/assembler.pyx":712
  *             else:
  *                 amount = 0
  *             if i > k:             # <<<<<<<<<<<<<<
- *                 tot.push_back(amount)
- * 
+ *                 # tot.push_back(amount)
+ *                 tot_amount += amount
  */
       }
 
-      /* "dysgu/assembler.pyx":709
- *                 tot.push_back(amount)
- * 
+      /* "dysgu/assembler.pyx":716
+ *                 tot_amount += amount
+ *                 total_seen += 1
  *             last_visited[a] = i             # <<<<<<<<<<<<<<
  *             sub_ptr += 1
  * 
  */
       (__pyx_v_last_visited[__pyx_v_a]) = __pyx_v_i;
 
-      /* "dysgu/assembler.pyx":710
- * 
+      /* "dysgu/assembler.pyx":717
+ *                 total_seen += 1
  *             last_visited[a] = i
  *             sub_ptr += 1             # <<<<<<<<<<<<<<
  * 
- *     if tot.size() == 0:
+ *     # if tot.size() == 0:
  */
       __pyx_v_sub_ptr = (__pyx_v_sub_ptr + 1);
     }
 
-    /* "dysgu/assembler.pyx":693
+    /* "dysgu/assembler.pyx":694
  *     cdef const unsigned char* sub_ptr = s_bytes
  * 
  *     for k in (2, 3, 4, 5, 6):             # <<<<<<<<<<<<<<
@@ -11256,89 +11279,47 @@ static float __pyx_f_5dysgu_9assembler_compute_rep(PyObject *__pyx_v_seq, CYTHON
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/assembler.pyx":712
- *             sub_ptr += 1
+  /* "dysgu/assembler.pyx":720
  * 
- *     if tot.size() == 0:             # <<<<<<<<<<<<<<
+ *     # if tot.size() == 0:
+ *     if total_seen == 0:             # <<<<<<<<<<<<<<
  *         return 0
- *     cdef float t = 0
+ *     # cdef float t = 0
  */
-  __pyx_t_10 = ((__pyx_v_tot.size() == 0) != 0);
+  __pyx_t_10 = ((__pyx_v_total_seen == 0.0) != 0);
   if (__pyx_t_10) {
 
-    /* "dysgu/assembler.pyx":713
- * 
- *     if tot.size() == 0:
+    /* "dysgu/assembler.pyx":721
+ *     # if tot.size() == 0:
+ *     if total_seen == 0:
  *         return 0             # <<<<<<<<<<<<<<
- *     cdef float t = 0
- *     for amount in tot:
+ *     # cdef float t = 0
+ *     # for amount in tot:
  */
     __pyx_r = 0.0;
     goto __pyx_L0;
 
-    /* "dysgu/assembler.pyx":712
- *             sub_ptr += 1
+    /* "dysgu/assembler.pyx":720
  * 
- *     if tot.size() == 0:             # <<<<<<<<<<<<<<
+ *     # if tot.size() == 0:
+ *     if total_seen == 0:             # <<<<<<<<<<<<<<
  *         return 0
- *     cdef float t = 0
+ *     # cdef float t = 0
  */
   }
 
-  /* "dysgu/assembler.pyx":714
- *     if tot.size() == 0:
- *         return 0
- *     cdef float t = 0             # <<<<<<<<<<<<<<
- *     for amount in tot:
- *         t += amount
+  /* "dysgu/assembler.pyx":730
+ *     # return t / tot.size()
+ * 
+ *     return tot_amount / total_seen             # <<<<<<<<<<<<<<
+ * 
+ * cdef tuple get_rep(contig_seq):
  */
-  __pyx_v_t = 0.0;
-
-  /* "dysgu/assembler.pyx":715
- *         return 0
- *     cdef float t = 0
- *     for amount in tot:             # <<<<<<<<<<<<<<
- *         t += amount
- * 
- */
-  __pyx_t_12 = __pyx_v_tot.begin();
-  for (;;) {
-    if (!(__pyx_t_12 != __pyx_v_tot.end())) break;
-    __pyx_t_13 = *__pyx_t_12;
-    ++__pyx_t_12;
-    __pyx_v_amount = __pyx_t_13;
-
-    /* "dysgu/assembler.pyx":716
- *     cdef float t = 0
- *     for amount in tot:
- *         t += amount             # <<<<<<<<<<<<<<
- * 
- *     return t / tot.size()
- */
-    __pyx_v_t = (__pyx_v_t + __pyx_v_amount);
-
-    /* "dysgu/assembler.pyx":715
- *         return 0
- *     cdef float t = 0
- *     for amount in tot:             # <<<<<<<<<<<<<<
- *         t += amount
- * 
- */
-  }
-
-  /* "dysgu/assembler.pyx":718
- *         t += amount
- * 
- *     return t / tot.size()             # <<<<<<<<<<<<<<
- * 
- * 
- */
-  __pyx_t_14 = __pyx_v_tot.size();
-  if (unlikely(__pyx_t_14 == 0)) {
+  if (unlikely(__pyx_v_total_seen == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 718, __pyx_L1_error)
+    __PYX_ERR(0, 730, __pyx_L1_error)
   }
-  __pyx_r = (__pyx_v_t / ((float)__pyx_t_14));
+  __pyx_r = (__pyx_v_tot_amount / __pyx_v_total_seen);
   goto __pyx_L0;
 
   /* "dysgu/assembler.pyx":682
@@ -11401,8 +11382,8 @@ static PyObject *__pyx_pf_5dysgu_9assembler_2compute_rep(CYTHON_UNUSED PyObject 
   return __pyx_r;
 }
 
-/* "dysgu/assembler.pyx":721
- * 
+/* "dysgu/assembler.pyx":732
+ *     return tot_amount / total_seen
  * 
  * cdef tuple get_rep(contig_seq):             # <<<<<<<<<<<<<<
  * 
@@ -11431,7 +11412,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("get_rep", 0);
 
-  /* "dysgu/assembler.pyx":723
+  /* "dysgu/assembler.pyx":734
  * cdef tuple get_rep(contig_seq):
  * 
  *     cdef int left_clip_end = 0             # <<<<<<<<<<<<<<
@@ -11440,7 +11421,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
   __pyx_v_left_clip_end = 0;
 
-  /* "dysgu/assembler.pyx":724
+  /* "dysgu/assembler.pyx":735
  * 
  *     cdef int left_clip_end = 0
  *     cdef int right_clip_start = 0             # <<<<<<<<<<<<<<
@@ -11449,28 +11430,28 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
   __pyx_v_right_clip_start = 0;
 
-  /* "dysgu/assembler.pyx":728
+  /* "dysgu/assembler.pyx":739
  *     cdef str clip
  *     # Get left clip
  *     for left_clip_end in range(len(contig_seq)):             # <<<<<<<<<<<<<<
  *         if contig_seq[left_clip_end].isupper():
  *             break
  */
-  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 728, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 739, __pyx_L1_error)
   __pyx_t_2 = __pyx_t_1;
   for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
     __pyx_v_left_clip_end = __pyx_t_3;
 
-    /* "dysgu/assembler.pyx":729
+    /* "dysgu/assembler.pyx":740
  *     # Get left clip
  *     for left_clip_end in range(len(contig_seq)):
  *         if contig_seq[left_clip_end].isupper():             # <<<<<<<<<<<<<<
  *             break
  * 
  */
-    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_contig_seq, __pyx_v_left_clip_end, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 729, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_GetItemInt(__pyx_v_contig_seq, __pyx_v_left_clip_end, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 740, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_isupper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 729, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_isupper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 740, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __pyx_t_5 = NULL;
@@ -11485,14 +11466,14 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
     }
     __pyx_t_4 = (__pyx_t_5) ? __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_5) : __Pyx_PyObject_CallNoArg(__pyx_t_6);
     __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 729, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 740, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 729, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 740, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     if (__pyx_t_7) {
 
-      /* "dysgu/assembler.pyx":730
+      /* "dysgu/assembler.pyx":741
  *     for left_clip_end in range(len(contig_seq)):
  *         if contig_seq[left_clip_end].isupper():
  *             break             # <<<<<<<<<<<<<<
@@ -11501,7 +11482,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
       goto __pyx_L4_break;
 
-      /* "dysgu/assembler.pyx":729
+      /* "dysgu/assembler.pyx":740
  *     # Get left clip
  *     for left_clip_end in range(len(contig_seq)):
  *         if contig_seq[left_clip_end].isupper():             # <<<<<<<<<<<<<<
@@ -11512,27 +11493,27 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   }
   __pyx_L4_break:;
 
-  /* "dysgu/assembler.pyx":732
+  /* "dysgu/assembler.pyx":743
  *             break
  * 
  *     for right_clip_start in range(len(contig_seq) - 1, -1, -1):             # <<<<<<<<<<<<<<
  *         if contig_seq[right_clip_start].isupper():
  *             right_clip_start += 1
  */
-  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 732, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 743, __pyx_L1_error)
   for (__pyx_t_3 = (__pyx_t_1 - 1); __pyx_t_3 > -1; __pyx_t_3-=1) {
     __pyx_v_right_clip_start = __pyx_t_3;
 
-    /* "dysgu/assembler.pyx":733
+    /* "dysgu/assembler.pyx":744
  * 
  *     for right_clip_start in range(len(contig_seq) - 1, -1, -1):
  *         if contig_seq[right_clip_start].isupper():             # <<<<<<<<<<<<<<
  *             right_clip_start += 1
  *             break
  */
-    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_contig_seq, __pyx_v_right_clip_start, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 733, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_GetItemInt(__pyx_v_contig_seq, __pyx_v_right_clip_start, int, 1, __Pyx_PyInt_From_int, 0, 1, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 744, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_isupper); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 733, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_6, __pyx_n_s_isupper); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 744, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
     __pyx_t_6 = NULL;
@@ -11547,14 +11528,14 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
     }
     __pyx_t_4 = (__pyx_t_6) ? __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_6) : __Pyx_PyObject_CallNoArg(__pyx_t_5);
     __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 733, __pyx_L1_error)
+    if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 744, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 733, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 744, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     if (__pyx_t_7) {
 
-      /* "dysgu/assembler.pyx":734
+      /* "dysgu/assembler.pyx":745
  *     for right_clip_start in range(len(contig_seq) - 1, -1, -1):
  *         if contig_seq[right_clip_start].isupper():
  *             right_clip_start += 1             # <<<<<<<<<<<<<<
@@ -11563,7 +11544,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
       __pyx_v_right_clip_start = (__pyx_v_right_clip_start + 1);
 
-      /* "dysgu/assembler.pyx":735
+      /* "dysgu/assembler.pyx":746
  *         if contig_seq[right_clip_start].isupper():
  *             right_clip_start += 1
  *             break             # <<<<<<<<<<<<<<
@@ -11572,7 +11553,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
       goto __pyx_L7_break;
 
-      /* "dysgu/assembler.pyx":733
+      /* "dysgu/assembler.pyx":744
  * 
  *     for right_clip_start in range(len(contig_seq) - 1, -1, -1):
  *         if contig_seq[right_clip_start].isupper():             # <<<<<<<<<<<<<<
@@ -11583,19 +11564,19 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   }
   __pyx_L7_break:;
 
-  /* "dysgu/assembler.pyx":737
+  /* "dysgu/assembler.pyx":748
  *             break
  * 
  *     aligned_portion = compute_rep(contig_seq[left_clip_end: right_clip_start])             # <<<<<<<<<<<<<<
  * 
  *     clip_rep = 0
  */
-  __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, __pyx_v_left_clip_end, __pyx_v_right_clip_start, NULL, NULL, NULL, 1, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 737, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, __pyx_v_left_clip_end, __pyx_v_right_clip_start, NULL, NULL, NULL, 1, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 748, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_v_aligned_portion = __pyx_f_5dysgu_9assembler_compute_rep(__pyx_t_4, 0);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-  /* "dysgu/assembler.pyx":739
+  /* "dysgu/assembler.pyx":750
  *     aligned_portion = compute_rep(contig_seq[left_clip_end: right_clip_start])
  * 
  *     clip_rep = 0             # <<<<<<<<<<<<<<
@@ -11604,7 +11585,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
   __pyx_v_clip_rep = 0.0;
 
-  /* "dysgu/assembler.pyx":740
+  /* "dysgu/assembler.pyx":751
  * 
  *     clip_rep = 0
  *     clip_seen = 0             # <<<<<<<<<<<<<<
@@ -11613,7 +11594,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
   __pyx_v_clip_seen = 0.0;
 
-  /* "dysgu/assembler.pyx":741
+  /* "dysgu/assembler.pyx":752
  *     clip_rep = 0
  *     clip_seen = 0
  *     if left_clip_end > 0:             # <<<<<<<<<<<<<<
@@ -11623,20 +11604,20 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   __pyx_t_7 = ((__pyx_v_left_clip_end > 0) != 0);
   if (__pyx_t_7) {
 
-    /* "dysgu/assembler.pyx":742
+    /* "dysgu/assembler.pyx":753
  *     clip_seen = 0
  *     if left_clip_end > 0:
  *         clip = contig_seq[:left_clip_end]             # <<<<<<<<<<<<<<
  *         clip_rep += compute_rep(clip)
  *         clip_seen += 1
  */
-    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, 0, __pyx_v_left_clip_end, NULL, NULL, NULL, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 742, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, 0, __pyx_v_left_clip_end, NULL, NULL, NULL, 0, 1, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 753, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    if (!(likely(PyUnicode_CheckExact(__pyx_t_4))||((__pyx_t_4) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_4)->tp_name), 0))) __PYX_ERR(0, 742, __pyx_L1_error)
+    if (!(likely(PyUnicode_CheckExact(__pyx_t_4))||((__pyx_t_4) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_4)->tp_name), 0))) __PYX_ERR(0, 753, __pyx_L1_error)
     __pyx_v_clip = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "dysgu/assembler.pyx":743
+    /* "dysgu/assembler.pyx":754
  *     if left_clip_end > 0:
  *         clip = contig_seq[:left_clip_end]
  *         clip_rep += compute_rep(clip)             # <<<<<<<<<<<<<<
@@ -11645,7 +11626,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
     __pyx_v_clip_rep = (__pyx_v_clip_rep + __pyx_f_5dysgu_9assembler_compute_rep(__pyx_v_clip, 0));
 
-    /* "dysgu/assembler.pyx":744
+    /* "dysgu/assembler.pyx":755
  *         clip = contig_seq[:left_clip_end]
  *         clip_rep += compute_rep(clip)
  *         clip_seen += 1             # <<<<<<<<<<<<<<
@@ -11654,7 +11635,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
     __pyx_v_clip_seen = (__pyx_v_clip_seen + 1.0);
 
-    /* "dysgu/assembler.pyx":741
+    /* "dysgu/assembler.pyx":752
  *     clip_rep = 0
  *     clip_seen = 0
  *     if left_clip_end > 0:             # <<<<<<<<<<<<<<
@@ -11664,31 +11645,31 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
     goto __pyx_L9;
   }
 
-  /* "dysgu/assembler.pyx":746
+  /* "dysgu/assembler.pyx":757
  *         clip_seen += 1
  * 
  *     elif right_clip_start < len(contig_seq):             # <<<<<<<<<<<<<<
  *         clip = contig_seq[right_clip_start:]
  *         clip_rep += compute_rep(clip)
  */
-  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 746, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_contig_seq); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 757, __pyx_L1_error)
   __pyx_t_7 = ((__pyx_v_right_clip_start < __pyx_t_1) != 0);
   if (__pyx_t_7) {
 
-    /* "dysgu/assembler.pyx":747
+    /* "dysgu/assembler.pyx":758
  * 
  *     elif right_clip_start < len(contig_seq):
  *         clip = contig_seq[right_clip_start:]             # <<<<<<<<<<<<<<
  *         clip_rep += compute_rep(clip)
  *         clip_seen += 1
  */
-    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, __pyx_v_right_clip_start, 0, NULL, NULL, NULL, 1, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 747, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetSlice(__pyx_v_contig_seq, __pyx_v_right_clip_start, 0, NULL, NULL, NULL, 1, 0, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 758, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    if (!(likely(PyUnicode_CheckExact(__pyx_t_4))||((__pyx_t_4) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_4)->tp_name), 0))) __PYX_ERR(0, 747, __pyx_L1_error)
+    if (!(likely(PyUnicode_CheckExact(__pyx_t_4))||((__pyx_t_4) == Py_None)||(PyErr_Format(PyExc_TypeError, "Expected %.16s, got %.200s", "unicode", Py_TYPE(__pyx_t_4)->tp_name), 0))) __PYX_ERR(0, 758, __pyx_L1_error)
     __pyx_v_clip = ((PyObject*)__pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "dysgu/assembler.pyx":748
+    /* "dysgu/assembler.pyx":759
  *     elif right_clip_start < len(contig_seq):
  *         clip = contig_seq[right_clip_start:]
  *         clip_rep += compute_rep(clip)             # <<<<<<<<<<<<<<
@@ -11697,7 +11678,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
     __pyx_v_clip_rep = (__pyx_v_clip_rep + __pyx_f_5dysgu_9assembler_compute_rep(__pyx_v_clip, 0));
 
-    /* "dysgu/assembler.pyx":749
+    /* "dysgu/assembler.pyx":760
  *         clip = contig_seq[right_clip_start:]
  *         clip_rep += compute_rep(clip)
  *         clip_seen += 1             # <<<<<<<<<<<<<<
@@ -11706,7 +11687,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
     __pyx_v_clip_seen = (__pyx_v_clip_seen + 1.0);
 
-    /* "dysgu/assembler.pyx":746
+    /* "dysgu/assembler.pyx":757
  *         clip_seen += 1
  * 
  *     elif right_clip_start < len(contig_seq):             # <<<<<<<<<<<<<<
@@ -11716,7 +11697,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   }
   __pyx_L9:;
 
-  /* "dysgu/assembler.pyx":751
+  /* "dysgu/assembler.pyx":762
  *         clip_seen += 1
  * 
  *     if clip_seen != 0:             # <<<<<<<<<<<<<<
@@ -11726,7 +11707,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   __pyx_t_7 = ((__pyx_v_clip_seen != 0.0) != 0);
   if (__pyx_t_7) {
 
-    /* "dysgu/assembler.pyx":752
+    /* "dysgu/assembler.pyx":763
  * 
  *     if clip_seen != 0:
  *         clip_rep = clip_rep / clip_seen             # <<<<<<<<<<<<<<
@@ -11735,11 +11716,11 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
     if (unlikely(__pyx_v_clip_seen == 0)) {
       PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-      __PYX_ERR(0, 752, __pyx_L1_error)
+      __PYX_ERR(0, 763, __pyx_L1_error)
     }
     __pyx_v_clip_rep = (__pyx_v_clip_rep / __pyx_v_clip_seen);
 
-    /* "dysgu/assembler.pyx":751
+    /* "dysgu/assembler.pyx":762
  *         clip_seen += 1
  * 
  *     if clip_seen != 0:             # <<<<<<<<<<<<<<
@@ -11748,7 +11729,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  */
   }
 
-  /* "dysgu/assembler.pyx":753
+  /* "dysgu/assembler.pyx":764
  *     if clip_seen != 0:
  *         clip_rep = clip_rep / clip_seen
  *     return aligned_portion, clip_rep, right_clip_start - left_clip_end             # <<<<<<<<<<<<<<
@@ -11756,13 +11737,13 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
  * # @timeit
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = PyFloat_FromDouble(__pyx_v_aligned_portion); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 753, __pyx_L1_error)
+  __pyx_t_4 = PyFloat_FromDouble(__pyx_v_aligned_portion); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 764, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = PyFloat_FromDouble(__pyx_v_clip_rep); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 753, __pyx_L1_error)
+  __pyx_t_5 = PyFloat_FromDouble(__pyx_v_clip_rep); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 764, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_6 = __Pyx_PyInt_From_int((__pyx_v_right_clip_start - __pyx_v_left_clip_end)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 753, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int((__pyx_v_right_clip_start - __pyx_v_left_clip_end)); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 764, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 753, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(3); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 764, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GIVEREF(__pyx_t_4);
   PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_4);
@@ -11777,8 +11758,8 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   __pyx_t_8 = 0;
   goto __pyx_L0;
 
-  /* "dysgu/assembler.pyx":721
- * 
+  /* "dysgu/assembler.pyx":732
+ *     return tot_amount / total_seen
  * 
  * cdef tuple get_rep(contig_seq):             # <<<<<<<<<<<<<<
  * 
@@ -11800,7 +11781,7 @@ static PyObject *__pyx_f_5dysgu_9assembler_get_rep(PyObject *__pyx_v_contig_seq)
   return __pyx_r;
 }
 
-/* "dysgu/assembler.pyx":756
+/* "dysgu/assembler.pyx":767
  * 
  * # @timeit
  * def contig_info(events):             # <<<<<<<<<<<<<<
@@ -11856,32 +11837,32 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("contig_info", 0);
 
-  /* "dysgu/assembler.pyx":759
+  /* "dysgu/assembler.pyx":770
  * 
  *     cdef EventResult_t e
  *     for i in range(len(events)):             # <<<<<<<<<<<<<<
  *         e = events[i]
  *         gc_count = 0
  */
-  __pyx_t_1 = PyObject_Length(__pyx_v_events); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 759, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(__pyx_v_events); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 770, __pyx_L1_error)
   __pyx_t_2 = __pyx_t_1;
   for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
     __pyx_v_i = __pyx_t_3;
 
-    /* "dysgu/assembler.pyx":760
+    /* "dysgu/assembler.pyx":771
  *     cdef EventResult_t e
  *     for i in range(len(events)):
  *         e = events[i]             # <<<<<<<<<<<<<<
  *         gc_count = 0
  *         seq_length = 0
  */
-    __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_events, __pyx_v_i, Py_ssize_t, 1, PyInt_FromSsize_t, 0, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 760, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_GetItemInt(__pyx_v_events, __pyx_v_i, Py_ssize_t, 1, PyInt_FromSsize_t, 0, 1, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 771, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 760, __pyx_L1_error)
+    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 771, __pyx_L1_error)
     __Pyx_XDECREF_SET(__pyx_v_e, ((__pyx_t_5dysgu_9assembler_EventResult_t)__pyx_t_4));
     __pyx_t_4 = 0;
 
-    /* "dysgu/assembler.pyx":761
+    /* "dysgu/assembler.pyx":772
  *     for i in range(len(events)):
  *         e = events[i]
  *         gc_count = 0             # <<<<<<<<<<<<<<
@@ -11890,7 +11871,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     __pyx_v_gc_count = 0;
 
-    /* "dysgu/assembler.pyx":762
+    /* "dysgu/assembler.pyx":773
  *         e = events[i]
  *         gc_count = 0
  *         seq_length = 0             # <<<<<<<<<<<<<<
@@ -11899,24 +11880,24 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     __pyx_v_seq_length = 0;
 
-    /* "dysgu/assembler.pyx":763
+    /* "dysgu/assembler.pyx":774
  *         gc_count = 0
  *         seq_length = 0
  *         if e.contig:             # <<<<<<<<<<<<<<
  *             cont = e.contig.upper()
  *             seq_length += len(cont)
  */
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 763, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 774, __pyx_L1_error)
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":764
+      /* "dysgu/assembler.pyx":775
  *         seq_length = 0
  *         if e.contig:
  *             cont = e.contig.upper()             # <<<<<<<<<<<<<<
  *             seq_length += len(cont)
  *             for letter in cont:
  */
-      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_e->contig, __pyx_n_s_upper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 764, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_e->contig, __pyx_n_s_upper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 775, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __pyx_t_7 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
@@ -11930,23 +11911,23 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       }
       __pyx_t_4 = (__pyx_t_7) ? __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_7) : __Pyx_PyObject_CallNoArg(__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 764, __pyx_L1_error)
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 775, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_XDECREF_SET(__pyx_v_cont, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":765
+      /* "dysgu/assembler.pyx":776
  *         if e.contig:
  *             cont = e.contig.upper()
  *             seq_length += len(cont)             # <<<<<<<<<<<<<<
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":
  */
-      __pyx_t_8 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 765, __pyx_L1_error)
+      __pyx_t_8 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 776, __pyx_L1_error)
       __pyx_v_seq_length = (__pyx_v_seq_length + __pyx_t_8);
 
-      /* "dysgu/assembler.pyx":766
+      /* "dysgu/assembler.pyx":777
  *             cont = e.contig.upper()
  *             seq_length += len(cont)
  *             for letter in cont:             # <<<<<<<<<<<<<<
@@ -11957,26 +11938,26 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __pyx_t_4 = __pyx_v_cont; __Pyx_INCREF(__pyx_t_4); __pyx_t_8 = 0;
         __pyx_t_9 = NULL;
       } else {
-        __pyx_t_8 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_cont); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 766, __pyx_L1_error)
+        __pyx_t_8 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_cont); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 777, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_9 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 766, __pyx_L1_error)
+        __pyx_t_9 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 777, __pyx_L1_error)
       }
       for (;;) {
         if (likely(!__pyx_t_9)) {
           if (likely(PyList_CheckExact(__pyx_t_4))) {
             if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_4)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 766, __pyx_L1_error)
+            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 777, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 766, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 777, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           } else {
             if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_4)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 766, __pyx_L1_error)
+            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 777, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 766, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 777, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           }
@@ -11986,7 +11967,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 766, __pyx_L1_error)
+              else __PYX_ERR(0, 777, __pyx_L1_error)
             }
             break;
           }
@@ -11995,25 +11976,25 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __Pyx_XDECREF_SET(__pyx_v_letter, __pyx_t_6);
         __pyx_t_6 = 0;
 
-        /* "dysgu/assembler.pyx":767
+        /* "dysgu/assembler.pyx":778
  *             seq_length += len(cont)
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":             # <<<<<<<<<<<<<<
  *                     gc_count += 1
  * 
  */
-        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_G, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 767, __pyx_L1_error)
+        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_G, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 778, __pyx_L1_error)
         if (!__pyx_t_10) {
         } else {
           __pyx_t_5 = __pyx_t_10;
           goto __pyx_L9_bool_binop_done;
         }
-        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_C, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 767, __pyx_L1_error)
+        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_C, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 778, __pyx_L1_error)
         __pyx_t_5 = __pyx_t_10;
         __pyx_L9_bool_binop_done:;
         if (__pyx_t_5) {
 
-          /* "dysgu/assembler.pyx":768
+          /* "dysgu/assembler.pyx":779
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":
  *                     gc_count += 1             # <<<<<<<<<<<<<<
@@ -12022,7 +12003,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
           __pyx_v_gc_count = (__pyx_v_gc_count + 1);
 
-          /* "dysgu/assembler.pyx":767
+          /* "dysgu/assembler.pyx":778
  *             seq_length += len(cont)
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":             # <<<<<<<<<<<<<<
@@ -12031,7 +12012,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
         }
 
-        /* "dysgu/assembler.pyx":766
+        /* "dysgu/assembler.pyx":777
  *             cont = e.contig.upper()
  *             seq_length += len(cont)
  *             for letter in cont:             # <<<<<<<<<<<<<<
@@ -12041,7 +12022,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       }
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":763
+      /* "dysgu/assembler.pyx":774
  *         gc_count = 0
  *         seq_length = 0
  *         if e.contig:             # <<<<<<<<<<<<<<
@@ -12050,24 +12031,24 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     }
 
-    /* "dysgu/assembler.pyx":770
+    /* "dysgu/assembler.pyx":781
  *                     gc_count += 1
  * 
  *         if e.contig2:             # <<<<<<<<<<<<<<
  *             cont = e.contig2.upper()
  *             seq_length += len(cont)
  */
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 770, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 781, __pyx_L1_error)
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":771
+      /* "dysgu/assembler.pyx":782
  * 
  *         if e.contig2:
  *             cont = e.contig2.upper()             # <<<<<<<<<<<<<<
  *             seq_length += len(cont)
  *             for letter in cont:
  */
-      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_e->contig2, __pyx_n_s_upper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 771, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_e->contig2, __pyx_n_s_upper); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 782, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __pyx_t_7 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
@@ -12081,23 +12062,23 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       }
       __pyx_t_4 = (__pyx_t_7) ? __Pyx_PyObject_CallOneArg(__pyx_t_6, __pyx_t_7) : __Pyx_PyObject_CallNoArg(__pyx_t_6);
       __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 771, __pyx_L1_error)
+      if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 782, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_XDECREF_SET(__pyx_v_cont, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":772
+      /* "dysgu/assembler.pyx":783
  *         if e.contig2:
  *             cont = e.contig2.upper()
  *             seq_length += len(cont)             # <<<<<<<<<<<<<<
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":
  */
-      __pyx_t_8 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 772, __pyx_L1_error)
+      __pyx_t_8 = PyObject_Length(__pyx_v_cont); if (unlikely(__pyx_t_8 == ((Py_ssize_t)-1))) __PYX_ERR(0, 783, __pyx_L1_error)
       __pyx_v_seq_length = (__pyx_v_seq_length + __pyx_t_8);
 
-      /* "dysgu/assembler.pyx":773
+      /* "dysgu/assembler.pyx":784
  *             cont = e.contig2.upper()
  *             seq_length += len(cont)
  *             for letter in cont:             # <<<<<<<<<<<<<<
@@ -12108,26 +12089,26 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __pyx_t_4 = __pyx_v_cont; __Pyx_INCREF(__pyx_t_4); __pyx_t_8 = 0;
         __pyx_t_9 = NULL;
       } else {
-        __pyx_t_8 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_cont); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 773, __pyx_L1_error)
+        __pyx_t_8 = -1; __pyx_t_4 = PyObject_GetIter(__pyx_v_cont); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 784, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_9 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 773, __pyx_L1_error)
+        __pyx_t_9 = Py_TYPE(__pyx_t_4)->tp_iternext; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 784, __pyx_L1_error)
       }
       for (;;) {
         if (likely(!__pyx_t_9)) {
           if (likely(PyList_CheckExact(__pyx_t_4))) {
             if (__pyx_t_8 >= PyList_GET_SIZE(__pyx_t_4)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 773, __pyx_L1_error)
+            __pyx_t_6 = PyList_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 784, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 773, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 784, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           } else {
             if (__pyx_t_8 >= PyTuple_GET_SIZE(__pyx_t_4)) break;
             #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 773, __pyx_L1_error)
+            __pyx_t_6 = PyTuple_GET_ITEM(__pyx_t_4, __pyx_t_8); __Pyx_INCREF(__pyx_t_6); __pyx_t_8++; if (unlikely(0 < 0)) __PYX_ERR(0, 784, __pyx_L1_error)
             #else
-            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 773, __pyx_L1_error)
+            __pyx_t_6 = PySequence_ITEM(__pyx_t_4, __pyx_t_8); __pyx_t_8++; if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 784, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_6);
             #endif
           }
@@ -12137,7 +12118,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
             PyObject* exc_type = PyErr_Occurred();
             if (exc_type) {
               if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-              else __PYX_ERR(0, 773, __pyx_L1_error)
+              else __PYX_ERR(0, 784, __pyx_L1_error)
             }
             break;
           }
@@ -12146,25 +12127,25 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __Pyx_XDECREF_SET(__pyx_v_letter, __pyx_t_6);
         __pyx_t_6 = 0;
 
-        /* "dysgu/assembler.pyx":774
+        /* "dysgu/assembler.pyx":785
  *             seq_length += len(cont)
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":             # <<<<<<<<<<<<<<
  *                     gc_count += 1
  * 
  */
-        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_G, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 774, __pyx_L1_error)
+        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_G, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 785, __pyx_L1_error)
         if (!__pyx_t_10) {
         } else {
           __pyx_t_5 = __pyx_t_10;
           goto __pyx_L15_bool_binop_done;
         }
-        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_C, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 774, __pyx_L1_error)
+        __pyx_t_10 = (__Pyx_PyUnicode_Equals(__pyx_v_letter, __pyx_n_u_C, Py_EQ)); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 785, __pyx_L1_error)
         __pyx_t_5 = __pyx_t_10;
         __pyx_L15_bool_binop_done:;
         if (__pyx_t_5) {
 
-          /* "dysgu/assembler.pyx":775
+          /* "dysgu/assembler.pyx":786
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":
  *                     gc_count += 1             # <<<<<<<<<<<<<<
@@ -12173,7 +12154,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
           __pyx_v_gc_count = (__pyx_v_gc_count + 1);
 
-          /* "dysgu/assembler.pyx":774
+          /* "dysgu/assembler.pyx":785
  *             seq_length += len(cont)
  *             for letter in cont:
  *                 if letter == "G" or letter == "C":             # <<<<<<<<<<<<<<
@@ -12182,7 +12163,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
         }
 
-        /* "dysgu/assembler.pyx":773
+        /* "dysgu/assembler.pyx":784
  *             cont = e.contig2.upper()
  *             seq_length += len(cont)
  *             for letter in cont:             # <<<<<<<<<<<<<<
@@ -12192,7 +12173,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       }
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":770
+      /* "dysgu/assembler.pyx":781
  *                     gc_count += 1
  * 
  *         if e.contig2:             # <<<<<<<<<<<<<<
@@ -12201,7 +12182,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     }
 
-    /* "dysgu/assembler.pyx":777
+    /* "dysgu/assembler.pyx":788
  *                     gc_count += 1
  * 
  *         if seq_length > 0:             # <<<<<<<<<<<<<<
@@ -12211,7 +12192,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __pyx_t_5 = ((__pyx_v_seq_length > 0) != 0);
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":778
+      /* "dysgu/assembler.pyx":789
  * 
  *         if seq_length > 0:
  *             e.gc = round((gc_count / seq_length) * 100, 2)             # <<<<<<<<<<<<<<
@@ -12220,11 +12201,11 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
       if (unlikely(__pyx_v_seq_length == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 778, __pyx_L1_error)
+        __PYX_ERR(0, 789, __pyx_L1_error)
       }
-      __pyx_t_4 = PyFloat_FromDouble(((((double)__pyx_v_gc_count) / ((double)__pyx_v_seq_length)) * 100.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 778, __pyx_L1_error)
+      __pyx_t_4 = PyFloat_FromDouble(((((double)__pyx_v_gc_count) / ((double)__pyx_v_seq_length)) * 100.0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 789, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_6 = PyTuple_New(2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 778, __pyx_L1_error)
+      __pyx_t_6 = PyTuple_New(2); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 789, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_GIVEREF(__pyx_t_4);
       PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_4);
@@ -12232,14 +12213,14 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       __Pyx_GIVEREF(__pyx_int_2);
       PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_int_2);
       __pyx_t_4 = 0;
-      __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_6, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 778, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_6, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 789, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 778, __pyx_L1_error)
+      __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 789, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->gc = __pyx_t_11;
 
-      /* "dysgu/assembler.pyx":777
+      /* "dysgu/assembler.pyx":788
  *                     gc_count += 1
  * 
  *         if seq_length > 0:             # <<<<<<<<<<<<<<
@@ -12249,7 +12230,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       goto __pyx_L17;
     }
 
-    /* "dysgu/assembler.pyx":780
+    /* "dysgu/assembler.pyx":791
  *             e.gc = round((gc_count / seq_length) * 100, 2)
  *         else:
  *             e.gc = 0             # <<<<<<<<<<<<<<
@@ -12261,7 +12242,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     }
     __pyx_L17:;
 
-    /* "dysgu/assembler.pyx":782
+    /* "dysgu/assembler.pyx":793
  *             e.gc = 0
  * 
  *         sc_rep = 0             # <<<<<<<<<<<<<<
@@ -12271,7 +12252,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_int_0);
     __Pyx_XDECREF_SET(__pyx_v_sc_rep, __pyx_int_0);
 
-    /* "dysgu/assembler.pyx":783
+    /* "dysgu/assembler.pyx":794
  * 
  *         sc_rep = 0
  *         aln_rep = 0             # <<<<<<<<<<<<<<
@@ -12281,7 +12262,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_int_0);
     __Pyx_XDECREF_SET(__pyx_v_aln_rep, __pyx_int_0);
 
-    /* "dysgu/assembler.pyx":784
+    /* "dysgu/assembler.pyx":795
  *         sc_rep = 0
  *         aln_rep = 0
  *         aligned = 0             # <<<<<<<<<<<<<<
@@ -12291,7 +12272,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_int_0);
     __Pyx_XDECREF_SET(__pyx_v_aligned, __pyx_int_0);
 
-    /* "dysgu/assembler.pyx":785
+    /* "dysgu/assembler.pyx":796
  *         aln_rep = 0
  *         aligned = 0
  *         seen = 0             # <<<<<<<<<<<<<<
@@ -12300,17 +12281,17 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     __pyx_v_seen = 0;
 
-    /* "dysgu/assembler.pyx":786
+    /* "dysgu/assembler.pyx":797
  *         aligned = 0
  *         seen = 0
  *         if e.contig:             # <<<<<<<<<<<<<<
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig)
  *             sc_rep += sc_rep1
  */
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 786, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 797, __pyx_L1_error)
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":787
+      /* "dysgu/assembler.pyx":798
  *         seen = 0
  *         if e.contig:
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig)             # <<<<<<<<<<<<<<
@@ -12319,7 +12300,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
       __pyx_t_4 = __pyx_v_e->contig;
       __Pyx_INCREF(__pyx_t_4);
-      __pyx_t_6 = __pyx_f_5dysgu_9assembler_get_rep(__pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 787, __pyx_L1_error)
+      __pyx_t_6 = __pyx_f_5dysgu_9assembler_get_rep(__pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 798, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       if (likely(__pyx_t_6 != Py_None)) {
@@ -12328,7 +12309,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         if (unlikely(size != 3)) {
           if (size > 3) __Pyx_RaiseTooManyValuesError(3);
           else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-          __PYX_ERR(0, 787, __pyx_L1_error)
+          __PYX_ERR(0, 798, __pyx_L1_error)
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
         __pyx_t_4 = PyTuple_GET_ITEM(sequence, 0); 
@@ -12338,16 +12319,16 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __Pyx_INCREF(__pyx_t_7);
         __Pyx_INCREF(__pyx_t_12);
         #else
-        __pyx_t_4 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 787, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 798, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 787, __pyx_L1_error)
+        __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 798, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_12 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 787, __pyx_L1_error)
+        __pyx_t_12 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 798, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_12);
         #endif
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       } else {
-        __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 787, __pyx_L1_error)
+        __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 798, __pyx_L1_error)
       }
       __Pyx_XDECREF_SET(__pyx_v_aln_rep1, __pyx_t_4);
       __pyx_t_4 = 0;
@@ -12356,43 +12337,43 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       __Pyx_XDECREF_SET(__pyx_v_aligned_bases, __pyx_t_12);
       __pyx_t_12 = 0;
 
-      /* "dysgu/assembler.pyx":788
+      /* "dysgu/assembler.pyx":799
  *         if e.contig:
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig)
  *             sc_rep += sc_rep1             # <<<<<<<<<<<<<<
  *             aln_rep += aln_rep1
  *             aligned += aligned_bases
  */
-      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_sc_rep, __pyx_v_sc_rep1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 788, __pyx_L1_error)
+      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_sc_rep, __pyx_v_sc_rep1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 799, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF_SET(__pyx_v_sc_rep, __pyx_t_6);
       __pyx_t_6 = 0;
 
-      /* "dysgu/assembler.pyx":789
+      /* "dysgu/assembler.pyx":800
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig)
  *             sc_rep += sc_rep1
  *             aln_rep += aln_rep1             # <<<<<<<<<<<<<<
  *             aligned += aligned_bases
  *             seen += 1
  */
-      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_aln_rep, __pyx_v_aln_rep1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 789, __pyx_L1_error)
+      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_aln_rep, __pyx_v_aln_rep1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 800, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF_SET(__pyx_v_aln_rep, __pyx_t_6);
       __pyx_t_6 = 0;
 
-      /* "dysgu/assembler.pyx":790
+      /* "dysgu/assembler.pyx":801
  *             sc_rep += sc_rep1
  *             aln_rep += aln_rep1
  *             aligned += aligned_bases             # <<<<<<<<<<<<<<
  *             seen += 1
  * 
  */
-      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_aligned, __pyx_v_aligned_bases); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 790, __pyx_L1_error)
+      __pyx_t_6 = PyNumber_InPlaceAdd(__pyx_v_aligned, __pyx_v_aligned_bases); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 801, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF_SET(__pyx_v_aligned, __pyx_t_6);
       __pyx_t_6 = 0;
 
-      /* "dysgu/assembler.pyx":791
+      /* "dysgu/assembler.pyx":802
  *             aln_rep += aln_rep1
  *             aligned += aligned_bases
  *             seen += 1             # <<<<<<<<<<<<<<
@@ -12401,7 +12382,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
       __pyx_v_seen = (__pyx_v_seen + 1);
 
-      /* "dysgu/assembler.pyx":786
+      /* "dysgu/assembler.pyx":797
  *         aligned = 0
  *         seen = 0
  *         if e.contig:             # <<<<<<<<<<<<<<
@@ -12410,17 +12391,17 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     }
 
-    /* "dysgu/assembler.pyx":793
+    /* "dysgu/assembler.pyx":804
  *             seen += 1
  * 
  *         if e.contig2:             # <<<<<<<<<<<<<<
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig2)
  *             seen += 1
  */
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 793, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_v_e->contig2); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 804, __pyx_L1_error)
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":794
+      /* "dysgu/assembler.pyx":805
  * 
  *         if e.contig2:
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig2)             # <<<<<<<<<<<<<<
@@ -12429,7 +12410,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
       __pyx_t_6 = __pyx_v_e->contig2;
       __Pyx_INCREF(__pyx_t_6);
-      __pyx_t_12 = __pyx_f_5dysgu_9assembler_get_rep(__pyx_t_6); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 794, __pyx_L1_error)
+      __pyx_t_12 = __pyx_f_5dysgu_9assembler_get_rep(__pyx_t_6); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 805, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       if (likely(__pyx_t_12 != Py_None)) {
@@ -12438,7 +12419,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         if (unlikely(size != 3)) {
           if (size > 3) __Pyx_RaiseTooManyValuesError(3);
           else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-          __PYX_ERR(0, 794, __pyx_L1_error)
+          __PYX_ERR(0, 805, __pyx_L1_error)
         }
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
         __pyx_t_6 = PyTuple_GET_ITEM(sequence, 0); 
@@ -12448,16 +12429,16 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
         __Pyx_INCREF(__pyx_t_7);
         __Pyx_INCREF(__pyx_t_4);
         #else
-        __pyx_t_6 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 794, __pyx_L1_error)
+        __pyx_t_6 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 805, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 794, __pyx_L1_error)
+        __pyx_t_7 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 805, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
-        __pyx_t_4 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 794, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(sequence, 2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 805, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
         __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       } else {
-        __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 794, __pyx_L1_error)
+        __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 805, __pyx_L1_error)
       }
       __Pyx_XDECREF_SET(__pyx_v_aln_rep1, __pyx_t_6);
       __pyx_t_6 = 0;
@@ -12466,7 +12447,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       __Pyx_XDECREF_SET(__pyx_v_aligned_bases, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":795
+      /* "dysgu/assembler.pyx":806
  *         if e.contig2:
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig2)
  *             seen += 1             # <<<<<<<<<<<<<<
@@ -12475,43 +12456,43 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
       __pyx_v_seen = (__pyx_v_seen + 1);
 
-      /* "dysgu/assembler.pyx":796
+      /* "dysgu/assembler.pyx":807
  *             aln_rep1, sc_rep1, aligned_bases = get_rep(e.contig2)
  *             seen += 1
  *             sc_rep += sc_rep1             # <<<<<<<<<<<<<<
  *             aln_rep += aln_rep1
  *             aligned += aligned_bases
  */
-      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_sc_rep, __pyx_v_sc_rep1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 796, __pyx_L1_error)
+      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_sc_rep, __pyx_v_sc_rep1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 807, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF_SET(__pyx_v_sc_rep, __pyx_t_12);
       __pyx_t_12 = 0;
 
-      /* "dysgu/assembler.pyx":797
+      /* "dysgu/assembler.pyx":808
  *             seen += 1
  *             sc_rep += sc_rep1
  *             aln_rep += aln_rep1             # <<<<<<<<<<<<<<
  *             aligned += aligned_bases
  * 
  */
-      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_aln_rep, __pyx_v_aln_rep1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 797, __pyx_L1_error)
+      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_aln_rep, __pyx_v_aln_rep1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 808, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF_SET(__pyx_v_aln_rep, __pyx_t_12);
       __pyx_t_12 = 0;
 
-      /* "dysgu/assembler.pyx":798
+      /* "dysgu/assembler.pyx":809
  *             sc_rep += sc_rep1
  *             aln_rep += aln_rep1
  *             aligned += aligned_bases             # <<<<<<<<<<<<<<
  * 
  *         if seen > 0:
  */
-      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_aligned, __pyx_v_aligned_bases); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 798, __pyx_L1_error)
+      __pyx_t_12 = PyNumber_InPlaceAdd(__pyx_v_aligned, __pyx_v_aligned_bases); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 809, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF_SET(__pyx_v_aligned, __pyx_t_12);
       __pyx_t_12 = 0;
 
-      /* "dysgu/assembler.pyx":793
+      /* "dysgu/assembler.pyx":804
  *             seen += 1
  * 
  *         if e.contig2:             # <<<<<<<<<<<<<<
@@ -12520,7 +12501,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     }
 
-    /* "dysgu/assembler.pyx":800
+    /* "dysgu/assembler.pyx":811
  *             aligned += aligned_bases
  * 
  *         if seen > 0:             # <<<<<<<<<<<<<<
@@ -12530,37 +12511,37 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __pyx_t_5 = ((__pyx_v_seen > 0) != 0);
     if (__pyx_t_5) {
 
-      /* "dysgu/assembler.pyx":801
+      /* "dysgu/assembler.pyx":812
  * 
  *         if seen > 0:
  *             aln_rep = aln_rep / seen             # <<<<<<<<<<<<<<
  *             sc_rep = sc_rep / seen
  * 
  */
-      __pyx_t_12 = __Pyx_PyInt_From_long(__pyx_v_seen); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 801, __pyx_L1_error)
+      __pyx_t_12 = __Pyx_PyInt_From_long(__pyx_v_seen); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 812, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
-      __pyx_t_4 = __Pyx_PyNumber_Divide(__pyx_v_aln_rep, __pyx_t_12); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 801, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyNumber_Divide(__pyx_v_aln_rep, __pyx_t_12); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 812, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       __Pyx_DECREF_SET(__pyx_v_aln_rep, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "dysgu/assembler.pyx":802
+      /* "dysgu/assembler.pyx":813
  *         if seen > 0:
  *             aln_rep = aln_rep / seen
  *             sc_rep = sc_rep / seen             # <<<<<<<<<<<<<<
  * 
  *         e.rep = round(aln_rep, 3)
  */
-      __pyx_t_4 = __Pyx_PyInt_From_long(__pyx_v_seen); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 802, __pyx_L1_error)
+      __pyx_t_4 = __Pyx_PyInt_From_long(__pyx_v_seen); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 813, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_12 = __Pyx_PyNumber_Divide(__pyx_v_sc_rep, __pyx_t_4); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 802, __pyx_L1_error)
+      __pyx_t_12 = __Pyx_PyNumber_Divide(__pyx_v_sc_rep, __pyx_t_4); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 813, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_DECREF_SET(__pyx_v_sc_rep, __pyx_t_12);
       __pyx_t_12 = 0;
 
-      /* "dysgu/assembler.pyx":800
+      /* "dysgu/assembler.pyx":811
  *             aligned += aligned_bases
  * 
  *         if seen > 0:             # <<<<<<<<<<<<<<
@@ -12569,14 +12550,14 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
  */
     }
 
-    /* "dysgu/assembler.pyx":804
+    /* "dysgu/assembler.pyx":815
  *             sc_rep = sc_rep / seen
  * 
  *         e.rep = round(aln_rep, 3)             # <<<<<<<<<<<<<<
  *         e.rep_sc = round(sc_rep, 3)
  *         e.ref_bases = aligned
  */
-    __pyx_t_12 = PyTuple_New(2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 804, __pyx_L1_error)
+    __pyx_t_12 = PyTuple_New(2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 815, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_12);
     __Pyx_INCREF(__pyx_v_aln_rep);
     __Pyx_GIVEREF(__pyx_v_aln_rep);
@@ -12584,21 +12565,21 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_int_3);
     __Pyx_GIVEREF(__pyx_int_3);
     PyTuple_SET_ITEM(__pyx_t_12, 1, __pyx_int_3);
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 804, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 815, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 804, __pyx_L1_error)
+    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 815, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_v_e->rep = __pyx_t_11;
 
-    /* "dysgu/assembler.pyx":805
+    /* "dysgu/assembler.pyx":816
  * 
  *         e.rep = round(aln_rep, 3)
  *         e.rep_sc = round(sc_rep, 3)             # <<<<<<<<<<<<<<
  *         e.ref_bases = aligned
  * 
  */
-    __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 805, __pyx_L1_error)
+    __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 816, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_INCREF(__pyx_v_sc_rep);
     __Pyx_GIVEREF(__pyx_v_sc_rep);
@@ -12606,25 +12587,25 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __Pyx_INCREF(__pyx_int_3);
     __Pyx_GIVEREF(__pyx_int_3);
     PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_int_3);
-    __pyx_t_12 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_4, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 805, __pyx_L1_error)
+    __pyx_t_12 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_4, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 816, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_12);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_12); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 805, __pyx_L1_error)
+    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_12); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 816, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
     __pyx_v_e->rep_sc = __pyx_t_11;
 
-    /* "dysgu/assembler.pyx":806
+    /* "dysgu/assembler.pyx":817
  *         e.rep = round(aln_rep, 3)
  *         e.rep_sc = round(sc_rep, 3)
  *         e.ref_bases = aligned             # <<<<<<<<<<<<<<
  * 
  *     return events
  */
-    __pyx_t_13 = __Pyx_PyInt_As_int32_t(__pyx_v_aligned); if (unlikely((__pyx_t_13 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 806, __pyx_L1_error)
+    __pyx_t_13 = __Pyx_PyInt_As_int32_t(__pyx_v_aligned); if (unlikely((__pyx_t_13 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(0, 817, __pyx_L1_error)
     __pyx_v_e->ref_bases = __pyx_t_13;
   }
 
-  /* "dysgu/assembler.pyx":808
+  /* "dysgu/assembler.pyx":819
  *         e.ref_bases = aligned
  * 
  *     return events             # <<<<<<<<<<<<<<
@@ -12636,7 +12617,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
   __pyx_r = __pyx_v_events;
   goto __pyx_L0;
 
-  /* "dysgu/assembler.pyx":756
+  /* "dysgu/assembler.pyx":767
  * 
  * # @timeit
  * def contig_info(events):             # <<<<<<<<<<<<<<
@@ -12667,7 +12648,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
   return __pyx_r;
 }
 
-/* "dysgu/assembler.pyx":811
+/* "dysgu/assembler.pyx":822
  * 
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):             # <<<<<<<<<<<<<<
@@ -12730,7 +12711,7 @@ static PyObject *__pyx_pw_5dysgu_9assembler_7check_contig_match(PyObject *__pyx_
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_b)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("check_contig_match", 0, 2, 7, 1); __PYX_ERR(0, 811, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("check_contig_match", 0, 2, 7, 1); __PYX_ERR(0, 822, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
@@ -12764,7 +12745,7 @@ static PyObject *__pyx_pw_5dysgu_9assembler_7check_contig_match(PyObject *__pyx_
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "check_contig_match") < 0)) __PYX_ERR(0, 811, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "check_contig_match") < 0)) __PYX_ERR(0, 822, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -12794,7 +12775,7 @@ static PyObject *__pyx_pw_5dysgu_9assembler_7check_contig_match(PyObject *__pyx_
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("check_contig_match", 0, 2, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 811, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("check_contig_match", 0, 2, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 822, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.assembler.check_contig_match", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -12836,41 +12817,41 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("check_contig_match", 0);
 
-  /* "dysgu/assembler.pyx":812
+  /* "dysgu/assembler.pyx":823
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:             # <<<<<<<<<<<<<<
  *         return 0
  *     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
  */
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_a); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 812, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_v_a); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 823, __pyx_L1_error)
   __pyx_t_3 = ((!__pyx_t_2) != 0);
   if (!__pyx_t_3) {
   } else {
     __pyx_t_1 = __pyx_t_3;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_v_b); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 812, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_v_b); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 823, __pyx_L1_error)
   __pyx_t_2 = ((!__pyx_t_3) != 0);
   if (!__pyx_t_2) {
   } else {
     __pyx_t_1 = __pyx_t_2;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_4 = PyObject_Length(__pyx_v_a); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 812, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_a); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 823, __pyx_L1_error)
   __pyx_t_2 = ((__pyx_t_4 > 0x1388) != 0);
   if (!__pyx_t_2) {
   } else {
     __pyx_t_1 = __pyx_t_2;
     goto __pyx_L4_bool_binop_done;
   }
-  __pyx_t_4 = PyObject_Length(__pyx_v_b); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 812, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_b); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 823, __pyx_L1_error)
   __pyx_t_2 = ((__pyx_t_4 > 0x1388) != 0);
   __pyx_t_1 = __pyx_t_2;
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/assembler.pyx":813
+    /* "dysgu/assembler.pyx":824
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:
  *         return 0             # <<<<<<<<<<<<<<
@@ -12882,7 +12863,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
     __pyx_r = __pyx_int_0;
     goto __pyx_L0;
 
-    /* "dysgu/assembler.pyx":812
+    /* "dysgu/assembler.pyx":823
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:             # <<<<<<<<<<<<<<
@@ -12891,26 +12872,26 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
   }
 
-  /* "dysgu/assembler.pyx":814
+  /* "dysgu/assembler.pyx":825
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:
  *         return 0
  *     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)             # <<<<<<<<<<<<<<
  *     alignment = query(str(b))
  * 
  */
-  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_StripedSmithWaterman); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 814, __pyx_L1_error)
+  __Pyx_GetModuleGlobalName(__pyx_t_5, __pyx_n_s_StripedSmithWaterman); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 825, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
-  __pyx_t_6 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_v_a); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 814, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_v_a); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 825, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 814, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 825, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_GIVEREF(__pyx_t_6);
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6);
   __pyx_t_6 = 0;
-  __pyx_t_6 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 814, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 825, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  if (PyDict_SetItem(__pyx_t_6, __pyx_n_s_suppress_sequences, __pyx_v_supress_seq) < 0) __PYX_ERR(0, 814, __pyx_L1_error)
-  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 814, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_6, __pyx_n_s_suppress_sequences, __pyx_v_supress_seq) < 0) __PYX_ERR(0, 825, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, __pyx_t_6); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 825, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
@@ -12918,14 +12899,14 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   __pyx_v_query = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":815
+  /* "dysgu/assembler.pyx":826
  *         return 0
  *     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
  *     alignment = query(str(b))             # <<<<<<<<<<<<<<
  * 
  *     qs, qe = alignment.query_begin, alignment.query_end
  */
-  __pyx_t_6 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_v_b); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 815, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_v_b); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 826, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_INCREF(__pyx_v_query);
   __pyx_t_7 = __pyx_v_query; __pyx_t_5 = NULL;
@@ -12941,45 +12922,45 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   __pyx_t_8 = (__pyx_t_5) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_5, __pyx_t_6) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_6);
   __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 815, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 826, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_v_alignment = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":817
+  /* "dysgu/assembler.pyx":828
  *     alignment = query(str(b))
  * 
  *     qs, qe = alignment.query_begin, alignment.query_end             # <<<<<<<<<<<<<<
  *     als, ale = alignment.target_begin, alignment.target_end_optimal
  * 
  */
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_query_begin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 817, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_query_begin); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 828, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_query_end); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 817, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_query_end); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 828, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __pyx_v_qs = __pyx_t_8;
   __pyx_t_8 = 0;
   __pyx_v_qe = __pyx_t_7;
   __pyx_t_7 = 0;
 
-  /* "dysgu/assembler.pyx":818
+  /* "dysgu/assembler.pyx":829
  * 
  *     qs, qe = alignment.query_begin, alignment.query_end
  *     als, ale = alignment.target_begin, alignment.target_end_optimal             # <<<<<<<<<<<<<<
  * 
  *     # Find the length of any unaligned overhangs
  */
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 818, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_target_begin); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 829, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 818, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_target_end_optimal); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 829, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __pyx_v_als = __pyx_t_7;
   __pyx_t_7 = 0;
   __pyx_v_ale = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":821
+  /* "dysgu/assembler.pyx":832
  * 
  *     # Find the length of any unaligned overhangs
  *     extent_left = min((qs, als))             # <<<<<<<<<<<<<<
@@ -12990,8 +12971,8 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   __pyx_t_8 = __pyx_v_als;
   __Pyx_INCREF(__pyx_v_qs);
   __pyx_t_7 = __pyx_v_qs;
-  __pyx_t_5 = PyObject_RichCompare(__pyx_t_8, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 821, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 821, __pyx_L1_error)
+  __pyx_t_5 = PyObject_RichCompare(__pyx_t_8, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 832, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 832, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   if (__pyx_t_1) {
     __Pyx_INCREF(__pyx_t_8);
@@ -13008,27 +12989,27 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   __pyx_v_extent_left = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":822
+  /* "dysgu/assembler.pyx":833
  *     # Find the length of any unaligned overhangs
  *     extent_left = min((qs, als))
  *     extent_right = min((len(a) - qe, len(b) - ale))             # <<<<<<<<<<<<<<
  *     total_overhangs = extent_left + extent_right
  *     aln_s = alignment.optimal_alignment_score
  */
-  __pyx_t_4 = PyObject_Length(__pyx_v_b); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 822, __pyx_L1_error)
-  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 822, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_b); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_6 = PyNumber_Subtract(__pyx_t_8, __pyx_v_ale); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 822, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_t_8, __pyx_v_ale); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_4 = PyObject_Length(__pyx_v_a); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 822, __pyx_L1_error)
-  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 822, __pyx_L1_error)
+  __pyx_t_4 = PyObject_Length(__pyx_v_a); if (unlikely(__pyx_t_4 == ((Py_ssize_t)-1))) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_8 = PyInt_FromSsize_t(__pyx_t_4); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = PyNumber_Subtract(__pyx_t_8, __pyx_v_qe); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 822, __pyx_L1_error)
+  __pyx_t_7 = PyNumber_Subtract(__pyx_t_8, __pyx_v_qe); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_5 = PyObject_RichCompare(__pyx_t_6, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 822, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 822, __pyx_L1_error)
+  __pyx_t_5 = PyObject_RichCompare(__pyx_t_6, __pyx_t_7, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 833, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   if (__pyx_t_1) {
     __Pyx_INCREF(__pyx_t_6);
@@ -13045,61 +13026,61 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
   __pyx_v_extent_right = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/assembler.pyx":823
+  /* "dysgu/assembler.pyx":834
  *     extent_left = min((qs, als))
  *     extent_right = min((len(a) - qe, len(b) - ale))
  *     total_overhangs = extent_left + extent_right             # <<<<<<<<<<<<<<
  *     aln_s = alignment.optimal_alignment_score
  *     expected = (qe - qs) * 2  # +2 is the score for a match
  */
-  __pyx_t_6 = PyNumber_Add(__pyx_v_extent_left, __pyx_v_extent_right); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 823, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Add(__pyx_v_extent_left, __pyx_v_extent_right); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 834, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_v_total_overhangs = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/assembler.pyx":824
+  /* "dysgu/assembler.pyx":835
  *     extent_right = min((len(a) - qe, len(b) - ale))
  *     total_overhangs = extent_left + extent_right
  *     aln_s = alignment.optimal_alignment_score             # <<<<<<<<<<<<<<
  *     expected = (qe - qs) * 2  # +2 is the score for a match
  * 
  */
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_optimal_alignment_score); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 824, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_optimal_alignment_score); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 835, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_v_aln_s = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/assembler.pyx":825
+  /* "dysgu/assembler.pyx":836
  *     total_overhangs = extent_left + extent_right
  *     aln_s = alignment.optimal_alignment_score
  *     expected = (qe - qs) * 2  # +2 is the score for a match             # <<<<<<<<<<<<<<
  * 
  *     if expected < 2 * ol_length:  # Match score * Minimum clip length
  */
-  __pyx_t_6 = PyNumber_Subtract(__pyx_v_qe, __pyx_v_qs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 825, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_v_qe, __pyx_v_qs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 836, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_8 = PyNumber_Multiply(__pyx_t_6, __pyx_int_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 825, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Multiply(__pyx_t_6, __pyx_int_2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 836, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_v_expected = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":827
+  /* "dysgu/assembler.pyx":838
  *     expected = (qe - qs) * 2  # +2 is the score for a match
  * 
  *     if expected < 2 * ol_length:  # Match score * Minimum clip length             # <<<<<<<<<<<<<<
  *         return 0
  * 
  */
-  __pyx_t_8 = PyNumber_Multiply(__pyx_int_2, __pyx_v_ol_length); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 827, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Multiply(__pyx_int_2, __pyx_v_ol_length); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 838, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_6 = PyObject_RichCompare(__pyx_v_expected, __pyx_t_8, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 827, __pyx_L1_error)
+  __pyx_t_6 = PyObject_RichCompare(__pyx_v_expected, __pyx_t_8, Py_LT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 838, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 827, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 838, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (__pyx_t_1) {
 
-    /* "dysgu/assembler.pyx":828
+    /* "dysgu/assembler.pyx":839
  * 
  *     if expected < 2 * ol_length:  # Match score * Minimum clip length
  *         return 0             # <<<<<<<<<<<<<<
@@ -13111,7 +13092,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
     __pyx_r = __pyx_int_0;
     goto __pyx_L0;
 
-    /* "dysgu/assembler.pyx":827
+    /* "dysgu/assembler.pyx":838
  *     expected = (qe - qs) * 2  # +2 is the score for a match
  * 
  *     if expected < 2 * ol_length:  # Match score * Minimum clip length             # <<<<<<<<<<<<<<
@@ -13120,84 +13101,84 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
   }
 
-  /* "dysgu/assembler.pyx":830
+  /* "dysgu/assembler.pyx":841
  *         return 0
  * 
  *     rel_diff = (aln_s - total_overhangs) / expected             # <<<<<<<<<<<<<<
  *     diff = expected - aln_s + total_overhangs
  * 
  */
-  __pyx_t_6 = PyNumber_Subtract(__pyx_v_aln_s, __pyx_v_total_overhangs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 830, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_v_aln_s, __pyx_v_total_overhangs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 841, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_6, __pyx_v_expected); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 830, __pyx_L1_error)
+  __pyx_t_8 = __Pyx_PyNumber_Divide(__pyx_t_6, __pyx_v_expected); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 841, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_v_rel_diff = __pyx_t_8;
   __pyx_t_8 = 0;
 
-  /* "dysgu/assembler.pyx":831
+  /* "dysgu/assembler.pyx":842
  * 
  *     rel_diff = (aln_s - total_overhangs) / expected
  *     diff = expected - aln_s + total_overhangs             # <<<<<<<<<<<<<<
  * 
  *     if aln_s > 100 and total_overhangs < qe - qs:
  */
-  __pyx_t_8 = PyNumber_Subtract(__pyx_v_expected, __pyx_v_aln_s); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 831, __pyx_L1_error)
+  __pyx_t_8 = PyNumber_Subtract(__pyx_v_expected, __pyx_v_aln_s); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 842, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_6 = PyNumber_Add(__pyx_t_8, __pyx_v_total_overhangs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 831, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Add(__pyx_t_8, __pyx_v_total_overhangs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 842, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_v_diff = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/assembler.pyx":833
+  /* "dysgu/assembler.pyx":844
  *     diff = expected - aln_s + total_overhangs
  * 
  *     if aln_s > 100 and total_overhangs < qe - qs:             # <<<<<<<<<<<<<<
  *         if rel_diff > 0.7:
  *             if return_int:
  */
-  __pyx_t_6 = PyObject_RichCompare(__pyx_v_aln_s, __pyx_int_100, Py_GT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 833, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_6 = PyObject_RichCompare(__pyx_v_aln_s, __pyx_int_100, Py_GT); __Pyx_XGOTREF(__pyx_t_6); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 844, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 844, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (__pyx_t_2) {
   } else {
     __pyx_t_1 = __pyx_t_2;
     goto __pyx_L10_bool_binop_done;
   }
-  __pyx_t_6 = PyNumber_Subtract(__pyx_v_qe, __pyx_v_qs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_v_qe, __pyx_v_qs); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 844, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_8 = PyObject_RichCompare(__pyx_v_total_overhangs, __pyx_t_6, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_8 = PyObject_RichCompare(__pyx_v_total_overhangs, __pyx_t_6, Py_LT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 844, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 833, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 844, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_1 = __pyx_t_2;
   __pyx_L10_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/assembler.pyx":834
+    /* "dysgu/assembler.pyx":845
  * 
  *     if aln_s > 100 and total_overhangs < qe - qs:
  *         if rel_diff > 0.7:             # <<<<<<<<<<<<<<
  *             if return_int:
  *                 return 1
  */
-    __pyx_t_8 = PyObject_RichCompare(__pyx_v_rel_diff, __pyx_float_0_7, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 834, __pyx_L1_error)
-    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 834, __pyx_L1_error)
+    __pyx_t_8 = PyObject_RichCompare(__pyx_v_rel_diff, __pyx_float_0_7, Py_GT); __Pyx_XGOTREF(__pyx_t_8); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 845, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_8); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 845, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     if (__pyx_t_1) {
 
-      /* "dysgu/assembler.pyx":835
+      /* "dysgu/assembler.pyx":846
  *     if aln_s > 100 and total_overhangs < qe - qs:
  *         if rel_diff > 0.7:
  *             if return_int:             # <<<<<<<<<<<<<<
  *                 return 1
  *             return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
  */
-      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_return_int); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 835, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_return_int); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 846, __pyx_L1_error)
       if (__pyx_t_1) {
 
-        /* "dysgu/assembler.pyx":836
+        /* "dysgu/assembler.pyx":847
  *         if rel_diff > 0.7:
  *             if return_int:
  *                 return 1             # <<<<<<<<<<<<<<
@@ -13209,7 +13190,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
         __pyx_r = __pyx_int_1;
         goto __pyx_L0;
 
-        /* "dysgu/assembler.pyx":835
+        /* "dysgu/assembler.pyx":846
  *     if aln_s > 100 and total_overhangs < qe - qs:
  *         if rel_diff > 0.7:
  *             if return_int:             # <<<<<<<<<<<<<<
@@ -13218,7 +13199,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
       }
 
-      /* "dysgu/assembler.pyx":837
+      /* "dysgu/assembler.pyx":848
  *             if return_int:
  *                 return 1
  *             return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,             # <<<<<<<<<<<<<<
@@ -13226,29 +13207,29 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  *         return 0
  */
       __Pyx_XDECREF(__pyx_r);
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_cigar); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 837, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_cigar); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 848, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_query_sequence); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 837, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_query_sequence); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 848, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
 
-      /* "dysgu/assembler.pyx":838
+      /* "dysgu/assembler.pyx":849
  *                 return 1
  *             return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
  *                     alignment.aligned_target_sequence)             # <<<<<<<<<<<<<<
  *         return 0
  * 
  */
-      __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 838, __pyx_L1_error)
+      __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 849, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
 
-      /* "dysgu/assembler.pyx":837
+      /* "dysgu/assembler.pyx":848
  *             if return_int:
  *                 return 1
  *             return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,             # <<<<<<<<<<<<<<
  *                     alignment.aligned_target_sequence)
  *         return 0
  */
-      __pyx_t_5 = PyTuple_New(7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 837, __pyx_L1_error)
+      __pyx_t_5 = PyTuple_New(7); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 848, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_INCREF(__pyx_v_qs);
       __Pyx_GIVEREF(__pyx_v_qs);
@@ -13275,7 +13256,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
       __pyx_t_5 = 0;
       goto __pyx_L0;
 
-      /* "dysgu/assembler.pyx":834
+      /* "dysgu/assembler.pyx":845
  * 
  *     if aln_s > 100 and total_overhangs < qe - qs:
  *         if rel_diff > 0.7:             # <<<<<<<<<<<<<<
@@ -13284,7 +13265,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
     }
 
-    /* "dysgu/assembler.pyx":839
+    /* "dysgu/assembler.pyx":850
  *             return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
  *                     alignment.aligned_target_sequence)
  *         return 0             # <<<<<<<<<<<<<<
@@ -13296,7 +13277,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
     __pyx_r = __pyx_int_0;
     goto __pyx_L0;
 
-    /* "dysgu/assembler.pyx":833
+    /* "dysgu/assembler.pyx":844
  *     diff = expected - aln_s + total_overhangs
  * 
  *     if aln_s > 100 and total_overhangs < qe - qs:             # <<<<<<<<<<<<<<
@@ -13305,19 +13286,19 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
   }
 
-  /* "dysgu/assembler.pyx":841
+  /* "dysgu/assembler.pyx":852
  *         return 0
  * 
  *     if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits             # <<<<<<<<<<<<<<
  *         return 0
  *     else:
  */
-  __pyx_t_5 = PyObject_RichCompare(__pyx_v_diff, __pyx_v_diffs, Py_GT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 841, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 841, __pyx_L1_error)
+  __pyx_t_5 = PyObject_RichCompare(__pyx_v_diff, __pyx_v_diffs, Py_GT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 852, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 852, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   if (__pyx_t_1) {
 
-    /* "dysgu/assembler.pyx":842
+    /* "dysgu/assembler.pyx":853
  * 
  *     if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits
  *         return 0             # <<<<<<<<<<<<<<
@@ -13329,7 +13310,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
     __pyx_r = __pyx_int_0;
     goto __pyx_L0;
 
-    /* "dysgu/assembler.pyx":841
+    /* "dysgu/assembler.pyx":852
  *         return 0
  * 
  *     if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits             # <<<<<<<<<<<<<<
@@ -13338,7 +13319,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
   }
 
-  /* "dysgu/assembler.pyx":844
+  /* "dysgu/assembler.pyx":855
  *         return 0
  *     else:
  *         if return_int:             # <<<<<<<<<<<<<<
@@ -13346,10 +13327,10 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  *         return (qs, qe, als, ale,
  */
   /*else*/ {
-    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_return_int); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 844, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_return_int); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 855, __pyx_L1_error)
     if (__pyx_t_1) {
 
-      /* "dysgu/assembler.pyx":845
+      /* "dysgu/assembler.pyx":856
  *     else:
  *         if return_int:
  *             return 1             # <<<<<<<<<<<<<<
@@ -13361,7 +13342,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
       __pyx_r = __pyx_int_1;
       goto __pyx_L0;
 
-      /* "dysgu/assembler.pyx":844
+      /* "dysgu/assembler.pyx":855
  *         return 0
  *     else:
  *         if return_int:             # <<<<<<<<<<<<<<
@@ -13370,7 +13351,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
     }
 
-    /* "dysgu/assembler.pyx":846
+    /* "dysgu/assembler.pyx":857
  *         if return_int:
  *             return 1
  *         return (qs, qe, als, ale,             # <<<<<<<<<<<<<<
@@ -13379,44 +13360,44 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
  */
     __Pyx_XDECREF(__pyx_r);
 
-    /* "dysgu/assembler.pyx":847
+    /* "dysgu/assembler.pyx":858
  *             return 1
  *         return (qs, qe, als, ale,
  *                 alignment.cigar,             # <<<<<<<<<<<<<<
  *                 alignment.aligned_query_sequence,
  *                 alignment.aligned_target_sequence)
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_cigar); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 847, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_cigar); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 858, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
 
-    /* "dysgu/assembler.pyx":848
+    /* "dysgu/assembler.pyx":859
  *         return (qs, qe, als, ale,
  *                 alignment.cigar,
  *                 alignment.aligned_query_sequence,             # <<<<<<<<<<<<<<
  *                 alignment.aligned_target_sequence)
  * 
  */
-    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_query_sequence); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 848, __pyx_L1_error)
+    __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_query_sequence); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 859, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
 
-    /* "dysgu/assembler.pyx":849
+    /* "dysgu/assembler.pyx":860
  *                 alignment.cigar,
  *                 alignment.aligned_query_sequence,
  *                 alignment.aligned_target_sequence)             # <<<<<<<<<<<<<<
  * 
  * 
  */
-    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 849, __pyx_L1_error)
+    __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_alignment, __pyx_n_s_aligned_target_sequence); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 860, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_6);
 
-    /* "dysgu/assembler.pyx":846
+    /* "dysgu/assembler.pyx":857
  *         if return_int:
  *             return 1
  *         return (qs, qe, als, ale,             # <<<<<<<<<<<<<<
  *                 alignment.cigar,
  *                 alignment.aligned_query_sequence,
  */
-    __pyx_t_8 = PyTuple_New(7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 846, __pyx_L1_error)
+    __pyx_t_8 = PyTuple_New(7); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 857, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_8);
     __Pyx_INCREF(__pyx_v_qs);
     __Pyx_GIVEREF(__pyx_v_qs);
@@ -13444,7 +13425,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_6check_contig_match(CYTHON_UNUSED Py
     goto __pyx_L0;
   }
 
-  /* "dysgu/assembler.pyx":811
+  /* "dysgu/assembler.pyx":822
  * 
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):             # <<<<<<<<<<<<<<
@@ -29198,7 +29179,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 157, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 320, __pyx_L1_error)
   __pyx_builtin_quit = __Pyx_GetBuiltinName(__pyx_n_s_quit); if (!__pyx_builtin_quit) __PYX_ERR(0, 440, __pyx_L1_error)
-  __pyx_builtin_round = __Pyx_GetBuiltinName(__pyx_n_s_round); if (!__pyx_builtin_round) __PYX_ERR(0, 778, __pyx_L1_error)
+  __pyx_builtin_round = __Pyx_GetBuiltinName(__pyx_n_s_round); if (!__pyx_builtin_round) __PYX_ERR(0, 789, __pyx_L1_error)
   __pyx_builtin_ImportError = __Pyx_GetBuiltinName(__pyx_n_s_ImportError); if (!__pyx_builtin_ImportError) __PYX_ERR(1, 884, __pyx_L1_error)
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(2, 109, __pyx_L1_error)
   __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(3, 151, __pyx_L1_error)
@@ -29226,14 +29207,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "dysgu/assembler.pyx":693
+  /* "dysgu/assembler.pyx":694
  *     cdef const unsigned char* sub_ptr = s_bytes
  * 
  *     for k in (2, 3, 4, 5, 6):             # <<<<<<<<<<<<<<
  * 
  *         decay = 0.25 * 1/k
  */
-  __pyx_tuple__5 = PyTuple_Pack(5, __pyx_int_2, __pyx_int_3, __pyx_int_4, __pyx_int_5, __pyx_int_6); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 693, __pyx_L1_error)
+  __pyx_tuple__5 = PyTuple_Pack(5, __pyx_int_2, __pyx_int_3, __pyx_int_4, __pyx_int_5, __pyx_int_6); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 694, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
 
@@ -29462,29 +29443,29 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__26);
   __Pyx_GIVEREF(__pyx_tuple__26);
 
-  /* "dysgu/assembler.pyx":756
+  /* "dysgu/assembler.pyx":767
  * 
  * # @timeit
  * def contig_info(events):             # <<<<<<<<<<<<<<
  * 
  *     cdef EventResult_t e
  */
-  __pyx_tuple__28 = PyTuple_Pack(14, __pyx_n_s_events, __pyx_n_s_e, __pyx_n_s_i, __pyx_n_s_gc_count, __pyx_n_s_seq_length, __pyx_n_s_cont, __pyx_n_s_letter, __pyx_n_s_sc_rep, __pyx_n_s_aln_rep, __pyx_n_s_aligned, __pyx_n_s_seen, __pyx_n_s_aln_rep1, __pyx_n_s_sc_rep1, __pyx_n_s_aligned_bases); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 756, __pyx_L1_error)
+  __pyx_tuple__28 = PyTuple_Pack(14, __pyx_n_s_events, __pyx_n_s_e, __pyx_n_s_i, __pyx_n_s_gc_count, __pyx_n_s_seq_length, __pyx_n_s_cont, __pyx_n_s_letter, __pyx_n_s_sc_rep, __pyx_n_s_aln_rep, __pyx_n_s_aligned, __pyx_n_s_seen, __pyx_n_s_aln_rep1, __pyx_n_s_sc_rep1, __pyx_n_s_aligned_bases); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 767, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__28);
   __Pyx_GIVEREF(__pyx_tuple__28);
-  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_assembler_pyx, __pyx_n_s_contig_info, 756, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 756, __pyx_L1_error)
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_assembler_pyx, __pyx_n_s_contig_info, 767, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 767, __pyx_L1_error)
 
-  /* "dysgu/assembler.pyx":811
+  /* "dysgu/assembler.pyx":822
  * 
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):             # <<<<<<<<<<<<<<
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:
  *         return 0
  */
-  __pyx_tuple__30 = PyTuple_Pack(20, __pyx_n_s_a, __pyx_n_s_b, __pyx_n_s_rel_diffs, __pyx_n_s_diffs, __pyx_n_s_ol_length, __pyx_n_s_supress_seq, __pyx_n_s_return_int, __pyx_n_s_query, __pyx_n_s_alignment, __pyx_n_s_qs, __pyx_n_s_qe, __pyx_n_s_als, __pyx_n_s_ale, __pyx_n_s_extent_left, __pyx_n_s_extent_right, __pyx_n_s_total_overhangs, __pyx_n_s_aln_s, __pyx_n_s_expected, __pyx_n_s_rel_diff, __pyx_n_s_diff); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 811, __pyx_L1_error)
+  __pyx_tuple__30 = PyTuple_Pack(20, __pyx_n_s_a, __pyx_n_s_b, __pyx_n_s_rel_diffs, __pyx_n_s_diffs, __pyx_n_s_ol_length, __pyx_n_s_supress_seq, __pyx_n_s_return_int, __pyx_n_s_query, __pyx_n_s_alignment, __pyx_n_s_qs, __pyx_n_s_qe, __pyx_n_s_als, __pyx_n_s_ale, __pyx_n_s_extent_left, __pyx_n_s_extent_right, __pyx_n_s_total_overhangs, __pyx_n_s_aln_s, __pyx_n_s_expected, __pyx_n_s_rel_diff, __pyx_n_s_diff); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 822, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
-  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(7, 0, 20, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_assembler_pyx, __pyx_n_s_check_contig_match, 811, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 811, __pyx_L1_error)
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(7, 0, 20, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_assembler_pyx, __pyx_n_s_check_contig_match, 822, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 822, __pyx_L1_error)
 
   /* "View.MemoryView":286
  *         return self.name
@@ -30360,28 +30341,28 @@ if (!__Pyx_RefNanny) {
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_lowermap, __pyx_t_2) < 0) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/assembler.pyx":756
+  /* "dysgu/assembler.pyx":767
  * 
  * # @timeit
  * def contig_info(events):             # <<<<<<<<<<<<<<
  * 
  *     cdef EventResult_t e
  */
-  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9assembler_5contig_info, NULL, __pyx_n_s_dysgu_assembler); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 756, __pyx_L1_error)
+  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9assembler_5contig_info, NULL, __pyx_n_s_dysgu_assembler); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 767, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_contig_info, __pyx_t_2) < 0) __PYX_ERR(0, 756, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_contig_info, __pyx_t_2) < 0) __PYX_ERR(0, 767, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/assembler.pyx":811
+  /* "dysgu/assembler.pyx":822
  * 
  * 
  * def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):             # <<<<<<<<<<<<<<
  *     if not a or not b or len(a) > 5000 or len(b) > 5000:
  *         return 0
  */
-  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9assembler_7check_contig_match, NULL, __pyx_n_s_dysgu_assembler); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 811, __pyx_L1_error)
+  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_9assembler_7check_contig_match, NULL, __pyx_n_s_dysgu_assembler); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 822, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_check_contig_match, __pyx_t_2) < 0) __PYX_ERR(0, 811, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_check_contig_match, __pyx_t_2) < 0) __PYX_ERR(0, 822, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "dysgu/assembler.pyx":1

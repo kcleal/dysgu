@@ -140,7 +140,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.1.3',
+    version='1.1.4',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',
@@ -157,7 +157,19 @@ setup(
             'edlib',
 
         ],
-    setup_requires=['cython', 'numpy', 'pysam'],  # setup.py requires
+    setup_requires=[
+            'cython',
+            'click',
+            'numpy',
+            'pandas',
+            'pysam',
+            'networkx>=2.4',
+            'scikit-learn',
+            'ncls',
+            'scikit-bio',
+            'sortedcontainers',
+            'lightgbm',
+            'edlib'],  # setup.py requires at compile time
     packages=["dysgu", "dysgu.tests"],
     ext_modules=cythonize(ext_modules),
 

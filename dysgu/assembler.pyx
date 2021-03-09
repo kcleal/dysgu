@@ -682,8 +682,9 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 cpdef float compute_rep(seq):
 
     cdef unordered_map[float, int] last_visited
-    cdef cpp_vector[float] tot
-
+    # cdef cpp_vector[float] tot
+    cdef float tot_amount = 0
+    cdef float total_seen = 0
     cdef int k, i, diff
     cdef float decay, max_amount, amount
 
@@ -694,29 +695,39 @@ cpdef float compute_rep(seq):
 
         decay = 0.25 * 1/k
         max_amount = exp(-decay) * k  # If last kmer was the same as current kmer
+
         sub_ptr = s_bytes
         for i in range(len(seq) - k):
 
             a = xxhasher(sub_ptr, k, 42)
             if last_visited.find(a) != last_visited.end():
                 diff = i - last_visited[a]
-                amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+                #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
+
+                x = exp(-decay * diff)
+                amount = (k * x) / max_amount
+
             else:
                 amount = 0
             if i > k:
-                tot.push_back(amount)
-
+                # tot.push_back(amount)
+                tot_amount += amount
+                total_seen += 1
             last_visited[a] = i
             sub_ptr += 1
 
-    if tot.size() == 0:
+    # if tot.size() == 0:
+    if total_seen == 0:
         return 0
-    cdef float t = 0
-    for amount in tot:
-        t += amount
+    # cdef float t = 0
+    # for amount in tot:
+    #     t += amount
+    # echo(t / tot.size())
+    # echo(tot_amount / total_seen)
+    # quit()
+    # return t / tot.size()
 
-    return t / tot.size()
-
+    return tot_amount / total_seen
 
 cdef tuple get_rep(contig_seq):
 
