@@ -861,7 +861,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                 component[ci] = cmp[cmp_idx]
                 ci += 1
 
-            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
 
             if res:
                 event_id += 1

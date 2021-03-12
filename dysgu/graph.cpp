@@ -4380,7 +4380,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_reads(PyObject *, PyObject *, int __p
 static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *, int, robin_hood::unordered_set<int>  &); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *, PyObject *); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph_count_support_between(PyObject *, PyObject *, int); /*proto*/
-static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *, PyObject *, PyObject *, PyObject *, PyObject *, int, int, int __pyx_skip_dispatch); /*proto*/
+static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *, PyObject *, PyObject *, PyObject *, PyObject *, int, int, int, int __pyx_skip_dispatch); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph___pyx_unpickle_Table__set_state(struct __pyx_obj_5dysgu_5graph_Table *, PyObject *); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph___pyx_unpickle_PairedEndScoper__set_state(struct __pyx_obj_5dysgu_5graph_PairedEndScoper *, PyObject *); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph___pyx_unpickle_TemplateEdges__set_state(struct __pyx_obj_5dysgu_5graph_TemplateEdges *, PyObject *); /*proto*/
@@ -4939,7 +4939,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_2get_query_pos_from_cigarstring(CYTHON_U
 static PyObject *__pyx_pf_5dysgu_5graph_4get_query_pos_from_cigartuples(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_r); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_6construct_graph(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_genome_scanner, PyObject *__pyx_v_infile, int __pyx_v_max_dist, int __pyx_v_clustering_dist, int __pyx_v_k, int __pyx_v_m, int __pyx_v_clip_l, int __pyx_v_min_sv_size, int __pyx_v_minimizer_support_thresh, int __pyx_v_minimizer_breadth, int __pyx_v_minimizer_dist, int __pyx_v_mapq_thresh, PyObject *__pyx_v_debug, PyObject *__pyx_v_procs, int __pyx_v_paired_end, int __pyx_v_read_length, int __pyx_v_contigs, float __pyx_v_norm_thresh, float __pyx_v_spd_thresh); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_8get_reads(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_infile, PyObject *__pyx_v_sub_graph_reads); /* proto */
-static PyObject *__pyx_pf_5dysgu_5graph_10proc_component(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs); /* proto */
+static PyObject *__pyx_pf_5dysgu_5graph_10proc_component(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs, int __pyx_v_paired_end); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_12__pyx_unpickle_Table(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_14__pyx_unpickle_PairedEndScoper(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_5dysgu_5graph_16__pyx_unpickle_TemplateEdges(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
@@ -23756,12 +23756,12 @@ static PyObject *__pyx_f_5dysgu_5graph_count_support_between(PyObject *__pyx_v_G
  * 
  * 
  * cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,             # <<<<<<<<<<<<<<
- *                          int min_support, int procs):
+ *                          int min_support, int procs, int paired_end):
  * 
  */
 
 static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, CYTHON_UNUSED PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs, CYTHON_UNUSED int __pyx_skip_dispatch) {
+static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, CYTHON_UNUSED PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs, int __pyx_v_paired_end, CYTHON_UNUSED int __pyx_skip_dispatch) {
   PyObject *__pyx_v_n2n = NULL;
   PyObject *__pyx_v_reads = NULL;
   int __pyx_v_support_estimate;
@@ -23792,7 +23792,7 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
   __Pyx_RefNannySetupContext("proc_component", 0);
 
   /* "dysgu/graph.pyx":1343
- *                          int min_support, int procs):
+ *                          int min_support, int procs, int paired_end):
  * 
  *     n2n = {}             # <<<<<<<<<<<<<<
  *     reads = {}
@@ -24087,8 +24087,8 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
  *     support_between, support_within = count_support_between(G, partitions, min_support)
  * 
  *     if len(support_between) == 0 and len(support_within) == 0:             # <<<<<<<<<<<<<<
- *         # single paired end template can have 3 nodes e.g. two reads plus supplementary
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+ *         if not paired_end:
+ * 
  */
   __pyx_t_2 = PyObject_Length(__pyx_v_support_between); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1366, __pyx_L1_error)
   __pyx_t_8 = ((__pyx_t_2 == 0) != 0);
@@ -24103,155 +24103,249 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
   __pyx_L11_bool_binop_done:;
   if (__pyx_t_6) {
 
-    /* "dysgu/graph.pyx":1368
+    /* "dysgu/graph.pyx":1367
+ * 
  *     if len(support_between) == 0 and len(support_within) == 0:
- *         # single paired end template can have 3 nodes e.g. two reads plus supplementary
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):             # <<<<<<<<<<<<<<
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         elif len(reads) >= min_support:
+ *         if not paired_end:             # <<<<<<<<<<<<<<
+ * 
+ *             if len(n2n) >= min_support or len(reads) >= min_support:
  */
-    __pyx_t_8 = ((__pyx_v_min_support == 1) != 0);
-    if (__pyx_t_8) {
-    } else {
-      __pyx_t_6 = __pyx_t_8;
-      goto __pyx_L14_bool_binop_done;
-    }
-    __pyx_t_2 = PyDict_Size(__pyx_v_n2n); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1368, __pyx_L1_error)
-    __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
-    if (!__pyx_t_8) {
-    } else {
-      __pyx_t_6 = __pyx_t_8;
-      goto __pyx_L14_bool_binop_done;
-    }
-    __pyx_t_2 = PyDict_Size(__pyx_v_reads); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1368, __pyx_L1_error)
-    __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
-    __pyx_t_6 = __pyx_t_8;
-    __pyx_L14_bool_binop_done:;
+    __pyx_t_6 = ((!(__pyx_v_paired_end != 0)) != 0);
     if (__pyx_t_6) {
 
       /* "dysgu/graph.pyx":1369
- *         # single paired end template can have 3 nodes e.g. two reads plus supplementary
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}             # <<<<<<<<<<<<<<
- *         elif len(reads) >= min_support:
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *         if not paired_end:
+ * 
+ *             if len(n2n) >= min_support or len(reads) >= min_support:             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
  */
-      __Pyx_XDECREF(__pyx_r);
-      __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_t_4) < 0) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_t_4) < 0) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_t_4) < 0) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1369, __pyx_L1_error)
-      __pyx_r = ((PyObject*)__pyx_t_1);
-      __pyx_t_1 = 0;
-      goto __pyx_L0;
+      __pyx_t_2 = PyDict_Size(__pyx_v_n2n); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1369, __pyx_L1_error)
+      __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
+      if (!__pyx_t_8) {
+      } else {
+        __pyx_t_6 = __pyx_t_8;
+        goto __pyx_L15_bool_binop_done;
+      }
+      __pyx_t_2 = PyDict_Size(__pyx_v_reads); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1369, __pyx_L1_error)
+      __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
+      __pyx_t_6 = __pyx_t_8;
+      __pyx_L15_bool_binop_done:;
+      if (__pyx_t_6) {
 
-      /* "dysgu/graph.pyx":1368
+        /* "dysgu/graph.pyx":1370
+ * 
+ *             if len(n2n) >= min_support or len(reads) >= min_support:
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}             # <<<<<<<<<<<<<<
+ *             else:
+ *                 return {}
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_t_4) < 0) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_t_4) < 0) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_t_4) < 0) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1370, __pyx_L1_error)
+        __pyx_r = ((PyObject*)__pyx_t_1);
+        __pyx_t_1 = 0;
+        goto __pyx_L0;
+
+        /* "dysgu/graph.pyx":1369
+ *         if not paired_end:
+ * 
+ *             if len(n2n) >= min_support or len(reads) >= min_support:             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
+ */
+      }
+
+      /* "dysgu/graph.pyx":1372
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
+ *                 return {}             # <<<<<<<<<<<<<<
+ * 
+ *         else:
+ */
+      /*else*/ {
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1372, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_r = ((PyObject*)__pyx_t_1);
+        __pyx_t_1 = 0;
+        goto __pyx_L0;
+      }
+
+      /* "dysgu/graph.pyx":1367
+ * 
  *     if len(support_between) == 0 and len(support_within) == 0:
- *         # single paired end template can have 3 nodes e.g. two reads plus supplementary
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):             # <<<<<<<<<<<<<<
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         elif len(reads) >= min_support:
+ *         if not paired_end:             # <<<<<<<<<<<<<<
+ * 
+ *             if len(n2n) >= min_support or len(reads) >= min_support:
  */
     }
 
-    /* "dysgu/graph.pyx":1370
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         elif len(reads) >= min_support:             # <<<<<<<<<<<<<<
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+    /* "dysgu/graph.pyx":1376
  *         else:
+ *             # single paired end template can have 3 nodes e.g. two reads plus supplementary
+ *             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             elif len(reads) >= min_support:
  */
-    __pyx_t_2 = PyDict_Size(__pyx_v_reads); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1370, __pyx_L1_error)
-    __pyx_t_6 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
-    if (__pyx_t_6) {
+    /*else*/ {
+      __pyx_t_8 = ((__pyx_v_min_support == 1) != 0);
+      if (__pyx_t_8) {
+      } else {
+        __pyx_t_6 = __pyx_t_8;
+        goto __pyx_L18_bool_binop_done;
+      }
+      __pyx_t_2 = PyDict_Size(__pyx_v_n2n); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1376, __pyx_L1_error)
+      __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
+      if (!__pyx_t_8) {
+      } else {
+        __pyx_t_6 = __pyx_t_8;
+        goto __pyx_L18_bool_binop_done;
+      }
+      __pyx_t_2 = PyDict_Size(__pyx_v_reads); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1376, __pyx_L1_error)
+      __pyx_t_8 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
+      __pyx_t_6 = __pyx_t_8;
+      __pyx_L18_bool_binop_done:;
+      if (__pyx_t_6) {
 
-      /* "dysgu/graph.pyx":1371
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         elif len(reads) >= min_support:
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}             # <<<<<<<<<<<<<<
- *         else:
- *             return {}
+        /* "dysgu/graph.pyx":1377
+ *             # single paired end template can have 3 nodes e.g. two reads plus supplementary
+ *             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}             # <<<<<<<<<<<<<<
+ *             elif len(reads) >= min_support:
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
  */
-      __Pyx_XDECREF(__pyx_r);
-      __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_t_4) < 0) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_t_4) < 0) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_t_4) < 0) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1371, __pyx_L1_error)
-      __pyx_r = ((PyObject*)__pyx_t_1);
-      __pyx_t_1 = 0;
-      goto __pyx_L0;
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_t_4) < 0) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_t_4) < 0) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_t_4) < 0) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1377, __pyx_L1_error)
+        __pyx_r = ((PyObject*)__pyx_t_1);
+        __pyx_t_1 = 0;
+        goto __pyx_L0;
 
-      /* "dysgu/graph.pyx":1370
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         elif len(reads) >= min_support:             # <<<<<<<<<<<<<<
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+        /* "dysgu/graph.pyx":1376
  *         else:
+ *             # single paired end template can have 3 nodes e.g. two reads plus supplementary
+ *             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             elif len(reads) >= min_support:
  */
-    }
+      }
 
-    /* "dysgu/graph.pyx":1373
- *             return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
- *         else:
- *             return {}             # <<<<<<<<<<<<<<
+      /* "dysgu/graph.pyx":1378
+ *             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             elif len(reads) >= min_support:             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
+ */
+      __pyx_t_2 = PyDict_Size(__pyx_v_reads); if (unlikely(__pyx_t_2 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1378, __pyx_L1_error)
+      __pyx_t_6 = ((__pyx_t_2 >= __pyx_v_min_support) != 0);
+      if (__pyx_t_6) {
+
+        /* "dysgu/graph.pyx":1379
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             elif len(reads) >= min_support:
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}             # <<<<<<<<<<<<<<
+ *             else:
+ *                 return {}
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_t_4) < 0) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_t_4) < 0) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_4);
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_t_4) < 0) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+        if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1379, __pyx_L1_error)
+        __pyx_r = ((PyObject*)__pyx_t_1);
+        __pyx_t_1 = 0;
+        goto __pyx_L0;
+
+        /* "dysgu/graph.pyx":1378
+ *             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             elif len(reads) >= min_support:             # <<<<<<<<<<<<<<
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
+ */
+      }
+
+      /* "dysgu/graph.pyx":1381
+ *                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+ *             else:
+ *                 return {}             # <<<<<<<<<<<<<<
  * 
  *     sb = {}
  */
-    /*else*/ {
-      __Pyx_XDECREF(__pyx_r);
-      __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1373, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_r = ((PyObject*)__pyx_t_1);
-      __pyx_t_1 = 0;
-      goto __pyx_L0;
+      /*else*/ {
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1381, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_1);
+        __pyx_r = ((PyObject*)__pyx_t_1);
+        __pyx_t_1 = 0;
+        goto __pyx_L0;
+      }
     }
 
     /* "dysgu/graph.pyx":1366
  *     support_between, support_within = count_support_between(G, partitions, min_support)
  * 
  *     if len(support_between) == 0 and len(support_within) == 0:             # <<<<<<<<<<<<<<
- *         # single paired end template can have 3 nodes e.g. two reads plus supplementary
- *         if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+ *         if not paired_end:
+ * 
  */
   }
 
-  /* "dysgu/graph.pyx":1375
- *             return {}
+  /* "dysgu/graph.pyx":1383
+ *                 return {}
  * 
  *     sb = {}             # <<<<<<<<<<<<<<
  *     for edge, vd in support_between.items():
  *         sb[edge] = vd
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1375, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1383, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_sb = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "dysgu/graph.pyx":1376
+  /* "dysgu/graph.pyx":1384
  * 
  *     sb = {}
  *     for edge, vd in support_between.items():             # <<<<<<<<<<<<<<
@@ -24261,9 +24355,9 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
   __pyx_t_2 = 0;
   if (unlikely(__pyx_v_support_between == Py_None)) {
     PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "items");
-    __PYX_ERR(0, 1376, __pyx_L1_error)
+    __PYX_ERR(0, 1384, __pyx_L1_error)
   }
-  __pyx_t_4 = __Pyx_dict_iterator(__pyx_v_support_between, 0, __pyx_n_s_items, (&__pyx_t_10), (&__pyx_t_5)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1376, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_dict_iterator(__pyx_v_support_between, 0, __pyx_n_s_items, (&__pyx_t_10), (&__pyx_t_5)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1384, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_1);
   __pyx_t_1 = __pyx_t_4;
@@ -24271,7 +24365,7 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
   while (1) {
     __pyx_t_11 = __Pyx_dict_iter_next(__pyx_t_1, __pyx_t_10, &__pyx_t_2, &__pyx_t_4, &__pyx_t_9, NULL, __pyx_t_5);
     if (unlikely(__pyx_t_11 == 0)) break;
-    if (unlikely(__pyx_t_11 == -1)) __PYX_ERR(0, 1376, __pyx_L1_error)
+    if (unlikely(__pyx_t_11 == -1)) __PYX_ERR(0, 1384, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_XDECREF_SET(__pyx_v_edge, __pyx_t_4);
@@ -24279,30 +24373,30 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
     __Pyx_XDECREF_SET(__pyx_v_vd, __pyx_t_9);
     __pyx_t_9 = 0;
 
-    /* "dysgu/graph.pyx":1377
+    /* "dysgu/graph.pyx":1385
  *     sb = {}
  *     for edge, vd in support_between.items():
  *         sb[edge] = vd             # <<<<<<<<<<<<<<
  * 
  *     # Debug:
  */
-    if (unlikely(PyDict_SetItem(__pyx_v_sb, __pyx_v_edge, __pyx_v_vd) < 0)) __PYX_ERR(0, 1377, __pyx_L1_error)
+    if (unlikely(PyDict_SetItem(__pyx_v_sb, __pyx_v_edge, __pyx_v_vd) < 0)) __PYX_ERR(0, 1385, __pyx_L1_error)
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/graph.pyx":1393
+  /* "dysgu/graph.pyx":1401
  *     #     echo("s_within", support_within)
  * 
  *     return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1393, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyDict_NewPresized(5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1401, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_v_partitions) < 0) __PYX_ERR(0, 1393, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_v_sb) < 0) __PYX_ERR(0, 1393, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1393, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_v_support_within) < 0) __PYX_ERR(0, 1393, __pyx_L1_error)
-  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1393, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_parts, __pyx_v_partitions) < 0) __PYX_ERR(0, 1401, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_between, __pyx_v_sb) < 0) __PYX_ERR(0, 1401, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_reads, __pyx_v_reads) < 0) __PYX_ERR(0, 1401, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_s_within, __pyx_v_support_within) < 0) __PYX_ERR(0, 1401, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_1, __pyx_n_u_n2n, __pyx_v_n2n) < 0) __PYX_ERR(0, 1401, __pyx_L1_error)
   __pyx_r = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
   goto __pyx_L0;
@@ -24311,7 +24405,7 @@ static PyObject *__pyx_f_5dysgu_5graph_proc_component(PyObject *__pyx_v_node_to_
  * 
  * 
  * cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,             # <<<<<<<<<<<<<<
- *                          int min_support, int procs):
+ *                          int min_support, int procs, int paired_end):
  * 
  */
 
@@ -24347,6 +24441,7 @@ static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, P
   PyObject *__pyx_v_G = 0;
   int __pyx_v_min_support;
   int __pyx_v_procs;
+  int __pyx_v_paired_end;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -24354,12 +24449,14 @@ static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, P
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("proc_component (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_node_to_name,&__pyx_n_s_component,&__pyx_n_s_read_buffer,&__pyx_n_s_infile,&__pyx_n_s_G,&__pyx_n_s_min_support,&__pyx_n_s_procs,0};
-    PyObject* values[7] = {0,0,0,0,0,0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_node_to_name,&__pyx_n_s_component,&__pyx_n_s_read_buffer,&__pyx_n_s_infile,&__pyx_n_s_G,&__pyx_n_s_min_support,&__pyx_n_s_procs,&__pyx_n_s_paired_end,0};
+    PyObject* values[8] = {0,0,0,0,0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  8: values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
+        CYTHON_FALLTHROUGH;
         case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
         CYTHON_FALLTHROUGH;
         case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
@@ -24386,43 +24483,49 @@ static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, P
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_component)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 1); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 1); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_read_buffer)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 2); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 2); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_infile)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 3); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 3); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_G)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 4); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 4); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
         if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_min_support)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 5); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 5); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
         if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_procs)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, 6); __PYX_ERR(0, 1340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 6); __PYX_ERR(0, 1340, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  7:
+        if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_paired_end)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, 7); __PYX_ERR(0, 1340, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
         if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "proc_component") < 0)) __PYX_ERR(0, 1340, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 8) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -24432,6 +24535,7 @@ static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, P
       values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
       values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
       values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+      values[7] = PyTuple_GET_ITEM(__pyx_args, 7);
     }
     __pyx_v_node_to_name = values[0];
     __pyx_v_component = values[1];
@@ -24440,23 +24544,24 @@ static PyObject *__pyx_pw_5dysgu_5graph_11proc_component(PyObject *__pyx_self, P
     __pyx_v_G = values[4];
     __pyx_v_min_support = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_min_support == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1341, __pyx_L3_error)
     __pyx_v_procs = __Pyx_PyInt_As_int(values[6]); if (unlikely((__pyx_v_procs == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1341, __pyx_L3_error)
+    __pyx_v_paired_end = __Pyx_PyInt_As_int(values[7]); if (unlikely((__pyx_v_paired_end == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1341, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("proc_component", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 1340, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("proc_component", 1, 8, 8, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 1340, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.graph.proc_component", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_5dysgu_5graph_10proc_component(__pyx_self, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_min_support, __pyx_v_procs);
+  __pyx_r = __pyx_pf_5dysgu_5graph_10proc_component(__pyx_self, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_min_support, __pyx_v_procs, __pyx_v_paired_end);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_5dysgu_5graph_10proc_component(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs) {
+static PyObject *__pyx_pf_5dysgu_5graph_10proc_component(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_node_to_name, PyObject *__pyx_v_component, PyObject *__pyx_v_read_buffer, PyObject *__pyx_v_infile, PyObject *__pyx_v_G, int __pyx_v_min_support, int __pyx_v_procs, int __pyx_v_paired_end) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -24465,7 +24570,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_10proc_component(CYTHON_UNUSED PyObject 
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("proc_component", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_5dysgu_5graph_proc_component(__pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_min_support, __pyx_v_procs, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1340, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_5dysgu_5graph_proc_component(__pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_min_support, __pyx_v_procs, __pyx_v_paired_end, 0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1340, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;

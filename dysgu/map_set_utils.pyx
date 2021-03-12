@@ -348,7 +348,18 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""
     def __cinit__(self):
+        # set a few variables
         self.svlen_precise = 1
+        self.rep = 0
+        self.ref_rep = 0
+        self.NMpri = 0
+        self.NMbase = 0
+        self.mcov = 0
+        self.neigh = 0
+        self.ref_bases = 0
+        self.n_sa = 0
+        self.n_gaps = 0
+        self.compress = 0
 
     def to_dict(self):
         return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict"}

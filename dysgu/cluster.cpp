@@ -21177,7 +21177,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
  *                 component[ci] = cmp[cmp_idx]
  *                 ci += 1             # <<<<<<<<<<<<<<
  * 
- *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+ *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
  */
         __pyx_v_ci = (__pyx_v_ci + 1);
       }
@@ -21185,7 +21185,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
       /* "dysgu/cluster.pyx":864
  *                 ci += 1
  * 
- *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])             # <<<<<<<<<<<<<<
+ *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)             # <<<<<<<<<<<<<<
  * 
  *             if res:
  */
@@ -21210,8 +21210,8 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
       }
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_4)) {
-        PyObject *__pyx_temp[8] = {__pyx_t_9, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_lower_bound_support, __pyx_t_20};
-        __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_13, 7+__pyx_t_13); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 864, __pyx_L1_error)
+        PyObject *__pyx_temp[9] = {__pyx_t_9, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_lower_bound_support, __pyx_t_20, __pyx_v_paired_end};
+        __pyx_t_8 = __Pyx_PyFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_13, 8+__pyx_t_13); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 864, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
@@ -21219,15 +21219,15 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
       #endif
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_4)) {
-        PyObject *__pyx_temp[8] = {__pyx_t_9, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_lower_bound_support, __pyx_t_20};
-        __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_13, 7+__pyx_t_13); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 864, __pyx_L1_error)
+        PyObject *__pyx_temp[9] = {__pyx_t_9, __pyx_v_node_to_name, __pyx_v_component, __pyx_v_read_buffer, __pyx_v_infile, __pyx_v_G, __pyx_v_lower_bound_support, __pyx_t_20, __pyx_v_paired_end};
+        __pyx_t_8 = __Pyx_PyCFunction_FastCall(__pyx_t_4, __pyx_temp+1-__pyx_t_13, 8+__pyx_t_13); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 864, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
         __Pyx_GOTREF(__pyx_t_8);
         __Pyx_DECREF(__pyx_t_20); __pyx_t_20 = 0;
       } else
       #endif
       {
-        __pyx_t_2 = PyTuple_New(7+__pyx_t_13); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 864, __pyx_L1_error)
+        __pyx_t_2 = PyTuple_New(8+__pyx_t_13); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 864, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         if (__pyx_t_9) {
           __Pyx_GIVEREF(__pyx_t_9); PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_9); __pyx_t_9 = NULL;
@@ -21252,6 +21252,9 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
         PyTuple_SET_ITEM(__pyx_t_2, 5+__pyx_t_13, __pyx_v_lower_bound_support);
         __Pyx_GIVEREF(__pyx_t_20);
         PyTuple_SET_ITEM(__pyx_t_2, 6+__pyx_t_13, __pyx_t_20);
+        __Pyx_INCREF(__pyx_v_paired_end);
+        __Pyx_GIVEREF(__pyx_v_paired_end);
+        PyTuple_SET_ITEM(__pyx_t_2, 7+__pyx_t_13, __pyx_v_paired_end);
         __pyx_t_20 = 0;
         __pyx_t_8 = __Pyx_PyObject_Call(__pyx_t_4, __pyx_t_2, NULL); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 864, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_8);
@@ -21262,7 +21265,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
       __pyx_t_8 = 0;
 
       /* "dysgu/cluster.pyx":866
- *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+ *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
  * 
  *             if res:             # <<<<<<<<<<<<<<
  *                 event_id += 1
@@ -21680,7 +21683,7 @@ static PyObject *__pyx_pf_5dysgu_7cluster_22pipe1(CYTHON_UNUSED PyObject *__pyx_
         __pyx_L41:;
 
         /* "dysgu/cluster.pyx":866
- *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"])
+ *             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
  * 
  *             if res:             # <<<<<<<<<<<<<<
  *                 event_id += 1

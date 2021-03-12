@@ -1338,7 +1338,7 @@ cdef tuple count_support_between(G, parts, int min_support):
 
 
 cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
-                         int min_support, int procs):
+                         int min_support, int procs, int paired_end):
 
     n2n = {}
     reads = {}
@@ -1364,13 +1364,21 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     support_between, support_within = count_support_between(G, partitions, min_support)
 
     if len(support_between) == 0 and len(support_within) == 0:
-        # single paired end template can have 3 nodes e.g. two reads plus supplementary
-        if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
-            return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
-        elif len(reads) >= min_support:
-            return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+        if not paired_end:
+
+            if len(n2n) >= min_support or len(reads) >= min_support:
+                return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+            else:
+                return {}
+
         else:
-            return {}
+            # single paired end template can have 3 nodes e.g. two reads plus supplementary
+            if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+                return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+            elif len(reads) >= min_support:
+                return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+            else:
+                return {}
 
     sb = {}
     for edge, vd in support_between.items():
