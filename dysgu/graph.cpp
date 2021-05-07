@@ -6157,7 +6157,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_5Table_8__setstate_cython__(struct __pyx
 /* "dysgu/graph.pyx":99
  * 
  * 
- * cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):  # unordered_set[long]& homopolymers):             # <<<<<<<<<<<<<<
+ * cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):             # <<<<<<<<<<<<<<
  *     """End minimizer
  *     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
  */
@@ -6456,7 +6456,7 @@ static void __pyx_f_5dysgu_5graph_sliding_window_minimum(int __pyx_v_k, int __py
   /* "dysgu/graph.pyx":99
  * 
  * 
- * cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):  # unordered_set[long]& homopolymers):             # <<<<<<<<<<<<<<
+ * cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):             # <<<<<<<<<<<<<<
  *     """End minimizer
  *     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
  */

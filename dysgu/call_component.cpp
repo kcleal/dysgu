@@ -38,8 +38,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/pysam",
+            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -3702,12 +3702,12 @@ static const char __pyx_k_A[] = "A";
 static const char __pyx_k_B[] = "B";
 static const char __pyx_k_x[] = "x";
 static const char __pyx_k_AS[] = "AS";
-static const char __pyx_k_DA[] = "DA";
-static const char __pyx_k_DN[] = "DN";
-static const char __pyx_k_DP[] = "DP";
 static const char __pyx_k_NM[] = "NM";
 static const char __pyx_k_SA[] = "SA";
 static const char __pyx_k_XA[] = "XA";
+static const char __pyx_k_ZA[] = "ZA";
+static const char __pyx_k_ZN[] = "ZN";
+static const char __pyx_k_ZP[] = "ZP";
 static const char __pyx_k__4[] = ";";
 static const char __pyx_k_er[] = "er";
 static const char __pyx_k_np[] = "np";
@@ -3881,10 +3881,7 @@ static PyObject *__pyx_n_s_AlignmentItem;
 static PyObject *__pyx_n_u_B;
 static PyObject *__pyx_n_u_BND;
 static PyObject *__pyx_n_s_Counter;
-static PyObject *__pyx_n_u_DA;
 static PyObject *__pyx_n_u_DEL;
-static PyObject *__pyx_n_u_DN;
-static PyObject *__pyx_n_u_DP;
 static PyObject *__pyx_n_u_DUP;
 static PyObject *__pyx_n_s_DeprecationWarning;
 static PyObject *__pyx_n_s_FutureWarning;
@@ -3898,6 +3895,9 @@ static PyObject *__pyx_n_s_StopIteration;
 static PyObject *__pyx_n_u_TRA;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_n_u_XA;
+static PyObject *__pyx_n_u_ZA;
+static PyObject *__pyx_n_u_ZN;
+static PyObject *__pyx_n_u_ZP;
 static PyObject *__pyx_kp_u__4;
 static PyObject *__pyx_n_s_a_qend;
 static PyObject *__pyx_n_s_a_qstart;
@@ -7987,7 +7987,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
   /* "dysgu/call_component.pyx":126
  *     cdef float a_bases, large_gaps, n_small_gaps
- * 
+ *     # extended tags: "DP", "DN", "DApri", "DAsupp",
  *     for index, a in enumerate(itertools.chain(reads1, reads2)):             # <<<<<<<<<<<<<<
  * 
  *         qname = a.qname
@@ -8133,8 +8133,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *             seen.add(qname)
  * 
  *         if extended_tags:             # <<<<<<<<<<<<<<
- *             if a.has_tag("DP"):
- *                 DP  += float(a.get_tag("DP"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
  */
     __pyx_t_10 = (__pyx_v_extended_tags != 0);
     if (__pyx_t_10) {
@@ -8142,9 +8142,9 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":133
  * 
  *         if extended_tags:
- *             if a.has_tag("DP"):             # <<<<<<<<<<<<<<
- *                 DP  += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
+ *             if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
  */
       __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_has_tag); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 133, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
@@ -8158,7 +8158,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_7, function);
         }
       }
-      __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_DP) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_DP);
+      __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_ZP) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_ZP);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
       if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 133, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -8169,10 +8169,10 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":134
  *         if extended_tags:
- *             if a.has_tag("DP"):
- *                 DP  += float(a.get_tag("DP"))             # <<<<<<<<<<<<<<
- *             if a.has_tag("DN"):
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))             # <<<<<<<<<<<<<<
+ *             if a.has_tag("ZN"):
+ *                 DN += float(a.get_tag("ZN"))
  */
         __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_get_tag); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 134, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
@@ -8186,7 +8186,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_7, function);
           }
         }
-        __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_DP) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_DP);
+        __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_ZP) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_ZP);
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 134, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
@@ -8198,17 +8198,17 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":133
  * 
  *         if extended_tags:
- *             if a.has_tag("DP"):             # <<<<<<<<<<<<<<
- *                 DP  += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
+ *             if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
  */
       }
 
       /* "dysgu/call_component.pyx":135
- *             if a.has_tag("DP"):
- *                 DP  += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):             # <<<<<<<<<<<<<<
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):             # <<<<<<<<<<<<<<
+ *                 DN += float(a.get_tag("ZN"))
  * 
  */
       __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_has_tag); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 135, __pyx_L1_error)
@@ -8223,7 +8223,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_7, function);
         }
       }
-      __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_DN) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_DN);
+      __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_ZN) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_ZN);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
       if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 135, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -8233,9 +8233,9 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_10) {
 
         /* "dysgu/call_component.pyx":136
- *                 DP  += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
- *                 DN += float(a.get_tag("DN"))             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
+ *                 DN += float(a.get_tag("ZN"))             # <<<<<<<<<<<<<<
  * 
  *         flag = a.flag
  */
@@ -8251,7 +8251,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_7, function);
           }
         }
-        __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_DN) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_DN);
+        __pyx_t_1 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_7, __pyx_t_4, __pyx_n_u_ZN) : __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_n_u_ZN);
         __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
         if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 136, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
@@ -8261,10 +8261,10 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         __pyx_v_DN = (__pyx_v_DN + __pyx_t_12);
 
         /* "dysgu/call_component.pyx":135
- *             if a.has_tag("DP"):
- *                 DP  += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):             # <<<<<<<<<<<<<<
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):             # <<<<<<<<<<<<<<
+ *                 DN += float(a.get_tag("ZN"))
  * 
  */
       }
@@ -8273,13 +8273,13 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *             seen.add(qname)
  * 
  *         if extended_tags:             # <<<<<<<<<<<<<<
- *             if a.has_tag("DP"):
- *                 DP  += float(a.get_tag("DP"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
  */
     }
 
     /* "dysgu/call_component.pyx":138
- *                 DN += float(a.get_tag("DN"))
+ *                 DN += float(a.get_tag("ZN"))
  * 
  *         flag = a.flag             # <<<<<<<<<<<<<<
  *         if flag & 2:
@@ -8803,7 +8803,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
  *             er.supp += 1             # <<<<<<<<<<<<<<
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):
+ *             if extended_tags and a.has_tag("ZA"):
  */
       __pyx_v_er->supp = (__pyx_v_er->supp + 1);
 
@@ -8811,8 +8811,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
  *             er.supp += 1
  *             MAPQsupp += a.mapq             # <<<<<<<<<<<<<<
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  */
       __pyx_t_1 = PyFloat_FromDouble(__pyx_v_MAPQsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 162, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -8829,8 +8829,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":163
  *             er.supp += 1
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       __pyx_t_9 = (__pyx_v_extended_tags != 0);
@@ -8851,7 +8851,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_4, function);
         }
       }
-      __pyx_t_13 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DA);
+      __pyx_t_13 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZA);
       __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
       if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 163, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_13);
@@ -8864,8 +8864,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":164
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))             # <<<<<<<<<<<<<<
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))             # <<<<<<<<<<<<<<
  *             if a.has_tag("NM"):
  *                 if a_bases:
  */
@@ -8881,7 +8881,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_4, function);
           }
         }
-        __pyx_t_13 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DA);
+        __pyx_t_13 = (__pyx_t_1) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_1, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZA);
         __Pyx_XDECREF(__pyx_t_1); __pyx_t_1 = 0;
         if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 164, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_13);
@@ -8893,15 +8893,15 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":163
  *             er.supp += 1
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       }
 
       /* "dysgu/call_component.pyx":165
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -8928,7 +8928,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_10) {
 
         /* "dysgu/call_component.pyx":166
- *                 DAsupp += float(a.get_tag("DA"))
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -8970,7 +8970,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __pyx_v_NMsupp = (__pyx_v_NMsupp + (__pyx_t_12 / ((double)__pyx_v_a_bases)));
 
           /* "dysgu/call_component.pyx":166
- *                 DAsupp += float(a.get_tag("DA"))
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -8979,8 +8979,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         }
 
         /* "dysgu/call_component.pyx":165
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -9163,7 +9163,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *             else:
  *                 paired_end.add(qname)             # <<<<<<<<<<<<<<
  * 
- *             if extended_tags and a.has_tag("DA"):
+ *             if extended_tags and a.has_tag("ZA"):
  */
       /*else*/ {
         __pyx_t_11 = PySet_Add(__pyx_v_paired_end, __pyx_v_qname); if (unlikely(__pyx_t_11 == ((int)-1))) __PYX_ERR(0, 181, __pyx_L1_error)
@@ -9173,8 +9173,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":183
  *                 paired_end.add(qname)
  * 
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       __pyx_t_20 = (__pyx_v_extended_tags != 0);
@@ -9195,7 +9195,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_4, function);
         }
       }
-      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DA);
+      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZA);
       __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
       if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 183, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -9208,8 +9208,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":184
  * 
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))             # <<<<<<<<<<<<<<
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))             # <<<<<<<<<<<<<<
  *             if a.has_tag("NM"):
  *                 if a_bases:
  */
@@ -9225,7 +9225,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_4, function);
           }
         }
-        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DA);
+        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZA);
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
         if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 184, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
@@ -9237,15 +9237,15 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":183
  *                 paired_end.add(qname)
  * 
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       }
 
       /* "dysgu/call_component.pyx":185
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     nm = float(a.get_tag("NM"))
@@ -9272,7 +9272,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_10) {
 
         /* "dysgu/call_component.pyx":186
- *                 DApri += float(a.get_tag("DA"))
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     nm = float(a.get_tag("NM"))
@@ -9337,7 +9337,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __pyx_v_NMbase = (__pyx_v_NMbase + (__pyx_t_12 / ((double)__pyx_v_a_bases)));
 
           /* "dysgu/call_component.pyx":186
- *                 DApri += float(a.get_tag("DA"))
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     nm = float(a.get_tag("NM"))
@@ -9346,8 +9346,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         }
 
         /* "dysgu/call_component.pyx":185
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     nm = float(a.get_tag("NM"))
@@ -9465,7 +9465,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
     /* "dysgu/call_component.pyx":126
  *     cdef float a_bases, large_gaps, n_small_gaps
- * 
+ *     # extended tags: "DP", "DN", "DApri", "DAsupp",
  *     for index, a in enumerate(itertools.chain(reads1, reads2)):             # <<<<<<<<<<<<<<
  * 
  *         qname = a.qname
@@ -9567,8 +9567,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *             seen.add(qname)
  * 
  *         if extended_tags:             # <<<<<<<<<<<<<<
- *             if a.has_tag("DP"):
- *                 DP += float(a.get_tag("DP"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
  */
     __pyx_t_20 = (__pyx_v_extended_tags != 0);
     if (__pyx_t_20) {
@@ -9576,9 +9576,9 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":207
  * 
  *         if extended_tags:
- *             if a.has_tag("DP"):             # <<<<<<<<<<<<<<
- *                 DP += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
+ *             if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
  */
       __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_has_tag); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 207, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
@@ -9592,7 +9592,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_4, function);
         }
       }
-      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DP) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DP);
+      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZP) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZP);
       __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
       if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 207, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -9603,10 +9603,10 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":208
  *         if extended_tags:
- *             if a.has_tag("DP"):
- *                 DP += float(a.get_tag("DP"))             # <<<<<<<<<<<<<<
- *             if a.has_tag("DN"):
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))             # <<<<<<<<<<<<<<
+ *             if a.has_tag("ZN"):
+ *                 DN += float(a.get_tag("ZN"))
  */
         __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_get_tag); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 208, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
@@ -9620,7 +9620,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_4, function);
           }
         }
-        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DP) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DP);
+        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZP) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZP);
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
         if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 208, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
@@ -9632,17 +9632,17 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":207
  * 
  *         if extended_tags:
- *             if a.has_tag("DP"):             # <<<<<<<<<<<<<<
- *                 DP += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
+ *             if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
  */
       }
 
       /* "dysgu/call_component.pyx":209
- *             if a.has_tag("DP"):
- *                 DP += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):             # <<<<<<<<<<<<<<
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):             # <<<<<<<<<<<<<<
+ *                 DN += float(a.get_tag("ZN"))
  * 
  */
       __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_has_tag); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 209, __pyx_L1_error)
@@ -9657,7 +9657,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_4, function);
         }
       }
-      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DN) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DN);
+      __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZN) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZN);
       __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
       if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
@@ -9667,9 +9667,9 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_20) {
 
         /* "dysgu/call_component.pyx":210
- *                 DP += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):
- *                 DN += float(a.get_tag("DN"))             # <<<<<<<<<<<<<<
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):
+ *                 DN += float(a.get_tag("ZN"))             # <<<<<<<<<<<<<<
  * 
  *         flag = a.flag
  */
@@ -9685,7 +9685,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_4, function);
           }
         }
-        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_DN) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_DN);
+        __pyx_t_1 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_13, __pyx_n_u_ZN) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_n_u_ZN);
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
         if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 210, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
@@ -9695,10 +9695,10 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         __pyx_v_DN = (__pyx_v_DN + __pyx_t_12);
 
         /* "dysgu/call_component.pyx":209
- *             if a.has_tag("DP"):
- *                 DP += float(a.get_tag("DP"))
- *             if a.has_tag("DN"):             # <<<<<<<<<<<<<<
- *                 DN += float(a.get_tag("DN"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
+ *             if a.has_tag("ZN"):             # <<<<<<<<<<<<<<
+ *                 DN += float(a.get_tag("ZN"))
  * 
  */
       }
@@ -9707,13 +9707,13 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *             seen.add(qname)
  * 
  *         if extended_tags:             # <<<<<<<<<<<<<<
- *             if a.has_tag("DP"):
- *                 DP += float(a.get_tag("DP"))
+ *             if a.has_tag("ZP"):
+ *                 DP += float(a.get_tag("ZP"))
  */
     }
 
     /* "dysgu/call_component.pyx":212
- *                 DN += float(a.get_tag("DN"))
+ *                 DN += float(a.get_tag("ZN"))
  * 
  *         flag = a.flag             # <<<<<<<<<<<<<<
  *         if flag & 2:
@@ -10130,7 +10130,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *         if flag & 2304:  # Supplementary
  *             er.supp += 1             # <<<<<<<<<<<<<<
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):
+ *             if extended_tags and a.has_tag("ZA"):
  */
       __pyx_v_er->supp = (__pyx_v_er->supp + 1);
 
@@ -10138,8 +10138,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *         if flag & 2304:  # Supplementary
  *             er.supp += 1
  *             MAPQsupp += a.mapq             # <<<<<<<<<<<<<<
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  */
       __pyx_t_13 = PyFloat_FromDouble(__pyx_v_MAPQsupp); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 231, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_13);
@@ -10156,8 +10156,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":232
  *             er.supp += 1
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       __pyx_t_10 = (__pyx_v_extended_tags != 0);
@@ -10178,7 +10178,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_1, function);
         }
       }
-      __pyx_t_7 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_DA);
+      __pyx_t_7 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_ZA);
       __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
       if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 232, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
@@ -10191,8 +10191,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":233
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))             # <<<<<<<<<<<<<<
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))             # <<<<<<<<<<<<<<
  *             if a.has_tag("NM"):
  *                 if a_bases:
  */
@@ -10208,7 +10208,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_1, function);
           }
         }
-        __pyx_t_7 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_DA);
+        __pyx_t_7 = (__pyx_t_13) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_13, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_ZA);
         __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
         if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 233, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_7);
@@ -10220,15 +10220,15 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":232
  *             er.supp += 1
  *             MAPQsupp += a.mapq
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       }
 
       /* "dysgu/call_component.pyx":234
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -10255,7 +10255,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_20) {
 
         /* "dysgu/call_component.pyx":235
- *                 DAsupp += float(a.get_tag("DA"))
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -10297,7 +10297,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __pyx_v_NMsupp = (__pyx_v_NMsupp + (__pyx_t_12 / ((double)__pyx_v_a_bases)));
 
           /* "dysgu/call_component.pyx":235
- *                 DAsupp += float(a.get_tag("DA"))
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -10306,8 +10306,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         }
 
         /* "dysgu/call_component.pyx":234
- *             if extended_tags and a.has_tag("DA"):
- *                 DAsupp += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DAsupp += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -10480,8 +10480,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *                 er.pe += 2
  *             else:
  *                 paired_end.add(qname)             # <<<<<<<<<<<<<<
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))
  */
       /*else*/ {
         __pyx_t_11 = PySet_Add(__pyx_v_paired_end, __pyx_v_qname); if (unlikely(__pyx_t_11 == ((int)-1))) __PYX_ERR(0, 249, __pyx_L1_error)
@@ -10491,8 +10491,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       /* "dysgu/call_component.pyx":250
  *             else:
  *                 paired_end.add(qname)
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       __pyx_t_20 = (__pyx_v_extended_tags != 0);
@@ -10513,7 +10513,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __Pyx_DECREF_SET(__pyx_t_1, function);
         }
       }
-      __pyx_t_13 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_7, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_DA);
+      __pyx_t_13 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_7, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_ZA);
       __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
       if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 250, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_13);
@@ -10526,8 +10526,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
 
         /* "dysgu/call_component.pyx":251
  *                 paired_end.add(qname)
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))             # <<<<<<<<<<<<<<
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))             # <<<<<<<<<<<<<<
  *             if a.has_tag("NM"):
  *                 if a_bases:
  */
@@ -10543,7 +10543,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
             __Pyx_DECREF_SET(__pyx_t_1, function);
           }
         }
-        __pyx_t_13 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_7, __pyx_n_u_DA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_DA);
+        __pyx_t_13 = (__pyx_t_7) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_7, __pyx_n_u_ZA) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_n_u_ZA);
         __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
         if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 251, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_13);
@@ -10555,15 +10555,15 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         /* "dysgu/call_component.pyx":250
  *             else:
  *                 paired_end.add(qname)
- *             if extended_tags and a.has_tag("DA"):             # <<<<<<<<<<<<<<
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):             # <<<<<<<<<<<<<<
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  */
       }
 
       /* "dysgu/call_component.pyx":252
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     nm = float(a.get_tag("NM"))
@@ -10590,7 +10590,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
       if (__pyx_t_10) {
 
         /* "dysgu/call_component.pyx":253
- *                 DApri += float(a.get_tag("DA"))
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     nm = float(a.get_tag("NM"))
@@ -10655,7 +10655,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
           __pyx_v_NMbase = (__pyx_v_NMbase + (__pyx_t_12 / ((double)__pyx_v_a_bases)));
 
           /* "dysgu/call_component.pyx":253
- *                 DApri += float(a.get_tag("DA"))
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):
  *                 if a_bases:             # <<<<<<<<<<<<<<
  *                     nm = float(a.get_tag("NM"))
@@ -10664,8 +10664,8 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
         }
 
         /* "dysgu/call_component.pyx":252
- *             if extended_tags and a.has_tag("DA"):
- *                 DApri += float(a.get_tag("DA"))
+ *             if extended_tags and a.has_tag("ZA"):
+ *                 DApri += float(a.get_tag("ZA"))
  *             if a.has_tag("NM"):             # <<<<<<<<<<<<<<
  *                 if a_bases:
  *                     nm = float(a.get_tag("NM"))
@@ -31772,7 +31772,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
  *                             lens.append(i.inferred_sv_len)
  *                 if len(lens) > 0:             # <<<<<<<<<<<<<<
  *                     svlen = int(np.mean(lens))
- *                     if (svlen / main_svlen) > 0.7:
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
  */
         __pyx_t_3 = PyList_GET_SIZE(__pyx_v_lens); if (unlikely(__pyx_t_3 == ((Py_ssize_t)-1))) __PYX_ERR(0, 1766, __pyx_L1_error)
         __pyx_t_7 = ((__pyx_t_3 > 0) != 0);
@@ -31782,7 +31782,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
  *                             lens.append(i.inferred_sv_len)
  *                 if len(lens) > 0:
  *                     svlen = int(np.mean(lens))             # <<<<<<<<<<<<<<
- *                     if (svlen / main_svlen) > 0.7:
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
  *                         svlen_precise = 1
  */
           __Pyx_GetModuleGlobalName(__pyx_t_15, __pyx_n_s_np); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 1767, __pyx_L1_error)
@@ -31814,10 +31814,16 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
           /* "dysgu/call_component.pyx":1768
  *                 if len(lens) > 0:
  *                     svlen = int(np.mean(lens))
- *                     if (svlen / main_svlen) > 0.7:             # <<<<<<<<<<<<<<
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:             # <<<<<<<<<<<<<<
  *                         svlen_precise = 1
  *                     else:
  */
+          __pyx_t_20 = ((__pyx_v_main_svlen > 0) != 0);
+          if (__pyx_t_20) {
+          } else {
+            __pyx_t_7 = __pyx_t_20;
+            goto __pyx_L36_bool_binop_done;
+          }
           __pyx_t_14 = __Pyx_PyInt_From_int(__pyx_v_main_svlen); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 1768, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_14);
           __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_svlen, __pyx_t_14); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 1768, __pyx_L1_error)
@@ -31825,13 +31831,15 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
           __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
           __pyx_t_14 = PyObject_RichCompare(__pyx_t_5, __pyx_float_0_7, Py_GT); __Pyx_XGOTREF(__pyx_t_14); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 1768, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-          __pyx_t_7 = __Pyx_PyObject_IsTrue(__pyx_t_14); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 1768, __pyx_L1_error)
+          __pyx_t_20 = __Pyx_PyObject_IsTrue(__pyx_t_14); if (unlikely(__pyx_t_20 < 0)) __PYX_ERR(0, 1768, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
+          __pyx_t_7 = __pyx_t_20;
+          __pyx_L36_bool_binop_done:;
           if (__pyx_t_7) {
 
             /* "dysgu/call_component.pyx":1769
  *                     svlen = int(np.mean(lens))
- *                     if (svlen / main_svlen) > 0.7:
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
  *                         svlen_precise = 1             # <<<<<<<<<<<<<<
  *                     else:
  *                         svlen = main_svlen
@@ -31841,7 +31849,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
             /* "dysgu/call_component.pyx":1768
  *                 if len(lens) > 0:
  *                     svlen = int(np.mean(lens))
- *                     if (svlen / main_svlen) > 0.7:             # <<<<<<<<<<<<<<
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:             # <<<<<<<<<<<<<<
  *                         svlen_precise = 1
  *                     else:
  */
@@ -31868,7 +31876,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
  *                             lens.append(i.inferred_sv_len)
  *                 if len(lens) > 0:             # <<<<<<<<<<<<<<
  *                     svlen = int(np.mean(lens))
- *                     if (svlen / main_svlen) > 0.7:
+ *                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
  */
           goto __pyx_L34;
         }
@@ -31925,7 +31933,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
  *                         svlen = int(np.mean(inferred_lens))
  *                     else:
  */
-            goto __pyx_L36;
+            goto __pyx_L38;
           }
 
           /* "dysgu/call_component.pyx":1776
@@ -31941,7 +31949,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
             __Pyx_DECREF_SET(__pyx_v_svlen, __pyx_t_15);
             __pyx_t_15 = 0;
           }
-          __pyx_L36:;
+          __pyx_L38:;
 
           /* "dysgu/call_component.pyx":1778
  *                         svlen = main_svlen
@@ -31954,7 +31962,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
           if (__pyx_t_20) {
           } else {
             __pyx_t_7 = __pyx_t_20;
-            goto __pyx_L38_bool_binop_done;
+            goto __pyx_L40_bool_binop_done;
           }
           __pyx_t_15 = __Pyx_PyInt_From_int(__pyx_v_main_svlen); if (unlikely(!__pyx_t_15)) __PYX_ERR(0, 1778, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_15);
@@ -31966,7 +31974,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
           __pyx_t_20 = __Pyx_PyObject_IsTrue(__pyx_t_15); if (unlikely(__pyx_t_20 < 0)) __PYX_ERR(0, 1778, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_15); __pyx_t_15 = 0;
           __pyx_t_7 = __pyx_t_20;
-          __pyx_L38_bool_binop_done:;
+          __pyx_L40_bool_binop_done:;
           if (__pyx_t_7) {
 
             /* "dysgu/call_component.pyx":1779
@@ -32063,32 +32071,32 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
   { /* enter inner scope */
-    __pyx_t_14 = PyList_New(0); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 1786, __pyx_L42_error)
+    __pyx_t_14 = PyList_New(0); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 1786, __pyx_L44_error)
     __Pyx_GOTREF(__pyx_t_14);
     if (likely(PyList_CheckExact(__pyx_v_informative)) || PyTuple_CheckExact(__pyx_v_informative)) {
       __pyx_t_13 = __pyx_v_informative; __Pyx_INCREF(__pyx_t_13); __pyx_t_3 = 0;
       __pyx_t_4 = NULL;
     } else {
-      __pyx_t_3 = -1; __pyx_t_13 = PyObject_GetIter(__pyx_v_informative); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 1786, __pyx_L42_error)
+      __pyx_t_3 = -1; __pyx_t_13 = PyObject_GetIter(__pyx_v_informative); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 1786, __pyx_L44_error)
       __Pyx_GOTREF(__pyx_t_13);
-      __pyx_t_4 = Py_TYPE(__pyx_t_13)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1786, __pyx_L42_error)
+      __pyx_t_4 = Py_TYPE(__pyx_t_13)->tp_iternext; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 1786, __pyx_L44_error)
     }
     for (;;) {
       if (likely(!__pyx_t_4)) {
         if (likely(PyList_CheckExact(__pyx_t_13))) {
           if (__pyx_t_3 >= PyList_GET_SIZE(__pyx_t_13)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_12 = PyList_GET_ITEM(__pyx_t_13, __pyx_t_3); __Pyx_INCREF(__pyx_t_12); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 1786, __pyx_L42_error)
+          __pyx_t_12 = PyList_GET_ITEM(__pyx_t_13, __pyx_t_3); __Pyx_INCREF(__pyx_t_12); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 1786, __pyx_L44_error)
           #else
-          __pyx_t_12 = PySequence_ITEM(__pyx_t_13, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L42_error)
+          __pyx_t_12 = PySequence_ITEM(__pyx_t_13, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L44_error)
           __Pyx_GOTREF(__pyx_t_12);
           #endif
         } else {
           if (__pyx_t_3 >= PyTuple_GET_SIZE(__pyx_t_13)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_12 = PyTuple_GET_ITEM(__pyx_t_13, __pyx_t_3); __Pyx_INCREF(__pyx_t_12); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 1786, __pyx_L42_error)
+          __pyx_t_12 = PyTuple_GET_ITEM(__pyx_t_13, __pyx_t_3); __Pyx_INCREF(__pyx_t_12); __pyx_t_3++; if (unlikely(0 < 0)) __PYX_ERR(0, 1786, __pyx_L44_error)
           #else
-          __pyx_t_12 = PySequence_ITEM(__pyx_t_13, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L42_error)
+          __pyx_t_12 = PySequence_ITEM(__pyx_t_13, __pyx_t_3); __pyx_t_3++; if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L44_error)
           __Pyx_GOTREF(__pyx_t_12);
           #endif
         }
@@ -32098,27 +32106,27 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 1786, __pyx_L42_error)
+            else __PYX_ERR(0, 1786, __pyx_L44_error)
           }
           break;
         }
         __Pyx_GOTREF(__pyx_t_12);
       }
-      if (!(likely(((__pyx_t_12) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_12, __pyx_ptype_5dysgu_14call_component_AlignmentItem))))) __PYX_ERR(0, 1786, __pyx_L42_error)
+      if (!(likely(((__pyx_t_12) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_12, __pyx_ptype_5dysgu_14call_component_AlignmentItem))))) __PYX_ERR(0, 1786, __pyx_L44_error)
       __Pyx_XDECREF_SET(__pyx_9genexpr14__pyx_v_i, ((struct __pyx_obj_5dysgu_14call_component_AlignmentItem *)__pyx_t_12));
       __pyx_t_12 = 0;
-      __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_9genexpr14__pyx_v_i->query_overlap); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L42_error)
+      __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_9genexpr14__pyx_v_i->query_overlap); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 1786, __pyx_L44_error)
       __Pyx_GOTREF(__pyx_t_12);
-      if (unlikely(__Pyx_ListComp_Append(__pyx_t_14, (PyObject*)__pyx_t_12))) __PYX_ERR(0, 1786, __pyx_L42_error)
+      if (unlikely(__Pyx_ListComp_Append(__pyx_t_14, (PyObject*)__pyx_t_12))) __PYX_ERR(0, 1786, __pyx_L44_error)
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
     }
     __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
     __Pyx_XDECREF((PyObject *)__pyx_9genexpr14__pyx_v_i); __pyx_9genexpr14__pyx_v_i = 0;
-    goto __pyx_L45_exit_scope;
-    __pyx_L42_error:;
+    goto __pyx_L47_exit_scope;
+    __pyx_L44_error:;
     __Pyx_XDECREF((PyObject *)__pyx_9genexpr14__pyx_v_i); __pyx_9genexpr14__pyx_v_i = 0;
     goto __pyx_L1_error;
-    __pyx_L45_exit_scope:;
+    __pyx_L47_exit_scope:;
   } /* exit inner scope */
   __pyx_t_13 = NULL;
   if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_5))) {
@@ -32207,7 +32215,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
  *         jitter = ((cipos95A + cipos95B) / 2) / svlen
  *     else:
  */
-    goto __pyx_L47;
+    goto __pyx_L49;
   }
 
   /* "dysgu/call_component.pyx":1793
@@ -32221,7 +32229,7 @@ static void __pyx_f_5dysgu_14call_component_make_call(PyObject *__pyx_v_informat
     __Pyx_INCREF(__pyx_int_neg_1);
     __pyx_v_jitter = __pyx_int_neg_1;
   }
-  __pyx_L47:;
+  __pyx_L49:;
 
   /* "dysgu/call_component.pyx":1795
  *         jitter = -1
@@ -43769,10 +43777,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_B, __pyx_k_B, sizeof(__pyx_k_B), 0, 1, 0, 1},
   {&__pyx_n_u_BND, __pyx_k_BND, sizeof(__pyx_k_BND), 0, 1, 0, 1},
   {&__pyx_n_s_Counter, __pyx_k_Counter, sizeof(__pyx_k_Counter), 0, 0, 1, 1},
-  {&__pyx_n_u_DA, __pyx_k_DA, sizeof(__pyx_k_DA), 0, 1, 0, 1},
   {&__pyx_n_u_DEL, __pyx_k_DEL, sizeof(__pyx_k_DEL), 0, 1, 0, 1},
-  {&__pyx_n_u_DN, __pyx_k_DN, sizeof(__pyx_k_DN), 0, 1, 0, 1},
-  {&__pyx_n_u_DP, __pyx_k_DP, sizeof(__pyx_k_DP), 0, 1, 0, 1},
   {&__pyx_n_u_DUP, __pyx_k_DUP, sizeof(__pyx_k_DUP), 0, 1, 0, 1},
   {&__pyx_n_s_DeprecationWarning, __pyx_k_DeprecationWarning, sizeof(__pyx_k_DeprecationWarning), 0, 0, 1, 1},
   {&__pyx_n_s_FutureWarning, __pyx_k_FutureWarning, sizeof(__pyx_k_FutureWarning), 0, 0, 1, 1},
@@ -43786,6 +43791,9 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_u_TRA, __pyx_k_TRA, sizeof(__pyx_k_TRA), 0, 1, 0, 1},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_n_u_XA, __pyx_k_XA, sizeof(__pyx_k_XA), 0, 1, 0, 1},
+  {&__pyx_n_u_ZA, __pyx_k_ZA, sizeof(__pyx_k_ZA), 0, 1, 0, 1},
+  {&__pyx_n_u_ZN, __pyx_k_ZN, sizeof(__pyx_k_ZN), 0, 1, 0, 1},
+  {&__pyx_n_u_ZP, __pyx_k_ZP, sizeof(__pyx_k_ZP), 0, 1, 0, 1},
   {&__pyx_kp_u__4, __pyx_k__4, sizeof(__pyx_k__4), 0, 1, 0, 0},
   {&__pyx_n_s_a_qend, __pyx_k_a_qend, sizeof(__pyx_k_a_qend), 0, 0, 1, 1},
   {&__pyx_n_s_a_qstart, __pyx_k_a_qstart, sizeof(__pyx_k_a_qstart), 0, 0, 1, 1},

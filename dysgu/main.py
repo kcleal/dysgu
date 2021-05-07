@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import click
 import os
+import sys
 import time
 from multiprocessing import cpu_count
 from subprocess import run
@@ -68,15 +69,8 @@ def add_option_set(ctx, param, value):
     new_options_set[param.name] = value
 
 
-def show_params(kwargs):
-    logging.info("mode {}, max-cov {}, mq {}, min_support {}, dist-norm {}, contigs {}".format(
-        kwargs["mode"],
-        kwargs["max_cov"],
-        kwargs["mq"],
-        kwargs["min_support"],
-        kwargs["dist_norm"],
-        kwargs["contigs"]
-    ))
+def show_params():
+    logging.info(" ".join(sys.argv[1:]))
 
 
 def apply_preset(kwargs):
@@ -123,11 +117,6 @@ def make_wd(args, call_func=False):
         if (call_func and args["ibam"] is None) or not call_func:
             raise ValueError("Working directory already exists. Add --overwrite=True to proceed, "
                              "or supply --ibam to re-use temp files in working directory")
-
-
-def clean_up(args, tmp_file_name):
-    if args["rm_temp"]:
-        os.remove(tmp_file_name)
 
 
 @click.group(chain=False, invoke_without_command=False)
@@ -201,7 +190,7 @@ def run_pipeline(ctx, **kwargs):
 
     apply_preset(kwargs)
 
-    show_params(kwargs)
+    show_params()
 
     ctx = apply_ctx(ctx, kwargs)
     pfix = kwargs["pfix"]
@@ -223,8 +212,6 @@ def run_pipeline(ctx, **kwargs):
     ctx.obj["procs"] = 1
     logging.info("Input file is: {}".format(tmp_file_name))
     cluster.cluster_reads(ctx.obj)
-
-    # clean_up(ctx.obj)
 
     logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(
         seconds=int(time.time() - t0)))))

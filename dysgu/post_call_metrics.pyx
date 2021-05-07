@@ -87,7 +87,7 @@ class BadClipCounter:
 def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
     bad_clip_counter.sort_arrays()
-    logging.info("Arrays sorted")
+    # logging.info("Arrays sorted")
     new_events = []
     cdef EventResult_t e
     for e in events:

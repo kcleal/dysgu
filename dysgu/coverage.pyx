@@ -265,7 +265,7 @@ class GenomeScanner:
                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
                             inserts.append(a.tlen)
                             if not tags_checked:
-                                if a.has_tag("DP"):
+                                if a.has_tag("ZP"):
                                     self.extended_tags = True
                                 tags_checked = True
 

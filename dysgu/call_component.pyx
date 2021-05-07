@@ -122,7 +122,7 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
 
     cdef int flag, index, this_as
     cdef float a_bases, large_gaps, n_small_gaps
-
+    # extended tags: "DP", "DN", "DApri", "DAsupp",
     for index, a in enumerate(itertools.chain(reads1, reads2)):
 
         qname = a.qname
@@ -130,10 +130,10 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             seen.add(qname)
 
         if extended_tags:
-            if a.has_tag("DP"):
-                DP  += float(a.get_tag("DP"))
-            if a.has_tag("DN"):
-                DN += float(a.get_tag("DN"))
+            if a.has_tag("ZP"):
+                DP += float(a.get_tag("ZP"))
+            if a.has_tag("ZN"):
+                DN += float(a.get_tag("ZN"))
 
         flag = a.flag
         if flag & 2:
@@ -160,8 +160,8 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
             er.supp += 1
             MAPQsupp += a.mapq
-            if extended_tags and a.has_tag("DA"):
-                DAsupp += float(a.get_tag("DA"))
+            if extended_tags and a.has_tag("ZA"):
+                DAsupp += float(a.get_tag("ZA"))
             if a.has_tag("NM"):
                 if a_bases:
                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -180,8 +180,8 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             else:
                 paired_end.add(qname)
 
-            if extended_tags and a.has_tag("DA"):
-                DApri += float(a.get_tag("DA"))
+            if extended_tags and a.has_tag("ZA"):
+                DApri += float(a.get_tag("ZA"))
             if a.has_tag("NM"):
                 if a_bases:
                     nm = float(a.get_tag("NM"))
@@ -204,10 +204,10 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             seen.add(qname)
 
         if extended_tags:
-            if a.has_tag("DP"):
-                DP += float(a.get_tag("DP"))
-            if a.has_tag("DN"):
-                DN += float(a.get_tag("DN"))
+            if a.has_tag("ZP"):
+                DP += float(a.get_tag("ZP"))
+            if a.has_tag("ZN"):
+                DN += float(a.get_tag("ZN"))
 
         flag = a.flag
         if flag & 2:
@@ -229,8 +229,8 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
         if flag & 2304:  # Supplementary
             er.supp += 1
             MAPQsupp += a.mapq
-            if extended_tags and a.has_tag("DA"):
-                DAsupp += float(a.get_tag("DA"))
+            if extended_tags and a.has_tag("ZA"):
+                DAsupp += float(a.get_tag("ZA"))
             if a.has_tag("NM"):
                 if a_bases:
                     NMsupp += float(a.get_tag("NM")) / a_bases
@@ -247,8 +247,8 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
                 er.pe += 2
             else:
                 paired_end.add(qname)
-            if extended_tags and a.has_tag("DA"):
-                DApri += float(a.get_tag("DA"))
+            if extended_tags and a.has_tag("ZA"):
+                DApri += float(a.get_tag("ZA"))
             if a.has_tag("NM"):
                 if a_bases:
                     nm = float(a.get_tag("NM"))
@@ -1765,7 +1765,7 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                             lens.append(i.inferred_sv_len)
                 if len(lens) > 0:
                     svlen = int(np.mean(lens))
-                    if (svlen / main_svlen) > 0.7:
+                    if main_svlen > 0 and (svlen / main_svlen) > 0.7:
                         svlen_precise = 1
                     else:
                         svlen = main_svlen

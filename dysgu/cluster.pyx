@@ -322,10 +322,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
         c = [node_to_event[n] for n in grp]
         best = sorted(c, key=srt_func, reverse=True)
-
+        w0 = best[0]
         if not pick_best:
 
-            w0 = best[0]
             # Weighting for base result
             weight = w0.pe + w0.supp + w0.spanning
             spanned = bool(w0.spanning)
@@ -418,6 +417,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 w0.contig = new_a
             if add_contig_b and new_b:
                 w0.contig2 = new_b
+
         if add_partners:
             # echo([i.event_id for i in best[1:]])
             w0.partners = [i.event_id for i in best[1:]]
@@ -591,7 +591,7 @@ cdef dict search_ssr_kc(ori):
     return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
 
 
-@timeit
+# @timeit
 def find_repeat_expansions(events, insert_stdev):
 
     cdef EventResult_t e
@@ -801,13 +801,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             norm_thresh=args["dist_norm"],
                                             spd_thresh=args["spd"])
 
-    logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
-        int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-        time.time() - t5))
+    logging.info("Graph constructed")
+    # logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
+    #     int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
+    #     time.time() - t5))
 
     t0 = time.time()
     cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
-    logging.info("connected components done")
+    # logging.info("connected components done")
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
         if insert_ppf < 0:
@@ -907,7 +908,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             completed += 1
             num_jobs -= 1
 
-    logging.info("Number of components {}, n candidates {}".format(components_seen, len(block_edge_events)))
+    logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
 
     del G
     del read_buffer
@@ -1049,15 +1050,13 @@ def cluster_reads(args):
     # Run dysgu here:
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
 
-    logging.info("Extended tags: {}".format(extended_tags))
+    # logging.info("Extended tags: {}".format(extended_tags))
 
     df = pd.DataFrame.from_records([e.to_dict() for e in events])
     if not extended_tags:
         for cl in ("DN", "DP", "DApri", "DAsupp"):
             del df[cl]
-    # echo(df.columns)
-    # echo(extended_tags)
-    # quit()
+
     df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
 
     if len(df) > 0:
@@ -1079,13 +1078,6 @@ def cluster_reads(args):
             args["sample_name"] = sample_name
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
                             extended_tags=extended_tags)
-
-    # infile.close()
-    # ref_genome.close()
-    # try:
-    #     ibam.close()
-    # except:
-    #     pass
 
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],

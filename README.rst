@@ -48,7 +48,7 @@ Calling SVs
 
 Paired-end reads
 ****************
-To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
+Dysgu was developed to work with paired-end reads aligned using bwa mem. To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
 be provided to store temporary files. There are a few ways to run dysgu depending on the type of data you have.
 For paired-end data the `run` command is recommended which wraps `fetch` and `call`::
 
@@ -58,7 +58,7 @@ This will first call `fetch` which will create a temporary bam file plus other a
 
 Long reads
 **********
-For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
+Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
 For PacBio Sequel II HiFi reads, the `run` command is recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
@@ -104,7 +104,9 @@ Issues
 If dysgu is taking a long time to run, this could be due to the complexity of the sample.
 Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome.
 In this case consider increasing the `clip-length` or setting `--contigs False`, or `--remap False`.
-Alternatively check your sample for anomalous sequences and adapter content.
+Alternatively you might need to check your sample for anomalous sequences and adapter content.
 
 If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and
 provide manually using the `-I` option otherwise.
+
+If you input data or aligner do not seem to be working well with dusgu, please get in touch clealk@cardiff.ac.uk

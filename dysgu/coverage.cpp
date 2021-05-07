@@ -2646,8 +2646,8 @@ static const char __pyx_k_r[] = "r";
 static const char __pyx_k_s[] = "s";
 static const char __pyx_k_v[] = "v";
 static const char __pyx_k_x[] = "x";
-static const char __pyx_k_DP[] = "DP";
 static const char __pyx_k_SA[] = "SA";
+static const char __pyx_k_ZP[] = "ZP";
 static const char __pyx_k__2[] = "#";
 static const char __pyx_k__3[] = "\t";
 static const char __pyx_k__5[] = ";";
@@ -2961,7 +2961,6 @@ static PyObject *__pyx_kp_s_Cannot_create_writable_memory_vi;
 static PyObject *__pyx_kp_s_Cannot_index_with_type_s;
 static PyObject *__pyx_kp_u_Cant_infer_read_length_after_10;
 static PyObject *__pyx_kp_u_Cant_infer_read_length_no_reads;
-static PyObject *__pyx_n_u_DP;
 static PyObject *__pyx_n_s_DTYPE;
 static PyObject *__pyx_n_s_Ellipsis;
 static PyObject *__pyx_kp_s_Empty_shape_tuple_for_cython_arr;
@@ -2996,6 +2995,7 @@ static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_kp_s_Unable_to_convert_item_to_object;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_View_MemoryView;
+static PyObject *__pyx_n_u_ZP;
 static PyObject *__pyx_kp_u__10;
 static PyObject *__pyx_kp_u__2;
 static PyObject *__pyx_kp_u__3;
@@ -9035,7 +9035,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
  *                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
  *                             inserts.append(a.tlen)             # <<<<<<<<<<<<<<
  *                             if not tags_checked:
- *                                 if a.has_tag("DP"):
+ *                                 if a.has_tag("ZP"):
  */
             __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_a, __pyx_n_s_tlen); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_2);
@@ -9046,7 +9046,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
  *                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
  *                             inserts.append(a.tlen)
  *                             if not tags_checked:             # <<<<<<<<<<<<<<
- *                                 if a.has_tag("DP"):
+ *                                 if a.has_tag("ZP"):
  *                                     self.extended_tags = True
  */
             __pyx_t_8 = ((!(__pyx_v_tags_checked != 0)) != 0);
@@ -9055,7 +9055,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
               /* "dysgu/coverage.pyx":268
  *                             inserts.append(a.tlen)
  *                             if not tags_checked:
- *                                 if a.has_tag("DP"):             # <<<<<<<<<<<<<<
+ *                                 if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
  *                                     self.extended_tags = True
  *                                 tags_checked = True
  */
@@ -9071,7 +9071,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
                   __Pyx_DECREF_SET(__pyx_t_3, function);
                 }
               }
-              __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_n_u_DP) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_n_u_DP);
+              __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_n_u_ZP) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_n_u_ZP);
               __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
               if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 268, __pyx_L1_error)
               __Pyx_GOTREF(__pyx_t_2);
@@ -9082,7 +9082,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
 
                 /* "dysgu/coverage.pyx":269
  *                             if not tags_checked:
- *                                 if a.has_tag("DP"):
+ *                                 if a.has_tag("ZP"):
  *                                     self.extended_tags = True             # <<<<<<<<<<<<<<
  *                                 tags_checked = True
  * 
@@ -9092,14 +9092,14 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
                 /* "dysgu/coverage.pyx":268
  *                             inserts.append(a.tlen)
  *                             if not tags_checked:
- *                                 if a.has_tag("DP"):             # <<<<<<<<<<<<<<
+ *                                 if a.has_tag("ZP"):             # <<<<<<<<<<<<<<
  *                                     self.extended_tags = True
  *                                 tags_checked = True
  */
               }
 
               /* "dysgu/coverage.pyx":270
- *                                 if a.has_tag("DP"):
+ *                                 if a.has_tag("ZP"):
  *                                     self.extended_tags = True
  *                                 tags_checked = True             # <<<<<<<<<<<<<<
  * 
@@ -9111,7 +9111,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_13GenomeScanner_5get_read_length(CYTH
  *                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
  *                             inserts.append(a.tlen)
  *                             if not tags_checked:             # <<<<<<<<<<<<<<
- *                                 if a.has_tag("DP"):
+ *                                 if a.has_tag("ZP"):
  *                                     self.extended_tags = True
  */
             }
@@ -28781,7 +28781,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_Cannot_index_with_type_s, __pyx_k_Cannot_index_with_type_s, sizeof(__pyx_k_Cannot_index_with_type_s), 0, 0, 1, 0},
   {&__pyx_kp_u_Cant_infer_read_length_after_10, __pyx_k_Cant_infer_read_length_after_10, sizeof(__pyx_k_Cant_infer_read_length_after_10), 0, 1, 0, 0},
   {&__pyx_kp_u_Cant_infer_read_length_no_reads, __pyx_k_Cant_infer_read_length_no_reads, sizeof(__pyx_k_Cant_infer_read_length_no_reads), 0, 1, 0, 0},
-  {&__pyx_n_u_DP, __pyx_k_DP, sizeof(__pyx_k_DP), 0, 1, 0, 1},
   {&__pyx_n_s_DTYPE, __pyx_k_DTYPE, sizeof(__pyx_k_DTYPE), 0, 0, 1, 1},
   {&__pyx_n_s_Ellipsis, __pyx_k_Ellipsis, sizeof(__pyx_k_Ellipsis), 0, 0, 1, 1},
   {&__pyx_kp_s_Empty_shape_tuple_for_cython_arr, __pyx_k_Empty_shape_tuple_for_cython_arr, sizeof(__pyx_k_Empty_shape_tuple_for_cython_arr), 0, 0, 1, 0},
@@ -28816,6 +28815,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_Unable_to_convert_item_to_object, __pyx_k_Unable_to_convert_item_to_object, sizeof(__pyx_k_Unable_to_convert_item_to_object), 0, 0, 1, 0},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_n_s_View_MemoryView, __pyx_k_View_MemoryView, sizeof(__pyx_k_View_MemoryView), 0, 0, 1, 1},
+  {&__pyx_n_u_ZP, __pyx_k_ZP, sizeof(__pyx_k_ZP), 0, 1, 0, 1},
   {&__pyx_kp_u__10, __pyx_k__10, sizeof(__pyx_k__10), 0, 1, 0, 0},
   {&__pyx_kp_u__2, __pyx_k__2, sizeof(__pyx_k__2), 0, 1, 0, 0},
   {&__pyx_kp_u__3, __pyx_k__3, sizeof(__pyx_k__3), 0, 1, 0, 0},

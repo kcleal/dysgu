@@ -115,11 +115,11 @@ cdef trim_cigar(c, int pos, int approx_pos):
     return c[start_index:end_index], start_pos, seq_start
 
 
-cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, ndict_r, TwoWayMap& ndict_r2,
+cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, TwoWayMap& ndict_r2,
                        int32_t approx_position, int32_t max_distance):
 
     cdef int i = 0
-
+    # todo should this be uint8_t ?
     cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
     cdef char base
 
@@ -414,7 +414,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef int begin = 0
 
     cdef DiGraph G = DiGraph()
-    node_dict_r = {}
+    # node_dict_r = {}
 
     cdef TwoWayMap ndict_r2
 
@@ -426,18 +426,18 @@ cdef dict get_consensus(rd, int position, int max_distance):
         if r.query_qualities is None or len(r.seq) != len(r.query_qualities):
             r.query_qualities = array.array("B", [1] * len(r.seq))
 
-        add_to_graph(G, r, node_weights, node_dict_r, ndict_r2, position, max_distance)
+        add_to_graph(G, r, node_weights, ndict_r2, position, max_distance)
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
 
-    if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
-        idx = nodes_to_visit2[1]
-        idx2 = nodes_to_visit2[2]
-        echo("Bad node", nodes_to_visit2[1], list(node_dict_r.keys())[idx], list(node_dict_r.keys())[idx2])
-
-        for r in rd:
-            echo(f"{r.rname}:{r.pos}   {r.qname}")
-        quit()
+    # if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
+    #     idx = nodes_to_visit2[1]
+    #     idx2 = nodes_to_visit2[2]
+    #     echo("Bad node", nodes_to_visit2[1], list(node_dict_r.keys())[idx], list(node_dict_r.keys())[idx2])
+    #
+    #     for r in rd:
+    #         echo(f"{r.rname}:{r.pos}   {r.qname}")
+    #     quit()
 
     cdef cpp_deque[int] path2
     path2 = score_best_path(G, nodes_to_visit2, node_weights)

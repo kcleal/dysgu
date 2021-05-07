@@ -96,7 +96,7 @@ cdef class Table:
         return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
-cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):  # unordered_set[long]& homopolymers):
+cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
     """End minimizer
     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
     cdef int i = 0
