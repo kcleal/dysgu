@@ -2,7 +2,7 @@
 dysgu-SV
 ========
 
-dysgu (pronounced *duss-key*) is a set of tools for calling structural variants in paired-end or long read sequencing data.
+dysgu (pronounced *duss-key*) is a set of tools for calling structural variants using paired-end or long read sequencing data.
 
 
 Installation
@@ -94,6 +94,7 @@ For help use::
     dysgu --help
     dysgu command --help
 
+
 Resource requirements
 ---------------------
 Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and
@@ -109,4 +110,4 @@ Alternatively you might need to check your sample for anomalous sequences and ad
 If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and
 provide manually using the `-I` option otherwise.
 
-If you input data or aligner do not seem to be working well with dusgu, please get in touch clealk@cardiff.ac.uk
+If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
