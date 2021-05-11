@@ -171,18 +171,20 @@ def cli():
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
+@click.option("--contigs", help="Generate consensus contigs for each side of break and use sequence-based metrics in model scoring", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
-@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
-@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
-@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
+@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
-    """Run dysgu on input file with default parameters"""
+    """Run the standard dysgu pipeline. Important parameters are --mode, --dip, --min-support, --min-size"""
     # Add arguments to context
     t0 = time.time()
     logging.info("[dysgu-run] Version: {}".format(version))
@@ -193,6 +195,10 @@ def run_pipeline(ctx, **kwargs):
     show_params()
 
     ctx = apply_ctx(ctx, kwargs)
+
+    if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
+        raise ValueError("Only dip=False or contigs=False are supported, not both")
+
     pfix = kwargs["pfix"]
 
     dest = os.path.expanduser(kwargs["working_directory"])
@@ -304,13 +310,15 @@ def get_reads(ctx, **kwargs):
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--contigs", help="Generate consensus contigs for each side of break", default="True",
+@click.option("--contigs", help="Generate consensus contigs for each side of break and use sequence-based metrics in model scoring", default="True",
+              type=click.Choice(["True", "False"]), show_default=True)
+@click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
-@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=True, default=True)
-@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=True)
-@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
+@click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
+@click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
@@ -328,6 +336,8 @@ def call_events(ctx, **kwargs):
             else:
                 raise ValueError("Could not find {} in {}".format(bname, kwargs["working_directory"]))
 
+    if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
+        raise ValueError("Only dip=False or contigs=False are supported, not both")
     logging.info("Input file is: {}".format(kwargs["sv_aligns"]))
 
     apply_preset(kwargs)

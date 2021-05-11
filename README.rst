@@ -95,6 +95,19 @@ For help use::
     dysgu command --help
 
 
+Models available
+----------------
+There are a choice of three models per read type. By default, a diploid model will be used that takes into account
+changes in read-depth around break sites. This model is
+preferred as it often attains higher precision in germline samples. However, for somatic samples e.g. tumors, copy
+number changes, poly-clonality or poly-ploidy can lead to events with low allelic fraction. For such samples, a non-diploid
+model might work better. This is selected by applying `--diploid False`. A model with no information on allelic fraction
+will then be utilized.
+
+Finally, if the diploid/non-diploid models are not picking up your SV of interest, a simpler model can be used with the
+`--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
+retained. In general the performance of models follows diploid > non-diploid > no-contigs.
+
 Resource requirements
 ---------------------
 Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and

@@ -601,18 +601,21 @@ def compressability(events):
 
 
 # @timeit
-def apply_model(df, mode, contigs, paired, thresholds):
+def apply_model(df, mode, contigs, diploid, paired, thresholds):
 
     pth = os.path.dirname(os.path.abspath(__file__))
     pth = f"{pth}/dysgu_model.1.pkl.gz"
     models = pickle.load(gzip.open(pth, "rb"))
 
+    assert not (diploid == 'True' and contigs == 'True')
+
     # i.e. key is "nanopore_classifier_no_contigs"
-    col_key = f"{mode}_cols{'_no_contigs' if not contigs else ''}"
-    model_key = f"{mode}_classifier{'_no_contigs' if not contigs else ''}"
+    col_key = f"{mode}_cols{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"
+    model_key = f"{mode}_classifier{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"
 
     cols = models[col_key]
     clf = models[model_key]
+    logging.info(f"Model: {mode}, diploid: {diploid}, contig features: {contigs}. N features: {len(cols)}")
 
     c = dict(zip(
         ['NMS',    'SQC', 'CIPOS95',  'CIEND95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT'],

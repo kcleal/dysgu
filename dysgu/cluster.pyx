@@ -1057,7 +1057,7 @@ def cluster_reads(args):
         for cl in ("DN", "DP", "DApri", "DAsupp"):
             del df[cl]
 
-    df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["paired"], args["thresholds"])
+    df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"], args["thresholds"])
 
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])
