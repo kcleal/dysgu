@@ -607,7 +607,7 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
     pth = f"{pth}/dysgu_model.1.pkl.gz"
     models = pickle.load(gzip.open(pth, "rb"))
 
-    assert not (diploid == 'True' and contigs == 'True')
+    assert not (diploid == 'False' and contigs == 'False')
 
     # i.e. key is "nanopore_classifier_no_contigs"
     col_key = f"{mode}_cols{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"
