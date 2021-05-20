@@ -122,7 +122,7 @@ def make_wd(args, call_func=False):
 @click.group(chain=False, invoke_without_command=False)
 @click.version_option()
 def cli():
-    """Dysgu-SV is a set of tools for mapping and calling structural variants from bam/cram files"""
+    """Dysgu-SV is a set of tools calling structural variants from bam/cram files"""
     pass
 
 

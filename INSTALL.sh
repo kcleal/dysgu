@@ -30,19 +30,24 @@ if [[ $htslib_folder == "./dysgu/htslib" ]]
 then
   echo "Building htslib"
   cd ./dysgu/htslib
-  autoheader
-  autoconf
-  ./configure $@
+  ls
+  autoreconf -i
+  ./configure
+#  autoheader
+#  autoconf
+#  ./configure $@
   make -j$threads
   cd ../../
 fi
 
 echo "Installing dependencies"
-pip install -r requirements.txt
+pip3 --version
+pip3 install -r requirements.txt
 
 echo "Installing dysgu"
-python setup.py install
+python3 --version
+python3 setup.py install
 
 dysgu --version
-#dysgu test
+
 echo "Done"
