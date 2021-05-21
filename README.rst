@@ -48,37 +48,40 @@ Calling SVs
 
 Paired-end reads
 ****************
-Dysgu was developed to work with paired-end reads aligned using bwa mem. To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
+Dysgu was developed to work with paired-end reads aligned using bwa mem, although other aligners will work. To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
 be provided to store temporary files. There are a few ways to run dysgu depending on the type of data you have.
 For paired-end data the `run` command is recommended which wraps `fetch` and `call`::
 
     dysgu run reference.fa temp_dir input.bam > svs.vcf
 
-This will first call `fetch` which will create a temporary bam file plus other analysis files in the working directory `samp1_temp`. These temporary files are then analysed using the `call` program.
+This will first call `fetch` which will create a temporary bam file plus other analysis files in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
 
 Long reads
 **********
 Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
-For PacBio Sequel II HiFi reads, the `run` command is recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
+For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
 
-Fetching SV reads
+Pipeline overview
 ~~~~~~~~~~~~~~~~~
-To separate SV-associated reads, use `fetch` on an existing .bam file::
+The first stage of the "run" pipeline is to separate SV-associated reads - split/discordant reads,
+and reads with a soft-clip >= clip_length (15 bp by default).
+This is achieved using the `fetch` command, which can be run independently if needs be::
 
     dysgu fetch samp1_temp input.bam
 
 
-To save time, `dysgu fetch` can be run in a stream during mapping/sorting. Here, dysgu reads from stdin and
+For example, to save time, `dysgu fetch` can be run in a stream during mapping/sorting. In the example below, dysgu reads from stdin and
 all SV associated reads will be placed in `temp_dir/temp_dir.dysgu_reads.bam`, and all input alignments will be placed in all_reads.bam::
 
     dysgu fetch -r all_reads.bam temp_dir -
 
-SVs can be subsequently called using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
-size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate::
+The next stage of the pipeline is to call SVs using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
+size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate. Alternatively,
+the insert size can be specified manually using the -I option::
 
     dysgu call --ibam all_reads.bam reference.fa temp_dir temp_dir/temp_dir.dysgu_reads.bam > svs.vcf
 
