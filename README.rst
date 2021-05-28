@@ -38,9 +38,9 @@ Usage
 Available commands::
 
     dysgu run     # Run using default arguments, wraps fetch and call commands
-    dysgu fetch   # Seperate SV reads from input bam file
+    dysgu fetch   # Separate SV reads from input bam file
     dysgu call    # SV calling
-    dysgu merge   # Merge calls from multiple dysgu call runs
+    dysgu merge   # Merge calls from multiple samples
     dysgu test    # Run basic tests
 
 Calling SVs
@@ -110,6 +110,13 @@ will then be utilized.
 Finally, if the diploid/non-diploid models are not picking up your SV of interest, a simpler model can be used with the
 `--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
 retained. In general the performance of models follows diploid > non-diploid > no-contigs.
+
+Useful parameters
+-----------------
+The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.
+Also the --max-cov parameter may need to be adjusted for high coverage samples (default is 200); regions with higher
+coverage are ignored. The --thresholds parameter controls the probability value at which events are labelled with a
+'PASS', increasing these values increases precision at the expense of sensitivity.
 
 Resource requirements
 ---------------------
