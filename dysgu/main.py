@@ -342,7 +342,7 @@ def call_events(ctx, **kwargs):
 
     apply_preset(kwargs)
 
-    show_params(kwargs)
+    show_params()
 
     ctx = apply_ctx(ctx, kwargs)
 
