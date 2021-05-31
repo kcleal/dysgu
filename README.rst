@@ -58,7 +58,7 @@ This will first call `fetch` which will create a temporary bam file plus other a
 
 Long reads
 **********
-Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly. If you plan to use the 'call' comand, please build dysgu from source rather than using pip install - a patch will be released to  pypi as soon as possible.
+Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly. *If you plan to use the 'call' comand, please build dysgu from source rather than using pip install - a bug has recently been fixed and patch will be released to  pypi as soon as possible.
 For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
