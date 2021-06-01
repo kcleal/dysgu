@@ -502,7 +502,7 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
 
         max_depth = 0
         if kind == "hemi-regional":
-            # chrom_i = infile.get_tid(r["chrA"])
+
             chrom_i = r.chrA
             if chrom_i in regions_depth.chrom_cov_arrays:
                 reads_10kb, max_depth = calculate_coverage(r.posA - 10000, r.posA + 10000, regions_depth.chrom_cov_arrays[chrom_i])
@@ -510,15 +510,13 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
             else:
                 reads_10kb = 0
         else:
-            # Calculate max
-            # chrom_i = infile.get_tid(r["chrA"])
             chrom_i = r.chrA
             if chrom_i in regions_depth.chrom_cov_arrays:
                 reads_10kb_left, max_depth = calculate_coverage(r.posA - 10000, r.posA + 10000, regions_depth.chrom_cov_arrays[chrom_i])
                 reads_10kb_left = round(reads_10kb_left, 3)
             else:
                 reads_10kb_left = 0
-            # chrom_i = infile.get_tid(r["chrB"])
+
             chrom_i = r.chrB
             if chrom_i in regions_depth.chrom_cov_arrays:
                 reads_10kb_right, max_depth = calculate_coverage(r.posB - 10000, r.posB + 10000, regions_depth.chrom_cov_arrays[chrom_i])

@@ -10,10 +10,9 @@ from cython.operator import dereference, postincrement, postdecrement, preincrem
 from libc.math cimport fabs as c_fabs
 from libcpp.vector cimport vector as cpp_vector
 
-from dysgu.map_set_utils import echo, timeit
+from dysgu.map_set_utils import echo
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
-from dysgu.coverage import merge_intervals
 from dysgu.assembler import compute_rep
 
 import zlib
@@ -22,7 +21,6 @@ import array
 import pickle
 import os
 import glob
-import click
 import gzip
 import pandas as pd
 import warnings
@@ -83,11 +81,10 @@ class BadClipCounter:
 
         return count
 
-# @timeit
+
 def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
     bad_clip_counter.sort_arrays()
-    # logging.info("Arrays sorted")
     new_events = []
     cdef EventResult_t e
     for e in events:
@@ -116,7 +113,6 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
             continue
 
         clip_res = None
-        # cont = None
 
         max_score_rev = 0
         max_score_forward = 0
@@ -250,7 +246,6 @@ class CoverageAnalyser(object):
         else:
             logging.warning("Coverage track not loaded, working directory does not exist {}".format(self.temp_dir))
 
-    # @timeit
     def process_events(self, events):
 
         # Try and load coverage tracks
@@ -454,7 +449,7 @@ class CoverageAnalyser(object):
 
         return events
 
-# @timeit
+
 def ref_repetitiveness(events, mode, ref_genome):
     cdef EventResult_t e
     for e in events:
@@ -580,7 +575,7 @@ def get_gt_metric(events, infile, add_gt=False):
 
     return events
 
-# @timeit
+
 def compressability(events):
     cdef EventResult_t e
     for e in events:
@@ -600,7 +595,6 @@ def compressability(events):
     return events
 
 
-# @timeit
 def apply_model(df, mode, contigs, diploid, paired, thresholds):
 
     pth = os.path.dirname(os.path.abspath(__file__))

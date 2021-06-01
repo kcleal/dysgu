@@ -156,10 +156,13 @@ def cli():
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
-@click.option('--regions-only', help="If --include is provided, call only events within target regions",
+@click.option('--regions', help="bed file of target regions, coverage information outside these regions will be ignored", default=None, type=click.Path(exists=True))
+@click.option('--regions-only', help="If --regions is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
-@click.option('--include', help=".bed file, limit calls to regions", default=None, type=click.Path(exists=True))
+@click.option('--regions-mm-only', help="If --regions is provided, only use minimizer clustering within --regions. Useful for high coverage targeted sequencing",
+              default="False", type=click.Choice(["True", "False"]),
+              show_default=True)
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
@@ -295,10 +298,14 @@ def get_reads(ctx, **kwargs):
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
-@click.option('--regions-only', help="If --include is provided, call only events within target regions",
-              default="False", type=click.Choice(["True", "False"]), show_default=True)
+@click.option('--regions', help="bed file of target regions, coverage information outside these regions will be ignored", default=None, type=click.Path(exists=True))
+@click.option('--regions-only', help="If --regions is provided, call only events within target regions",
+              default="False", type=click.Choice(["True", "False"]),
+              show_default=True)
+@click.option('--regions-mm-only', help="If --regions is provided, only use minimizer clustering within --regions. Useful for high coverage targeted sequencing",
+              default="False", type=click.Choice(["True", "False"]),
+              show_default=True)
 @click.option("-p", "--procs", help="Processors to use", type=cpu_range, default=1, show_default=True)
-@click.option('--include', help=".bed file, limit calls to regions", default=None, type=click.Path(exists=True))
 @click.option("--buffer-size", help="Number of alignments to buffer", default=defaults["buffer_size"],
               type=int, show_default=True)
 @click.option("--merge-within", help="Try and merge similar events, recommended for most situations",
@@ -386,8 +393,8 @@ def test_command(ctx, **kwargs):
     pwd = os.getcwd()
     logging.info("[dysgu-test] Version: {}".format(version))
     tests_path = os.path.dirname(__file__) + "/tests"
-    # runner = CliRunner()
-    tests = []
+
+    tests = list()
     tests.append(["dysgu run",
                   "-x --drop-gaps False",
                   "-o " + pwd + '/test.dysgu{}.vcf'.format(version),
@@ -395,11 +402,24 @@ def test_command(ctx, **kwargs):
                   pwd + '/wd_test',
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
+                  "-x --drop-gaps False",
+                  "--regions " + tests_path + '/targets.bed',
+                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test2',
+                  tests_path + '/small.bam'])
+    tests.append(["dysgu run",
                   "-x --drop-gaps False --mode pacbio",
                   "-o " + pwd + '/test2.dysgu{}.vcf'.format(version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test',
-              tests_path + '/small.bam'])
+                  tests_path + '/small.bam'])
+    tests.append(["dysgu call",
+                  "-x --drop-gaps False",
+                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test',
+                  tests_path + '/small.bam'])
     tests.append(["dysgu merge",
                   pwd + '/test.dysgu{}.vcf'.format(version),
                   pwd + '/test2.dysgu{}.vcf'.format(version),
@@ -412,18 +432,5 @@ def test_command(ctx, **kwargs):
             raise RuntimeError(t, "finished with non zero: {}".format(v))
         else:
             click.echo("PASS: " + c, err=True)
-    # result = runner.invoke(run_pipeline, t)
-    # click.echo(result, err=True)
-    # assert result.exit_code == 0
-
-    # runner = CliRunner()
-    # t = ["-x --mode pacbio",
-    #      "-o " + tests_path + '/test2.vcf',
-    #      tests_path + '/ref.fa',
-    #      tests_path + '/wd_test',
-    #      tests_path + '/small.bam']
-    #
-    # result = runner.invoke(run_pipeline, t)
-    # assert result.exit_code == 0
 
     logging.info("Run test complete")

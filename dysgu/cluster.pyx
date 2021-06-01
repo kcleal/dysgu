@@ -48,13 +48,13 @@ def filter_potential(input_events, tree, regions_only):
         #     i["remap_score"] = 0
         # if "scw" not in i or i["scw"] is None:
         #     i["scw"] = 0
-        # Remove events for which both ends are in --include but no contig was found
+        # Remove events for which both ends are in --regions but no contig was found
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i.chrA, i.posA, i.posA + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i.chrB, i.posB, i.posB + 1)
 
         if (posA_intersects and posB_intersects) and (i.contig is None or i.contig2 is None):
             continue
-        # Remove events for which neither end is in --include (if --include provided)
+        # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
             if not posA_intersects and not posB_intersects:
                 continue
@@ -733,7 +733,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     else:
         coverage_tracker = None
 
-    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["include"], 1,
+    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["regions"], 1,
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
@@ -799,7 +799,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             read_length=read_len,
                                             contigs=args["contigs"],
                                             norm_thresh=args["dist_norm"],
-                                            spd_thresh=args["spd"])
+                                            spd_thresh=args["spd"],
+                                            mm_only=args["regions_mm_only"] == "True")
 
     logging.info("Graph constructed")
     # logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
@@ -990,7 +991,7 @@ def cluster_reads(args):
     if kind not in opts:
         raise ValueError("Input must be a .bam/cam/sam or stdin")
 
-    if kind == "stdin" and args["include"] is not None:
+    if kind == "stdin" and args["regions"] is not None:
         raise ValueError("Cannot use stdin and include (an indexed bam is needed)")
 
     bam_mode = opts[kind]
@@ -1002,7 +1003,7 @@ def cluster_reads(args):
     except ValueError:
         has_index = False
     logging.info("Input file has index {}".format(has_index))
-    if not has_index and args["include"] is not None:
+    if not has_index and args["regions"] is not None:
         logging.info("Indexing input alignment file")
         infile.close()
         pysam.index(args["sv_aligns"])
@@ -1045,7 +1046,7 @@ def cluster_reads(args):
         outfile = open(args["svs_out"], "w")
     logging.info("Running pipeline")
     _debug_k = []
-    regions = io_funcs.overlap_regions(args["include"])
+    regions = io_funcs.overlap_regions(args["regions"])
 
     # Run dysgu here:
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)

@@ -39,7 +39,7 @@ Available commands::
 
     dysgu run     # Run using default arguments, wraps fetch and call commands
     dysgu fetch   # Separate SV reads from input bam file
-    dysgu call    # SV calling**
+    dysgu call    # SV calling
     dysgu merge   # Merge calls from multiple samples
     dysgu test    # Run basic tests
 
@@ -58,7 +58,7 @@ This will first call `fetch` which will create a temporary bam file plus other a
 
 Long reads
 **********
-Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly. *If you plan to use the 'call' comand, please build dysgu from source rather than using pip install - a bug has recently been fixed and patch will be released to  pypi as soon as possible.
+Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
 For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
@@ -102,7 +102,7 @@ Models available
 ----------------
 There are a choice of three models per read type. By default, a diploid model will be used that takes into account
 changes in read-depth around break sites. This model is
-preferred as it often attains higher precision in germline samples. However, for somatic samples e.g. tumors, copy
+preferred as it often attains higher precision in germline whole-genome samples. However, for somatic samples (e.g. tumors) copy
 number changes, poly-clonality or poly-ploidy can lead to events with low allelic fraction. For such samples, a non-diploid
 model might work better. This is selected by applying `--diploid False`. A model with no information on allelic fraction
 will then be utilized.

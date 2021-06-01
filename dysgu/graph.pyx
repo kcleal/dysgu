@@ -777,7 +777,8 @@ cdef cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
 cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
                        NodeToName node_to_name, genome_scanner,
                        int flag, int chrom, tell, int cigar_index, int event_pos,
-                       int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum, p1_overlaps, p2_overlaps):
+                       int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
+                       bint p1_overlaps, bint p2_overlaps, bint mm_only):
 
     # Adds relevant information to graph and other data structures for further processing
     cdef vector[int] other_nodes  # Other alignments to add edges between
@@ -792,7 +793,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
     both_overlap = p1_overlaps and p2_overlaps
 
-    if read_enum != BREAKEND and not both_overlap:
+    if read_enum != BREAKEND and (not mm_only or not both_overlap):
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
@@ -800,7 +801,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
         # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
         #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
-    if not both_overlap:
+    if not mm_only or not both_overlap:
         pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum)
     # Debug:
     # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
@@ -901,7 +902,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                             int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                             TemplateEdges_t template_edges, NodeToName node_to_name,
                             int cigar_pos2, int mapq_thresh, ClipScoper_t clip_scope,
-                            ReadEnum_t read_enum, bad_clip_counter):
+                            ReadEnum_t read_enum, bad_clip_counter, bint mm_only):
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
@@ -970,7 +971,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             pass  # rnext and pnext set as above
 
         if read_enum == BREAKEND:
-            if current_overlaps_roi and next_overlaps_roi:
+            if mm_only and current_overlaps_roi and next_overlaps_roi:
                 # Probably too many reads in ROI to reliably separate out break end reads
                 return
             if good_clip and cigar_clip(r, clip_l):
@@ -986,7 +987,8 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 pos2 = event_pos
 
         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                               tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi)
+                               tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,
+                               mm_only)
 
     ###
     else:  # Single end
@@ -1006,14 +1008,16 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     cigar_index = 0
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                           current_overlaps_roi, next_overlaps_roi)
+                                           current_overlaps_roi, next_overlaps_roi,
+                                           mm_only)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
                     cigar_index = len(r.cigartuples) - 1
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                           current_overlaps_roi, next_overlaps_roi)
+                                           current_overlaps_roi, next_overlaps_roi,
+                                           mm_only)
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
@@ -1022,7 +1026,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 pos2 = event_pos
             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                   current_overlaps_roi, next_overlaps_roi)
+                                   current_overlaps_roi, next_overlaps_roi, mm_only)
 
 
 cdef struct CigarEvent:
@@ -1053,7 +1057,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_support_thresh=2, int minimizer_breadth=3,
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
-                            float norm_thresh=100, float spd_thresh=0.3):
+                            float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False):
 
     t0 = time.time()
     logging.info("Building graph with clustering distance {} bp, scope length {} bp".format(max_dist, clustering_dist))
@@ -1115,7 +1119,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
-                                      bad_clip_counter)
+                                      bad_clip_counter, mm_only)
                     added = True
 
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
@@ -1154,7 +1158,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           overlap_regions, clustering_dist, pe_scope,
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
-                                          pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter)
+                                          pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
+                                          mm_only)
                 else:
                     # Use whole read, could be normal or discordant
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
@@ -1172,7 +1177,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
-                                      pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter)
+                                      pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
+                                      mm_only)
 
             # process within-read events
             if not events_to_add.empty():
@@ -1189,7 +1195,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
-                                      v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter)
+                                      v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter,
+                                      mm_only)
 
                     preincrement(itr_events)
 
