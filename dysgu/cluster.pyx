@@ -640,10 +640,12 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
 def process_job(msg_queue, args):
 
-    job_path, infile_path, bam_mode, regions, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
+    job_path, infile_path, bam_mode, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size = args
 
     # job_file = None #open(job_path, "rb")
+
+    regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
 
     pysam.set_verbosity(0)
@@ -810,7 +812,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             job_path = f"{tdir}/job_{n}.pkl"
 
             proc_args = (
-                job_path, args["sv_aligns"], args["bam_mode"], regions, clip_length, insert_median, insert_stdev,
+                job_path, args["sv_aligns"], args["bam_mode"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs,
                 rel_diffs, diffs, min_size
             )
