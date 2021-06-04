@@ -55,6 +55,9 @@ For paired-end data the `run` command is recommended which wraps `fetch` and `ca
     dysgu run reference.fa temp_dir input.bam > svs.vcf
 
 This will first call `fetch` which will create a temporary bam file plus other analysis files in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
+To make use of multiprocessing, set the "-p" parameter::
+
+    dysgu run -p4 reference.fa temp_dir input.bam > svs.vcf
 
 Long reads
 **********
@@ -62,6 +65,7 @@ Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For ver
 For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
+
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
 

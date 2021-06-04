@@ -2164,17 +2164,6 @@ static int __Pyx__GetException(PyThreadState *tstate, PyObject **type, PyObject 
 static int __Pyx_GetException(PyObject **type, PyObject **value, PyObject **tb);
 #endif
 
-/* PyIntBinop.proto */
-#if !CYTHON_COMPILING_IN_PYPY
-static PyObject* __Pyx_PyInt_TrueDivideObjC(PyObject *op1, PyObject *op2, long intval, int inplace, int zerodivision_check);
-#else
-#define __Pyx_PyInt_TrueDivideObjC(op1, op2, intval, inplace, zerodivision_check)\
-    (inplace ? PyNumber_InPlaceTrueDivide(op1, op2) : PyNumber_TrueDivide(op1, op2))
-#endif
-
-/* None.proto */
-static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
-
 /* IterFinish.proto */
 static CYTHON_INLINE int __Pyx_IterFinish(void);
 
@@ -2474,6 +2463,9 @@ static CYTHON_INLINE int __Pyx_PyList_Extend(PyObject* L, PyObject* v) {
     return PyList_SetSlice(L, PY_SSIZE_T_MAX, PY_SSIZE_T_MAX, v);
 #endif
 }
+
+/* None.proto */
+static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
 
 /* None.proto */
 static CYTHON_INLINE long __Pyx_div_long(long, long);
@@ -3157,7 +3149,6 @@ static const char __pyx_k_gt_idx[] = "gt_idx";
 static const char __pyx_k_gt_sum[] = "gt_sum";
 static const char __pyx_k_ignore[] = "ignore";
 static const char __pyx_k_import[] = "__import__";
-static const char __pyx_k_infile[] = "infile";
 static const char __pyx_k_is_dup[] = "is_dup";
 static const char __pyx_k_jitter[] = "jitter";
 static const char __pyx_k_lp_het[] = "lp_het";
@@ -3180,6 +3171,7 @@ static const char __pyx_k_sorted[] = "sorted";
 static const char __pyx_k_stride[] = "stride";
 static const char __pyx_k_struct[] = "struct";
 static const char __pyx_k_svtype[] = "svtype";
+static const char __pyx_k_timeit[] = "timeit";
 static const char __pyx_k_unpack[] = "unpack";
 static const char __pyx_k_update[] = "update";
 static const char __pyx_k_CIEND95[] = "CIEND95";
@@ -3634,7 +3626,6 @@ static PyObject *__pyx_n_s_icn;
 static PyObject *__pyx_n_s_id;
 static PyObject *__pyx_n_u_ignore;
 static PyObject *__pyx_n_s_import;
-static PyObject *__pyx_n_s_infile;
 static PyObject *__pyx_n_s_info;
 static PyObject *__pyx_n_s_init;
 static PyObject *__pyx_n_s_inner;
@@ -3824,6 +3815,7 @@ static PyObject *__pyx_n_s_temp_dir;
 static PyObject *__pyx_n_s_test;
 static PyObject *__pyx_n_s_thresholds;
 static PyObject *__pyx_n_s_time;
+static PyObject *__pyx_n_s_timeit;
 static PyObject *__pyx_n_s_total;
 static PyObject *__pyx_kp_s_unable_to_allocate_array_data;
 static PyObject *__pyx_kp_s_unable_to_allocate_shape_and_str;
@@ -3851,7 +3843,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_4log_choose(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_n, PyObject *__pyx_v_k); /* proto */
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_6bayes_gt(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_ref, PyObject *__pyx_v_alt, PyObject *__pyx_v_is_dup); /* proto */
 static PyObject *__pyx_lambda_funcdef_lambda(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_x); /* proto */
-static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events, CYTHON_UNUSED PyObject *__pyx_v_infile, PyObject *__pyx_v_add_gt); /* proto */
+static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events, PyObject *__pyx_v_add_gt); /* proto */
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_10compressability(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events); /* proto */
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_12apply_model(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_df, PyObject *__pyx_v_mode, PyObject *__pyx_v_contigs, PyObject *__pyx_v_diploid, CYTHON_UNUSED PyObject *__pyx_v_paired, PyObject *__pyx_v_thresholds); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */
@@ -8407,9 +8399,7 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_3process
 
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process_events(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self, PyObject *__pyx_v_events) {
   __pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_e = 0;
-  long __pyx_v_count;
   CYTHON_UNUSED PyObject *__pyx_v_t0 = NULL;
-  CYTHON_UNUSED PyObject *__pyx_v_fcc = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -8489,7 +8479,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
  *             e.fcc = -1
  *             e.inner_cn = -1             # <<<<<<<<<<<<<<
  *             e.outer_cn = -1
- *         count = 0
+ * 
  */
     __pyx_v_e->inner_cn = -1.0;
 
@@ -8497,7 +8487,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
  *             e.fcc = -1
  *             e.inner_cn = -1
  *             e.outer_cn = -1             # <<<<<<<<<<<<<<
- *         count = 0
+ * 
  *         for e in events:
  */
     __pyx_v_e->outer_cn = -1.0;
@@ -8512,18 +8502,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":257
- *             e.inner_cn = -1
- *             e.outer_cn = -1
- *         count = 0             # <<<<<<<<<<<<<<
- *         for e in events:
- *             t0 = time.time()
- */
-  __pyx_v_count = 0;
-
   /* "dysgu/post_call_metrics.pyx":258
  *             e.outer_cn = -1
- *         count = 0
+ * 
  *         for e in events:             # <<<<<<<<<<<<<<
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
@@ -8572,7 +8553,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
     __pyx_t_4 = 0;
 
     /* "dysgu/post_call_metrics.pyx":259
- *         count = 0
+ * 
  *         for e in events:
  *             t0 = time.time()             # <<<<<<<<<<<<<<
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
@@ -8606,7 +8587,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":             # <<<<<<<<<<<<<<
  *                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
- *                     fcc = self.process_two_windows(e)
+ *                     self.process_two_windows(e)
  */
     __pyx_t_8 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_DEL, Py_EQ)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 260, __pyx_L1_error)
     if (!__pyx_t_8) {
@@ -8629,7 +8610,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
  *                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:             # <<<<<<<<<<<<<<
- *                     fcc = self.process_two_windows(e)
+ *                     self.process_two_windows(e)
  *                 else:
  */
       __pyx_t_8 = ((__pyx_v_e->svlen > 0x7D0) != 0);
@@ -8654,9 +8635,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
         /* "dysgu/post_call_metrics.pyx":262
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
  *                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
- *                     fcc = self.process_two_windows(e)             # <<<<<<<<<<<<<<
+ *                     self.process_two_windows(e)             # <<<<<<<<<<<<<<
  *                 else:
- *                     fcc = self.process_one_window(e)
+ *                     self.process_one_window(e)
  */
         __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_process_two_windows); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 262, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
@@ -8675,25 +8656,24 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
         if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 262, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_XDECREF_SET(__pyx_v_fcc, __pyx_t_4);
-        __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
         /* "dysgu/post_call_metrics.pyx":261
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
  *                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:             # <<<<<<<<<<<<<<
- *                     fcc = self.process_two_windows(e)
+ *                     self.process_two_windows(e)
  *                 else:
  */
         goto __pyx_L11;
       }
 
       /* "dysgu/post_call_metrics.pyx":264
- *                     fcc = self.process_two_windows(e)
+ *                     self.process_two_windows(e)
  *                 else:
- *                     fcc = self.process_one_window(e)             # <<<<<<<<<<<<<<
+ *                     self.process_one_window(e)             # <<<<<<<<<<<<<<
  *             elif e.svtype == "INS":
- *                 fcc = self.process_insertion(e)
+ *                 self.process_insertion(e)
  */
       /*else*/ {
         __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_process_one_window); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 264, __pyx_L1_error)
@@ -8713,8 +8693,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
         if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 264, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_XDECREF_SET(__pyx_v_fcc, __pyx_t_4);
-        __pyx_t_4 = 0;
+        __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       }
       __pyx_L11:;
 
@@ -8723,27 +8702,27 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":             # <<<<<<<<<<<<<<
  *                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
- *                     fcc = self.process_two_windows(e)
+ *                     self.process_two_windows(e)
  */
       goto __pyx_L7;
     }
 
     /* "dysgu/post_call_metrics.pyx":265
  *                 else:
- *                     fcc = self.process_one_window(e)
+ *                     self.process_one_window(e)
  *             elif e.svtype == "INS":             # <<<<<<<<<<<<<<
- *                 fcc = self.process_insertion(e)
+ *                 self.process_insertion(e)
  *             else:  # TRA
  */
     __pyx_t_7 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_INS, Py_EQ)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 265, __pyx_L1_error)
     if (__pyx_t_7) {
 
       /* "dysgu/post_call_metrics.pyx":266
- *                     fcc = self.process_one_window(e)
+ *                     self.process_one_window(e)
  *             elif e.svtype == "INS":
- *                 fcc = self.process_insertion(e)             # <<<<<<<<<<<<<<
+ *                 self.process_insertion(e)             # <<<<<<<<<<<<<<
  *             else:  # TRA
- *                 fcc = self.process_two_windows(e)
+ *                 self.process_two_windows(e)
  */
       __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_process_insertion); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 266, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
@@ -8762,25 +8741,24 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
       if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 266, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __Pyx_XDECREF_SET(__pyx_v_fcc, __pyx_t_4);
-      __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
       /* "dysgu/post_call_metrics.pyx":265
  *                 else:
- *                     fcc = self.process_one_window(e)
+ *                     self.process_one_window(e)
  *             elif e.svtype == "INS":             # <<<<<<<<<<<<<<
- *                 fcc = self.process_insertion(e)
+ *                 self.process_insertion(e)
  *             else:  # TRA
  */
       goto __pyx_L7;
     }
 
     /* "dysgu/post_call_metrics.pyx":268
- *                 fcc = self.process_insertion(e)
+ *                 self.process_insertion(e)
  *             else:  # TRA
- *                 fcc = self.process_two_windows(e)             # <<<<<<<<<<<<<<
- *             count += 1
+ *                 self.process_two_windows(e)             # <<<<<<<<<<<<<<
  * 
+ *         return events
  */
     /*else*/ {
       __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_process_two_windows); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 268, __pyx_L1_error)
@@ -8800,23 +8778,13 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
       if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 268, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __Pyx_XDECREF_SET(__pyx_v_fcc, __pyx_t_4);
-      __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     }
     __pyx_L7:;
 
-    /* "dysgu/post_call_metrics.pyx":269
- *             else:  # TRA
- *                 fcc = self.process_two_windows(e)
- *             count += 1             # <<<<<<<<<<<<<<
- * 
- *         return events
- */
-    __pyx_v_count = (__pyx_v_count + 1);
-
     /* "dysgu/post_call_metrics.pyx":258
  *             e.outer_cn = -1
- *         count = 0
+ * 
  *         for e in events:             # <<<<<<<<<<<<<<
  *             t0 = time.time()
  *             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
@@ -8824,8 +8792,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":271
- *             count += 1
+  /* "dysgu/post_call_metrics.pyx":270
+ *                 self.process_two_windows(e)
  * 
  *         return events             # <<<<<<<<<<<<<<
  * 
@@ -8855,18 +8823,17 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_2process
   __pyx_L0:;
   __Pyx_XDECREF((PyObject *)__pyx_v_e);
   __Pyx_XDECREF(__pyx_v_t0);
-  __Pyx_XDECREF(__pyx_v_fcc);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "dysgu/post_call_metrics.pyx":273
+/* "dysgu/post_call_metrics.pyx":272
  *         return events
  * 
  *     def process_one_window(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left, right, middle, sides, fc
  */
 
 /* Python wrapper */
@@ -8904,11 +8871,11 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_5process
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_e)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("process_one_window", 1, 2, 2, 1); __PYX_ERR(0, 273, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("process_one_window", 1, 2, 2, 1); __PYX_ERR(0, 272, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "process_one_window") < 0)) __PYX_ERR(0, 273, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "process_one_window") < 0)) __PYX_ERR(0, 272, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -8921,13 +8888,13 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_5process
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("process_one_window", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 273, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("process_one_window", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 272, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.post_call_metrics.CoverageAnalyser.process_one_window", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_e), __pyx_ptype_5dysgu_13map_set_utils_EventResult, 1, "e", 0))) __PYX_ERR(0, 273, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_e), __pyx_ptype_5dysgu_13map_set_utils_EventResult, 1, "e", 0))) __PYX_ERR(0, 272, __pyx_L1_error)
   __pyx_r = __pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process_one_window(__pyx_self, __pyx_v_self, __pyx_v_e);
 
   /* function exit code */
@@ -8940,16 +8907,16 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_5process
 }
 
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process_one_window(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self, __pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_e) {
-  int32_t __pyx_v_start;
-  int32_t __pyx_v_end;
-  int32_t __pyx_v_s;
-  PyObject *__pyx_v_arr = NULL;
-  long __pyx_v_starting_pos;
+  int __pyx_v_start;
+  int __pyx_v_end;
+  int __pyx_v_s;
   float __pyx_v_left;
   float __pyx_v_right;
   float __pyx_v_middle;
   float __pyx_v_sides;
-  double __pyx_v_fc;
+  float __pyx_v_fc;
+  PyObject *__pyx_v_arr = NULL;
+  long __pyx_v_starting_pos;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int32_t __pyx_t_1;
@@ -8966,8 +8933,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process
   __Pyx_RefNannySetupContext("process_one_window", 0);
 
   /* "dysgu/post_call_metrics.pyx":275
- *     def process_one_window(self, EventResult_t e):
- * 
+ *         cdef int start, end, s
+ *         cdef float left, right, middle, sides, fc
  *         start, end = e.posA, e.posB             # <<<<<<<<<<<<<<
  *         if end < start:
  *             s = start
@@ -8978,7 +8945,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process
   __pyx_v_end = __pyx_t_2;
 
   /* "dysgu/post_call_metrics.pyx":276
- * 
+ *         cdef float left, right, middle, sides, fc
  *         start, end = e.posA, e.posB
  *         if end < start:             # <<<<<<<<<<<<<<
  *             s = start
@@ -9015,7 +8982,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process
     __pyx_v_end = __pyx_v_s;
 
     /* "dysgu/post_call_metrics.pyx":276
- * 
+ *         cdef float left, right, middle, sides, fc
  *         start, end = e.posA, e.posB
  *         if end < start:             # <<<<<<<<<<<<<<
  *             s = start
@@ -9395,12 +9362,12 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process
  */
   __pyx_v_e->fcc = __pyx_v_fc;
 
-  /* "dysgu/post_call_metrics.pyx":273
+  /* "dysgu/post_call_metrics.pyx":272
  *         return events
  * 
  *     def process_one_window(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left, right, middle, sides, fc
  */
 
   /* function exit code */
@@ -9423,8 +9390,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_4process
  *         e.fcc = fc
  * 
  *     def process_two_windows(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  */
 
 /* Python wrapper */
@@ -9498,18 +9465,18 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_7process
 }
 
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process_two_windows(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self, __pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_e) {
-  int32_t __pyx_v_start;
-  int32_t __pyx_v_end;
-  int32_t __pyx_v_s;
-  PyObject *__pyx_v_arr1 = NULL;
-  PyObject *__pyx_v_arr2 = NULL;
+  int __pyx_v_start;
+  int __pyx_v_end;
+  int __pyx_v_s;
   float __pyx_v_left1;
   float __pyx_v_right1;
   float __pyx_v_left2;
   float __pyx_v_right2;
-  double __pyx_v_middle;
-  double __pyx_v_sides;
-  double __pyx_v_fc;
+  float __pyx_v_middle;
+  float __pyx_v_sides;
+  float __pyx_v_fc;
+  PyObject *__pyx_v_arr1 = NULL;
+  PyObject *__pyx_v_arr2 = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int32_t __pyx_t_1;
@@ -9528,9 +9495,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("process_two_windows", 0);
 
-  /* "dysgu/post_call_metrics.pyx":317
- *     def process_two_windows(self, EventResult_t e):
- * 
+  /* "dysgu/post_call_metrics.pyx":318
+ *         cdef int start, end, s
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  *         start, end = e.posA, e.posB             # <<<<<<<<<<<<<<
  *         if e.chrA == e.chrB and end < start:
  *             s = start
@@ -9540,15 +9507,15 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   __pyx_v_start = __pyx_t_1;
   __pyx_v_end = __pyx_t_2;
 
-  /* "dysgu/post_call_metrics.pyx":318
- * 
+  /* "dysgu/post_call_metrics.pyx":319
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  *         start, end = e.posA, e.posB
  *         if e.chrA == e.chrB and end < start:             # <<<<<<<<<<<<<<
  *             s = start
  *             start = end
  */
-  __pyx_t_4 = PyObject_RichCompare(__pyx_v_e->chrA, __pyx_v_e->chrB, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 318, __pyx_L1_error)
-  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 318, __pyx_L1_error)
+  __pyx_t_4 = PyObject_RichCompare(__pyx_v_e->chrA, __pyx_v_e->chrB, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 319, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 319, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   if (__pyx_t_5) {
   } else {
@@ -9560,7 +9527,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":319
+    /* "dysgu/post_call_metrics.pyx":320
  *         start, end = e.posA, e.posB
  *         if e.chrA == e.chrB and end < start:
  *             s = start             # <<<<<<<<<<<<<<
@@ -9569,7 +9536,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_s = __pyx_v_start;
 
-    /* "dysgu/post_call_metrics.pyx":320
+    /* "dysgu/post_call_metrics.pyx":321
  *         if e.chrA == e.chrB and end < start:
  *             s = start
  *             start = end             # <<<<<<<<<<<<<<
@@ -9578,7 +9545,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_start = __pyx_v_end;
 
-    /* "dysgu/post_call_metrics.pyx":321
+    /* "dysgu/post_call_metrics.pyx":322
  *             s = start
  *             start = end
  *             end = s             # <<<<<<<<<<<<<<
@@ -9587,8 +9554,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_end = __pyx_v_s;
 
-    /* "dysgu/post_call_metrics.pyx":318
- * 
+    /* "dysgu/post_call_metrics.pyx":319
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  *         start, end = e.posA, e.posB
  *         if e.chrA == e.chrB and end < start:             # <<<<<<<<<<<<<<
  *             s = start
@@ -9596,7 +9563,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
   }
 
-  /* "dysgu/post_call_metrics.pyx":322
+  /* "dysgu/post_call_metrics.pyx":323
  *             start = end
  *             end = s
  *         arr1, arr2 = None, None             # <<<<<<<<<<<<<<
@@ -9612,20 +9579,20 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   __pyx_v_arr2 = __pyx_t_6;
   __pyx_t_6 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":323
+  /* "dysgu/post_call_metrics.pyx":324
  *             end = s
  *         arr1, arr2 = None, None
  *         if self.chrom_cov_arrays:             # <<<<<<<<<<<<<<
  *             try:
  *                 arr1 = self.chrom_cov_arrays[e.chrA]
  */
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 323, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 323, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":324
+    /* "dysgu/post_call_metrics.pyx":325
  *         arr1, arr2 = None, None
  *         if self.chrom_cov_arrays:
  *             try:             # <<<<<<<<<<<<<<
@@ -9641,34 +9608,34 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       __Pyx_XGOTREF(__pyx_t_9);
       /*try:*/ {
 
-        /* "dysgu/post_call_metrics.pyx":325
+        /* "dysgu/post_call_metrics.pyx":326
  *         if self.chrom_cov_arrays:
  *             try:
  *                 arr1 = self.chrom_cov_arrays[e.chrA]             # <<<<<<<<<<<<<<
  *                 if e.chrA == e.chrB:
  *                     arr2 = arr1
  */
-        __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 325, __pyx_L7_error)
+        __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 326, __pyx_L7_error)
         __Pyx_GOTREF(__pyx_t_6);
-        __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_v_e->chrA); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 325, __pyx_L7_error)
+        __pyx_t_4 = __Pyx_PyObject_GetItem(__pyx_t_6, __pyx_v_e->chrA); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 326, __pyx_L7_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
         __Pyx_DECREF_SET(__pyx_v_arr1, __pyx_t_4);
         __pyx_t_4 = 0;
 
-        /* "dysgu/post_call_metrics.pyx":326
+        /* "dysgu/post_call_metrics.pyx":327
  *             try:
  *                 arr1 = self.chrom_cov_arrays[e.chrA]
  *                 if e.chrA == e.chrB:             # <<<<<<<<<<<<<<
  *                     arr2 = arr1
  *                 else:
  */
-        __pyx_t_4 = PyObject_RichCompare(__pyx_v_e->chrA, __pyx_v_e->chrB, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 326, __pyx_L7_error)
-        __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 326, __pyx_L7_error)
+        __pyx_t_4 = PyObject_RichCompare(__pyx_v_e->chrA, __pyx_v_e->chrB, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 327, __pyx_L7_error)
+        __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 327, __pyx_L7_error)
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         if (__pyx_t_3) {
 
-          /* "dysgu/post_call_metrics.pyx":327
+          /* "dysgu/post_call_metrics.pyx":328
  *                 arr1 = self.chrom_cov_arrays[e.chrA]
  *                 if e.chrA == e.chrB:
  *                     arr2 = arr1             # <<<<<<<<<<<<<<
@@ -9678,7 +9645,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
           __Pyx_INCREF(__pyx_v_arr1);
           __Pyx_DECREF_SET(__pyx_v_arr2, __pyx_v_arr1);
 
-          /* "dysgu/post_call_metrics.pyx":326
+          /* "dysgu/post_call_metrics.pyx":327
  *             try:
  *                 arr1 = self.chrom_cov_arrays[e.chrA]
  *                 if e.chrA == e.chrB:             # <<<<<<<<<<<<<<
@@ -9688,7 +9655,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
           goto __pyx_L13;
         }
 
-        /* "dysgu/post_call_metrics.pyx":329
+        /* "dysgu/post_call_metrics.pyx":330
  *                     arr2 = arr1
  *                 else:
  *                     arr2 = self.chrom_cov_arrays[e.chrB]             # <<<<<<<<<<<<<<
@@ -9696,9 +9663,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  *                 return -1
  */
         /*else*/ {
-          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 329, __pyx_L7_error)
+          __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 330, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_4);
-          __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_4, __pyx_v_e->chrB); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 329, __pyx_L7_error)
+          __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_t_4, __pyx_v_e->chrB); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 330, __pyx_L7_error)
           __Pyx_GOTREF(__pyx_t_6);
           __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
           __Pyx_DECREF_SET(__pyx_v_arr2, __pyx_t_6);
@@ -9706,7 +9673,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
         }
         __pyx_L13:;
 
-        /* "dysgu/post_call_metrics.pyx":324
+        /* "dysgu/post_call_metrics.pyx":325
  *         arr1, arr2 = None, None
  *         if self.chrom_cov_arrays:
  *             try:             # <<<<<<<<<<<<<<
@@ -9722,7 +9689,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-      /* "dysgu/post_call_metrics.pyx":330
+      /* "dysgu/post_call_metrics.pyx":331
  *                 else:
  *                     arr2 = self.chrom_cov_arrays[e.chrB]
  *             except KeyError:             # <<<<<<<<<<<<<<
@@ -9732,12 +9699,12 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       __pyx_t_10 = __Pyx_PyErr_ExceptionMatches(__pyx_builtin_KeyError);
       if (__pyx_t_10) {
         __Pyx_AddTraceback("dysgu.post_call_metrics.CoverageAnalyser.process_two_windows", __pyx_clineno, __pyx_lineno, __pyx_filename);
-        if (__Pyx_GetException(&__pyx_t_6, &__pyx_t_4, &__pyx_t_11) < 0) __PYX_ERR(0, 330, __pyx_L9_except_error)
+        if (__Pyx_GetException(&__pyx_t_6, &__pyx_t_4, &__pyx_t_11) < 0) __PYX_ERR(0, 331, __pyx_L9_except_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_GOTREF(__pyx_t_11);
 
-        /* "dysgu/post_call_metrics.pyx":331
+        /* "dysgu/post_call_metrics.pyx":332
  *                     arr2 = self.chrom_cov_arrays[e.chrB]
  *             except KeyError:
  *                 return -1             # <<<<<<<<<<<<<<
@@ -9755,7 +9722,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       goto __pyx_L9_except_error;
       __pyx_L9_except_error:;
 
-      /* "dysgu/post_call_metrics.pyx":324
+      /* "dysgu/post_call_metrics.pyx":325
  *         arr1, arr2 = None, None
  *         if self.chrom_cov_arrays:
  *             try:             # <<<<<<<<<<<<<<
@@ -9776,7 +9743,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       __pyx_L12_try_end:;
     }
 
-    /* "dysgu/post_call_metrics.pyx":323
+    /* "dysgu/post_call_metrics.pyx":324
  *             end = s
  *         arr1, arr2 = None, None
  *         if self.chrom_cov_arrays:             # <<<<<<<<<<<<<<
@@ -9786,7 +9753,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     goto __pyx_L6;
   }
 
-  /* "dysgu/post_call_metrics.pyx":333
+  /* "dysgu/post_call_metrics.pyx":334
  *                 return -1
  *         else:
  *             return -1             # <<<<<<<<<<<<<<
@@ -9801,87 +9768,87 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   }
   __pyx_L6:;
 
-  /* "dysgu/post_call_metrics.pyx":335
+  /* "dysgu/post_call_metrics.pyx":336
  *             return -1
  * 
  *         left1 = median(arr1, start - self.pad_size, start)             # <<<<<<<<<<<<<<
  *         right1 = median(arr1, start, start + self.pad_size)
  * 
  */
-  if (!(likely(((__pyx_v_arr1) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 335, __pyx_L1_error)
-  __pyx_t_11 = __Pyx_PyInt_From_int32_t(__pyx_v_start); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 335, __pyx_L1_error)
+  if (!(likely(((__pyx_v_arr1) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_start); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 336, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 335, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 336, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = PyNumber_Subtract(__pyx_t_11, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 335, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_t_11, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 336, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 335, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 336, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_v_left1 = __pyx_f_5dysgu_17post_call_metrics_median(((PyArrayObject *)__pyx_v_arr1), __pyx_t_10, __pyx_v_start);
 
-  /* "dysgu/post_call_metrics.pyx":336
+  /* "dysgu/post_call_metrics.pyx":337
  * 
  *         left1 = median(arr1, start - self.pad_size, start)
  *         right1 = median(arr1, start, start + self.pad_size)             # <<<<<<<<<<<<<<
  * 
  *         left2 = median(arr2, end - self.pad_size, end)
  */
-  if (!(likely(((__pyx_v_arr1) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 336, __pyx_L1_error)
-  __pyx_t_6 = __Pyx_PyInt_From_int32_t(__pyx_v_start); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 336, __pyx_L1_error)
+  if (!(likely(((__pyx_v_arr1) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 337, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_start); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_11 = PyNumber_Add(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_11 = PyNumber_Add(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_11); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 336, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_11); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   __pyx_v_right1 = __pyx_f_5dysgu_17post_call_metrics_median(((PyArrayObject *)__pyx_v_arr1), __pyx_v_start, __pyx_t_10);
 
-  /* "dysgu/post_call_metrics.pyx":338
+  /* "dysgu/post_call_metrics.pyx":339
  *         right1 = median(arr1, start, start + self.pad_size)
  * 
  *         left2 = median(arr2, end - self.pad_size, end)             # <<<<<<<<<<<<<<
  *         right2 = median(arr2, end, end + self.pad_size)
  * 
  */
-  if (!(likely(((__pyx_v_arr2) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr2, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 338, __pyx_L1_error)
-  __pyx_t_11 = __Pyx_PyInt_From_int32_t(__pyx_v_end); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 338, __pyx_L1_error)
+  if (!(likely(((__pyx_v_arr2) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr2, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_end); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 339, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 338, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 339, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_6 = PyNumber_Subtract(__pyx_t_11, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 338, __pyx_L1_error)
+  __pyx_t_6 = PyNumber_Subtract(__pyx_t_11, __pyx_t_4); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 339, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 338, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_6); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 339, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __pyx_v_left2 = __pyx_f_5dysgu_17post_call_metrics_median(((PyArrayObject *)__pyx_v_arr2), __pyx_t_10, __pyx_v_end);
 
-  /* "dysgu/post_call_metrics.pyx":339
+  /* "dysgu/post_call_metrics.pyx":340
  * 
  *         left2 = median(arr2, end - self.pad_size, end)
  *         right2 = median(arr2, end, end + self.pad_size)             # <<<<<<<<<<<<<<
  * 
  *         if left1 == -1 or left2 == -1 or right1 == -1 or right2 == -1:
  */
-  if (!(likely(((__pyx_v_arr2) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr2, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 339, __pyx_L1_error)
-  __pyx_t_6 = __Pyx_PyInt_From_int32_t(__pyx_v_end); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 339, __pyx_L1_error)
+  if (!(likely(((__pyx_v_arr2) == Py_None) || likely(__Pyx_TypeTest(__pyx_v_arr2, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 340, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_end); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_pad_size); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_11 = PyNumber_Add(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_t_11 = PyNumber_Add(__pyx_t_6, __pyx_t_4); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_11); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 339, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_t_11); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   __pyx_v_right2 = __pyx_f_5dysgu_17post_call_metrics_median(((PyArrayObject *)__pyx_v_arr2), __pyx_v_end, __pyx_t_10);
 
-  /* "dysgu/post_call_metrics.pyx":341
+  /* "dysgu/post_call_metrics.pyx":342
  *         right2 = median(arr2, end, end + self.pad_size)
  * 
  *         if left1 == -1 or left2 == -1 or right1 == -1 or right2 == -1:             # <<<<<<<<<<<<<<
@@ -9911,7 +9878,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   __pyx_L17_bool_binop_done:;
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":342
+    /* "dysgu/post_call_metrics.pyx":343
  * 
  *         if left1 == -1 or left2 == -1 or right1 == -1 or right2 == -1:
  *             return -1             # <<<<<<<<<<<<<<
@@ -9923,7 +9890,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     __pyx_r = __pyx_int_neg_1;
     goto __pyx_L0;
 
-    /* "dysgu/post_call_metrics.pyx":341
+    /* "dysgu/post_call_metrics.pyx":342
  *         right2 = median(arr2, end, end + self.pad_size)
  * 
  *         if left1 == -1 or left2 == -1 or right1 == -1 or right2 == -1:             # <<<<<<<<<<<<<<
@@ -9932,7 +9899,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
   }
 
-  /* "dysgu/post_call_metrics.pyx":344
+  /* "dysgu/post_call_metrics.pyx":345
  *             return -1
  * 
  *         middle = (right1 + left2) / 2.             # <<<<<<<<<<<<<<
@@ -9941,7 +9908,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
   __pyx_v_middle = (((double)(__pyx_v_right1 + __pyx_v_left2)) / 2.);
 
-  /* "dysgu/post_call_metrics.pyx":345
+  /* "dysgu/post_call_metrics.pyx":346
  * 
  *         middle = (right1 + left2) / 2.
  *         sides = (left1 + right2) / 2.             # <<<<<<<<<<<<<<
@@ -9950,7 +9917,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
   __pyx_v_sides = (((double)(__pyx_v_left1 + __pyx_v_right2)) / 2.);
 
-  /* "dysgu/post_call_metrics.pyx":347
+  /* "dysgu/post_call_metrics.pyx":348
  *         sides = (left1 + right2) / 2.
  * 
  *         fc = 0             # <<<<<<<<<<<<<<
@@ -9959,17 +9926,17 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
   __pyx_v_fc = 0.0;
 
-  /* "dysgu/post_call_metrics.pyx":348
+  /* "dysgu/post_call_metrics.pyx":349
  * 
  *         fc = 0
  *         if e.svtype == "DEL":             # <<<<<<<<<<<<<<
  *             if sides == 0:
  *                 fc = 0
  */
-  __pyx_t_3 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_DEL, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 348, __pyx_L1_error)
+  __pyx_t_3 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_DEL, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 349, __pyx_L1_error)
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":349
+    /* "dysgu/post_call_metrics.pyx":350
  *         fc = 0
  *         if e.svtype == "DEL":
  *             if sides == 0:             # <<<<<<<<<<<<<<
@@ -9979,7 +9946,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     __pyx_t_3 = ((__pyx_v_sides == 0.0) != 0);
     if (__pyx_t_3) {
 
-      /* "dysgu/post_call_metrics.pyx":350
+      /* "dysgu/post_call_metrics.pyx":351
  *         if e.svtype == "DEL":
  *             if sides == 0:
  *                 fc = 0             # <<<<<<<<<<<<<<
@@ -9988,7 +9955,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
       __pyx_v_fc = 0.0;
 
-      /* "dysgu/post_call_metrics.pyx":349
+      /* "dysgu/post_call_metrics.pyx":350
  *         fc = 0
  *         if e.svtype == "DEL":
  *             if sides == 0:             # <<<<<<<<<<<<<<
@@ -9998,7 +9965,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       goto __pyx_L22;
     }
 
-    /* "dysgu/post_call_metrics.pyx":352
+    /* "dysgu/post_call_metrics.pyx":353
  *                 fc = 0
  *             else:
  *                 fc = middle / sides             # <<<<<<<<<<<<<<
@@ -10008,13 +9975,13 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     /*else*/ {
       if (unlikely(__pyx_v_sides == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 352, __pyx_L1_error)
+        __PYX_ERR(0, 353, __pyx_L1_error)
       }
       __pyx_v_fc = (__pyx_v_middle / __pyx_v_sides);
     }
     __pyx_L22:;
 
-    /* "dysgu/post_call_metrics.pyx":353
+    /* "dysgu/post_call_metrics.pyx":354
  *             else:
  *                 fc = middle / sides
  *             e.outer_cn = sides             # <<<<<<<<<<<<<<
@@ -10023,7 +9990,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_e->outer_cn = __pyx_v_sides;
 
-    /* "dysgu/post_call_metrics.pyx":354
+    /* "dysgu/post_call_metrics.pyx":355
  *                 fc = middle / sides
  *             e.outer_cn = sides
  *             e.inner_cn = middle             # <<<<<<<<<<<<<<
@@ -10032,7 +9999,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_e->inner_cn = __pyx_v_middle;
 
-    /* "dysgu/post_call_metrics.pyx":348
+    /* "dysgu/post_call_metrics.pyx":349
  * 
  *         fc = 0
  *         if e.svtype == "DEL":             # <<<<<<<<<<<<<<
@@ -10042,17 +10009,17 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     goto __pyx_L21;
   }
 
-  /* "dysgu/post_call_metrics.pyx":356
+  /* "dysgu/post_call_metrics.pyx":357
  *             e.inner_cn = middle
  * 
  *         elif e.svtype == "DUP":  # DUP, INV             # <<<<<<<<<<<<<<
  *             if middle == 0:
  *                 fc = 0
  */
-  __pyx_t_3 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_DUP, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 356, __pyx_L1_error)
+  __pyx_t_3 = (__Pyx_PyUnicode_Equals(__pyx_v_e->svtype, __pyx_n_u_DUP, Py_EQ)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 357, __pyx_L1_error)
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":357
+    /* "dysgu/post_call_metrics.pyx":358
  * 
  *         elif e.svtype == "DUP":  # DUP, INV
  *             if middle == 0:             # <<<<<<<<<<<<<<
@@ -10062,7 +10029,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     __pyx_t_3 = ((__pyx_v_middle == 0.0) != 0);
     if (__pyx_t_3) {
 
-      /* "dysgu/post_call_metrics.pyx":358
+      /* "dysgu/post_call_metrics.pyx":359
  *         elif e.svtype == "DUP":  # DUP, INV
  *             if middle == 0:
  *                 fc = 0             # <<<<<<<<<<<<<<
@@ -10071,7 +10038,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
       __pyx_v_fc = 0.0;
 
-      /* "dysgu/post_call_metrics.pyx":357
+      /* "dysgu/post_call_metrics.pyx":358
  * 
  *         elif e.svtype == "DUP":  # DUP, INV
  *             if middle == 0:             # <<<<<<<<<<<<<<
@@ -10081,7 +10048,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       goto __pyx_L23;
     }
 
-    /* "dysgu/post_call_metrics.pyx":360
+    /* "dysgu/post_call_metrics.pyx":361
  *                 fc = 0
  *             else:
  *                 fc = sides / middle             # <<<<<<<<<<<<<<
@@ -10091,13 +10058,13 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     /*else*/ {
       if (unlikely(__pyx_v_middle == 0)) {
         PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-        __PYX_ERR(0, 360, __pyx_L1_error)
+        __PYX_ERR(0, 361, __pyx_L1_error)
       }
       __pyx_v_fc = (__pyx_v_sides / __pyx_v_middle);
     }
     __pyx_L23:;
 
-    /* "dysgu/post_call_metrics.pyx":361
+    /* "dysgu/post_call_metrics.pyx":362
  *             else:
  *                 fc = sides / middle
  *             e.outer_cn = middle             # <<<<<<<<<<<<<<
@@ -10106,7 +10073,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_e->outer_cn = __pyx_v_middle;
 
-    /* "dysgu/post_call_metrics.pyx":362
+    /* "dysgu/post_call_metrics.pyx":363
  *                 fc = sides / middle
  *             e.outer_cn = middle
  *             e.inner_cn = sides             # <<<<<<<<<<<<<<
@@ -10115,7 +10082,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  */
     __pyx_v_e->inner_cn = __pyx_v_sides;
 
-    /* "dysgu/post_call_metrics.pyx":356
+    /* "dysgu/post_call_metrics.pyx":357
  *             e.inner_cn = middle
  * 
  *         elif e.svtype == "DUP":  # DUP, INV             # <<<<<<<<<<<<<<
@@ -10126,8 +10093,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
   }
 
   /* "dysgu/post_call_metrics.pyx":366
+ * 
  *         else:  # TRA
- *             # if chrom_med > 0:
  *             if e.join_type == "3to5":             # <<<<<<<<<<<<<<
  *                 e.outer_cn = sides
  *                 e.inner_cn = middle
@@ -10137,7 +10104,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
     if (__pyx_t_3) {
 
       /* "dysgu/post_call_metrics.pyx":367
- *             # if chrom_med > 0:
+ *         else:  # TRA
  *             if e.join_type == "3to5":
  *                 e.outer_cn = sides             # <<<<<<<<<<<<<<
  *                 e.inner_cn = middle
@@ -10155,8 +10122,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
       __pyx_v_e->inner_cn = __pyx_v_middle;
 
       /* "dysgu/post_call_metrics.pyx":366
+ * 
  *         else:  # TRA
- *             # if chrom_med > 0:
  *             if e.join_type == "3to5":             # <<<<<<<<<<<<<<
  *                 e.outer_cn = sides
  *                 e.inner_cn = middle
@@ -10276,8 +10243,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  *         e.fcc = fc
  * 
  *     def process_two_windows(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  */
 
   /* function exit code */
@@ -10301,7 +10268,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_6process
  *         e.fcc = fc
  * 
  *     def process_insertion(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:
  */
 
@@ -10376,16 +10343,16 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_9process
 }
 
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process_insertion(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_self, __pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_e) {
-  PyObject *__pyx_v_arr = NULL;
-  long __pyx_v_starting_pos;
-  long __pyx_v_pad;
   float __pyx_v_left;
   float __pyx_v_left_svlen;
   float __pyx_v_right;
   float __pyx_v_right_svlen;
-  double __pyx_v_fcc;
-  double __pyx_v_inner;
-  double __pyx_v_outer;
+  float __pyx_v_fcc;
+  float __pyx_v_inner;
+  float __pyx_v_outer;
+  PyObject *__pyx_v_arr = NULL;
+  long __pyx_v_starting_pos;
+  long __pyx_v_pad;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
@@ -10402,7 +10369,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process
 
   /* "dysgu/post_call_metrics.pyx":383
  *     def process_insertion(self, EventResult_t e):
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:             # <<<<<<<<<<<<<<
  *             return -1
  * 
@@ -10411,7 +10378,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process
   if (__pyx_t_1) {
 
     /* "dysgu/post_call_metrics.pyx":384
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:
  *             return -1             # <<<<<<<<<<<<<<
  * 
@@ -10424,7 +10391,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process
 
     /* "dysgu/post_call_metrics.pyx":383
  *     def process_insertion(self, EventResult_t e):
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:             # <<<<<<<<<<<<<<
  *             return -1
  * 
@@ -10788,7 +10755,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process
  *         e.fcc = fc
  * 
  *     def process_insertion(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:
  */
 
@@ -10812,7 +10779,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_8process
  *         e.fcc = fcc
  * 
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  */
 
@@ -10915,22 +10882,23 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_11_get_c
 }
 
 static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_cov(CYTHON_UNUSED PyObject *__pyx_self, CYTHON_UNUSED PyObject *__pyx_v_self, PyObject *__pyx_v_cn, PyObject *__pyx_v_chrom_a, PyObject *__pyx_v_chrom_b, PyObject *__pyx_v_chrom_medians) {
-  PyObject *__pyx_v_m = NULL;
-  PyObject *__pyx_v_m1 = NULL;
-  PyObject *__pyx_v_m2 = NULL;
+  float __pyx_v_m;
+  float __pyx_v_m1;
+  float __pyx_v_m2;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
   int __pyx_t_2;
   PyObject *__pyx_t_3 = NULL;
-  PyObject *__pyx_t_4 = NULL;
+  float __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
   PyObject *__pyx_t_6 = NULL;
   PyObject *__pyx_t_7 = NULL;
-  int __pyx_t_8;
-  PyObject *__pyx_t_9 = NULL;
-  int __pyx_t_10;
-  PyObject *__pyx_t_11 = NULL;
+  PyObject *__pyx_t_8 = NULL;
+  int __pyx_t_9;
+  PyObject *__pyx_t_10 = NULL;
+  int __pyx_t_11;
+  PyObject *__pyx_t_12 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -10938,7 +10906,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
 
   /* "dysgu/post_call_metrics.pyx":421
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:             # <<<<<<<<<<<<<<
  *             if chrom_medians[chrom_a]:
  *                 m = cn / chrom_medians[chrom_a]
@@ -10949,7 +10917,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
   if (__pyx_t_2) {
 
     /* "dysgu/post_call_metrics.pyx":422
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  *             if chrom_medians[chrom_a]:             # <<<<<<<<<<<<<<
  *                 m = cn / chrom_medians[chrom_a]
@@ -10973,11 +10941,12 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
       __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_v_cn, __pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 423, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_v_m = __pyx_t_3;
-      __pyx_t_3 = 0;
+      __pyx_t_4 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_4 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 423, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __pyx_v_m = __pyx_t_4;
 
       /* "dysgu/post_call_metrics.pyx":422
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  *             if chrom_medians[chrom_a]:             # <<<<<<<<<<<<<<
  *                 m = cn / chrom_medians[chrom_a]
@@ -10994,8 +10963,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  *         else:
  */
     /*else*/ {
-      __Pyx_INCREF(__pyx_int_neg_1);
-      __pyx_v_m = __pyx_int_neg_1;
+      __pyx_v_m = -1.0;
 
       /* "dysgu/post_call_metrics.pyx":426
  *             else:
@@ -11006,83 +10974,83 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  */
       __Pyx_GetModuleGlobalName(__pyx_t_1, __pyx_n_s_logging); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_warning); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 426, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Chromosome_median, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 426, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_warning); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 426, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_a); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 426, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Chromosome_median, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 426, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_7 = NULL;
-      __pyx_t_8 = 0;
-      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-        __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_5);
-        if (likely(__pyx_t_7)) {
-          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-          __Pyx_INCREF(__pyx_t_7);
+      __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_a); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 426, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_7);
+      __pyx_t_8 = NULL;
+      __pyx_t_9 = 0;
+      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
+        __pyx_t_8 = PyMethod_GET_SELF(__pyx_t_6);
+        if (likely(__pyx_t_8)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
+          __Pyx_INCREF(__pyx_t_8);
           __Pyx_INCREF(function);
-          __Pyx_DECREF_SET(__pyx_t_5, function);
-          __pyx_t_8 = 1;
+          __Pyx_DECREF_SET(__pyx_t_6, function);
+          __pyx_t_9 = 1;
         }
       }
       #if CYTHON_FAST_PYCALL
-      if (PyFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_v_chrom_a, __pyx_t_6};
-        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_8, 2+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
+      if (PyFunction_Check(__pyx_t_6)) {
+        PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_chrom_a, __pyx_t_7};
+        __pyx_t_1 = __Pyx_PyFunction_FastCall(__pyx_t_6, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
+        __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
         __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       } else
       #endif
       #if CYTHON_FAST_PYCCALL
-      if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[3] = {__pyx_t_7, __pyx_v_chrom_a, __pyx_t_6};
-        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_8, 2+__pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
+      if (__Pyx_PyFastCFunction_Check(__pyx_t_6)) {
+        PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_chrom_a, __pyx_t_7};
+        __pyx_t_1 = __Pyx_PyCFunction_FastCall(__pyx_t_6, __pyx_temp+1-__pyx_t_9, 2+__pyx_t_9); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
+        __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
         __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       } else
       #endif
       {
-        __pyx_t_9 = PyTuple_New(2+__pyx_t_8); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 426, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_9);
-        if (__pyx_t_7) {
-          __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_7); __pyx_t_7 = NULL;
+        __pyx_t_10 = PyTuple_New(2+__pyx_t_9); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 426, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_10);
+        if (__pyx_t_8) {
+          __Pyx_GIVEREF(__pyx_t_8); PyTuple_SET_ITEM(__pyx_t_10, 0, __pyx_t_8); __pyx_t_8 = NULL;
         }
         __Pyx_INCREF(__pyx_v_chrom_a);
         __Pyx_GIVEREF(__pyx_v_chrom_a);
-        PyTuple_SET_ITEM(__pyx_t_9, 0+__pyx_t_8, __pyx_v_chrom_a);
-        __Pyx_GIVEREF(__pyx_t_6);
-        PyTuple_SET_ITEM(__pyx_t_9, 1+__pyx_t_8, __pyx_t_6);
-        __pyx_t_6 = 0;
-        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_9, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
+        PyTuple_SET_ITEM(__pyx_t_10, 0+__pyx_t_9, __pyx_v_chrom_a);
+        __Pyx_GIVEREF(__pyx_t_7);
+        PyTuple_SET_ITEM(__pyx_t_10, 1+__pyx_t_9, __pyx_t_7);
+        __pyx_t_7 = 0;
+        __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_10, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 426, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
+        __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
       }
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_5 = NULL;
-      if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_4))) {
-        __pyx_t_5 = PyMethod_GET_SELF(__pyx_t_4);
-        if (likely(__pyx_t_5)) {
-          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-          __Pyx_INCREF(__pyx_t_5);
+      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+      __pyx_t_6 = NULL;
+      if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_5))) {
+        __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
+        if (likely(__pyx_t_6)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
+          __Pyx_INCREF(__pyx_t_6);
           __Pyx_INCREF(function);
-          __Pyx_DECREF_SET(__pyx_t_4, function);
+          __Pyx_DECREF_SET(__pyx_t_5, function);
         }
       }
-      __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_5, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_1);
-      __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __pyx_t_3 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_5, __pyx_t_6, __pyx_t_1) : __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_1);
+      __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 426, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     }
     __pyx_L4:;
 
     /* "dysgu/post_call_metrics.pyx":421
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:             # <<<<<<<<<<<<<<
  *             if chrom_medians[chrom_a]:
  *                 m = cn / chrom_medians[chrom_a]
@@ -11100,8 +11068,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
   /*else*/ {
     __pyx_t_3 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_a); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 428, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_v_m1 = __pyx_t_3;
-    __pyx_t_3 = 0;
+    __pyx_t_4 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_4 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_v_m1 = __pyx_t_4;
 
     /* "dysgu/post_call_metrics.pyx":429
  *         else:
@@ -11112,8 +11081,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  */
     __pyx_t_3 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_b); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 429, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_v_m2 = __pyx_t_3;
-    __pyx_t_3 = 0;
+    __pyx_t_4 = __pyx_PyFloat_AsFloat(__pyx_t_3); if (unlikely((__pyx_t_4 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 429, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_v_m2 = __pyx_t_4;
 
     /* "dysgu/post_call_metrics.pyx":430
  *             m1 = chrom_medians[chrom_a]
@@ -11122,14 +11092,14 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  *                 m = cn / ((m1 + m2) / 2)
  *             else:
  */
-    __pyx_t_10 = __Pyx_PyObject_IsTrue(__pyx_v_m1); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 430, __pyx_L1_error)
-    if (__pyx_t_10) {
+    __pyx_t_11 = (__pyx_v_m1 != 0);
+    if (__pyx_t_11) {
     } else {
-      __pyx_t_2 = __pyx_t_10;
+      __pyx_t_2 = __pyx_t_11;
       goto __pyx_L6_bool_binop_done;
     }
-    __pyx_t_10 = __Pyx_PyObject_IsTrue(__pyx_v_m2); if (unlikely(__pyx_t_10 < 0)) __PYX_ERR(0, 430, __pyx_L1_error)
-    __pyx_t_2 = __pyx_t_10;
+    __pyx_t_11 = (__pyx_v_m2 != 0);
+    __pyx_t_2 = __pyx_t_11;
     __pyx_L6_bool_binop_done:;
     if (__pyx_t_2) {
 
@@ -11138,18 +11108,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  *             if m1 and m2:
  *                 m = cn / ((m1 + m2) / 2)             # <<<<<<<<<<<<<<
  *             else:
- *                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
+ *                 m = 0
  */
-      __pyx_t_3 = PyNumber_Add(__pyx_v_m1, __pyx_v_m2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 431, __pyx_L1_error)
+      __pyx_t_3 = PyFloat_FromDouble(((__pyx_v_m1 + __pyx_v_m2) / 2.0)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 431, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_4 = __Pyx_PyInt_TrueDivideObjC(__pyx_t_3, __pyx_int_2, 2, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 431, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
+      __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_v_cn, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 431, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __pyx_t_3 = __Pyx_PyNumber_Divide(__pyx_v_cn, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 431, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_v_m = __pyx_t_3;
-      __pyx_t_3 = 0;
+      __pyx_t_4 = __pyx_PyFloat_AsFloat(__pyx_t_5); if (unlikely((__pyx_t_4 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 431, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+      __pyx_v_m = __pyx_t_4;
 
       /* "dysgu/post_call_metrics.pyx":430
  *             m1 = chrom_medians[chrom_a]
@@ -11164,108 +11132,117 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
     /* "dysgu/post_call_metrics.pyx":433
  *                 m = cn / ((m1 + m2) / 2)
  *             else:
+ *                 m = 0             # <<<<<<<<<<<<<<
+ *                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
+ *                                                                           chrom_b, chrom_medians[chrom_b]))
+ */
+    /*else*/ {
+      __pyx_v_m = 0.0;
+
+      /* "dysgu/post_call_metrics.pyx":434
+ *             else:
+ *                 m = 0
  *                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],             # <<<<<<<<<<<<<<
  *                                                                           chrom_b, chrom_medians[chrom_b]))
  *         return m
  */
-    /*else*/ {
-      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_logging); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 433, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_warning); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 433, __pyx_L1_error)
+      __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_logging); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 434, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_3);
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_warning); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 434, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Chromosome_median_2, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 433, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_5);
-      __pyx_t_9 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_a); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 433, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_9);
+      __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Chromosome_median_2, __pyx_n_s_format); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 434, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_6);
+      __pyx_t_10 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_a); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 434, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_10);
 
-      /* "dysgu/post_call_metrics.pyx":434
- *             else:
+      /* "dysgu/post_call_metrics.pyx":435
+ *                 m = 0
  *                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
  *                                                                           chrom_b, chrom_medians[chrom_b]))             # <<<<<<<<<<<<<<
  *         return m
  * 
  */
-      __pyx_t_6 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_b); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 434, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_6);
-      __pyx_t_7 = NULL;
-      __pyx_t_8 = 0;
-      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-        __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_5);
-        if (likely(__pyx_t_7)) {
-          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-          __Pyx_INCREF(__pyx_t_7);
+      __pyx_t_7 = __Pyx_PyObject_GetItem(__pyx_v_chrom_medians, __pyx_v_chrom_b); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 435, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_7);
+      __pyx_t_8 = NULL;
+      __pyx_t_9 = 0;
+      if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_6))) {
+        __pyx_t_8 = PyMethod_GET_SELF(__pyx_t_6);
+        if (likely(__pyx_t_8)) {
+          PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_6);
+          __Pyx_INCREF(__pyx_t_8);
           __Pyx_INCREF(function);
-          __Pyx_DECREF_SET(__pyx_t_5, function);
-          __pyx_t_8 = 1;
+          __Pyx_DECREF_SET(__pyx_t_6, function);
+          __pyx_t_9 = 1;
         }
       }
       #if CYTHON_FAST_PYCALL
-      if (PyFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[5] = {__pyx_t_7, __pyx_v_chrom_a, __pyx_t_9, __pyx_v_chrom_b, __pyx_t_6};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 433, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+      if (PyFunction_Check(__pyx_t_6)) {
+        PyObject *__pyx_temp[5] = {__pyx_t_8, __pyx_v_chrom_a, __pyx_t_10, __pyx_v_chrom_b, __pyx_t_7};
+        __pyx_t_3 = __Pyx_PyFunction_FastCall(__pyx_t_6, __pyx_temp+1-__pyx_t_9, 4+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 434, __pyx_L1_error)
+        __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
+        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       } else
       #endif
       #if CYTHON_FAST_PYCCALL
-      if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[5] = {__pyx_t_7, __pyx_v_chrom_a, __pyx_t_9, __pyx_v_chrom_b, __pyx_t_6};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_8, 4+__pyx_t_8); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 433, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+      if (__Pyx_PyFastCFunction_Check(__pyx_t_6)) {
+        PyObject *__pyx_temp[5] = {__pyx_t_8, __pyx_v_chrom_a, __pyx_t_10, __pyx_v_chrom_b, __pyx_t_7};
+        __pyx_t_3 = __Pyx_PyCFunction_FastCall(__pyx_t_6, __pyx_temp+1-__pyx_t_9, 4+__pyx_t_9); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 434, __pyx_L1_error)
+        __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
+        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
       } else
       #endif
       {
-        __pyx_t_11 = PyTuple_New(4+__pyx_t_8); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 433, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_11);
-        if (__pyx_t_7) {
-          __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_7); __pyx_t_7 = NULL;
+        __pyx_t_12 = PyTuple_New(4+__pyx_t_9); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 434, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_12);
+        if (__pyx_t_8) {
+          __Pyx_GIVEREF(__pyx_t_8); PyTuple_SET_ITEM(__pyx_t_12, 0, __pyx_t_8); __pyx_t_8 = NULL;
         }
         __Pyx_INCREF(__pyx_v_chrom_a);
         __Pyx_GIVEREF(__pyx_v_chrom_a);
-        PyTuple_SET_ITEM(__pyx_t_11, 0+__pyx_t_8, __pyx_v_chrom_a);
-        __Pyx_GIVEREF(__pyx_t_9);
-        PyTuple_SET_ITEM(__pyx_t_11, 1+__pyx_t_8, __pyx_t_9);
+        PyTuple_SET_ITEM(__pyx_t_12, 0+__pyx_t_9, __pyx_v_chrom_a);
+        __Pyx_GIVEREF(__pyx_t_10);
+        PyTuple_SET_ITEM(__pyx_t_12, 1+__pyx_t_9, __pyx_t_10);
         __Pyx_INCREF(__pyx_v_chrom_b);
         __Pyx_GIVEREF(__pyx_v_chrom_b);
-        PyTuple_SET_ITEM(__pyx_t_11, 2+__pyx_t_8, __pyx_v_chrom_b);
-        __Pyx_GIVEREF(__pyx_t_6);
-        PyTuple_SET_ITEM(__pyx_t_11, 3+__pyx_t_8, __pyx_t_6);
-        __pyx_t_9 = 0;
-        __pyx_t_6 = 0;
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_11, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 433, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+        PyTuple_SET_ITEM(__pyx_t_12, 2+__pyx_t_9, __pyx_v_chrom_b);
+        __Pyx_GIVEREF(__pyx_t_7);
+        PyTuple_SET_ITEM(__pyx_t_12, 3+__pyx_t_9, __pyx_t_7);
+        __pyx_t_10 = 0;
+        __pyx_t_7 = 0;
+        __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_12, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 434, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       }
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __pyx_t_5 = NULL;
+      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
+      __pyx_t_6 = NULL;
       if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_1))) {
-        __pyx_t_5 = PyMethod_GET_SELF(__pyx_t_1);
-        if (likely(__pyx_t_5)) {
+        __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_1);
+        if (likely(__pyx_t_6)) {
           PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
-          __Pyx_INCREF(__pyx_t_5);
+          __Pyx_INCREF(__pyx_t_6);
           __Pyx_INCREF(function);
           __Pyx_DECREF_SET(__pyx_t_1, function);
         }
       }
-      __pyx_t_3 = (__pyx_t_5) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_5, __pyx_t_4) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_4);
-      __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 433, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __pyx_t_5 = (__pyx_t_6) ? __Pyx_PyObject_Call2Args(__pyx_t_1, __pyx_t_6, __pyx_t_3) : __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_3);
+      __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+      if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 434, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_5);
+      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     }
     __pyx_L5:;
   }
   __pyx_L3:;
 
-  /* "dysgu/post_call_metrics.pyx":435
+  /* "dysgu/post_call_metrics.pyx":436
  *                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
  *                                                                           chrom_b, chrom_medians[chrom_b]))
  *         return m             # <<<<<<<<<<<<<<
@@ -11273,16 +11250,17 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
  *     def normalize_coverage_values(self, events):
  */
   __Pyx_XDECREF(__pyx_r);
-  if (unlikely(!__pyx_v_m)) { __Pyx_RaiseUnboundLocalError("m"); __PYX_ERR(0, 435, __pyx_L1_error) }
-  __Pyx_INCREF(__pyx_v_m);
-  __pyx_r = __pyx_v_m;
+  __pyx_t_5 = PyFloat_FromDouble(__pyx_v_m); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 436, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_r = __pyx_t_5;
+  __pyx_t_5 = 0;
   goto __pyx_L0;
 
   /* "dysgu/post_call_metrics.pyx":419
  *         e.fcc = fcc
  * 
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  */
 
@@ -11290,24 +11268,21 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_10_get_c
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_3);
-  __Pyx_XDECREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5);
   __Pyx_XDECREF(__pyx_t_6);
   __Pyx_XDECREF(__pyx_t_7);
-  __Pyx_XDECREF(__pyx_t_9);
-  __Pyx_XDECREF(__pyx_t_11);
+  __Pyx_XDECREF(__pyx_t_8);
+  __Pyx_XDECREF(__pyx_t_10);
+  __Pyx_XDECREF(__pyx_t_12);
   __Pyx_AddTraceback("dysgu.post_call_metrics.CoverageAnalyser._get_cov", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
-  __Pyx_XDECREF(__pyx_v_m);
-  __Pyx_XDECREF(__pyx_v_m1);
-  __Pyx_XDECREF(__pyx_v_m2);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "dysgu/post_call_metrics.pyx":437
+/* "dysgu/post_call_metrics.pyx":438
  *         return m
  * 
  *     def normalize_coverage_values(self, events):             # <<<<<<<<<<<<<<
@@ -11350,11 +11325,11 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_13normal
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_events)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("normalize_coverage_values", 1, 2, 2, 1); __PYX_ERR(0, 437, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("normalize_coverage_values", 1, 2, 2, 1); __PYX_ERR(0, 438, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "normalize_coverage_values") < 0)) __PYX_ERR(0, 437, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "normalize_coverage_values") < 0)) __PYX_ERR(0, 438, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -11367,7 +11342,7 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_16CoverageAnalyser_13normal
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("normalize_coverage_values", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 437, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("normalize_coverage_values", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 438, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.post_call_metrics.CoverageAnalyser.normalize_coverage_values", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -11406,21 +11381,21 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("normalize_coverage_values", 0);
 
-  /* "dysgu/post_call_metrics.pyx":439
+  /* "dysgu/post_call_metrics.pyx":440
  *     def normalize_coverage_values(self, events):
  * 
  *         if not self.chrom_cov_arrays:             # <<<<<<<<<<<<<<
  *             return events
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 439, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 440, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 439, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_2 < 0)) __PYX_ERR(0, 440, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_3 = ((!__pyx_t_2) != 0);
   if (__pyx_t_3) {
 
-    /* "dysgu/post_call_metrics.pyx":440
+    /* "dysgu/post_call_metrics.pyx":441
  * 
  *         if not self.chrom_cov_arrays:
  *             return events             # <<<<<<<<<<<<<<
@@ -11432,7 +11407,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
     __pyx_r = __pyx_v_events;
     goto __pyx_L0;
 
-    /* "dysgu/post_call_metrics.pyx":439
+    /* "dysgu/post_call_metrics.pyx":440
  *     def normalize_coverage_values(self, events):
  * 
  *         if not self.chrom_cov_arrays:             # <<<<<<<<<<<<<<
@@ -11441,7 +11416,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
  */
   }
 
-  /* "dysgu/post_call_metrics.pyx":442
+  /* "dysgu/post_call_metrics.pyx":443
  *             return events
  * 
  *         chrom_medians = {k: np.median(v[v > 0]) for k, v in self.chrom_cov_arrays.items()}             # <<<<<<<<<<<<<<
@@ -11449,16 +11424,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
  *         for e in events:
  */
   { /* enter inner scope */
-    __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 442, __pyx_L6_error)
+    __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 443, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_5 = 0;
-    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 442, __pyx_L6_error)
+    __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_chrom_cov_arrays); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 443, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_8);
     if (unlikely(__pyx_t_8 == Py_None)) {
       PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "items");
-      __PYX_ERR(0, 442, __pyx_L6_error)
+      __PYX_ERR(0, 443, __pyx_L6_error)
     }
-    __pyx_t_9 = __Pyx_dict_iterator(__pyx_t_8, 0, __pyx_n_s_items, (&__pyx_t_6), (&__pyx_t_7)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 442, __pyx_L6_error)
+    __pyx_t_9 = __Pyx_dict_iterator(__pyx_t_8, 0, __pyx_n_s_items, (&__pyx_t_6), (&__pyx_t_7)); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 443, __pyx_L6_error)
     __Pyx_GOTREF(__pyx_t_9);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     __Pyx_XDECREF(__pyx_t_4);
@@ -11467,20 +11442,20 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
     while (1) {
       __pyx_t_10 = __Pyx_dict_iter_next(__pyx_t_4, __pyx_t_6, &__pyx_t_5, &__pyx_t_9, &__pyx_t_8, NULL, __pyx_t_7);
       if (unlikely(__pyx_t_10 == 0)) break;
-      if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 442, __pyx_L6_error)
+      if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_9);
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_XDECREF_SET(__pyx_8genexpr3__pyx_v_k, __pyx_t_9);
       __pyx_t_9 = 0;
       __Pyx_XDECREF_SET(__pyx_8genexpr3__pyx_v_v, __pyx_t_8);
       __pyx_t_8 = 0;
-      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 442, __pyx_L6_error)
+      __Pyx_GetModuleGlobalName(__pyx_t_9, __pyx_n_s_np); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_9);
-      __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_median); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 442, __pyx_L6_error)
+      __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_median); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_11);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_9 = PyObject_RichCompare(__pyx_8genexpr3__pyx_v_v, __pyx_int_0, Py_GT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 442, __pyx_L6_error)
-      __pyx_t_12 = __Pyx_PyObject_GetItem(__pyx_8genexpr3__pyx_v_v, __pyx_t_9); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 442, __pyx_L6_error)
+      __pyx_t_9 = PyObject_RichCompare(__pyx_8genexpr3__pyx_v_v, __pyx_int_0, Py_GT); __Pyx_XGOTREF(__pyx_t_9); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 443, __pyx_L6_error)
+      __pyx_t_12 = __Pyx_PyObject_GetItem(__pyx_8genexpr3__pyx_v_v, __pyx_t_9); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_12);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       __pyx_t_9 = NULL;
@@ -11496,10 +11471,10 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
       __pyx_t_8 = (__pyx_t_9) ? __Pyx_PyObject_Call2Args(__pyx_t_11, __pyx_t_9, __pyx_t_12) : __Pyx_PyObject_CallOneArg(__pyx_t_11, __pyx_t_12);
       __Pyx_XDECREF(__pyx_t_9); __pyx_t_9 = 0;
       __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 442, __pyx_L6_error)
+      if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_GOTREF(__pyx_t_8);
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-      if (unlikely(PyDict_SetItem(__pyx_t_1, (PyObject*)__pyx_8genexpr3__pyx_v_k, (PyObject*)__pyx_t_8))) __PYX_ERR(0, 442, __pyx_L6_error)
+      if (unlikely(PyDict_SetItem(__pyx_t_1, (PyObject*)__pyx_8genexpr3__pyx_v_k, (PyObject*)__pyx_t_8))) __PYX_ERR(0, 443, __pyx_L6_error)
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
     }
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -11515,7 +11490,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   __pyx_v_chrom_medians = ((PyObject*)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":444
+  /* "dysgu/post_call_metrics.pyx":445
  *         chrom_medians = {k: np.median(v[v > 0]) for k, v in self.chrom_cov_arrays.items()}
  *         cdef EventResult_t e
  *         for e in events:             # <<<<<<<<<<<<<<
@@ -11526,26 +11501,26 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
     __pyx_t_1 = __pyx_v_events; __Pyx_INCREF(__pyx_t_1); __pyx_t_6 = 0;
     __pyx_t_13 = NULL;
   } else {
-    __pyx_t_6 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 444, __pyx_L1_error)
+    __pyx_t_6 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 445, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_13 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 444, __pyx_L1_error)
+    __pyx_t_13 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 445, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_13)) {
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_6 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_6); __Pyx_INCREF(__pyx_t_4); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 444, __pyx_L1_error)
+        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_6); __Pyx_INCREF(__pyx_t_4); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 445, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 444, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 445, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       } else {
         if (__pyx_t_6 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_6); __Pyx_INCREF(__pyx_t_4); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 444, __pyx_L1_error)
+        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_6); __Pyx_INCREF(__pyx_t_4); __pyx_t_6++; if (unlikely(0 < 0)) __PYX_ERR(0, 445, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 444, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_6); __pyx_t_6++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 445, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       }
@@ -11555,17 +11530,17 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 444, __pyx_L1_error)
+          else __PYX_ERR(0, 445, __pyx_L1_error)
         }
         break;
       }
       __Pyx_GOTREF(__pyx_t_4);
     }
-    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 444, __pyx_L1_error)
+    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 445, __pyx_L1_error)
     __Pyx_XDECREF_SET(__pyx_v_e, ((__pyx_t_5dysgu_17post_call_metrics_EventResult_t)__pyx_t_4));
     __pyx_t_4 = 0;
 
-    /* "dysgu/post_call_metrics.pyx":445
+    /* "dysgu/post_call_metrics.pyx":446
  *         cdef EventResult_t e
  *         for e in events:
  *             if e.outer_cn > 0:             # <<<<<<<<<<<<<<
@@ -11575,16 +11550,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
     __pyx_t_3 = ((__pyx_v_e->outer_cn > 0.0) != 0);
     if (__pyx_t_3) {
 
-      /* "dysgu/post_call_metrics.pyx":446
+      /* "dysgu/post_call_metrics.pyx":447
  *         for e in events:
  *             if e.outer_cn > 0:
  *                 e.outer_cn = self._get_cov(e.outer_cn, e.chrA, e.chrB, chrom_medians)             # <<<<<<<<<<<<<<
  *             if e.inner_cn > 0:
  *                 e.inner_cn = self._get_cov(e.inner_cn, e.chrA, e.chrB, chrom_medians)
  */
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_cov); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 446, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_cov); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 447, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_11 = PyFloat_FromDouble(__pyx_v_e->outer_cn); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 446, __pyx_L1_error)
+      __pyx_t_11 = PyFloat_FromDouble(__pyx_v_e->outer_cn); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 447, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_11);
       __pyx_t_12 = NULL;
       __pyx_t_7 = 0;
@@ -11601,7 +11576,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_8)) {
         PyObject *__pyx_temp[5] = {__pyx_t_12, __pyx_t_11, __pyx_v_e->chrA, __pyx_v_e->chrB, __pyx_v_chrom_medians};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 446, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 447, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
@@ -11610,14 +11585,14 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
         PyObject *__pyx_temp[5] = {__pyx_t_12, __pyx_t_11, __pyx_v_e->chrA, __pyx_v_e->chrB, __pyx_v_chrom_medians};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 446, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 447, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
       } else
       #endif
       {
-        __pyx_t_9 = PyTuple_New(4+__pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 446, __pyx_L1_error)
+        __pyx_t_9 = PyTuple_New(4+__pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 447, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_9);
         if (__pyx_t_12) {
           __Pyx_GIVEREF(__pyx_t_12); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_12); __pyx_t_12 = NULL;
@@ -11634,16 +11609,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
         __Pyx_GIVEREF(__pyx_v_chrom_medians);
         PyTuple_SET_ITEM(__pyx_t_9, 3+__pyx_t_7, __pyx_v_chrom_medians);
         __pyx_t_11 = 0;
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_9, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 446, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_9, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 447, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 446, __pyx_L1_error)
+      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 447, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->outer_cn = __pyx_t_14;
 
-      /* "dysgu/post_call_metrics.pyx":445
+      /* "dysgu/post_call_metrics.pyx":446
  *         cdef EventResult_t e
  *         for e in events:
  *             if e.outer_cn > 0:             # <<<<<<<<<<<<<<
@@ -11652,7 +11627,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
  */
     }
 
-    /* "dysgu/post_call_metrics.pyx":447
+    /* "dysgu/post_call_metrics.pyx":448
  *             if e.outer_cn > 0:
  *                 e.outer_cn = self._get_cov(e.outer_cn, e.chrA, e.chrB, chrom_medians)
  *             if e.inner_cn > 0:             # <<<<<<<<<<<<<<
@@ -11662,16 +11637,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
     __pyx_t_3 = ((__pyx_v_e->inner_cn > 0.0) != 0);
     if (__pyx_t_3) {
 
-      /* "dysgu/post_call_metrics.pyx":448
+      /* "dysgu/post_call_metrics.pyx":449
  *                 e.outer_cn = self._get_cov(e.outer_cn, e.chrA, e.chrB, chrom_medians)
  *             if e.inner_cn > 0:
  *                 e.inner_cn = self._get_cov(e.inner_cn, e.chrA, e.chrB, chrom_medians)             # <<<<<<<<<<<<<<
  * 
  *         return events
  */
-      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_cov); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 448, __pyx_L1_error)
+      __pyx_t_8 = __Pyx_PyObject_GetAttrStr(__pyx_v_self, __pyx_n_s_get_cov); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 449, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_8);
-      __pyx_t_9 = PyFloat_FromDouble(__pyx_v_e->inner_cn); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 448, __pyx_L1_error)
+      __pyx_t_9 = PyFloat_FromDouble(__pyx_v_e->inner_cn); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 449, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       __pyx_t_11 = NULL;
       __pyx_t_7 = 0;
@@ -11688,7 +11663,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_8)) {
         PyObject *__pyx_temp[5] = {__pyx_t_11, __pyx_t_9, __pyx_v_e->chrA, __pyx_v_e->chrB, __pyx_v_chrom_medians};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 448, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 449, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
@@ -11697,14 +11672,14 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_8)) {
         PyObject *__pyx_temp[5] = {__pyx_t_11, __pyx_t_9, __pyx_v_e->chrA, __pyx_v_e->chrB, __pyx_v_chrom_medians};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 448, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_8, __pyx_temp+1-__pyx_t_7, 4+__pyx_t_7); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 449, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_11); __pyx_t_11 = 0;
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       } else
       #endif
       {
-        __pyx_t_12 = PyTuple_New(4+__pyx_t_7); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 448, __pyx_L1_error)
+        __pyx_t_12 = PyTuple_New(4+__pyx_t_7); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 449, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_12);
         if (__pyx_t_11) {
           __Pyx_GIVEREF(__pyx_t_11); PyTuple_SET_ITEM(__pyx_t_12, 0, __pyx_t_11); __pyx_t_11 = NULL;
@@ -11721,16 +11696,16 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
         __Pyx_GIVEREF(__pyx_v_chrom_medians);
         PyTuple_SET_ITEM(__pyx_t_12, 3+__pyx_t_7, __pyx_v_chrom_medians);
         __pyx_t_9 = 0;
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 448, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_8, __pyx_t_12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 449, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       }
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 448, __pyx_L1_error)
+      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 449, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->inner_cn = __pyx_t_14;
 
-      /* "dysgu/post_call_metrics.pyx":447
+      /* "dysgu/post_call_metrics.pyx":448
  *             if e.outer_cn > 0:
  *                 e.outer_cn = self._get_cov(e.outer_cn, e.chrA, e.chrB, chrom_medians)
  *             if e.inner_cn > 0:             # <<<<<<<<<<<<<<
@@ -11739,7 +11714,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
  */
     }
 
-    /* "dysgu/post_call_metrics.pyx":444
+    /* "dysgu/post_call_metrics.pyx":445
  *         chrom_medians = {k: np.median(v[v > 0]) for k, v in self.chrom_cov_arrays.items()}
  *         cdef EventResult_t e
  *         for e in events:             # <<<<<<<<<<<<<<
@@ -11749,7 +11724,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":450
+  /* "dysgu/post_call_metrics.pyx":451
  *                 e.inner_cn = self._get_cov(e.inner_cn, e.chrA, e.chrB, chrom_medians)
  * 
  *         return events             # <<<<<<<<<<<<<<
@@ -11761,7 +11736,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   __pyx_r = __pyx_v_events;
   goto __pyx_L0;
 
-  /* "dysgu/post_call_metrics.pyx":437
+  /* "dysgu/post_call_metrics.pyx":438
  *         return m
  * 
  *     def normalize_coverage_values(self, events):             # <<<<<<<<<<<<<<
@@ -11789,7 +11764,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   return __pyx_r;
 }
 
-/* "dysgu/post_call_metrics.pyx":453
+/* "dysgu/post_call_metrics.pyx":454
  * 
  * 
  * def ref_repetitiveness(events, mode, ref_genome):             # <<<<<<<<<<<<<<
@@ -11835,17 +11810,17 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_3ref_repetitiveness(PyObjec
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_mode)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, 1); __PYX_ERR(0, 453, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, 1); __PYX_ERR(0, 454, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_ref_genome)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, 2); __PYX_ERR(0, 453, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, 2); __PYX_ERR(0, 454, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "ref_repetitiveness") < 0)) __PYX_ERR(0, 453, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "ref_repetitiveness") < 0)) __PYX_ERR(0, 454, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 3) {
       goto __pyx_L5_argtuple_error;
@@ -11860,7 +11835,7 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_3ref_repetitiveness(PyObjec
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 453, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("ref_repetitiveness", 1, 3, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 454, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.post_call_metrics.ref_repetitiveness", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -11900,37 +11875,37 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("ref_repetitiveness", 0);
 
-  /* "dysgu/post_call_metrics.pyx":455
+  /* "dysgu/post_call_metrics.pyx":456
  * def ref_repetitiveness(events, mode, ref_genome):
  *     cdef EventResult_t e
  *     for e in events:             # <<<<<<<<<<<<<<
- *         # if "ref_rep" not in e:
- *         e.ref_rep = 0 #-1
+ *         e.ref_rep = 0
+ *         if e.svlen < 150 and e.svtype == "DEL":
  */
   if (likely(PyList_CheckExact(__pyx_v_events)) || PyTuple_CheckExact(__pyx_v_events)) {
     __pyx_t_1 = __pyx_v_events; __Pyx_INCREF(__pyx_t_1); __pyx_t_2 = 0;
     __pyx_t_3 = NULL;
   } else {
-    __pyx_t_2 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 455, __pyx_L1_error)
+    __pyx_t_2 = -1; __pyx_t_1 = PyObject_GetIter(__pyx_v_events); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 456, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_3 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 455, __pyx_L1_error)
+    __pyx_t_3 = Py_TYPE(__pyx_t_1)->tp_iternext; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 456, __pyx_L1_error)
   }
   for (;;) {
     if (likely(!__pyx_t_3)) {
       if (likely(PyList_CheckExact(__pyx_t_1))) {
         if (__pyx_t_2 >= PyList_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 455, __pyx_L1_error)
+        __pyx_t_4 = PyList_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 456, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 455, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 456, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       } else {
         if (__pyx_t_2 >= PyTuple_GET_SIZE(__pyx_t_1)) break;
         #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 455, __pyx_L1_error)
+        __pyx_t_4 = PyTuple_GET_ITEM(__pyx_t_1, __pyx_t_2); __Pyx_INCREF(__pyx_t_4); __pyx_t_2++; if (unlikely(0 < 0)) __PYX_ERR(0, 456, __pyx_L1_error)
         #else
-        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 455, __pyx_L1_error)
+        __pyx_t_4 = PySequence_ITEM(__pyx_t_1, __pyx_t_2); __pyx_t_2++; if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 456, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         #endif
       }
@@ -11940,28 +11915,28 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
         PyObject* exc_type = PyErr_Occurred();
         if (exc_type) {
           if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-          else __PYX_ERR(0, 455, __pyx_L1_error)
+          else __PYX_ERR(0, 456, __pyx_L1_error)
         }
         break;
       }
       __Pyx_GOTREF(__pyx_t_4);
     }
-    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 455, __pyx_L1_error)
+    if (!(likely(((__pyx_t_4) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_4, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 456, __pyx_L1_error)
     __Pyx_XDECREF_SET(__pyx_v_e, ((__pyx_t_5dysgu_17post_call_metrics_EventResult_t)__pyx_t_4));
     __pyx_t_4 = 0;
 
     /* "dysgu/post_call_metrics.pyx":457
+ *     cdef EventResult_t e
  *     for e in events:
- *         # if "ref_rep" not in e:
- *         e.ref_rep = 0 #-1             # <<<<<<<<<<<<<<
+ *         e.ref_rep = 0             # <<<<<<<<<<<<<<
  *         if e.svlen < 150 and e.svtype == "DEL":
  *             try:
  */
     __pyx_v_e->ref_rep = 0.0;
 
     /* "dysgu/post_call_metrics.pyx":458
- *         # if "ref_rep" not in e:
- *         e.ref_rep = 0 #-1
+ *     for e in events:
+ *         e.ref_rep = 0
  *         if e.svlen < 150 and e.svtype == "DEL":             # <<<<<<<<<<<<<<
  *             try:
  *                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
@@ -11978,7 +11953,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
     if (__pyx_t_5) {
 
       /* "dysgu/post_call_metrics.pyx":459
- *         e.ref_rep = 0 #-1
+ *         e.ref_rep = 0
  *         if e.svlen < 150 and e.svtype == "DEL":
  *             try:             # <<<<<<<<<<<<<<
  *                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
@@ -12080,7 +12055,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
           __pyx_t_4 = 0;
 
           /* "dysgu/post_call_metrics.pyx":459
- *         e.ref_rep = 0 #-1
+ *         e.ref_rep = 0
  *         if e.svlen < 150 and e.svtype == "DEL":
  *             try:             # <<<<<<<<<<<<<<
  *                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
@@ -12133,7 +12108,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
         __pyx_L10_except_error:;
 
         /* "dysgu/post_call_metrics.pyx":459
- *         e.ref_rep = 0 #-1
+ *         e.ref_rep = 0
  *         if e.svlen < 150 and e.svtype == "DEL":
  *             try:             # <<<<<<<<<<<<<<
  *                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
@@ -12182,20 +12157,20 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
       __pyx_v_e->ref_rep = __pyx_t_17;
 
       /* "dysgu/post_call_metrics.pyx":458
- *         # if "ref_rep" not in e:
- *         e.ref_rep = 0 #-1
+ *     for e in events:
+ *         e.ref_rep = 0
  *         if e.svlen < 150 and e.svtype == "DEL":             # <<<<<<<<<<<<<<
  *             try:
  *                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
  */
     }
 
-    /* "dysgu/post_call_metrics.pyx":455
+    /* "dysgu/post_call_metrics.pyx":456
  * def ref_repetitiveness(events, mode, ref_genome):
  *     cdef EventResult_t e
  *     for e in events:             # <<<<<<<<<<<<<<
- *         # if "ref_rep" not in e:
- *         e.ref_rep = 0 #-1
+ *         e.ref_rep = 0
+ *         if e.svlen < 150 and e.svtype == "DEL":
  */
     __pyx_L3_continue:;
   }
@@ -12213,7 +12188,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
   __pyx_r = __pyx_v_events;
   goto __pyx_L0;
 
-  /* "dysgu/post_call_metrics.pyx":453
+  /* "dysgu/post_call_metrics.pyx":454
  * 
  * 
  * def ref_repetitiveness(events, mode, ref_genome):             # <<<<<<<<<<<<<<
@@ -13657,7 +13632,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_6bayes_gt(CYTHON_UNUSED PyO
  * 
  *     return lp_homref, lp_het, lp_homalt             # <<<<<<<<<<<<<<
  * 
- * # @timeit
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 509, __pyx_L1_error)
@@ -13707,8 +13682,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_6bayes_gt(CYTHON_UNUSED PyO
 
 /* "dysgu/post_call_metrics.pyx":512
  * 
- * # @timeit
- * def get_gt_metric(events, infile, add_gt=False):             # <<<<<<<<<<<<<<
+ * 
+ * def get_gt_metric(events, add_gt=False):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     if add_gt:
  */
@@ -13718,7 +13693,6 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric(PyObject *__
 static PyMethodDef __pyx_mdef_5dysgu_17post_call_metrics_9get_gt_metric = {"get_gt_metric", (PyCFunction)(void*)(PyCFunctionWithKeywords)__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric, METH_VARARGS|METH_KEYWORDS, 0};
 static PyObject *__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_events = 0;
-  CYTHON_UNUSED PyObject *__pyx_v_infile = 0;
   PyObject *__pyx_v_add_gt = 0;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
@@ -13727,15 +13701,13 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric(PyObject *__
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_gt_metric (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_events,&__pyx_n_s_infile,&__pyx_n_s_add_gt,0};
-    PyObject* values[3] = {0,0,0};
-    values[2] = ((PyObject *)Py_False);
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_events,&__pyx_n_s_add_gt,0};
+    PyObject* values[2] = {0,0};
+    values[1] = ((PyObject *)Py_False);
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
-        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
-        CYTHON_FALLTHROUGH;
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         CYTHON_FALLTHROUGH;
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
@@ -13750,15 +13722,9 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric(PyObject *__
         else goto __pyx_L5_argtuple_error;
         CYTHON_FALLTHROUGH;
         case  1:
-        if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_infile)) != 0)) kw_args--;
-        else {
-          __Pyx_RaiseArgtupleInvalid("get_gt_metric", 0, 2, 3, 1); __PYX_ERR(0, 512, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  2:
         if (kw_args > 0) {
           PyObject* value = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_add_gt);
-          if (value) { values[2] = value; kw_args--; }
+          if (value) { values[1] = value; kw_args--; }
         }
       }
       if (unlikely(kw_args > 0)) {
@@ -13766,27 +13732,25 @@ static PyObject *__pyx_pw_5dysgu_17post_call_metrics_9get_gt_metric(PyObject *__
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
-        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
-        CYTHON_FALLTHROUGH;
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
-        values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        CYTHON_FALLTHROUGH;
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
         break;
         default: goto __pyx_L5_argtuple_error;
       }
     }
     __pyx_v_events = values[0];
-    __pyx_v_infile = values[1];
-    __pyx_v_add_gt = values[2];
+    __pyx_v_add_gt = values[1];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("get_gt_metric", 0, 2, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 512, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("get_gt_metric", 0, 1, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 512, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.post_call_metrics.get_gt_metric", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(__pyx_self, __pyx_v_events, __pyx_v_infile, __pyx_v_add_gt);
+  __pyx_r = __pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(__pyx_self, __pyx_v_events, __pyx_v_add_gt);
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
@@ -13843,13 +13807,13 @@ static PyObject *__pyx_lambda_funcdef_lambda(CYTHON_UNUSED PyObject *__pyx_self,
 
 /* "dysgu/post_call_metrics.pyx":512
  * 
- * # @timeit
- * def get_gt_metric(events, infile, add_gt=False):             # <<<<<<<<<<<<<<
+ * 
+ * def get_gt_metric(events, add_gt=False):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     if add_gt:
  */
 
-static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events, CYTHON_UNUSED PyObject *__pyx_v_infile, PyObject *__pyx_v_add_gt) {
+static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_events, PyObject *__pyx_v_add_gt) {
   __pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_e = 0;
   CYTHON_UNUSED PyObject *__pyx_v_new_events = NULL;
   CYTHON_UNUSED long __pyx_v_pad;
@@ -13900,7 +13864,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSE
   __Pyx_RefNannySetupContext("get_gt_metric", 0);
 
   /* "dysgu/post_call_metrics.pyx":514
- * def get_gt_metric(events, infile, add_gt=False):
+ * def get_gt_metric(events, add_gt=False):
  *     cdef EventResult_t e
  *     if add_gt:             # <<<<<<<<<<<<<<
  *         logging.info("Adding genotype")
@@ -13939,7 +13903,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSE
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
     /* "dysgu/post_call_metrics.pyx":514
- * def get_gt_metric(events, infile, add_gt=False):
+ * def get_gt_metric(events, add_gt=False):
  *     cdef EventResult_t e
  *     if add_gt:             # <<<<<<<<<<<<<<
  *         logging.info("Adding genotype")
@@ -15134,8 +15098,8 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8get_gt_metric(CYTHON_UNUSE
 
   /* "dysgu/post_call_metrics.pyx":512
  * 
- * # @timeit
- * def get_gt_metric(events, infile, add_gt=False):             # <<<<<<<<<<<<<<
+ * 
+ * def get_gt_metric(events, add_gt=False):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     if add_gt:
  */
@@ -32189,7 +32153,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_id, __pyx_k_id, sizeof(__pyx_k_id), 0, 0, 1, 1},
   {&__pyx_n_u_ignore, __pyx_k_ignore, sizeof(__pyx_k_ignore), 0, 1, 0, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
-  {&__pyx_n_s_infile, __pyx_k_infile, sizeof(__pyx_k_infile), 0, 0, 1, 1},
   {&__pyx_n_s_info, __pyx_k_info, sizeof(__pyx_k_info), 0, 0, 1, 1},
   {&__pyx_n_s_init, __pyx_k_init, sizeof(__pyx_k_init), 0, 0, 1, 1},
   {&__pyx_n_s_inner, __pyx_k_inner, sizeof(__pyx_k_inner), 0, 0, 1, 1},
@@ -32379,6 +32342,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_test, __pyx_k_test, sizeof(__pyx_k_test), 0, 0, 1, 1},
   {&__pyx_n_s_thresholds, __pyx_k_thresholds, sizeof(__pyx_k_thresholds), 0, 0, 1, 1},
   {&__pyx_n_s_time, __pyx_k_time, sizeof(__pyx_k_time), 0, 0, 1, 1},
+  {&__pyx_n_s_timeit, __pyx_k_timeit, sizeof(__pyx_k_timeit), 0, 0, 1, 1},
   {&__pyx_n_s_total, __pyx_k_total, sizeof(__pyx_k_total), 0, 0, 1, 1},
   {&__pyx_kp_s_unable_to_allocate_array_data, __pyx_k_unable_to_allocate_array_data, sizeof(__pyx_k_unable_to_allocate_array_data), 0, 0, 1, 0},
   {&__pyx_kp_s_unable_to_allocate_shape_and_str, __pyx_k_unable_to_allocate_shape_and_str, sizeof(__pyx_k_unable_to_allocate_shape_and_str), 0, 0, 1, 0},
@@ -32395,7 +32359,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_object = __Pyx_GetBuiltinName(__pyx_n_s_object); if (!__pyx_builtin_object) __PYX_ERR(0, 230, __pyx_L1_error)
   __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 41, __pyx_L1_error)
-  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 330, __pyx_L1_error)
+  __pyx_builtin_KeyError = __Pyx_GetBuiltinName(__pyx_n_s_KeyError); if (!__pyx_builtin_KeyError) __PYX_ERR(0, 331, __pyx_L1_error)
   __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 461, __pyx_L1_error)
   __pyx_builtin_RuntimeWarning = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeWarning); if (!__pyx_builtin_RuntimeWarning) __PYX_ERR(0, 473, __pyx_L1_error)
   __pyx_builtin_any = __Pyx_GetBuiltinName(__pyx_n_s_any); if (!__pyx_builtin_any) __PYX_ERR(0, 532, __pyx_L1_error)
@@ -32771,31 +32735,31 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * 
  *         # Try and load coverage tracks
  */
-  __pyx_tuple__43 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_events, __pyx_n_s_e, __pyx_n_s_count, __pyx_n_s_t0, __pyx_n_s_fcc); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(0, 249, __pyx_L1_error)
+  __pyx_tuple__43 = PyTuple_Pack(4, __pyx_n_s_self, __pyx_n_s_events, __pyx_n_s_e, __pyx_n_s_t0); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(0, 249, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__43);
   __Pyx_GIVEREF(__pyx_tuple__43);
-  __pyx_codeobj__44 = (PyObject*)__Pyx_PyCode_New(2, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__43, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_events, 249, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__44)) __PYX_ERR(0, 249, __pyx_L1_error)
+  __pyx_codeobj__44 = (PyObject*)__Pyx_PyCode_New(2, 0, 4, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__43, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_events, 249, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__44)) __PYX_ERR(0, 249, __pyx_L1_error)
 
-  /* "dysgu/post_call_metrics.pyx":273
+  /* "dysgu/post_call_metrics.pyx":272
  *         return events
  * 
  *     def process_one_window(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left, right, middle, sides, fc
  */
-  __pyx_tuple__45 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_start, __pyx_n_s_end, __pyx_n_s_s, __pyx_n_s_arr, __pyx_n_s_starting_pos, __pyx_n_s_left, __pyx_n_s_right, __pyx_n_s_middle, __pyx_n_s_sides, __pyx_n_s_fc); if (unlikely(!__pyx_tuple__45)) __PYX_ERR(0, 273, __pyx_L1_error)
+  __pyx_tuple__45 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_start, __pyx_n_s_end, __pyx_n_s_s, __pyx_n_s_left, __pyx_n_s_right, __pyx_n_s_middle, __pyx_n_s_sides, __pyx_n_s_fc, __pyx_n_s_arr, __pyx_n_s_starting_pos); if (unlikely(!__pyx_tuple__45)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__45);
   __Pyx_GIVEREF(__pyx_tuple__45);
-  __pyx_codeobj__46 = (PyObject*)__Pyx_PyCode_New(2, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__45, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_one_window, 273, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__46)) __PYX_ERR(0, 273, __pyx_L1_error)
+  __pyx_codeobj__46 = (PyObject*)__Pyx_PyCode_New(2, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__45, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_one_window, 272, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__46)) __PYX_ERR(0, 272, __pyx_L1_error)
 
   /* "dysgu/post_call_metrics.pyx":315
  *         e.fcc = fc
  * 
  *     def process_two_windows(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  */
-  __pyx_tuple__47 = PyTuple_Pack(14, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_start, __pyx_n_s_end, __pyx_n_s_s, __pyx_n_s_arr1, __pyx_n_s_arr2, __pyx_n_s_left1, __pyx_n_s_right1, __pyx_n_s_left2, __pyx_n_s_right2, __pyx_n_s_middle, __pyx_n_s_sides, __pyx_n_s_fc); if (unlikely(!__pyx_tuple__47)) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_tuple__47 = PyTuple_Pack(14, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_start, __pyx_n_s_end, __pyx_n_s_s, __pyx_n_s_left1, __pyx_n_s_right1, __pyx_n_s_left2, __pyx_n_s_right2, __pyx_n_s_middle, __pyx_n_s_sides, __pyx_n_s_fc, __pyx_n_s_arr1, __pyx_n_s_arr2); if (unlikely(!__pyx_tuple__47)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__47);
   __Pyx_GIVEREF(__pyx_tuple__47);
   __pyx_codeobj__48 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__47, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_two_windows, 315, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__48)) __PYX_ERR(0, 315, __pyx_L1_error)
@@ -32804,10 +32768,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *         e.fcc = fc
  * 
  *     def process_insertion(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:
  */
-  __pyx_tuple__49 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_arr, __pyx_n_s_starting_pos, __pyx_n_s_pad, __pyx_n_s_left, __pyx_n_s_left_svlen, __pyx_n_s_right, __pyx_n_s_right_svlen, __pyx_n_s_fcc, __pyx_n_s_inner, __pyx_n_s_outer); if (unlikely(!__pyx_tuple__49)) __PYX_ERR(0, 381, __pyx_L1_error)
+  __pyx_tuple__49 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_e, __pyx_n_s_left, __pyx_n_s_left_svlen, __pyx_n_s_right, __pyx_n_s_right_svlen, __pyx_n_s_fcc, __pyx_n_s_inner, __pyx_n_s_outer, __pyx_n_s_arr, __pyx_n_s_starting_pos, __pyx_n_s_pad); if (unlikely(!__pyx_tuple__49)) __PYX_ERR(0, 381, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__49);
   __Pyx_GIVEREF(__pyx_tuple__49);
   __pyx_codeobj__50 = (PyObject*)__Pyx_PyCode_New(2, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__49, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_process_insertion, 381, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__50)) __PYX_ERR(0, 381, __pyx_L1_error)
@@ -32816,7 +32780,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *         e.fcc = fcc
  * 
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  */
   __pyx_tuple__51 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_cn, __pyx_n_s_chrom_a, __pyx_n_s_chrom_b, __pyx_n_s_chrom_medians, __pyx_n_s_m, __pyx_n_s_m1, __pyx_n_s_m2); if (unlikely(!__pyx_tuple__51)) __PYX_ERR(0, 419, __pyx_L1_error)
@@ -32824,29 +32788,29 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__51);
   __pyx_codeobj__52 = (PyObject*)__Pyx_PyCode_New(5, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__51, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_get_cov, 419, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__52)) __PYX_ERR(0, 419, __pyx_L1_error)
 
-  /* "dysgu/post_call_metrics.pyx":437
+  /* "dysgu/post_call_metrics.pyx":438
  *         return m
  * 
  *     def normalize_coverage_values(self, events):             # <<<<<<<<<<<<<<
  * 
  *         if not self.chrom_cov_arrays:
  */
-  __pyx_tuple__53 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_events, __pyx_n_s_chrom_medians, __pyx_n_s_e, __pyx_n_s_k, __pyx_n_s_v); if (unlikely(!__pyx_tuple__53)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_tuple__53 = PyTuple_Pack(6, __pyx_n_s_self, __pyx_n_s_events, __pyx_n_s_chrom_medians, __pyx_n_s_e, __pyx_n_s_k, __pyx_n_s_v); if (unlikely(!__pyx_tuple__53)) __PYX_ERR(0, 438, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__53);
   __Pyx_GIVEREF(__pyx_tuple__53);
-  __pyx_codeobj__54 = (PyObject*)__Pyx_PyCode_New(2, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__53, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_normalize_coverage_values, 437, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__54)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_codeobj__54 = (PyObject*)__Pyx_PyCode_New(2, 0, 6, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__53, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_normalize_coverage_values, 438, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__54)) __PYX_ERR(0, 438, __pyx_L1_error)
 
-  /* "dysgu/post_call_metrics.pyx":453
+  /* "dysgu/post_call_metrics.pyx":454
  * 
  * 
  * def ref_repetitiveness(events, mode, ref_genome):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     for e in events:
  */
-  __pyx_tuple__55 = PyTuple_Pack(5, __pyx_n_s_events, __pyx_n_s_mode, __pyx_n_s_ref_genome, __pyx_n_s_e, __pyx_n_s_ref_seq); if (unlikely(!__pyx_tuple__55)) __PYX_ERR(0, 453, __pyx_L1_error)
+  __pyx_tuple__55 = PyTuple_Pack(5, __pyx_n_s_events, __pyx_n_s_mode, __pyx_n_s_ref_genome, __pyx_n_s_e, __pyx_n_s_ref_seq); if (unlikely(!__pyx_tuple__55)) __PYX_ERR(0, 454, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__55);
   __Pyx_GIVEREF(__pyx_tuple__55);
-  __pyx_codeobj__56 = (PyObject*)__Pyx_PyCode_New(3, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__55, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_ref_repetitiveness, 453, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__56)) __PYX_ERR(0, 453, __pyx_L1_error)
+  __pyx_codeobj__56 = (PyObject*)__Pyx_PyCode_New(3, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__55, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_ref_repetitiveness, 454, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__56)) __PYX_ERR(0, 454, __pyx_L1_error)
 
   /* "dysgu/post_call_metrics.pyx":483
  * # https://github.com/hall-lab/svtyper/blob/master/svtyper/singlesample.py
@@ -32874,15 +32838,15 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "dysgu/post_call_metrics.pyx":512
  * 
- * # @timeit
- * def get_gt_metric(events, infile, add_gt=False):             # <<<<<<<<<<<<<<
+ * 
+ * def get_gt_metric(events, add_gt=False):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     if add_gt:
  */
-  __pyx_tuple__61 = PyTuple_Pack(24, __pyx_n_s_events, __pyx_n_s_infile, __pyx_n_s_add_gt, __pyx_n_s_e, __pyx_n_s_new_events, __pyx_n_s_pad, __pyx_n_s_sup, __pyx_n_s_ocn, __pyx_n_s_icn, __pyx_n_s_higher_cn, __pyx_n_s_lower_cn, __pyx_n_s_support_reads, __pyx_n_s_ref, __pyx_n_s_gt_lplist, __pyx_n_s_best, __pyx_n_s_second_best, __pyx_n_s_gt_idx, __pyx_n_s_gt_sum, __pyx_n_s_gt, __pyx_n_s_gt_sum_log, __pyx_n_s_sample_qual, __pyx_n_s_phred_gq, __pyx_n_s_i, __pyx_n_s_j); if (unlikely(!__pyx_tuple__61)) __PYX_ERR(0, 512, __pyx_L1_error)
+  __pyx_tuple__61 = PyTuple_Pack(23, __pyx_n_s_events, __pyx_n_s_add_gt, __pyx_n_s_e, __pyx_n_s_new_events, __pyx_n_s_pad, __pyx_n_s_sup, __pyx_n_s_ocn, __pyx_n_s_icn, __pyx_n_s_higher_cn, __pyx_n_s_lower_cn, __pyx_n_s_support_reads, __pyx_n_s_ref, __pyx_n_s_gt_lplist, __pyx_n_s_best, __pyx_n_s_second_best, __pyx_n_s_gt_idx, __pyx_n_s_gt_sum, __pyx_n_s_gt, __pyx_n_s_gt_sum_log, __pyx_n_s_sample_qual, __pyx_n_s_phred_gq, __pyx_n_s_i, __pyx_n_s_j); if (unlikely(!__pyx_tuple__61)) __PYX_ERR(0, 512, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__61);
   __Pyx_GIVEREF(__pyx_tuple__61);
-  __pyx_codeobj__62 = (PyObject*)__Pyx_PyCode_New(3, 0, 24, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__61, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_get_gt_metric, 512, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__62)) __PYX_ERR(0, 512, __pyx_L1_error)
+  __pyx_codeobj__62 = (PyObject*)__Pyx_PyCode_New(2, 0, 23, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__61, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_dysgu_post_call_metrics_pyx, __pyx_n_s_get_gt_metric, 512, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__62)) __PYX_ERR(0, 512, __pyx_L1_error)
 
   /* "dysgu/post_call_metrics.pyx":579
  * 
@@ -33421,15 +33385,18 @@ if (!__Pyx_RefNanny) {
   /* "dysgu/post_call_metrics.pyx":13
  * from libcpp.vector cimport vector as cpp_vector
  * 
- * from dysgu.map_set_utils import echo             # <<<<<<<<<<<<<<
+ * from dysgu.map_set_utils import echo, timeit             # <<<<<<<<<<<<<<
  * from dysgu import re_map
  * from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
  */
-  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_n_s_echo);
   __Pyx_GIVEREF(__pyx_n_s_echo);
   PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_echo);
+  __Pyx_INCREF(__pyx_n_s_timeit);
+  __Pyx_GIVEREF(__pyx_n_s_timeit);
+  PyList_SET_ITEM(__pyx_t_1, 1, __pyx_n_s_timeit);
   __pyx_t_2 = __Pyx_Import(__pyx_n_s_dysgu_map_set_utils, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -33437,11 +33404,15 @@ if (!__Pyx_RefNanny) {
   __Pyx_GOTREF(__pyx_t_1);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_echo, __pyx_t_1) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_timeit); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_timeit, __pyx_t_1) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "dysgu/post_call_metrics.pyx":14
  * 
- * from dysgu.map_set_utils import echo
+ * from dysgu.map_set_utils import echo, timeit
  * from dysgu import re_map             # <<<<<<<<<<<<<<
  * from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
  * from dysgu.assembler import compute_rep
@@ -33461,7 +33432,7 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "dysgu/post_call_metrics.pyx":15
- * from dysgu.map_set_utils import echo
+ * from dysgu.map_set_utils import echo, timeit
  * from dysgu import re_map
  * from dysgu.io_funcs import reverse_complement, intersecter_str_chrom             # <<<<<<<<<<<<<<
  * from dysgu.assembler import compute_rep
@@ -33787,24 +33758,24 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_process_events, __pyx_t_3) < 0) __PYX_ERR(0, 249, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":273
+  /* "dysgu/post_call_metrics.pyx":272
  *         return events
  * 
  *     def process_one_window(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left, right, middle, sides, fc
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_5process_one_window, 0, __pyx_n_s_CoverageAnalyser_process_one_win, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__46)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 273, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_5process_one_window, 0, __pyx_n_s_CoverageAnalyser_process_one_win, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__46)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_process_one_window, __pyx_t_3) < 0) __PYX_ERR(0, 273, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_process_one_window, __pyx_t_3) < 0) __PYX_ERR(0, 272, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
   /* "dysgu/post_call_metrics.pyx":315
  *         e.fcc = fc
  * 
  *     def process_two_windows(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
- *         start, end = e.posA, e.posB
+ *         cdef int start, end, s
+ *         cdef float left1, right1, left2, right2, middle, sides, fc
  */
   __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_7process_two_windows, 0, __pyx_n_s_CoverageAnalyser_process_two_win, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__48)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
@@ -33815,7 +33786,7 @@ if (!__Pyx_RefNanny) {
  *         e.fcc = fc
  * 
  *     def process_insertion(self, EventResult_t e):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
  *         if e.svlen > 10000:
  */
   __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_9process_insertion, 0, __pyx_n_s_CoverageAnalyser_process_inserti, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__50)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 381, __pyx_L1_error)
@@ -33827,7 +33798,7 @@ if (!__Pyx_RefNanny) {
  *         e.fcc = fcc
  * 
  *     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):             # <<<<<<<<<<<<<<
- * 
+ *         cdef float m, m1, m2
  *         if chrom_a == chrom_b:
  */
   __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_11_get_cov, 0, __pyx_n_s_CoverageAnalyser__get_cov, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__52)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 419, __pyx_L1_error)
@@ -33835,16 +33806,16 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_get_cov, __pyx_t_3) < 0) __PYX_ERR(0, 419, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":437
+  /* "dysgu/post_call_metrics.pyx":438
  *         return m
  * 
  *     def normalize_coverage_values(self, events):             # <<<<<<<<<<<<<<
  * 
  *         if not self.chrom_cov_arrays:
  */
-  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_13normalize_coverage_values, 0, __pyx_n_s_CoverageAnalyser_normalize_cover, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__54)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_CyFunction_New(&__pyx_mdef_5dysgu_17post_call_metrics_16CoverageAnalyser_13normalize_coverage_values, 0, __pyx_n_s_CoverageAnalyser_normalize_cover, NULL, __pyx_n_s_dysgu_post_call_metrics, __pyx_d, ((PyObject *)__pyx_codeobj__54)); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 438, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
-  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_normalize_coverage_values, __pyx_t_3) < 0) __PYX_ERR(0, 437, __pyx_L1_error)
+  if (__Pyx_SetNameInClass(__pyx_t_1, __pyx_n_s_normalize_coverage_values, __pyx_t_3) < 0) __PYX_ERR(0, 438, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
 
   /* "dysgu/post_call_metrics.pyx":230
@@ -33861,16 +33832,16 @@ if (!__Pyx_RefNanny) {
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/post_call_metrics.pyx":453
+  /* "dysgu/post_call_metrics.pyx":454
  * 
  * 
  * def ref_repetitiveness(events, mode, ref_genome):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     for e in events:
  */
-  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_17post_call_metrics_3ref_repetitiveness, NULL, __pyx_n_s_dysgu_post_call_metrics); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 453, __pyx_L1_error)
+  __pyx_t_2 = PyCFunction_NewEx(&__pyx_mdef_5dysgu_17post_call_metrics_3ref_repetitiveness, NULL, __pyx_n_s_dysgu_post_call_metrics); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 454, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ref_repetitiveness, __pyx_t_2) < 0) __PYX_ERR(0, 453, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_ref_repetitiveness, __pyx_t_2) < 0) __PYX_ERR(0, 454, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "dysgu/post_call_metrics.pyx":483
@@ -33899,8 +33870,8 @@ if (!__Pyx_RefNanny) {
 
   /* "dysgu/post_call_metrics.pyx":512
  * 
- * # @timeit
- * def get_gt_metric(events, infile, add_gt=False):             # <<<<<<<<<<<<<<
+ * 
+ * def get_gt_metric(events, add_gt=False):             # <<<<<<<<<<<<<<
  *     cdef EventResult_t e
  *     if add_gt:
  */
@@ -35776,111 +35747,6 @@ bad:
     Py_XDECREF(local_value);
     Py_XDECREF(local_tb);
     return -1;
-}
-
-/* PyIntBinop */
-#if !CYTHON_COMPILING_IN_PYPY
-#if PY_MAJOR_VERSION < 3 || CYTHON_USE_PYLONG_INTERNALS
-#define __Pyx_PyInt_TrueDivideObjC_ZeroDivisionError(operand)\
-    if (unlikely(zerodivision_check && ((operand) == 0))) {\
-        PyErr_SetString(PyExc_ZeroDivisionError, "integer division by zero");\
-        return NULL;\
-    }
-#endif
-static PyObject* __Pyx_PyInt_TrueDivideObjC(PyObject *op1, PyObject *op2, CYTHON_UNUSED long intval, int inplace, int zerodivision_check) {
-    (void)inplace;
-    (void)zerodivision_check;
-    #if PY_MAJOR_VERSION < 3
-    if (likely(PyInt_CheckExact(op1))) {
-        const long b = intval;
-        long a = PyInt_AS_LONG(op1);
-            __Pyx_PyInt_TrueDivideObjC_ZeroDivisionError(b)
-            if (8 * sizeof(long) <= 53 || likely(labs(a) <= ((PY_LONG_LONG)1 << 53))) {
-                return PyFloat_FromDouble((double)a / (double)b);
-            }
-            return PyInt_Type.tp_as_number->nb_true_divide(op1, op2);
-    }
-    #endif
-    #if CYTHON_USE_PYLONG_INTERNALS
-    if (likely(PyLong_CheckExact(op1))) {
-        const long b = intval;
-        long a, x;
-        const digit* digits = ((PyLongObject*)op1)->ob_digit;
-        const Py_ssize_t size = Py_SIZE(op1);
-        if (likely(__Pyx_sst_abs(size) <= 1)) {
-            a = likely(size) ? digits[0] : 0;
-            if (size == -1) a = -a;
-        } else {
-            switch (size) {
-                case -2:
-                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT && 1 * PyLong_SHIFT < 53) {
-                        a = -(long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                case 2:
-                    if (8 * sizeof(long) - 1 > 2 * PyLong_SHIFT && 1 * PyLong_SHIFT < 53) {
-                        a = (long) (((((unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                case -3:
-                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT && 2 * PyLong_SHIFT < 53) {
-                        a = -(long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                case 3:
-                    if (8 * sizeof(long) - 1 > 3 * PyLong_SHIFT && 2 * PyLong_SHIFT < 53) {
-                        a = (long) (((((((unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                case -4:
-                    if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT && 3 * PyLong_SHIFT < 53) {
-                        a = -(long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                case 4:
-                    if (8 * sizeof(long) - 1 > 4 * PyLong_SHIFT && 3 * PyLong_SHIFT < 53) {
-                        a = (long) (((((((((unsigned long)digits[3]) << PyLong_SHIFT) | (unsigned long)digits[2]) << PyLong_SHIFT) | (unsigned long)digits[1]) << PyLong_SHIFT) | (unsigned long)digits[0]));
-                        break;
-                    }
-                    CYTHON_FALLTHROUGH;
-                default: return PyLong_Type.tp_as_number->nb_true_divide(op1, op2);
-            }
-        }
-                __Pyx_PyInt_TrueDivideObjC_ZeroDivisionError(b)
-                if ((8 * sizeof(long) <= 53 || likely(labs(a) <= ((PY_LONG_LONG)1 << 53)))
-                        || __Pyx_sst_abs(size) <= 52 / PyLong_SHIFT) {
-                    return PyFloat_FromDouble((double)a / (double)b);
-                }
-                return PyLong_Type.tp_as_number->nb_true_divide(op1, op2);
-            return PyLong_FromLong(x);
-        
-    }
-    #endif
-    if (PyFloat_CheckExact(op1)) {
-        const long b = intval;
-        double a = PyFloat_AS_DOUBLE(op1);
-            double result;
-            if (unlikely(zerodivision_check && b == 0)) {
-                PyErr_SetString(PyExc_ZeroDivisionError, "float division by zero");
-                return NULL;
-            }
-            PyFPE_START_PROTECT("divide", return NULL)
-            result = ((double)a) / (double)b;
-            PyFPE_END_PROTECT(result)
-            return PyFloat_FromDouble(result);
-    }
-    return (inplace ? PyNumber_InPlaceTrueDivide : PyNumber_TrueDivide)(op1, op2);
-}
-#endif
-
-/* None */
-static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
-    PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
 }
 
 /* IterFinish */
@@ -38298,6 +38164,11 @@ static CYTHON_INLINE int __Pyx_PyErr_GivenExceptionMatches2(PyObject *err, PyObj
     return (PyErr_GivenExceptionMatches(err, exc_type1) || PyErr_GivenExceptionMatches(err, exc_type2));
 }
 #endif
+
+/* None */
+  static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
+    PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
+}
 
 /* None */
   static CYTHON_INLINE long __Pyx_div_long(long a, long b) {

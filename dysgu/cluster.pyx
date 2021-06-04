@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import datetime
 import os
 import time
+import heapq
 import logging
 import numpy as np
 import random
@@ -17,7 +18,7 @@ from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, 
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
 from dysgu.map_set_utils import timeit, echo
 import itertools
-
+import pickle
 
 import itertools
 import multiprocessing
@@ -281,13 +282,9 @@ def cut_components(G):
 
 
 cpdef srt_func(c):
-    # if "type" in c and c["type"] != "1":  # assume long read is != "1", either pacbio or nanopore
     if c.type != "pe" and c.type != "":
         return 100 + c.su
-    # if "su" in c:
     return c.su
-    # over weight spanning
-    # return c["pe"] + c["supp"] + (c["spanning"] * 10) + c["sc"]
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
@@ -395,15 +392,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                     w0.DP = norm_vals(w0.DP, weight, item.DP, wt, denom)
                     w0.NMpri = norm_vals(w0.NMpri, weight, item.NMpri, wt, denom)
                     w0.NMsupp = norm_vals(w0.NMsupp, weight, item.NMsupp, wt, denom)
-
-                    # w0.DN = ((w0.DN * weight) + (item.DN * wt)) / denom
-                    # w0.MAPQsupp = ((w0.MAPQsupp * weight) + (item.MAPQsupp * wt)) / denom
-                    # w0.MAPQpri = ((w0.MAPQpri * weight) + (item.MAPQpri * wt)) / denom
-                    # w0.DApri = ((w0.DApri * weight) + (item.DApri * wt)) / denom
-                    # w0.DAsupp = ((w0.DAsupp * weight) + (item.DAsupp * wt)) / denom
-                    # w0.DP = ((w0.DP * weight) + (item.DP * wt)) / denom
-                    # w0.NMpri = ((w0.NMpri * weight) + (item.NMpri * wt)) / denom
-                    # w0.NMsupp = ((w0.NMsupp * weight) + (item.NMsupp * wt)) / denom
 
                 # reset to combined weight?
                 # weight = w0.pe + w0.supp + w0.spanning
@@ -525,9 +513,6 @@ cdef dict search_ssr_kc(ori):
             starting_base = string_view[i]
             starting_kmer_idx = start
 
-            # if seq[start:start+t] in polymers:
-            #     continue
-
             count = 1
             mm = 0
             good_i = 0
@@ -591,7 +576,6 @@ cdef dict search_ssr_kc(ori):
     return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
 
 
-# @timeit
 def find_repeat_expansions(events, insert_stdev):
 
     cdef EventResult_t e
@@ -654,71 +638,50 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
     return potential_events, event_id
 
 
-class Consumer(multiprocessing.Process):
-    def __init__(self, task_queue, result_queue, bam_path, open_mode, regions, clip_length, insert_median, insert_stdev, insert_ppf, support, lower_bound_support, merge_dist,
-                 regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size):
-        self.infile = pysam.AlignmentFile(bam_path, open_mode)
-        self.regions = regions
-        self.clip_length = clip_length
-        self.insert_median = insert_median
-        self.insert_stdev = insert_stdev
-        self.insert_ppf = insert_ppf
-        self.support = support
-        self.lower_bound_support = lower_bound_support
-        self.merge_dist = merge_dist
-        self.regions_only = regions_only
-        self.extended_tags = extended_tags
-        self.assemble_contigs = assemble_contigs
-        self.rel_diffs = rel_diffs
-        self.diffs = diffs
-        self.min_size = min_size
-        # these must be at the bottom:
-        multiprocessing.Process.__init__(self)
-        self.task_queue = task_queue
-        self.result_queue = result_queue
+def process_job(msg_queue, args):
 
-    def run(self):
-        while True:
-            next_task = self.task_queue.get()
-            if next_task is None:
-                # Poison pill means shutdown
-                self.infile.close()
-                self.task_queue.task_done()
-                break
-            event_id, job = next_task()
-            events = []
-            potential_events, event_id = component_job(self.infile,
-                                                       job,
-                                                       self.regions,
-                                                       event_id,
-                                                       self.clip_length,
-                                                       self.insert_median,
-                                                       self.insert_stdev,
-                                                       self.insert_ppf,
-                                                       self.support,
-                                                       self.lower_bound_support,
-                                                       self.merge_dist,
-                                                       self.regions_only,
-                                                       self.extended_tags,
-                                                       self.assemble_contigs,
-                                                       self.rel_diffs,
-                                                       self.diffs,
-                                                       self.min_size)
+    job_path, infile_path, bam_mode, regions, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
+    lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size = args
 
-            if potential_events:
-                events += potential_events
-            self.result_queue.put(events)
-            self.task_queue.task_done()
+    # job_file = None #open(job_path, "rb")
+    completed_file = open(job_path[:-3] + "done.pkl", "wb")
 
+    pysam.set_verbosity(0)
+    infile = pysam.AlignmentFile(infile_path, bam_mode, threads=1)
+    pysam.set_verbosity(3)
 
-class Task:
-    def __init__(self, job_id, job):
-        self.job_id = job_id
-        self.job = job
-    def __call__(self):
-        return self.job_id, self.job
-    def __str__(self):
-        return f'{self.job_id} * {len(self.job)}'
+    event_id = 0
+
+    while 1:
+        msg = msg_queue.recv()  # wait for first message
+        if msg == 0:
+            break
+        # if not job_file:
+        #     job_file = open(job_path, "rb")
+
+        # while 1:
+        # try:
+            # res = pickle.load(job_file)
+        res = msg
+        event_id += 1
+
+        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                                                   insert_median,
+                                                   insert_stdev,
+                                                   insert_ppf,
+                                                   min_support,
+                                                   lower_bound_support,
+                                                   merge_dist,
+                                                   regions_only,
+                                                   extended_tags,
+                                                   assemble_contigs,
+                                                   rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
+
+        if potential_events:
+            for res in potential_events:
+                pickle.dump(res, completed_file)
+
+    completed_file.close()
 
 
 def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
@@ -792,7 +755,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             m=6,
                                             clip_l=clip_length,
                                             min_sv_size=min_size,
-                                            procs=1, #args["procs"],
+                                            procs=1, #args["procs"],  # using multiple reading threads leads to svs being dropped?
                                             mapq_thresh=args["mq"],
                                             debug=None,
                                             paired_end=paired_end,
@@ -803,13 +766,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
                                             mm_only=args["regions_mm_only"] == "True")
 
     logging.info("Graph constructed")
-    # logging.info("Graph time, mem={} Mb, time={} h:m:s".format(
-    #     int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1e6),
-    #     time.time() - t5))
 
     t0 = time.time()
     cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
-    # logging.info("connected components done")
+
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
         if insert_ppf < 0:
@@ -825,28 +785,47 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
         rel_diffs = True
         diffs = 0.15
 
+    write_index = None
+
+    tdir = args["working_directory"]
+    minhq = None
+
+    consumers = []
+    msg_queues = None
+
     if args["procs"] > 1:
-        tasks = multiprocessing.JoinableQueue(maxsize=100)
-        results_q = multiprocessing.Queue(maxsize=10000)
-        consumers = [ Consumer(tasks, results_q, args["sv_aligns"], open_mode, regions, clip_length, insert_median,
-                               insert_stdev, insert_ppf, min_support, merge_dist, regions_only, extended_tags, assemble_contigs,
-                               rel_diffs, diffs, min_size)
-            for i in range(args["procs"])]
 
-        for w in consumers:
-            w.start()
+        # Tried using a joinable queue, but it turned out to be very slow and buggy;
 
-    else:
-        tasks = None
-        results = None
-        consumers = None
+        write_index = itertools.cycle(range(args["procs"]))
+
+        # use load balancing, but doesnt make much difference
+        minhq = [(0, i) for i in range(args["procs"])]
+        # [(conn1, conn2)...]
+        # using multiple pipes seemed to be a bit quicker than one queue
+        msg_queues = [multiprocessing.Pipe(duplex=False) for _ in range(args["procs"])]
+
+        for n in range(args["procs"]):
+
+            job_path = f"{tdir}/job_{n}.pkl"
+
+            proc_args = (
+                job_path, args["sv_aligns"], args["bam_mode"], regions, clip_length, insert_median, insert_stdev,
+                insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs,
+                rel_diffs, diffs, min_size
+            )
+
+            p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
+            p.start()
+
+            consumers.append(p)
 
     num_jobs = 0
     completed = 0
     components_seen = 0
     cdef int last_i = 0
     cdef int ci, cmp_idx
-    # longest = 0
+
     for item_idx, item in enumerate(cmp):
         if item == -1:
             components_seen += 1
@@ -866,6 +845,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
             res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
 
             if res:
+
                 event_id += 1
                 # Res is a dict
                 # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
@@ -888,32 +868,55 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
 
                 else:
 
-                    while not results_q.empty():
-                        item = results_q.get()
-                        block_edge_events += item
-                        completed += 1
-                        num_jobs -= 1
+                    j_submitted, w_idx = heapq.heappop(minhq)
+                    heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
 
-                    tasks.put(Task(event_id, res))
-                    num_jobs += 1
+                    # w_idx = next(write_index)
+                    msg_queues[w_idx][1].send(res)
 
-    if args["procs"] > 1:
-
-        for _ in range(args["procs"]):
-            tasks.put(None)
-        tasks.join()
-
-        while num_jobs:
-            item = results_q.get()
-            block_edge_events += item
-            completed += 1
-            num_jobs -= 1
-
-    logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
 
     del G
     del read_buffer
     cmp.clear()
+
+    # #
+    if args["procs"] > 1:
+        for w in msg_queues:
+            w[1].send(0)  # kill workers
+        for n in consumers:
+            n.join()
+
+        # Collect results and update event ids
+        event_id = 0
+        last_seen_grp_id = None
+        new_grp = None
+        for p in range(args["procs"]):
+            jf = open(f"{tdir}/job_{p}.done.pkl", "rb")
+            while 1:
+                try:
+                    res = pickle.load(jf)
+
+                    event_id += 1
+
+                    current_id = res.event_id
+                    current_grp = res.grp_id
+
+                    if last_seen_grp_id != current_grp:
+                        last_seen_grp_id = current_grp
+                        new_grp = event_id  # replace old grp id with new_grp (id of first in group)
+
+                    res.event_id = event_id
+                    res.grp_id = new_grp
+                    block_edge_events.append(res)
+                except EOFError:
+                    break
+            last_grp_id = event_id
+
+            os.remove(f"{tdir}/job_{p}.done.pkl")
+
+    #
+    logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
+
     preliminaries = []
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
@@ -930,6 +933,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
+
     # Filter for absolute support and size here
     before = len(merged)
     if not args["keep_small"]:
@@ -939,7 +943,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
         merged = [event for event in merged if event.su >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
 
-
     # Add read-type information
     cdef EventResult_t d
     for d in merged:
@@ -948,27 +951,18 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
     coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
-    # logging.info("Cov analyser")
     preliminaries = coverage_analyser.process_events(merged)
-    # logging.info("Cov finished")
-    preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])  # genome_scanner.depth_d
-    # logging.info("Cov info finished")
-    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-    # logging.info("contig info finished")
+
+    preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
     preliminaries = sample_level_density(preliminaries, regions)
-    # logging.info("density finished")
-    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    # logging.info("repeat expansion finished")
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
-    # logging.info("bcc finished")
-    preliminaries = post_call_metrics.get_gt_metric(preliminaries, ibam, add_gt=args["no_gt"])
-    # logging.info("gt finished")
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-    # logging.info("norm cov finished")
-
-    preliminaries = post_call_metrics.compressability(preliminaries)
-
     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+
+    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    preliminaries = post_call_metrics.compressability(preliminaries)
+    preliminaries = post_call_metrics.get_gt_metric(preliminaries, add_gt=args["no_gt"])
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:
@@ -995,19 +989,23 @@ def cluster_reads(args):
         raise ValueError("Cannot use stdin and include (an indexed bam is needed)")
 
     bam_mode = opts[kind]
-    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1)
+    args["bam_mode"] = bam_mode
+
+    pysam.set_verbosity(0)
+    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"])
+    pysam.set_verbosity(3)
 
     has_index = True
     try:
         infile.check_index()
     except ValueError:
         has_index = False
-    logging.info("Input file has index {}".format(has_index))
+
     if not has_index and args["regions"] is not None:
-        logging.info("Indexing input alignment file")
+        logging.info("Input file has no index, attempting to index")
         infile.close()
         pysam.index(args["sv_aligns"])
-        infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=1)
+        infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"])
 
     ref_genome = pysam.FastaFile(args["reference"])
 
@@ -1016,7 +1014,10 @@ def cluster_reads(args):
         kind = args["sv_aligns"].split(".")[-1]
         if kind == "stdin" or kind == "-" or kind not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
+
+        pysam.set_verbosity(0)
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=1)
+        pysam.set_verbosity(3)
 
     if "RG" in infile.header:
         rg = infile.header["RG"]

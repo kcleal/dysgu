@@ -362,7 +362,7 @@ cdef class EventResult:
         self.compress = 0
 
     def to_dict(self):
-        return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict"}
+        return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}
 
     def from_dict(self, d):
         allowed = set(dir(self))
@@ -373,3 +373,10 @@ cdef class EventResult:
 
     def __repr__(self):
         return str(self.to_dict())
+
+    def __getstate__(self):  # for pickling
+        return self.to_dict()
+
+    def __setstate__(self, d):
+        for k, v in d.items():
+            self.__setattr__(k, v)

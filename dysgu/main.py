@@ -218,7 +218,7 @@ def run_pipeline(ctx, **kwargs):
     # Call SVs
     ctx.obj["ibam"] = kwargs["bam"]
     ctx.obj["sv_aligns"] = tmp_file_name
-    ctx.obj["procs"] = 1
+    # ctx.obj["procs"] = 1
     logging.info("Input file is: {}".format(tmp_file_name))
     cluster.cluster_reads(ctx.obj)
 
@@ -403,6 +403,13 @@ def test_command(ctx, **kwargs):
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False",
+                  "--regions " + tests_path + '/targets.bed',
+                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test2',
+                  tests_path + '/small.bam'])
+    tests.append(["dysgu run",
+                  "-x --drop-gaps False --procs 2",
                   "--regions " + tests_path + '/targets.bed',
                   "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
                   tests_path + '/ref.fa',

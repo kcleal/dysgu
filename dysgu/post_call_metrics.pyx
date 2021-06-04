@@ -10,7 +10,7 @@ from cython.operator import dereference, postincrement, postdecrement, preincrem
 from libc.math cimport fabs as c_fabs
 from libcpp.vector cimport vector as cpp_vector
 
-from dysgu.map_set_utils import echo
+from dysgu.map_set_utils import echo, timeit
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
 from dysgu.assembler import compute_rep
@@ -254,24 +254,24 @@ class CoverageAnalyser(object):
             e.fcc = -1
             e.inner_cn = -1
             e.outer_cn = -1
-        count = 0
+
         for e in events:
             t0 = time.time()
             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
-                    fcc = self.process_two_windows(e)
+                    self.process_two_windows(e)
                 else:
-                    fcc = self.process_one_window(e)
+                    self.process_one_window(e)
             elif e.svtype == "INS":
-                fcc = self.process_insertion(e)
+                self.process_insertion(e)
             else:  # TRA
-                fcc = self.process_two_windows(e)
-            count += 1
+                self.process_two_windows(e)
 
         return events
 
     def process_one_window(self, EventResult_t e):
-
+        cdef int start, end, s
+        cdef float left, right, middle, sides, fc
         start, end = e.posA, e.posB
         if end < start:
             s = start
@@ -313,7 +313,8 @@ class CoverageAnalyser(object):
         e.fcc = fc
 
     def process_two_windows(self, EventResult_t e):
-
+        cdef int start, end, s
+        cdef float left1, right1, left2, right2, middle, sides, fc
         start, end = e.posA, e.posB
         if e.chrA == e.chrB and end < start:
             s = start
@@ -362,7 +363,6 @@ class CoverageAnalyser(object):
             e.inner_cn = sides
 
         else:  # TRA
-            # if chrom_med > 0:
             if e.join_type == "3to5":
                 e.outer_cn = sides
                 e.inner_cn = middle
@@ -379,7 +379,7 @@ class CoverageAnalyser(object):
         e.fcc = fc
 
     def process_insertion(self, EventResult_t e):
-
+        cdef float left, left_svlen, right, right_svlen, fcc, inner, outer
         if e.svlen > 10000:
             return -1
 
@@ -417,7 +417,7 @@ class CoverageAnalyser(object):
         e.fcc = fcc
 
     def _get_cov(self, cn, chrom_a, chrom_b, chrom_medians):
-
+        cdef float m, m1, m2
         if chrom_a == chrom_b:
             if chrom_medians[chrom_a]:
                 m = cn / chrom_medians[chrom_a]
@@ -430,6 +430,7 @@ class CoverageAnalyser(object):
             if m1 and m2:
                 m = cn / ((m1 + m2) / 2)
             else:
+                m = 0
                 logging.warning("Chromosome median {}: {}, {}: {}".format(chrom_a, chrom_medians[chrom_a],
                                                                           chrom_b, chrom_medians[chrom_b]))
         return m
@@ -453,8 +454,7 @@ class CoverageAnalyser(object):
 def ref_repetitiveness(events, mode, ref_genome):
     cdef EventResult_t e
     for e in events:
-        # if "ref_rep" not in e:
-        e.ref_rep = 0 #-1
+        e.ref_rep = 0
         if e.svlen < 150 and e.svtype == "DEL":
             try:
                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
@@ -508,8 +508,8 @@ def bayes_gt(ref, alt, is_dup):
 
     return lp_homref, lp_het, lp_homalt
 
-# @timeit
-def get_gt_metric(events, infile, add_gt=False):
+
+def get_gt_metric(events, add_gt=False):
     cdef EventResult_t e
     if add_gt:
         logging.info("Adding genotype")
