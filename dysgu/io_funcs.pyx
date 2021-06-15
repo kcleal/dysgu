@@ -49,10 +49,14 @@ cpdef str reverse_complement(str seq, int seq_len):
 
 
 cdef list get_bed_regions(str bed):
-    b = [tuple([int(j) if j.isdigit() else j for j in i.strip().split("\t")[:3]]) for i in open(bed, "r")
-         if i[0] != "#" and len(i) > 0 and "\t" in i]
+    b = []
+    with open(bed, "r") as inf:
+        for line in inf:
+            if line[0] != "#":
+                r = line.strip().split("\t")
+                b.append((r[0], int(r[1]), int(r[2])))
     if len(b) == 0:
-        raise ValueError("Bed regions not formatted correctly")
+        raise ValueError("Bed regions empty")
     return b
 
 

@@ -189,7 +189,10 @@ class GenomeScanner:
                         if a.has_tag("SA"):
                             sa = a.get_tag("SA").split(";")
                             for v in sa:
-                                chrom2, pos2, _ = v.split(",", 2)
+                                try:
+                                    chrom2, pos2, _ = v.split(",", 2)
+                                except ValueError:  # sometimes trailing empty string in list ""
+                                    break
                                 pos2 = int(pos2) - pad
                                 intervals_to_check.append((chrom2, 0 if pos2 < 0 else pos2, pos2 + pad))
 

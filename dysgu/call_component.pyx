@@ -679,18 +679,21 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
 
 cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
-
+    #print("starting single")
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for _, i in rds]))
 
+    show = False
+
     if n_templates == 1:
         # Filter uninteresting reads
         if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
+            #print("finished single")
             return []
 
     # Group by template name to check for split reads
@@ -701,6 +704,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
     small_tlen_outliers = 0  # for paired reads note any smaller than expected TLENs
 
     for cigar_info, align in rds:
+
         tmp[align.qname].append((cigar_info, align))
 
         if align.flag & 1 and abs(align.tlen) < insert_ppf:
@@ -728,6 +732,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         else:  # Single alignment, check spanning
             cigar_info, a = alignments[0]
             cigar_index = cigar_info[5]
+
             if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
                 event_pos = cigar_info[6]
                 ci = a.cigartuples[cigar_index]
@@ -826,14 +831,16 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         er.block_edge = 0
         er.ref_bases = ref_bases
         er.sqc = -1  # not calculated
-
+        #print("finished single1")
         return er
 
     elif len(informative) > 0:
+        #print("finished single2")
         return partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                                 min_support, extended_tags, to_assemble, [])
 
     elif len(generic_insertions) > 0:
+        #print("finished single3")
         # this is a bit confusing, generic insertions are used instead to make call, but bnd count is now 0
         return make_single_call([], insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 0, generic_insertions)
@@ -2098,7 +2105,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
 
 cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
                    int min_support, int block_edge, int assemble, int extended_tags):
-
+    #print("starting one edge")
     spanning_alignments = []
     u_reads = []
     v_reads = []
@@ -2166,8 +2173,8 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         er.posA = posA
         er.posB = posB
         er.cipos95A = posA_95
-        er.cipos95B = posB_95,
-        er.jitter = jitter,
+        er.cipos95B = posB_95
+        er.jitter = jitter
         er.preciseA = True
         er.preciseB = True
         er.svlen = svlen
@@ -2178,25 +2185,27 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         count_attributes2(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags, insert_ppf, [], er)
         # if not attrs or attrs["su"] < min_support:
         if er.su < min_support:
+            #print("done one edge")
             return []
 
         assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
-
+        #print("done one edge")
         return [er]
 
     else:
         results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
-
+        #print("done one edge")
         return results
 
 
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
 
-    cdef int j, int_node
+    cdef int j, int_node, steps
     cdef uint64_t p
     cdef uint64_t v
     cdef AlignedSegment a
     aligns = []
+    fpos = []
     for int_node in nodes_info:
 
         n = n2n[int_node]
@@ -2206,6 +2215,15 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
         p = n[4]
         node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
+
+        fpos.append((node, int_node, n))
+
+    fpos = sorted(fpos, key=lambda x: x[0][4])
+
+    for node, int_node, save_node in fpos:
+
+        p = node[4]
+
         infile.seek(p)
         try:
             a = next(infile)
@@ -2214,7 +2232,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
         v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
 
         if (v, a.flag, a.pos, a.rname, p) == node:
-            aligns.append((n, a))
+            aligns.append((save_node, a))
+
             if add_to_buffer:
                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
             continue
@@ -2227,8 +2246,10 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
                     return aligns
                 steps += 1
                 v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+
                 if (v, a.flag, a.pos, a.rname, p) == node:
-                    aligns.append((n, a))
+                    aligns.append((save_node, a))
+
                     if add_to_buffer:
                         buffered_reads[int_node] = a
                     break
@@ -2238,7 +2259,7 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
 cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support, int lower_bound_support,
                  int assemble_contigs, int extended_tags):
-
+    #print("-starting multi")
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
     n2n = data["n2n"]
@@ -2306,7 +2327,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                     events.append(res)
                 else:
                     events += res
-
+    #print("-finished multi")
     return events
 
 
@@ -2315,7 +2336,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     n_parts = len(data["parts"])
     events = []
-
+    #print("--starting block")
     if n_parts >= 1:
         # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
@@ -2326,6 +2347,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
 
         if len(rds) < lower_bound_support:
+            #print("--finished block")
             return []
 
         e = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
@@ -2335,5 +2357,5 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events += e
             else:
                 events.append(e)
-
+    #print("--finished block")
     return events

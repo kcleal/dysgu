@@ -409,6 +409,13 @@ def test_command(ctx, **kwargs):
                   pwd + '/wd_test2',
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
+                  "-x --drop-gaps False",
+                  "--regions " + tests_path + '/targets.bed',
+                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
+                  tests_path + '/ref.fa',
+                  pwd + '/wd_test2',
+                  tests_path + '/small.cram'])
+    tests.append(["dysgu run",
                   "-x --drop-gaps False --procs 2",
                   "--regions " + tests_path + '/targets.bed',
                   "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),

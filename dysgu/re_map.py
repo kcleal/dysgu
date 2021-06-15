@@ -3,6 +3,7 @@ from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
 from dysgu.assembler import compute_rep
 
+import math
 import edlib
 import logging
 
@@ -30,7 +31,7 @@ def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
 
 
 def filter_bad_alignment(align, event, idx, begin, end, break_position):
-    # pos = event["pos" + idx]
+
     if idx == "A":
         pos = event.posA
     else:
@@ -53,7 +54,8 @@ def filter_bad_alignment(align, event, idx, begin, end, break_position):
     if distance_to_break > 200:
         gapped_score = score - large_gap_penalty
 
-    expect_thresh = 0.7
+    expect_thresh = max(0.2 + ((1 / math.exp(score * 0.015)) * 0.8), 0.6)
+    # expect_thresh = 0.7
 
     if gapped_score > 12:
         if is_overlapping(begin - 1, end + 1, pos, pos + 1):
@@ -65,6 +67,7 @@ def filter_bad_alignment(align, event, idx, begin, end, break_position):
             return 1
         elif gapped_score > 20:
             expected = span * 2  # 2 x match score
+
             # if gaps at both ends of alignment increase stringency
             if align.target_begin >= 2 and align.target_end_optimal < len(align.target_sequence) - 2:
                 expected = span * 4
@@ -130,7 +133,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     skip_event = False
     clip_length = 0
     high_quality_clip = False
-    if cont: # in e and e[cont]:
+    if cont:
 
         # break_position = e["pos" + idx]
         # clip_res = e[cont + idx + "clip_res"]
@@ -188,6 +191,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
         # Large alignment region
         el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="locations")
         locs = merge_align_regions(el['locations'])
+
         if not locs:
             # continue
             return to_add, skip_event, high_quality_clip, clip_length
@@ -331,7 +335,6 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
                 # return -2
     return to_add, skip_event, high_quality_clip, clip_length
-            #added and not skip_event and high_quality_clip and keep_unmapped and max_clip_length
 
 
 def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
@@ -346,9 +349,6 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
         e.remap_score = 0
         e.remap_ed = 0
         e.scw = 0
-
-        # if 'svlen_precise' not in e:
-        #     e['svlen_precise'] = 1
 
         if e.chrA != e.chrB:
             new_events.append(e)
@@ -387,6 +387,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
         if gstart < 0:
             gstart = 0
+
         try:
             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
         except (ValueError, KeyError, IndexError) as errors:
@@ -425,6 +426,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
 
             if not to_add and not skip_event and high_quality_clip and keep_unmapped and max_clip_length >= 18:
                 # basic filter
+
                 if e.su > min_support + 4:
                     new_events.append(e)
 

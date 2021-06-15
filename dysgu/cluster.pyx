@@ -53,8 +53,9 @@ def filter_potential(input_events, tree, regions_only):
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i.chrA, i.posA, i.posA + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i.chrB, i.posB, i.posB + 1)
 
-        if (posA_intersects and posB_intersects) and (i.contig is None or i.contig2 is None):
-            continue
+        # if (posA_intersects and posB_intersects) and (i.contig is None or i.contig2 is None):
+        #     continue
+
         # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
             if not posA_intersects and not posB_intersects:
@@ -643,27 +644,19 @@ def process_job(msg_queue, args):
     job_path, infile_path, bam_mode, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size = args
 
-    # job_file = None #open(job_path, "rb")
-
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
 
     pysam.set_verbosity(0)
     infile = pysam.AlignmentFile(infile_path, bam_mode, threads=1)
     pysam.set_verbosity(3)
-
     event_id = 0
 
     while 1:
         msg = msg_queue.recv()  # wait for first message
         if msg == 0:
             break
-        # if not job_file:
-        #     job_file = open(job_path, "rb")
 
-        # while 1:
-        # try:
-            # res = pickle.load(job_file)
         res = msg
         event_id += 1
 
@@ -686,7 +679,7 @@ def process_job(msg_queue, args):
     completed_file.close()
 
 
-def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
+def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
@@ -827,7 +820,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, open_mode):
     components_seen = 0
     cdef int last_i = 0
     cdef int ci, cmp_idx
-
+    # cmp is a flat array of indexes. item == -1 signifies end of component
     for item_idx, item in enumerate(cmp):
         if item == -1:
             components_seen += 1
@@ -983,11 +976,11 @@ def cluster_reads(args):
     random.seed(1)
     kind = args["sv_aligns"].split(".")[-1]
     kind = "stdin" if kind == "-" else kind
-    opts = {"bam": "rb", "cram": "rc", "sam": "rs", "-": "rb", "stdin": "rb"}
+    opts = {"bam": "rb", "cram": "rc", "sam": "r", "-": "rb", "stdin": "rb"}
     if kind not in opts:
         raise ValueError("Input must be a .bam/cam/sam or stdin")
 
-    if kind == "stdin" and args["regions"] is not None:
+    if (kind == "stdin" or kind == "sam") and args["regions"] is not None:
         raise ValueError("Cannot use stdin and include (an indexed bam is needed)")
 
     bam_mode = opts[kind]
@@ -1000,7 +993,7 @@ def cluster_reads(args):
     has_index = True
     try:
         infile.check_index()
-    except ValueError:
+    except (ValueError, AttributeError):  # attribute error with sam file
         has_index = False
 
     if not has_index and args["regions"] is not None:
@@ -1052,7 +1045,7 @@ def cluster_reads(args):
     regions = io_funcs.overlap_regions(args["regions"])
 
     # Run dysgu here:
-    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome, bam_mode)
+    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome)
 
     # logging.info("Extended tags: {}".format(extended_tags))
 

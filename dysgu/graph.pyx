@@ -1234,13 +1234,13 @@ cpdef dict get_reads(infile, sub_graph_reads):
 
 cdef set BFS_local(G, int source, unordered_set[int]& visited ):
     # Create a queue for BFS
-    queue = array.array("L", [source])  # [source]  # consider vector
+    queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
     while queue:
         u = queue.pop(0)
         for v in G.neighbors(u):
-            if visited.find(v) == visited.end(): #v not in visited:
+            if visited.find(v) == visited.end():
                 if G.weight(u, v) > 1:
                     if u not in nodes_found:
                         nodes_found.add(u)
@@ -1258,11 +1258,11 @@ cdef dict get_partitions(G, nodes):
     cdef int u, v, i
     parts = []
     for u in nodes:
-        if seen.find(u) != seen.end(): #u in seen:
+        if seen.find(u) != seen.end():
             continue
 
         for v in G.neighbors(u):
-            if seen.find(v) != seen.end(): #v in seen:
+            if seen.find(v) != seen.end():
                 continue
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
