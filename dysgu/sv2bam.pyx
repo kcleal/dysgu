@@ -13,10 +13,24 @@ from libc.stdint cimport uint32_t
 
 from dysgu import io_funcs
 from dysgu cimport map_set_utils
+from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport unordered_set, Py_CoverageTrack
 from dysgu.coverage import get_insert_params
 
 import logging
+
+
+def parse_search_regions(search):
+    s = ""
+    with open(search, "r") as bed:
+        for line in bed:
+            if line[0] == "#":
+                continue
+            chrom, start, end = line.strip().split("\t", 4)[:3]
+            s += f"{chrom}:{start}-{end},"
+    if len(s) == 0:
+        raise ValueError("Search regions not understood")
+    return s
 
 
 def iter_bam(bam, search, show=True):
@@ -30,7 +44,7 @@ def iter_bam(bam, search, show=True):
             for line in bed:
                 if line[0] == "#":
                     continue
-                chrom, start, end = line.split("\t")[:3]
+                chrom, start, end = line.strip().split("\t")[:3]
                 for aln in bam.fetch(reference=chrom, start=int(start), end=int(end)):  # Also get unmapped reads
                     yield aln
 
@@ -89,6 +103,10 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
     cdef bint paired_end = 0
 
     cov_track = Py_CoverageTrack(temp_dir, bam, max_coverage)
+
+    if exc_tree is not None:
+        # convert to int representation
+        exc_tree = {bam.get_tid(k): v for k, v in exc_tree.items()}
 
     for nn, r in enumerate(bam_i):
 
@@ -162,7 +180,7 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                                    int threads, int paired_end, char* temp_f, int max_coverage)
+                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region)
 
 def process(args):
 
@@ -173,6 +191,7 @@ def process(args):
     if "exclude" in args and args["exclude"]:
         logging.info("Excluding {} from search".format(args["exclude"]))
         exc_tree = io_funcs.overlap_regions(args["exclude"])
+        # convert to int representation
 
     if not args["output"]:
         bname = os.path.splitext(os.path.basename(args["bam"]))[0]
@@ -181,16 +200,28 @@ def process(args):
         out_name = "{}/{}.{}.bam".format(temp_dir, bname, args["pfix"])
 
     else:
+        bname = "-"
         out_name = args["output"]
 
     pe = int(args["pl"] == "pe")
 
-    cdef bytes infile_string = args["bam"].encode("ascii")
-    cdef bytes outfile_string = out_name.encode("ascii")
+    cdef bytes infile_string_b = args["bam"].encode("ascii")
+    cdef bytes outfile_string_b = out_name.encode("ascii")
     cdef bytes temp_f = temp_dir.encode("ascii")
 
-    if exc_tree is None and args["reads"] == "None":
-        count = search_hts_alignments(infile_string, outfile_string, args["min_size"], args["clip_length"], args["mq"], args["procs"], pe, temp_f, args["max_cov"])
+    cdef bytes regionbytes
+
+    if exc_tree is None and args["reads"] == "None": # and args["bam"] not in " -stdin":
+        region = args["search"]
+        if region:
+            region = parse_search_regions(region)
+        else:
+            region = ".,"
+
+        regionbytes = region.encode("ascii")
+
+        count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
+                                      args["procs"], pe, temp_f, args["max_cov"], regionbytes)
     else:
         args["outname"] = out_name
         bam, bam_i, clip_length, send_output, outbam = config(args)

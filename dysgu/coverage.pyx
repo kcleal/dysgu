@@ -9,10 +9,6 @@ import logging
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
-# ctypedef fused DTYPE_t:
-#     float
-#     short
-
 from dysgu.map_set_utils import echo
 
 
@@ -326,7 +322,7 @@ class GenomeScanner:
             self.read_buffer[n1] = r
 
         elif self.no_tell:
-            raise BufferError("Read buffer has overflowed, increase --buffer-size")
+            exit(BufferError("Read buffer has overflowed, increase --buffer-size"))
 
 
     def _add_to_bin_buffer(self, a, tell):

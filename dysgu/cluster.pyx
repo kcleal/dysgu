@@ -12,7 +12,6 @@ from collections import defaultdict, Counter
 import networkx as nx
 import pysam
 import sys
-import resource
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
@@ -691,7 +690,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     else:
         coverage_tracker = None
 
-    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["regions"], 1,
+    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["regions"], args["procs"],
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
@@ -703,7 +702,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         try:
             insert_median, insert_stdev, read_len = list(map(int, args["template_size"].split(",")))
         except:
-            raise ValueError("Template-size must be in the format 'INT,INT,INT'")
+            raise ValueError("Template-size must be in the format 'INT,INT,INT', for insert-median, insert-stdev, read-length")
 
     if paired_end:
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
@@ -750,7 +749,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             m=6,
                                             clip_l=clip_length,
                                             min_sv_size=min_size,
-                                            procs=1, #args["procs"],  # using multiple reading threads leads to svs being dropped?
+                                            procs=1,
                                             mapq_thresh=args["mq"],
                                             debug=None,
                                             paired_end=paired_end,
@@ -1016,9 +1015,12 @@ def cluster_reads(args):
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
-        if len(rg) > 1:
-            logging.warning("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]))
-        sample_name = rg[0]["SM"]
+        if "SM" in rg[0]:
+            if len(rg) > 1:
+                logging.warning("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]))
+            sample_name = rg[0]["SM"]
+        sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
+        logging.warning("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name))
     else:
         sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
         logging.warning("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name))

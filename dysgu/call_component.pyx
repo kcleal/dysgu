@@ -2198,6 +2198,9 @@ cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_si
         return results
 
 
+def fpos_srt(x):
+    return x[0][4]
+
 cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
 
     cdef int j, int_node, steps
@@ -2218,7 +2221,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
         fpos.append((node, int_node, n))
 
-    fpos = sorted(fpos, key=lambda x: x[0][4])
+    # improve chances of reading nearby locations sequentially
+    fpos = sorted(fpos, key=fpos_srt)
 
     for node, int_node, save_node in fpos:
 

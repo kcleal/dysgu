@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import click
 import os
 import sys
+import shutil
 import time
 from multiprocessing import cpu_count
 from subprocess import run
@@ -129,7 +130,7 @@ def cli():
 @cli.command("run")
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
-@click.argument('bam', required=True, type=click.Path(exists=True))
+@click.argument('bam', required=True, type=click.Path(exists=False))
 @click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
@@ -156,7 +157,7 @@ def cli():
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
-@click.option('--regions', help="bed file of target regions, coverage information outside these regions will be ignored", default=None, type=click.Path(exists=True))
+@click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
 @click.option('--regions-only', help="If --regions is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -183,11 +184,12 @@ def cli():
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
+@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
-    """Run the standard dysgu pipeline. Important parameters are --mode, --dip, --min-support, --min-size"""
+    """Run the dysgu pipeline. Important parameters are --mode, --diploid, --min-support, --min-size, --max-cov"""
     # Add arguments to context
     t0 = time.time()
     logging.info("[dysgu-run] Version: {}".format(version))
@@ -207,20 +209,28 @@ def run_pipeline(ctx, **kwargs):
     dest = os.path.expanduser(kwargs["working_directory"])
     logging.info(f"Destination: {dest}")
     bname = os.path.splitext(os.path.basename(kwargs["bam"]))[0]
-    tmp_file_name = f"{dest}/{bname}.{pfix}.bam"
+    tmp_file_name = f"{dest}/{bname if bname != '-' else dest}.{pfix}.bam"
 
     # Get SV reads
+    if kwargs["regions"] is not None and kwargs["regions_only"] == "True":
+        ctx.obj["search"] = kwargs["regions"]
+    else:
+        ctx.obj["search"] = None
     ctx.obj["output"] = tmp_file_name
-    # ctx.obj["out_format"] = "vcf"
     ctx.obj["reads"] = "None"
     sv2bam.process(ctx.obj)
 
     # Call SVs
-    ctx.obj["ibam"] = kwargs["bam"]
+    if kwargs["bam"] != "-":
+        ctx.obj["ibam"] = kwargs["bam"]
+    else:
+        ctx.obj["ibam"] = None
     ctx.obj["sv_aligns"] = tmp_file_name
-    # ctx.obj["procs"] = 1
     logging.info("Input file is: {}".format(tmp_file_name))
     cluster.cluster_reads(ctx.obj)
+
+    if kwargs["clean"]:
+        shutil.rmtree(kwargs["working_directory"])
 
     logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(
         seconds=int(time.time() - t0)))))
@@ -251,7 +261,7 @@ def run_pipeline(ctx, **kwargs):
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
-@click.option('--exclude', help=".bed file, do not search/call SVs within regions. Overrides include/search",
+@click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
@@ -298,7 +308,7 @@ def get_reads(ctx, **kwargs):
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
-@click.option('--regions', help="bed file of target regions, coverage information outside these regions will be ignored", default=None, type=click.Path(exists=True))
+@click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
 @click.option('--regions-only', help="If --regions is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -326,11 +336,12 @@ def get_reads(ctx, **kwargs):
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
+@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
-    """Call structural vaiants"""
+    """Call structural variants"""
     logging.info("[dysgu-call] Version: {}".format(version))
     make_wd(kwargs, call_func=True)
     if kwargs["sv_aligns"] is None:
@@ -354,6 +365,9 @@ def call_events(ctx, **kwargs):
     ctx = apply_ctx(ctx, kwargs)
 
     cluster.cluster_reads(ctx.obj)
+
+    if kwargs["clean"]:
+        shutil.rmtree(kwargs["working_directory"])
 
 
 @cli.command("merge")

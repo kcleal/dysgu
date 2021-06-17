@@ -521,7 +521,7 @@ cdef class PairedEndScoper:
 
 
 cdef class TemplateEdges:
-    cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict, robin map was buggy for itertaing
+    cdef unordered_map[string, vector[int]] templates_s  # robin map was buggy for itertaing
     def __init__(self):
         pass
 

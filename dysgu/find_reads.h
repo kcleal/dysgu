@@ -57,8 +57,7 @@ class CoverageTrack
             if (current_cov > max_coverage) {
                 return false;
             }
-//            std::cerr << current_cov << std::endl;
-//            exit(0);
+
             return true;
         }
 
@@ -97,20 +96,146 @@ class CoverageTrack
 };
 
 
+int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>& scope, std::vector<bam1_t*>& write_queue,
+                       const int max_scope, const int max_write_queue, const int clip_length,
+                       robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
+                       const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
+                       sam_hdr_t **samHdr, htsFile **f_out,
+                       std::string& temp_folder) {
+
+    int result;
+    bam1_t* aln;
+    std::pair<uint64_t, bam1_t*> scope_item;
+
+    if (scope.size() > max_scope) {
+        scope_item = scope[0];
+
+        // check if read is SV-read and in low coverage region, push to write queue
+        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
+            write_queue.push_back(scope_item.second);
+        } else {
+            bam_destroy1(scope_item.second);
+        }
+        scope.pop_front();
+    }
+
+    // Check if write queue is full
+    if (write_queue.size() > max_write_queue) {
+        for (const auto& val: write_queue) {
+            result = sam_write1(*f_out, *samHdr, val);
+            if (result < 0) { return -1; }
+            total += 1;
+            bam_destroy1(val);
+        }
+        write_queue.clear();
+    }
+
+    // Process current alignment as it arrives in scope. Add rname to hash if it is an SV read. Add coverage info
+    aln = scope.back().second;
+    const uint16_t flag = aln->core.flag;
+
+    // Skip uninteresting reads before putting on queue
+    // unmapped, not primary, duplicate
+    if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0 || aln -> core.qual < mapq_thresh ) {
+        // Next item will overwrite this record
+        return 0;
+    }
+
+    const uint16_t tid = aln->core.tid;
+
+    if (tid != current_tid && tid <= n_chromosomes) {  // prepare coverage array
+        if (current_tid != -1 ) {
+            const char* rname = sam_hdr_tid2name(*samHdr, current_tid);
+            if (rname != NULL) {
+
+                std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
+                cov_track.write_track(&out_name[0]);
+            }
+        }
+
+        int chrom_length = sam_hdr_tid2len(*samHdr, tid);
+        if (chrom_length == 0) {
+            return 0;
+        }
+        cov_track.set_cov_array(chrom_length);
+        current_tid = tid;
+    }
+
+    const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
+    scope.back().first = precalculated_hash;
+
+    // Add a new item to the queue for next iteration
+    scope.push_back(std::make_pair(0, bam_init1()));
+
+    // add alignment to coverage track, check for indels and soft-clips
+    const uint32_t* cigar = bam_get_cigar(aln);
+    bool sv_read = false;
+
+
+    if (read_names.find(precalculated_hash) != read_names.end()) { sv_read = true; }
+
+    int index_start = aln->core.pos;
+
+    for (uint32_t k=0; k < aln->core.n_cigar; k++) {
+
+        uint32_t op = bam_cigar_op(cigar[k]);
+        uint32_t length = bam_cigar_oplen(cigar[k]);
+
+        if (!sv_read) {
+            if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
+                read_names.insert(precalculated_hash);
+                sv_read = true;
+
+            } else if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
+                read_names.insert(precalculated_hash);
+                sv_read = true;
+            }
+        }
+
+        if (op == BAM_CDEL) {
+            index_start += length;
+
+        } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
+            int index_end = index_start + length;
+            cov_track.add(index_start, index_end);
+            index_start = index_end;
+        }
+    }
+
+    if (!sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
+
+        // Check for discordant of supplementary
+        if ((~flag & 2 && flag & 1) || flag & 2048) {
+            read_names.insert(precalculated_hash);
+            return 0;
+        }
+        // Check for SA tag
+        if (bam_aux_get(aln, "SA")) {
+            read_names.insert(precalculated_hash);
+            return 0;
+        }
+    }
+    return 0;
+}
+
+
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage) {
+                          int threads, int paired_end, char* temp_f, int max_coverage, char* region) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
     int result;
-    htsFile *fp_in = hts_open(infile, "r");
+    //htsFile *fp_in = hts_open(infile, "r");
+    samFile *fp_in = sam_open(infile, "r");
+
+    hts_idx_t *index;
 
     if (threads > 1) {  // set additional threads beyond main thread
         result = hts_set_threads(fp_in, threads - 1);
         if (result != 0) { return -1; }
     }
 
-    bam_hdr_t* samHdr = sam_hdr_read(fp_in);  // read header
+    sam_hdr_t* samHdr = sam_hdr_read(fp_in);  // read header
 
     int n_chromosomes = samHdr->n_targets;
 
@@ -141,130 +266,73 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     scope.push_back(std::make_pair(0, bam_init1()));
 
     // Write coverage information using mosdepth style algorithm
-     CoverageTrack cov_track;
-     cov_track.max_coverage = max_coverage;
+    CoverageTrack cov_track;
+    cov_track.max_coverage = max_coverage;
 
-     std::string temp_folder = temp_f;
+    std::string temp_folder = temp_f;
 
     int current_tid = -1;
-    bam1_t* aln;
 
-    // Read alignment into the back of scope queue
-    while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
+    hts_itr_t *iter = NULL;
 
-        if (scope.size() > max_scope) {
-            scope_item = scope[0];
+    std::string region_string = region;
 
-            // check if read is SV-read and in low coverage region, push to write queue
-            if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
-                write_queue.push_back(scope_item.second);
-            } else {
-                bam_destroy1(scope_item.second);
+    // iterate through regions
+    if (region_string != ".,") {
+
+        index = sam_index_load(fp_in,  infile);
+
+        int string_pos;
+        std::string delim = ",";
+        std::string token;
+
+        char *token_ptr;
+
+        while ((string_pos = region_string.find(delim)) != std::string::npos) {
+
+            token = region_string.substr(0, string_pos);
+            token_ptr = &token[0];
+
+            iter = sam_itr_querys(index, samHdr, token_ptr);
+            if (iter == NULL) {
+                std::cerr << "NULL iterator sam_itr_querys. Bad region format? " << region << std::endl;
+                return -1;
             }
-            scope.pop_front();
-        }
+            region_string.erase(0, string_pos + delim.length());
 
-        // Check if write queue is full
-        if (write_queue.size() > max_write_queue) {
-            for (const auto& val: write_queue) {
-                result = sam_write1(f_out, samHdr, val);
-                if (result < 0) { return -1; }
-                total += 1;
-                bam_destroy1(val);
-            }
-            write_queue.clear();
-        }
+            // Read alignment into the back of scope queue
+    //        while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
 
-        // Process current alignment as it arrives in scope. Add rname to hash if it is an SV read. Add coverage info
-        aln = scope.back().second;
-        const uint16_t flag = aln->core.flag;
+            while ( sam_itr_next(fp_in, iter, scope.back().second) >= 0 ) {
 
-        // Skip uninteresting reads before putting on queue
-        // unmapped, not primary, duplicate
-        if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0 || aln -> core.qual < mapq_thresh ) {
-            // Next item will overwrite this record
-            continue;
-        }
-
-        const uint16_t tid = aln->core.tid;
-
-        if (tid != current_tid && tid <= n_chromosomes) {  // prepare coverage array
-            if (current_tid != -1 ) {
-                const char* rname = sam_hdr_tid2name(samHdr, current_tid);
-                if (rname != NULL) {
-//                    std::cerr << rname << std::endl;
-                    std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
-                    cov_track.write_track(&out_name[0]);
+                int success = process_alignment(current_tid, scope, write_queue,
+                           max_scope, max_write_queue, clip_length,
+                           read_names, cov_track, total,
+                           n_chromosomes, mapq_thresh, check_clips, min_within_size,
+                           &samHdr, &f_out, temp_folder);
+                if (success < 0) {
+                    std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
+                    break;
                 }
             }
-
-            int chrom_length = sam_hdr_tid2len(samHdr, tid);
-            if (chrom_length == 0) {
-                continue;
-            }
-            cov_track.set_cov_array(chrom_length);
-            current_tid = tid;
         }
+    } else {
+        // iterate whole alignment file (no index needed)
+        while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
 
-        const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
-        scope.back().first = precalculated_hash;
-
-        // Add a new item to the queue for next iteration
-        scope.push_back(std::make_pair(0, bam_init1()));
-
-        // add alignment to coverage track, check for indels and soft-clips
-        const uint32_t* cigar = bam_get_cigar(aln);
-        bool sv_read = false;
-//        bool to_check = true;
-//        if (aln -> core.qual < mapq_thresh) {
-//            to_check = false;
-//        }
-
-        if (read_names.find(precalculated_hash) != read_names.end()) { sv_read = true; }
-
-        int index_start = aln->core.pos;
-
-        for (uint32_t k=0; k < aln->core.n_cigar; k++) {
-
-            uint32_t op = bam_cigar_op(cigar[k]);
-            uint32_t length = bam_cigar_oplen(cigar[k]);
-
-            if (!sv_read) {
-                if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
-                    read_names.insert(precalculated_hash);
-                    sv_read = true;
-
-                } else if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
-                    read_names.insert(precalculated_hash);
-                    sv_read = true;
-                }
-            }
-
-            if (op == BAM_CDEL) {
-                index_start += length;
-
-            } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
-                int index_end = index_start + length;
-                cov_track.add(index_start, index_end);
-                index_start = index_end;
-            }
-        }
-
-        if (!sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
-
-            // Check for discordant of supplementary
-            if ((~flag & 2 && flag & 1) || flag & 2048) {
-                read_names.insert(precalculated_hash);
-                continue;
-            }
-            // Check for SA tag
-            if (bam_aux_get(aln, "SA")) {
-                read_names.insert(precalculated_hash);
-                continue;
+            int success = process_alignment(current_tid, scope, write_queue,
+                       max_scope, max_write_queue, clip_length,
+                       read_names, cov_track, total,
+                       n_chromosomes, mapq_thresh, check_clips, min_within_size,
+                       &samHdr, &f_out, temp_folder);
+            if (success < 0) {
+                std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
+                break;
             }
         }
     }
 
+    // Deal with reads still in the queue
     while (scope.size() > 0) {
         scope_item = scope[0];
         if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
@@ -286,7 +354,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (current_tid >= 0 && current_tid <= n_chromosomes) { // tid can sometimes be 65535
         const char* rname = sam_hdr_tid2name(samHdr, current_tid);
         if (rname != NULL) {
-//            std::cerr << rname << std::endl;
             std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
             cov_track.write_track(&out_name[0]);
         }

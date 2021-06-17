@@ -38,8 +38,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "./dysgu",
+            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -2375,7 +2375,7 @@ struct __pyx_obj_5dysgu_5graph_PairedEndScoper {
  * 
  * 
  * cdef class TemplateEdges:             # <<<<<<<<<<<<<<
- *     cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict, robin map was buggy for itertaing
+ *     cdef unordered_map[string, vector[int]] templates_s  # robin map was buggy for itertaing
  *     def __init__(self):
  */
 struct __pyx_obj_5dysgu_5graph_TemplateEdges {
@@ -2889,7 +2889,7 @@ static struct __pyx_vtabstruct_5dysgu_5graph_PairedEndScoper *__pyx_vtabptr_5dys
  * 
  * 
  * cdef class TemplateEdges:             # <<<<<<<<<<<<<<
- *     cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict, robin map was buggy for itertaing
+ *     cdef unordered_map[string, vector[int]] templates_s  # robin map was buggy for itertaing
  *     def __init__(self):
  */
 
@@ -10449,7 +10449,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_15PairedEndScoper_4__setstate_cython__(s
 
 /* "dysgu/graph.pyx":525
  * cdef class TemplateEdges:
- *     cdef unordered_map[string, vector[int]] templates_s  # Better memory efficiency than dict, robin map was buggy for itertaing
+ *     cdef unordered_map[string, vector[int]] templates_s  # robin map was buggy for itertaing
  *     def __init__(self):             # <<<<<<<<<<<<<<
  *         pass
  * 
@@ -21836,7 +21836,7 @@ static PyObject *__pyx_pf_5dysgu_5graph_8get_reads(CYTHON_UNUSED PyObject *__pyx
  * 
  * cdef set BFS_local(G, int source, unordered_set[int]& visited ):             # <<<<<<<<<<<<<<
  *     # Create a queue for BFS
- *     queue = array.array("L", [source])  # [source]  # consider vector
+ *     queue = array.array("L", [source])
  */
 
 static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_v_source, robin_hood::unordered_set<int>  &__pyx_v_visited) {
@@ -21867,7 +21867,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
   /* "dysgu/graph.pyx":1237
  * cdef set BFS_local(G, int source, unordered_set[int]& visited ):
  *     # Create a queue for BFS
- *     queue = array.array("L", [source])  # [source]  # consider vector             # <<<<<<<<<<<<<<
+ *     queue = array.array("L", [source])             # <<<<<<<<<<<<<<
  *     nodes_found = set([])
  *     cdef int u, v
  */
@@ -21894,7 +21894,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
 
   /* "dysgu/graph.pyx":1238
  *     # Create a queue for BFS
- *     queue = array.array("L", [source])  # [source]  # consider vector
+ *     queue = array.array("L", [source])
  *     nodes_found = set([])             # <<<<<<<<<<<<<<
  *     cdef int u, v
  *     while queue:
@@ -21920,7 +21920,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
  *     while queue:
  *         u = queue.pop(0)             # <<<<<<<<<<<<<<
  *         for v in G.neighbors(u):
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  */
     __pyx_t_2 = __Pyx_PyObject_PopIndex(__pyx_v_queue, __pyx_int_0, 0, 1, Py_ssize_t, PyInt_FromSsize_t); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 1241, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
@@ -21932,7 +21932,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
  *     while queue:
  *         u = queue.pop(0)
  *         for v in G.neighbors(u):             # <<<<<<<<<<<<<<
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:
  */
     __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_G, __pyx_n_s_neighbors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1242, __pyx_L1_error)
@@ -22002,7 +22002,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
       /* "dysgu/graph.pyx":1243
  *         u = queue.pop(0)
  *         for v in G.neighbors(u):
- *             if visited.find(v) == visited.end(): #v not in visited:             # <<<<<<<<<<<<<<
+ *             if visited.find(v) == visited.end():             # <<<<<<<<<<<<<<
  *                 if G.weight(u, v) > 1:
  *                     if u not in nodes_found:
  */
@@ -22011,7 +22011,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
 
         /* "dysgu/graph.pyx":1244
  *         for v in G.neighbors(u):
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:             # <<<<<<<<<<<<<<
  *                     if u not in nodes_found:
  *                         nodes_found.add(u)
@@ -22078,7 +22078,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
         if (__pyx_t_3) {
 
           /* "dysgu/graph.pyx":1245
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:
  *                     if u not in nodes_found:             # <<<<<<<<<<<<<<
  *                         nodes_found.add(u)
@@ -22104,7 +22104,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
             __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
 
             /* "dysgu/graph.pyx":1245
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:
  *                     if u not in nodes_found:             # <<<<<<<<<<<<<<
  *                         nodes_found.add(u)
@@ -22161,7 +22161,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
 
           /* "dysgu/graph.pyx":1244
  *         for v in G.neighbors(u):
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:             # <<<<<<<<<<<<<<
  *                     if u not in nodes_found:
  *                         nodes_found.add(u)
@@ -22171,7 +22171,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
         /* "dysgu/graph.pyx":1243
  *         u = queue.pop(0)
  *         for v in G.neighbors(u):
- *             if visited.find(v) == visited.end(): #v not in visited:             # <<<<<<<<<<<<<<
+ *             if visited.find(v) == visited.end():             # <<<<<<<<<<<<<<
  *                 if G.weight(u, v) > 1:
  *                     if u not in nodes_found:
  */
@@ -22181,7 +22181,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
  *     while queue:
  *         u = queue.pop(0)
  *         for v in G.neighbors(u):             # <<<<<<<<<<<<<<
- *             if visited.find(v) == visited.end(): #v not in visited:
+ *             if visited.find(v) == visited.end():
  *                 if G.weight(u, v) > 1:
  */
     }
@@ -22214,7 +22214,7 @@ static PyObject *__pyx_f_5dysgu_5graph_BFS_local(PyObject *__pyx_v_G, int __pyx_
  * 
  * cdef set BFS_local(G, int source, unordered_set[int]& visited ):             # <<<<<<<<<<<<<<
  *     # Create a queue for BFS
- *     queue = array.array("L", [source])  # [source]  # consider vector
+ *     queue = array.array("L", [source])
  */
 
   /* function exit code */
@@ -22279,7 +22279,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
  *     cdef int u, v, i
  *     parts = []             # <<<<<<<<<<<<<<
  *     for u in nodes:
- *         if seen.find(u) != seen.end(): #u in seen:
+ *         if seen.find(u) != seen.end():
  */
   __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1259, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
@@ -22290,7 +22290,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
  *     cdef int u, v, i
  *     parts = []
  *     for u in nodes:             # <<<<<<<<<<<<<<
- *         if seen.find(u) != seen.end(): #u in seen:
+ *         if seen.find(u) != seen.end():
  *             continue
  */
   if (likely(PyList_CheckExact(__pyx_v_nodes)) || PyTuple_CheckExact(__pyx_v_nodes)) {
@@ -22339,7 +22339,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
     /* "dysgu/graph.pyx":1261
  *     parts = []
  *     for u in nodes:
- *         if seen.find(u) != seen.end(): #u in seen:             # <<<<<<<<<<<<<<
+ *         if seen.find(u) != seen.end():             # <<<<<<<<<<<<<<
  *             continue
  * 
  */
@@ -22348,7 +22348,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
 
       /* "dysgu/graph.pyx":1262
  *     for u in nodes:
- *         if seen.find(u) != seen.end(): #u in seen:
+ *         if seen.find(u) != seen.end():
  *             continue             # <<<<<<<<<<<<<<
  * 
  *         for v in G.neighbors(u):
@@ -22358,7 +22358,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
       /* "dysgu/graph.pyx":1261
  *     parts = []
  *     for u in nodes:
- *         if seen.find(u) != seen.end(): #u in seen:             # <<<<<<<<<<<<<<
+ *         if seen.find(u) != seen.end():             # <<<<<<<<<<<<<<
  *             continue
  * 
  */
@@ -22368,7 +22368,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
  *             continue
  * 
  *         for v in G.neighbors(u):             # <<<<<<<<<<<<<<
- *             if seen.find(v) != seen.end(): #v in seen:
+ *             if seen.find(v) != seen.end():
  *                 continue
  */
     __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_v_G, __pyx_n_s_neighbors); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1264, __pyx_L1_error)
@@ -22438,7 +22438,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
       /* "dysgu/graph.pyx":1265
  * 
  *         for v in G.neighbors(u):
- *             if seen.find(v) != seen.end(): #v in seen:             # <<<<<<<<<<<<<<
+ *             if seen.find(v) != seen.end():             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
@@ -22447,7 +22447,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
 
         /* "dysgu/graph.pyx":1266
  *         for v in G.neighbors(u):
- *             if seen.find(v) != seen.end(): #v in seen:
+ *             if seen.find(v) != seen.end():
  *                 continue             # <<<<<<<<<<<<<<
  * 
  *             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
@@ -22457,7 +22457,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
         /* "dysgu/graph.pyx":1265
  * 
  *         for v in G.neighbors(u):
- *             if seen.find(v) != seen.end(): #v in seen:             # <<<<<<<<<<<<<<
+ *             if seen.find(v) != seen.end():             # <<<<<<<<<<<<<<
  *                 continue
  * 
  */
@@ -22596,7 +22596,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
  *             continue
  * 
  *         for v in G.neighbors(u):             # <<<<<<<<<<<<<<
- *             if seen.find(v) != seen.end(): #v in seen:
+ *             if seen.find(v) != seen.end():
  *                 continue
  */
       __pyx_L6_continue:;
@@ -22616,7 +22616,7 @@ static PyObject *__pyx_f_5dysgu_5graph_get_partitions(PyObject *__pyx_v_G, PyObj
  *     cdef int u, v, i
  *     parts = []
  *     for u in nodes:             # <<<<<<<<<<<<<<
- *         if seen.find(u) != seen.end(): #u in seen:
+ *         if seen.find(u) != seen.end():
  *             continue
  */
     __pyx_L3_continue:;
