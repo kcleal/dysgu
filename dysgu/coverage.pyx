@@ -241,6 +241,7 @@ class GenomeScanner:
         tags_checked = False
 
         # Use ibam for insert params if possible
+
         if ibam is not None:
             file_iter = ibam
         else:
@@ -282,13 +283,19 @@ class GenomeScanner:
 
         approx_read_length = int(np.median(approx_read_length_l))
         self.approx_read_length = approx_read_length
+        assume_single = False
         if len(inserts) <= 100 and insert_median == -1:
             insert_median = 300
             insert_stdev = 150
+            assume_single = True
 
         if insert_median == -1:
             insert_median, insert_stdev = get_insert_params(inserts)
-        logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
+
+        if not assume_single:
+            logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
+        else:
+            logging.info(f"Inferred read length {approx_read_length}")
 
         if ibam is None:
             self.last_tell = tell

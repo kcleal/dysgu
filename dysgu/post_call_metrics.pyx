@@ -477,6 +477,35 @@ cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     return -1
 
 
+def nCk(n,k):
+    f = math.factorial
+    return f(n) // f(k) // f(n-k)
+
+
+def binom_prob(n, k, p):
+    # If n is > 1000, set it to 1000 so our Factorial doesn't blow up
+    n = n if n <= 1000 else 1000
+    binom = 0
+    q = 1-p
+    while k < n:
+        binom += nCk(n, k) * q**(n-k) * p**k
+        k += 1
+    return binom
+
+
+def strand_binom_t(events):
+    # perform a binomial test for strand bias
+    cdef EventResult_t e
+    cdef int n, k
+    for e in events:
+        k = max(e.plus, e.minus)
+        if k > 0:
+            n = e.plus + e.minus
+            e.strand_binom_t = binom_prob(n, k, 0.5)
+        else:
+            e.strand_binom_t = 1
+    return events
+
 # from svtyper with minor modifications
 # https://github.com/hall-lab/svtyper/blob/master/svtyper/singlesample.py
 # efficient combinatorial function to handle extremely large numbers
@@ -612,8 +641,8 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
     logging.info(f"Model: {mode}, diploid: {diploid}, contig features: {contigs}. N features: {len(cols)}")
 
     c = dict(zip(
-        ['NMS',    'SQC', 'CIPOS95',  'CIEND95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT'],
-        ['NMsupp', 'sqc', 'cipos95A', 'cipos95B', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp", 'ref_rep', 'jitter']
+        ['NMS',    'SQC', 'CIPOS95',  'CIEND95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT',    'SBT',            'SQR'],
+        ['NMsupp', 'sqc', 'cipos95A', 'cipos95B', 'gc', 'rep', 'rep_sc', 'su', 'spanning', 'supp', 'sc', 'n_expansion', 'ref_poly_bases', 'stride', 'svtype', 'svlen', 'NMpri', 'NMbase', 'MAPQpri', 'MAPQsupp', 'NP', 'maxASsupp', 'block_edge', 'raw_reads_10kb', 'mcov', 'neigh', 'neigh10kb', 'ref_bases', 'plus', 'minus', 'n_gaps', 'n_sa', 'n_xa', 'n_unmapped_mates', 'double_clips', 'remap_score', 'remap_ed', 'bad_clip_count', 'n_small_tlen', 'bnd', 'scw', 'ras', 'fas', "query_overlap", 'fcc', 'compress', "n_in_grp", 'ref_rep', 'jitter', 'strand_binom_t', 'clip_qual_ratio']
                  ))
 
     X = df[[c[i] for i in cols]]

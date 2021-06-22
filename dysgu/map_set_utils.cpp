@@ -1512,6 +1512,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float jitter;
   float sqc;
   float scw;
+  float clip_qual_ratio;
   float outer_cn;
   float inner_cn;
   float fcc;
@@ -1522,6 +1523,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float neigh10kb;
   float raw_reads_10kb;
   float mcov;
+  float strand_binom_t;
   int preciseA;
   int preciseB;
   int linked;
@@ -3325,6 +3327,8 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3sqc___get__(stru
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3sqc_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3scw___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3scw_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8outer_cn___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8outer_cn_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8inner_cn___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
@@ -3345,6 +3349,8 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14raw_reads_10kb_
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14raw_reads_10kb_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4mcov___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4mcov_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseA___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseA_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseB___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
@@ -15314,7 +15320,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6n_gaps_2__set__(struct
  *     cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
  * 
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp             # <<<<<<<<<<<<<<
- *     cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov
+ *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  */
 
@@ -16135,7 +16141,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8n_in_grp_2__set__(stru
 /* "dysgu/map_set_utils.pxd":246
  * 
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
- *     cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov             # <<<<<<<<<<<<<<
+ *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t             # <<<<<<<<<<<<<<
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise
  */
@@ -16356,6 +16362,80 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3scw_2__set__(struct __
   goto __pyx_L0;
   __pyx_L1_error:;
   __Pyx_AddTraceback("dysgu.map_set_utils.EventResult.scw.__set__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->clip_qual_ratio); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 246, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("dysgu.map_set_utils.EventResult.clip_qual_ratio.__get__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  float __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 246, __pyx_L1_error)
+  __pyx_v_self->clip_qual_ratio = __pyx_t_1;
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("dysgu.map_set_utils.EventResult.clip_qual_ratio.__set__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = -1;
   __pyx_L0:;
   __Pyx_RefNannyFinishContext();
@@ -17102,9 +17182,83 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4mcov_2__set__(struct _
   return __pyx_r;
 }
 
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->strand_binom_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 246, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("dysgu.map_set_utils.EventResult.strand_binom_t.__get__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  float __pyx_t_1;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 246, __pyx_L1_error)
+  __pyx_v_self->strand_binom_t = __pyx_t_1;
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("dysgu.map_set_utils.EventResult.strand_binom_t.__set__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
 /* "dysgu/map_set_utils.pxd":247
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
- *     cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov
+ *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped             # <<<<<<<<<<<<<<
  *     cdef public int8_t svlen_precise
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind
@@ -17481,7 +17635,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped_2__set__(stru
 }
 
 /* "dysgu/map_set_utils.pxd":248
- *     cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov
+ *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise             # <<<<<<<<<<<<<<
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind
@@ -35010,6 +35164,20 @@ static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_scw(PyObject *o, P
   }
 }
 
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_clip_qual_ratio(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_clip_qual_ratio(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_3__set__(o, v);
+  }
+  else {
+    PyErr_SetString(PyExc_NotImplementedError, "__del__");
+    return -1;
+  }
+}
+
 static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_outer_cn(PyObject *o, CYTHON_UNUSED void *x) {
   return __pyx_pw_5dysgu_13map_set_utils_11EventResult_8outer_cn_1__get__(o);
 }
@@ -35143,6 +35311,20 @@ static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_mcov(PyObjec
 static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_mcov(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
   if (v) {
     return __pyx_pw_5dysgu_13map_set_utils_11EventResult_4mcov_3__set__(o, v);
+  }
+  else {
+    PyErr_SetString(PyExc_NotImplementedError, "__del__");
+    return -1;
+  }
+}
+
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_strand_binom_t(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_strand_binom_t(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_3__set__(o, v);
   }
   else {
     PyErr_SetString(PyExc_NotImplementedError, "__del__");
@@ -35485,6 +35667,7 @@ static struct PyGetSetDef __pyx_getsets_5dysgu_13map_set_utils_EventResult[] = {
   {(char *)"jitter", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_jitter, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_jitter, (char *)0, 0},
   {(char *)"sqc", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_sqc, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_sqc, (char *)0, 0},
   {(char *)"scw", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_scw, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_scw, (char *)0, 0},
+  {(char *)"clip_qual_ratio", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_clip_qual_ratio, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_clip_qual_ratio, (char *)0, 0},
   {(char *)"outer_cn", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_outer_cn, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_outer_cn, (char *)0, 0},
   {(char *)"inner_cn", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_inner_cn, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_inner_cn, (char *)0, 0},
   {(char *)"fcc", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_fcc, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_fcc, (char *)0, 0},
@@ -35495,6 +35678,7 @@ static struct PyGetSetDef __pyx_getsets_5dysgu_13map_set_utils_EventResult[] = {
   {(char *)"neigh10kb", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_neigh10kb, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_neigh10kb, (char *)0, 0},
   {(char *)"raw_reads_10kb", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_raw_reads_10kb, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_raw_reads_10kb, (char *)0, 0},
   {(char *)"mcov", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_mcov, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_mcov, (char *)0, 0},
+  {(char *)"strand_binom_t", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_strand_binom_t, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_strand_binom_t, (char *)0, 0},
   {(char *)"preciseA", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_preciseA, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_preciseA, (char *)0, 0},
   {(char *)"preciseB", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_preciseB, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_preciseB, (char *)0, 0},
   {(char *)"linked", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_linked, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_linked, (char *)0, 0},

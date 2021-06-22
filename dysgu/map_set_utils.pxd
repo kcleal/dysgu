@@ -243,7 +243,7 @@ cdef class EventResult:
     cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
 
     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
-    cdef public float jitter, sqc, scw, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov
+    cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind

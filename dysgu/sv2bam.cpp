@@ -1381,6 +1381,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float jitter;
   float sqc;
   float scw;
+  float clip_qual_ratio;
   float outer_cn;
   float inner_cn;
   float fcc;
@@ -1391,6 +1392,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float neigh10kb;
   float raw_reads_10kb;
   float mcov;
+  float strand_binom_t;
   int preciseA;
   int preciseB;
   int linked;

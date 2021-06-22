@@ -778,7 +778,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
                        NodeToName node_to_name, genome_scanner,
                        int flag, int chrom, tell, int cigar_index, int event_pos,
                        int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
-                       bint p1_overlaps, bint p2_overlaps, bint mm_only):
+                       bint p1_overlaps, bint p2_overlaps, bint mm_only, int clip_l):
 
     # Adds relevant information to graph and other data structures for further processing
     cdef vector[int] other_nodes  # Other alignments to add edges between
@@ -796,7 +796,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     if read_enum != BREAKEND and (not mm_only or not both_overlap):
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
 
-    elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
+    elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
 
         # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
@@ -808,7 +808,7 @@ cdef bint add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     # look = set(['V300082976L4C001R0311226430'])
     # node_look = set([659281, 659282, 659283, 659284, 659285, 659286])
     # if r.qname in look:
-    # if r.qname == "HISEQ2500-10:539:CAV68ANXX:7:2214:16836:93172":
+    # if r.qname == "D00360:18:H8VC6ADXX:1:2109:15033:67418":
     #     echo("@", r.flag, node_name, event_pos, pos2, list(other_nodes), cigar_index)
     #     echo(both_overlap, "enum", read_enum, p1_overlaps, p2_overlaps)
     #     quit()
@@ -988,7 +988,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,
-                               mm_only)
+                               mm_only, clip_l)
 
     ###
     else:  # Single end
@@ -1009,7 +1009,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
-                                           mm_only)
+                                           mm_only, clip_l)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
@@ -1017,16 +1017,16 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
-                                           mm_only)
+                                           mm_only, clip_l)
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
-                pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
+                pos2 = cigar_pos2
             else:
                 pos2 = event_pos
             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                   current_overlaps_roi, next_overlaps_roi, mm_only)
+                                   current_overlaps_roi, next_overlaps_roi, mm_only, clip_l)
 
 
 cdef struct CigarEvent:

@@ -61,7 +61,7 @@ To make use of multiprocessing, set the "-p" parameter::
 
 Long reads
 **********
-Dysgy has been designed with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
+Dysgy has been designed to work with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
 For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf

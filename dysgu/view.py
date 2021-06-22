@@ -9,7 +9,12 @@ import time
 import datetime
 from collections import defaultdict
 from dysgu import io_funcs, cluster
+from dysgu import coverage
+from dysgu import call_component
 from dysgu.map_set_utils import echo, EventResult
+import subprocess
+import io
+import pysam
 
 
 def open_outfile(args, names_dict):
@@ -48,7 +53,21 @@ def set_numeric(d):
     return d
 
 
-def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
+def mung_df(df, args):
+    if args["no_chr"] == "True":
+        df["chrA"] = [i.replace("chr", "") for i in df["chrA"]]
+        df["chrB"] = [i.replace("chr", "") for i in df["chrB"]]
+
+    if args["no_contigs"] == "True":
+        df["contigA"] = [None] * len(df)
+        df["contigB"] = [None] * len(df)
+    else:
+        df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
+        df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
+    return df
+
+
+def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, aggressive=False):
     logging.info("Merge distance: {} bp".format(merge_dist))
     df.reset_index(inplace=True)
     df["event_id"] = df.index
@@ -59,10 +78,9 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
     df["preciseB"] = [1] * len(df)
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
 
-    # potential = [EventResult().from_dict(i) for i in potential]
-
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
     if not merge_within_sample:
+
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
                                      aggressive_ins_merge=True,
                                      same_sample=False)
@@ -71,7 +89,6 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
         for f in found:
             if f.partners is None:
                 ff[f.event_id] = set([])
-                # ff[f["event_id"]] = []
             else:
                 # Remove partners from same sample
                 current = f["table_name"]
@@ -80,10 +97,13 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False):
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
                     if t_name != current and t_name not in targets and len(targets) < n_samples:
-                        #ff[f["event_id"]].add(item)
-                        #ff[item].add(f["event_id"])
                         targets.add(t_name)
-                    else:  # Merged with self event. Can happen with clusters of SVs with small spacing
+                    elif aggressive:  # used for --pon merging
+                        targets.add(t_name)
+                    else:
+                        # Merged with self event. Can happen with clusters of SVs with small spacing
+                        # e.g. a is merged with b and c, where a is from sample1 and b and c are from sample2
+                        # safer not to merge, otherwise variants can be lost
                         bad_i.add(item)
                         passed = False
                 if passed:  # enumerate support between components
@@ -107,7 +127,6 @@ def to_csv(df, args, names, outfile, extended, small_output):
     keytable = io_funcs.col_names(extended, small_output)
     fmt = keytable.pop()
     keytable += fmt
-    # keytable = [item for sublist in keytable for item in sublist]
     if "partners" not in df.columns:
         if "table_name" in df.columns:
             del df["table_name"]
@@ -216,6 +235,7 @@ def vcf_to_df(path):
                "BND": ("bnd", int),
                "SQC": ("sqc", float),
                "SCW": ("scw", float),
+               "SQR": ("clip_qual_ratio", float),
                "RT": ("type", str),
                "BE": ("block_edge", int),
                "COV": ("raw_reads_10kb", float),
@@ -238,6 +258,7 @@ def vcf_to_df(path):
                "SVLEN": ("svlen", int),
                "PS": ("plus", int),
                "MS": ("minus", int),
+               "SBT": ("strand_binom_t", float),
                "PROB": ("prob", float),
                "NG": ("n_gaps", float),
                "NSA": ("n_sa", float),
@@ -282,6 +303,195 @@ def vcf_to_df(path):
     df["posB"] = df["posB"].astype(int)
 
     return df, header, n_fields
+
+
+def call_pons(samps, df, args):
+    pad = 500
+    # go through each samps and get reads
+    intervals = []
+    for chrA, posA, chrB, posB in zip(df.chrA, df.posA, df.chrB, df.posB):
+        r1 = chrA, 0 if posA - pad < 0 else posA - pad, posA + pad
+        r2 = chrB, 0 if posB - pad < 0 else posB - pad, posB + pad
+        intervals.append(r1)
+        intervals.append(r2)
+
+    merged_intervals = coverage.merge_intervals(intervals)
+
+    wd = args["wd"]
+    with open(f"{wd}/pon.search.bed", "w") as b:
+        for c, s, e in merged_intervals:
+            b.write(f"{c}\t{s}\t{e}\n")
+
+    ref = args["ref"]
+    pon_dfs = []
+    for af, read_type in samps:  # todo parallelize this
+
+        result = subprocess.run(
+            f"dysgu fetch --mq 0 --search {wd}/pon.search.bed --min-size 25 -x -o {wd}/pon.dysgu_reads.bam {wd} {af}",
+            shell=True, stdout=subprocess.PIPE)
+
+        if result.returncode != 0:
+            exit(RuntimeError(f"dysgu run failed on {af}"))
+
+        result = subprocess.run(
+            f"dysgu call --mq 0 --ibam {af} -f csv --min-support 1 -x --mode {read_type} {ref} {wd} {wd}/pon.dysgu_reads.bam",
+            shell=True, stdout=subprocess.PIPE)
+        if result.returncode != 0:
+            exit(RuntimeError("dysgu run failed on pon"))
+
+        output = io.StringIO()
+        output.write(result.stdout.decode("utf-8"))
+        output.seek(0)
+        df_p = pd.read_csv(output, sep=",", index_col=None)
+
+        df_p["sample"] = ["PON-dysgu"] * len(df_p)
+        df_p["table_name"] = ["PON-dysgu"] * len(df_p)
+        pon_dfs.append(df_p)
+
+    return pon_dfs
+
+
+def call_from_samp(samps, df, args):
+
+    pon_dfs = call_pons(samps, df, args)
+
+    df_c = pd.concat([df] + pon_dfs)
+
+    df_c["chrA"] = df_c["chrA"].astype(str)
+    df_c["chrB"] = df_c["chrB"].astype(str)
+    df_c["contigA"] = [i if isinstance(i, str) else "" for i in df_c["contigA"]]
+    df_c["contigB"] = [i if isinstance(i, str) else "" for i in df_c["contigB"]]
+
+    if "partners" in df_c:
+        del df_c["partners"]
+    if "event_id" in df_c:
+        del df_c["event_id"]
+
+    seen_names = len(set(df_c["sample"]))
+
+    df_m = merge_df(df_c, seen_names, args["merge_dist"], {}, aggressive=True)
+    df_m = df_m.sort_values(["chrA", "posA", "chrB", "posB"])
+
+    pon_partners = set([])
+    for s in df_m[df_m["sample"] == "PON-dysgu"]["partners"]:
+        pon_partners |= s
+
+    return pon_partners
+
+
+def check_raw_alignments(df, args, pon):
+
+    # get soft-clip position and direction
+    clips = []
+    for chrA, posA, contA, chrB, posB, contB, idx, svlen, spanning in zip(df.chrA, df.posA, df.contigA, df.chrB, df.posB, df.contigB, df.index, df.svlen, df.spanning):
+        if spanning:
+            clips.append((chrA, posA, 3, idx, chrA == chrB, svlen))
+            clips.append((chrB, posB, 3, idx, chrA == chrB, svlen))
+        else:
+            if contA:
+                start_lower = contA[0].islower()
+                end_lower = contA[-1].islower()
+                if start_lower and not end_lower:
+                    clip_side = 0
+                elif not start_lower and end_lower:
+                    clip_side = 1
+                else:  # start_lower and end_lower:
+                    clip_side = 3  # any side
+                clips.append((chrA, posA, clip_side, idx, chrA == chrB, svlen))
+            if contB:
+                start_lower = contB[0].islower()
+                end_lower = contB[-1].islower()
+                if start_lower and not end_lower:
+                    clip_side = 0
+                elif not start_lower and end_lower:
+                    clip_side = 1
+                else:
+                    clip_side = 3
+                clips.append((chrB, posB, clip_side, idx, chrA == chrB, svlen))
+
+    clips = sorted(clips, key=lambda x: (x[0], x[1]))
+
+    opts = {"bam": "rb", "cram": "rc", "sam": "r", "-": "rb", "stdin": "rb"}
+    pad = 20
+    found = set([])
+    for pth, _ in pon:
+        # open alignment file
+        kind = pth.split(".")[-1]
+        bam_mode = opts[kind]
+
+        pysam.set_verbosity(0)
+        infile = pysam.AlignmentFile(pth, bam_mode, threads=1,
+                                     reference_filename=None if kind != "cram" else args["ref"])
+        pysam.set_verbosity(3)
+
+        for chrom, pos, cs, index, intra, svlen in clips:
+
+            if index in found:
+                continue
+
+            for a in infile.fetch(chrom, pos - pad if pos - pad > 0 else 0, pos + pad):
+                if not a.cigartuples:
+                    continue
+                # if pos == 3786481 and a.cigartuples[-1][0] == 4:
+                #     echo(a.cigartuples, abs(pos - a.pos), abs(pos - a.reference_end))
+                if a.cigartuples[0][0] == 4 and cs != 1:
+                    current_pos = a.pos
+                    if abs(current_pos - pos) < 8:
+                        found.add(index)
+                        break
+                if a.cigartuples[-1][0] == 4 and cs != 0:
+                    current_pos = a.reference_end
+                    if abs(current_pos - pos) < 8:
+                        found.add(index)
+                        break
+
+    df = df.drop(found)
+
+    return df
+
+
+def process_pon(df, args):
+
+    # open pon
+    pon = []
+    for item, read_type in zip(args["pon"].split(","), args["pon_rt"].split(",")):
+        pon.append((item, read_type))
+
+    if len(pon) == 0:
+        exit(IOError("--pon parse failed"))
+
+    if "partners" in df.columns:
+        # check one representative from each group
+        dont_check = set([])
+        check = set([])
+        for idx, p in zip(df.index, df["partners"]):
+            if idx not in dont_check:
+                check.add(idx)
+                if p is not None:
+                    dont_check |= p
+
+        df_check = df.loc[list(check)]
+        pon_idxs = call_from_samp(pon, df_check, args)
+
+        # drop pon_idxs from main df
+        for idx, s in zip(df.index, df["partners"]):
+            if idx in pon_idxs:
+                pon_idxs |= s
+                continue
+            for i in s:
+                if i in pon_idxs:
+                    pon_idxs |= s
+                    break
+
+    else:
+        pon_idxs = call_from_samp(pon, df, args)
+
+    df = df.drop([i for i in pon_idxs if i in df.index])  # indexes might reference pon dataframe
+
+    # now check pon alignment files for matching soft-clips or other false negative events
+    df = check_raw_alignments(df, args, pon)
+
+    return df
 
 
 def view_file(args):
@@ -340,17 +550,7 @@ def view_file(args):
         if len(set(df["sample"])) > 1:
             raise ValueError("More than one sample per input file")
 
-        if args["no_chr"] == "True":
-            df["chrA"] = [i.replace("chr", "") for i in df["chrA"]]
-            df["chrB"] = [i.replace("chr", "") for i in df["chrB"]]
-
-        if args["no_contigs"] == "True":
-            df["contigA"] = [None] * len(df)
-            df["contigB"] = [None] * len(df)
-        else:
-            # click.echo(df.columns, err=True)
-            df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
-            df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
+        df = mung_df(df, args)
 
         if args["merge_within"] == "True":
             l_before = len(df)
@@ -367,6 +567,11 @@ def view_file(args):
             df = merge_df(df, len(seen_names), args["merge_dist"], {})
 
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
+
+    # if "pon" in args and args["pon"] is not None:
+    #     logging.info("Calling SVs from --pon samples")
+    #     df = process_pon(df, args)
+
     outfile = open_outfile(args, names_dict)
 
     if args["out_format"] == "vcf":

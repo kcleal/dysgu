@@ -38,8 +38,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/pysam",
+            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -1860,6 +1860,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float jitter;
   float sqc;
   float scw;
+  float clip_qual_ratio;
   float outer_cn;
   float inner_cn;
   float fcc;
@@ -1870,6 +1871,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   float neigh10kb;
   float raw_reads_10kb;
   float mcov;
+  float strand_binom_t;
   int preciseA;
   int preciseB;
   int linked;
@@ -4372,7 +4374,7 @@ static PyObject *__pyx_f_5dysgu_5graph_alignments_from_sa_tag(PyObject *, PyObje
 static PyObject *__pyx_f_5dysgu_5graph_connect_right(PyObject *, PyObject *, PyObject *, PyObject *, PyObject *, PyObject *); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph_connect_left(PyObject *, PyObject *, PyObject *, PyObject *, PyObject *, PyObject *); /*proto*/
 static PyObject *__pyx_f_5dysgu_5graph_cluster_clipped(PyObject *, PyObject *, __pyx_t_5dysgu_5graph_ClipScoper_t, PyObject *, PyObject *, PyObject *); /*proto*/
-static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *, struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *, __pyx_t_5dysgu_5graph_PairedEndScoper_t, __pyx_t_5dysgu_5graph_TemplateEdges_t, struct __pyx_obj_5dysgu_5graph_NodeToName *, PyObject *, int, int, PyObject *, int, int, int, int, __pyx_t_5dysgu_5graph_ClipScoper_t, __pyx_t_5dysgu_5graph_ReadEnum_t, int, int, int); /*proto*/
+static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *, struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *, __pyx_t_5dysgu_5graph_PairedEndScoper_t, __pyx_t_5dysgu_5graph_TemplateEdges_t, struct __pyx_obj_5dysgu_5graph_NodeToName *, PyObject *, int, int, PyObject *, int, int, int, int, __pyx_t_5dysgu_5graph_ClipScoper_t, __pyx_t_5dysgu_5graph_ReadEnum_t, int, int, int, int); /*proto*/
 static int __pyx_f_5dysgu_5graph_good_quality_clip(struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *, int); /*proto*/
 static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *, struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *, int, int, PyObject *, PyObject *, int, __pyx_t_5dysgu_5graph_PairedEndScoper_t, int, int, int, long, PyObject *, __pyx_t_5dysgu_5graph_TemplateEdges_t, struct __pyx_obj_5dysgu_5graph_NodeToName *, int, int, __pyx_t_5dysgu_5graph_ClipScoper_t, __pyx_t_5dysgu_5graph_ReadEnum_t, PyObject *, int); /*proto*/
 static struct __pyx_t_5dysgu_5graph_CigarEvent __pyx_f_5dysgu_5graph_make_cigar_event(int, int, int, int, int, __pyx_t_5dysgu_5graph_ReadEnum_t); /*proto*/
@@ -15819,7 +15821,7 @@ static PyObject *__pyx_f_5dysgu_5graph_cluster_clipped(PyObject *__pyx_v_G, PyOb
  *                        int flag, int chrom, tell, int cigar_index, int event_pos,
  */
 
-static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *__pyx_v_r, __pyx_t_5dysgu_5graph_PairedEndScoper_t __pyx_v_pe_scope, __pyx_t_5dysgu_5graph_TemplateEdges_t __pyx_v_template_edges, struct __pyx_obj_5dysgu_5graph_NodeToName *__pyx_v_node_to_name, PyObject *__pyx_v_genome_scanner, int __pyx_v_flag, int __pyx_v_chrom, PyObject *__pyx_v_tell, int __pyx_v_cigar_index, int __pyx_v_event_pos, int __pyx_v_chrom2, int __pyx_v_pos2, __pyx_t_5dysgu_5graph_ClipScoper_t __pyx_v_clip_scope, __pyx_t_5dysgu_5graph_ReadEnum_t __pyx_v_read_enum, int __pyx_v_p1_overlaps, int __pyx_v_p2_overlaps, int __pyx_v_mm_only) {
+static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_obj_5pysam_18libcalignedsegment_AlignedSegment *__pyx_v_r, __pyx_t_5dysgu_5graph_PairedEndScoper_t __pyx_v_pe_scope, __pyx_t_5dysgu_5graph_TemplateEdges_t __pyx_v_template_edges, struct __pyx_obj_5dysgu_5graph_NodeToName *__pyx_v_node_to_name, PyObject *__pyx_v_genome_scanner, int __pyx_v_flag, int __pyx_v_chrom, PyObject *__pyx_v_tell, int __pyx_v_cigar_index, int __pyx_v_event_pos, int __pyx_v_chrom2, int __pyx_v_pos2, __pyx_t_5dysgu_5graph_ClipScoper_t __pyx_v_clip_scope, __pyx_t_5dysgu_5graph_ReadEnum_t __pyx_v_read_enum, int __pyx_v_p1_overlaps, int __pyx_v_p2_overlaps, int __pyx_v_mm_only, int __pyx_v_clip_l) {
   std::vector<int>  __pyx_v_other_nodes;
   int __pyx_v_node_name;
   uint64_t __pyx_v_v;
@@ -16045,7 +16047,7 @@ static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_
  *     if read_enum != BREAKEND and (not mm_only or not both_overlap):
  *         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)             # <<<<<<<<<<<<<<
  * 
- *     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
+ *     elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
  */
     __pyx_v_other_nodes = ((struct __pyx_vtabstruct_5dysgu_5graph_PairedEndScoper *)__pyx_v_pe_scope->__pyx_vtab)->find_other_nodes(((struct __pyx_obj_5dysgu_5graph_PairedEndScoper *)__pyx_v_pe_scope), __pyx_v_node_name, __pyx_v_chrom, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_read_enum);
 
@@ -16062,16 +16064,24 @@ static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_
   /* "dysgu/graph.pyx":799
  *         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
  * 
- *     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:             # <<<<<<<<<<<<<<
+ *     elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:             # <<<<<<<<<<<<<<
  *         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
  * 
  */
-  __pyx_t_9 = ((__pyx_v_chrom != __pyx_v_chrom2) != 0);
+  __pyx_t_10 = ((__pyx_v_chrom != __pyx_v_chrom2) != 0);
+  if (__pyx_t_10) {
+  } else {
+    __pyx_t_9 = __pyx_t_10;
+    goto __pyx_L10_bool_binop_done;
+  }
+  __pyx_t_10 = ((__pyx_v_clip_l != -1L) != 0);
+  __pyx_t_9 = __pyx_t_10;
+  __pyx_L10_bool_binop_done:;
   if (__pyx_t_9) {
 
     /* "dysgu/graph.pyx":800
  * 
- *     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
+ *     elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:
  *         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)             # <<<<<<<<<<<<<<
  * 
  *         # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
@@ -16092,7 +16102,7 @@ static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_
     /* "dysgu/graph.pyx":799
  *         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum)
  * 
- *     elif chrom != chrom2:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:             # <<<<<<<<<<<<<<
+ *     elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations or read_enum == BREAKEND:             # <<<<<<<<<<<<<<
  *         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
  * 
  */
@@ -16110,11 +16120,11 @@ static int __pyx_f_5dysgu_5graph_add_to_graph(PyObject *__pyx_v_G, struct __pyx_
   if (!__pyx_t_10) {
   } else {
     __pyx_t_9 = __pyx_t_10;
-    goto __pyx_L11_bool_binop_done;
+    goto __pyx_L13_bool_binop_done;
   }
   __pyx_t_10 = ((!(__pyx_v_both_overlap != 0)) != 0);
   __pyx_t_9 = __pyx_t_10;
-  __pyx_L11_bool_binop_done:;
+  __pyx_L13_bool_binop_done:;
   if (__pyx_t_9) {
 
     /* "dysgu/graph.pyx":805
@@ -18488,7 +18498,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  * 
  *         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
  *                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,             # <<<<<<<<<<<<<<
- *                                mm_only)
+ *                                mm_only, clip_l)
  * 
  */
     __pyx_t_8 = __Pyx_PyInt_From_long(__pyx_v_tell); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 990, __pyx_L1_error)
@@ -18499,9 +18509,9 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  * 
  *         success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,             # <<<<<<<<<<<<<<
  *                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,
- *                                mm_only)
+ *                                mm_only, clip_l)
  */
-    __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_8, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only);
+    __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_8, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only, __pyx_v_clip_l);
     __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
 
     /* "dysgu/graph.pyx":926
@@ -18794,7 +18804,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
  *                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,             # <<<<<<<<<<<<<<
  *                                            current_overlaps_roi, next_overlaps_roi,
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  */
           __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v_tell); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1010, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
@@ -18806,7 +18816,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
  *                                            current_overlaps_roi, next_overlaps_roi,
  */
-          __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_1, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only);
+          __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_1, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only, __pyx_v_clip_l);
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
           /* "dysgu/graph.pyx":1006
@@ -18819,7 +18829,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
         }
 
         /* "dysgu/graph.pyx":1014
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  * 
  *                 if index > 0:             # <<<<<<<<<<<<<<
  *                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
@@ -18952,7 +18962,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                     success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
  *                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,             # <<<<<<<<<<<<<<
  *                                            current_overlaps_roi, next_overlaps_roi,
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  */
           __pyx_t_7 = __Pyx_PyInt_From_long(__pyx_v_tell); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1018, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_7);
@@ -18964,11 +18974,11 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
  *                                            current_overlaps_roi, next_overlaps_roi,
  */
-          __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_7, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only);
+          __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_7, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only, __pyx_v_clip_l);
           __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
 
           /* "dysgu/graph.pyx":1014
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  * 
  *                 if index > 0:             # <<<<<<<<<<<<<<
  *                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
@@ -18997,7 +19007,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
 
     /* "dysgu/graph.pyx":1021
  *                                            current_overlaps_roi, next_overlaps_roi,
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  *         elif read_enum >= 2:  # Sv within read             # <<<<<<<<<<<<<<
  *             chrom2 = r.rname
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
@@ -19006,11 +19016,11 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
     if (__pyx_t_4) {
 
       /* "dysgu/graph.pyx":1022
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  *         elif read_enum >= 2:  # Sv within read
  *             chrom2 = r.rname             # <<<<<<<<<<<<<<
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
- *                 pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
+ *                 pos2 = cigar_pos2
  */
       __pyx_t_7 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_r), __pyx_n_s_rname); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1022, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
@@ -19022,7 +19032,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *         elif read_enum >= 2:  # Sv within read
  *             chrom2 = r.rname
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion             # <<<<<<<<<<<<<<
- *                 pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
+ *                 pos2 = cigar_pos2
  *             else:
  */
       __pyx_t_7 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_r), __pyx_n_s_cigartuples); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 1023, __pyx_L1_error)
@@ -19043,7 +19053,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
         /* "dysgu/graph.pyx":1024
  *             chrom2 = r.rname
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
- *                 pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]             # <<<<<<<<<<<<<<
+ *                 pos2 = cigar_pos2             # <<<<<<<<<<<<<<
  *             else:
  *                 pos2 = event_pos
  */
@@ -19053,14 +19063,14 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *         elif read_enum >= 2:  # Sv within read
  *             chrom2 = r.rname
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion             # <<<<<<<<<<<<<<
- *                 pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
+ *                 pos2 = cigar_pos2
  *             else:
  */
         goto __pyx_L46;
       }
 
       /* "dysgu/graph.pyx":1026
- *                 pos2 = cigar_pos2  # event_pos + r.cigartuples[cigar_index][1]
+ *                 pos2 = cigar_pos2
  *             else:
  *                 pos2 = event_pos             # <<<<<<<<<<<<<<
  *             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
@@ -19075,7 +19085,7 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                 pos2 = event_pos
  *             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
  *                                    tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,             # <<<<<<<<<<<<<<
- *                                    current_overlaps_roi, next_overlaps_roi, mm_only)
+ *                                    current_overlaps_roi, next_overlaps_roi, mm_only, clip_l)
  * 
  */
       __pyx_t_1 = __Pyx_PyInt_From_long(__pyx_v_tell); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1028, __pyx_L1_error)
@@ -19086,14 +19096,14 @@ static void __pyx_f_5dysgu_5graph_process_alignment(PyObject *__pyx_v_G, struct 
  *                 pos2 = event_pos
  *             success = add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,             # <<<<<<<<<<<<<<
  *                                    tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
- *                                    current_overlaps_roi, next_overlaps_roi, mm_only)
+ *                                    current_overlaps_roi, next_overlaps_roi, mm_only, clip_l)
  */
-      __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_1, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only);
+      __pyx_v_success = __pyx_f_5dysgu_5graph_add_to_graph(__pyx_v_G, __pyx_v_r, __pyx_v_pe_scope, __pyx_v_template_edges, __pyx_v_node_to_name, __pyx_v_genome_scanner, __pyx_v_flag, __pyx_v_chrom, __pyx_t_1, __pyx_v_cigar_index, __pyx_v_event_pos, __pyx_v_chrom2, __pyx_v_pos2, __pyx_v_clip_scope, __pyx_v_read_enum, __pyx_v_current_overlaps_roi, __pyx_v_next_overlaps_roi, __pyx_v_mm_only, __pyx_v_clip_l);
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
       /* "dysgu/graph.pyx":1021
  *                                            current_overlaps_roi, next_overlaps_roi,
- *                                            mm_only)
+ *                                            mm_only, clip_l)
  *         elif read_enum >= 2:  # Sv within read             # <<<<<<<<<<<<<<
  *             chrom2 = r.rname
  *             if r.cigartuples[cigar_index][0] != 1:  # If not insertion

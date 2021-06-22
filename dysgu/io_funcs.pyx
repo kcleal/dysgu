@@ -154,7 +154,7 @@ def get_include_reads(include_regions, bam):
 cpdef list col_names(extended, small_output):  # todo fix for no-contigs view command
 
     if small_output:
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", "svlen", "svlen_precise", "rep", "gc",
+        return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
           ["GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc", "bnd",
          "raw_reads_10kb", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed", "bad_clip_count", "fcc", "inner_cn", "outer_cn", "prob"]
@@ -162,7 +162,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
     if extended:  # to do fix this
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp",  "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
          ["GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "block_edge",
+          "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
@@ -171,7 +171,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
           ["GT", "GQ", "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "block_edge",
+          "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
                 "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
@@ -200,11 +200,9 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         stride = r["stride"]
         exp_seq = r["exp_seq"]
         ref_poly = r["ref_poly_bases"]
-        # q_gaps = r["query_gap"]
         overlaps = r["query_overlap"]
 
         su, pe, sr, sc, bnd, wr = 0, 0, 0, 0, 0, 0
-        # probs = []
         for row in df_rows.values():
             pe += row["pe"]
             sr += row["supp"]
@@ -212,8 +210,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
             su += row["su"]
             bnd += row["bnd"]
             wr += row["spanning"]
-            # probs.append(row["Prob"])
-        # probs = round(np.median(probs), 3)
 
     else:
         pe = r["pe"]
@@ -222,7 +218,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         su = r["su"]
         bnd = r["bnd"]
         wr = r["spanning"]
-        # probs = r["Prob"]
         gc = round(r["gc"], 2)
         if not small_output:
             rep = r["rep"]
@@ -232,7 +227,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         stride = r["stride"]
         exp_seq = r["exp_seq"]
         ref_poly = r["ref_poly_bases"]
-        # q_gaps = r["query_gap"]
         overlaps = r["query_overlap"]
 
     samp = r["sample"]
@@ -293,17 +287,10 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
     if small_output:
         fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
-        # if "prob" in r:
-        #     fmt_keys += ":PROB"
-
     elif extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
-        # if "prob" in r:
-        #     fmt_keys += ":PROB"
+        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
     else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
-        # if "prob" in r:
-        #     fmt_keys += ":PROB"
+        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", "." if "filter" not in r else r['filter'],
            # INFO line
@@ -340,8 +327,8 @@ def get_fmt(r, extended, small_output):
     elif extended:
         v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                       r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
-                                      r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
+                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
+                                      r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2), round(r["n_xa"], 2),
                                       round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
                                     round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
 
@@ -351,8 +338,8 @@ def get_fmt(r, extended, small_output):
     else:
         v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
                                   r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
-                                  r['ref_bases'], r["plus"], r["minus"], r['n_gaps'], round(r["n_sa"], 2),
+                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
+                                  r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
                                   round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
                                 round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
              ]
@@ -372,8 +359,9 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
             else:
                 r["partners"] = [int(i.split(",")[1]) for i in r["partners"].split("|")]
         for idx in r["partners"]:
-            r2 = df.loc[idx]  # iloc
-            cols[r2["table_name"]] = r2
+            if idx in df.index:  # might be already dropped
+                r2 = df.loc[idx]
+                cols[r2["table_name"]] = r2
 
     if "table_name" in r:
         cols[r["table_name"]] = r
@@ -453,6 +441,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
 ##FORMAT=<ID=SCQ,Number=1,Type=Float,Description="Soft-clip quality weight value">
+##FORMAT=<ID=SQR,Number=1,Type=Float,Description="Soft-clip base-quality ratio wrt to aligned bases">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
@@ -462,6 +451,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
+##FORMAT=<ID=SBT,Number=1,Type=Integer,Description="Strand-bias, one-sided binomial test p-value">
 ##FORMAT=<ID=NG,Number=1,Type=Float,Description="Mean number of small gaps < 30 bp">
 ##FORMAT=<ID=NSA,Number=1,Type=Float,Description="Mean number of SA tags per read">
 ##FORMAT=<ID=NXA,Number=1,Type=Float,Description="Mean number of XA tags per read">
@@ -538,6 +528,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
 ##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
 ##FORMAT=<ID=SCW,Number=1,Type=Float,Description="Soft-clip quality weight value">
+##FORMAT=<ID=SQR,Number=1,Type=Float,Description="Soft-clip base-quality ratio wrt to aligned bases">
 ##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
 ##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
 ##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
@@ -547,6 +538,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
+##FORMAT=<ID=SBT,Number=1,Type=Integer,Description="Strand-bias, one-sided binomial test p-value">
 ##FORMAT=<ID=NG,Number=1,Type=Float,Description="Mean number of small gaps < 30 bp">
 ##FORMAT=<ID=NSA,Number=1,Type=Float,Description="Mean number of SA tags per read">
 ##FORMAT=<ID=NXA,Number=1,Type=Float,Description="Mean number of XA tags per read">

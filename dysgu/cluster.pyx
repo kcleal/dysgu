@@ -32,7 +32,7 @@ def filter_potential(input_events, tree, regions_only):
     potential = []
     cdef EventResult_t i
     for i in input_events:
-
+        # echo(i)
         # if "posB" not in i:  # Skip events for which no posB was identified
         #     continue
         if i.sqc is None:
@@ -159,17 +159,18 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
     seen = set([])
     pad = 100
-    # cdef EventResult_t ei, ej
+
     for ei, ej, idx, jdx in event_iter:
 
         i_id = ei.event_id
         j_id = ej.event_id
-        if not same_sample: # and "sample" in ei:
+
+        if not same_sample:
             if ei.sample == ej.sample:
                 continue
-        else:
-            if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
-                continue
+
+        if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
+            continue
 
         seen.add((i_id, j_id))
 
@@ -304,7 +305,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                          debug=debug)
 
     found = []
-    # cdef EventResult_t item, w0
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item.event_id):
             found.append(item)
@@ -334,7 +334,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             add_contig_b = bool(not w0.contig2)
             new_b = ""
             svt = w0.svtype
-            sqc = w0.sqc #w0["sqc"] if "sqc" in w0 else -1
+            sqc = w0.sqc
             for k in range(1, len(best)):
 
                 item = best[k]
@@ -407,7 +407,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 w0.contig2 = new_b
 
         if add_partners:
-            # echo([i.event_id for i in best[1:]])
             w0.partners = [i.event_id for i in best[1:]]
 
         found.append(w0)
@@ -640,14 +639,14 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 
 def process_job(msg_queue, args):
 
-    job_path, infile_path, bam_mode, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
+    job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size = args
 
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
 
     pysam.set_verbosity(0)
-    infile = pysam.AlignmentFile(infile_path, bam_mode, threads=1)
+    infile = pysam.AlignmentFile(infile_path, bam_mode, threads=1, reference_filename=None if bam_mode != "rc" else ref_path)
     pysam.set_verbosity(3)
     event_id = 0
 
@@ -705,6 +704,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             raise ValueError("Template-size must be in the format 'INT,INT,INT', for insert-median, insert-stdev, read-length")
 
     if paired_end:
+
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
                                                                      read_len, ibam)
         read_len = genome_scanner.approx_read_length
@@ -804,7 +804,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             job_path = f"{tdir}/job_{n}.pkl"
 
             proc_args = (
-                job_path, args["sv_aligns"], args["bam_mode"], args["regions"], clip_length, insert_median, insert_stdev,
+                job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs,
                 rel_diffs, diffs, min_size
             )
@@ -952,6 +952,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+    preliminaries = post_call_metrics.strand_binom_t(preliminaries)
 
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
@@ -986,7 +987,8 @@ def cluster_reads(args):
     args["bam_mode"] = bam_mode
 
     pysam.set_verbosity(0)
-    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"])
+    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
+                                 reference_filename=None if kind != "cram" else args["reference"])
     pysam.set_verbosity(3)
 
     has_index = True
@@ -999,28 +1001,31 @@ def cluster_reads(args):
         logging.info("Input file has no index, attempting to index")
         infile.close()
         pysam.index(args["sv_aligns"])
-        infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"])
+        infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
+                                     reference_filename=None if kind != "cram" else args["reference"])
 
     ref_genome = pysam.FastaFile(args["reference"])
 
     ibam = None
     if args["ibam"] is not None:
-        kind = args["sv_aligns"].split(".")[-1]
+        kind = args["ibam"].split(".")[-1]
         if kind == "stdin" or kind == "-" or kind not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
 
-        pysam.set_verbosity(0)
-        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=1)
-        pysam.set_verbosity(3)
+        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=1,
+                                   reference_filename=None if kind != "cram" else args["reference"])
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
             if len(rg) > 1:
-                logging.warning("Warning: more than one @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]))
+                sms = set([i["SM"] for i in rg])
+                if len(sms) > 1:
+                    logging.warning("Warning: more than one sample in @RG, using first sample (SM) for output: {}".format(rg[0]["SM"]))
             sample_name = rg[0]["SM"]
-        sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
-        logging.warning("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name))
+        else:
+            sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
+            logging.warning("Warning: no SM tag in @RG (read-group), using input file name as sample name for output: {}".format(sample_name))
     else:
         sample_name = os.path.splitext(os.path.basename(args["sv_aligns"]))[0]
         logging.warning("Warning: no @RG, using input file name as sample name for output: {}".format(sample_name))
@@ -1065,7 +1070,10 @@ def cluster_reads(args):
 
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
-            cols = io_funcs.col_names(extended_tags, not args["metrics"])
+            small_output_f = True
+            if args["metrics"]:
+                small_output_f = False
+            cols = io_funcs.col_names(extended_tags, small_output_f)
             fmt = cols.pop()
             cols += fmt
             df[cols].to_csv(outfile, index=False)

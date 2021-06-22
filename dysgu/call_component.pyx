@@ -10,7 +10,7 @@ import itertools
 from dysgu import assembler
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes
 from dysgu.post_call_metrics cimport soft_clip_qual_corr
 
 import warnings
@@ -94,6 +94,29 @@ cdef n_aligned_bases(ct):
     return float(aligned), float(large_gaps), float(n_small_gaps)
 
 
+cdef base_quals_aligned_clipped(AlignedSegment a):
+
+    # count aligned/clipped base qualities
+    cdef int left_clip, right_clip
+    cdef float aligned_base_quals = 0
+    cdef float aligned_bases = 0
+    cdef float clipped_base_quals = 0
+
+    left_clip, right_clip = clip_sizes(a)
+    clipped_bases = left_clip + right_clip
+
+    cdef const unsigned char[:] quals = a.query_qualities
+    cdef int i
+    for i in range(left_clip):
+        clipped_base_quals += quals[i]
+    for i in range(left_clip, len(quals) - right_clip):
+        aligned_base_quals += quals[i]
+        aligned_bases += 1
+    for i in range(len(quals) - right_clip, len(quals)):
+        clipped_base_quals += quals[i]
+    return aligned_base_quals, aligned_bases, clipped_base_quals, clipped_bases
+
+
 cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert_ppf, generic_ins,
                        EventResult_t er):
 
@@ -114,6 +137,12 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
 
     cdef int total_pri = 0
 
+
+    cdef float aligned_base_quals = 0
+    cdef float aligned_bases = 0
+    cdef float clipped_base_quals = 0
+    cdef float clipped_bases = 0
+    cdef int abq, ab, cbq, cb
     paired_end = set([])
     seen = set([])
 
@@ -123,11 +152,14 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
     cdef int flag, index, this_as
     cdef float a_bases, large_gaps, n_small_gaps
     # extended tags: "DP", "DN", "DApri", "DAsupp",
-    for index, a in enumerate(itertools.chain(reads1, reads2)):
 
-        qname = a.qname
-        if qname not in seen:
-            seen.add(qname)
+    cdef AlignedSegment a
+
+    for index, a in enumerate(itertools.chain(reads1, reads2, [i.read_a for i in generic_ins])):
+
+        # qname = a.qname
+        # if qname not in seen:
+        #     seen.add(qname)
 
         if extended_tags:
             if a.has_tag("ZP"):
@@ -175,10 +207,10 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             total_pri += 1
 
             MAPQpri += a.mapq
-            if index >= len(reads2) and qname in paired_end:  # If two primary reads from same pair
+            if index >= len(reads2) and a.qname in paired_end:  # If two primary reads from same pair
                 er.pe += 1
             else:
-                paired_end.add(qname)
+                paired_end.add(a.qname)
 
             if extended_tags and a.has_tag("ZA"):
                 DApri += float(a.get_tag("ZA"))
@@ -197,11 +229,18 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
         if ct[0][0] == 4 or ct[-1][0] == 4:
             er.sc += 1
 
+        if a.flag & 1:  # paired read
+            abq, ab, cbq, cb = base_quals_aligned_clipped(a)
+            aligned_base_quals += abq
+            aligned_bases += ab
+            clipped_base_quals += cbq
+            clipped_bases += cb
+
     for a in spanning:
 
-        qname = a.qname
-        if qname not in seen:
-            seen.add(qname)
+        # qname = a.qname
+        # if qname not in seen:
+        #     seen.add(qname)
 
         if extended_tags:
             if a.has_tag("ZP"):
@@ -243,10 +282,10 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
         else:  # Primary reads
             MAPQpri += a.mapq
             total_pri += 1
-            if qname in paired_end:  # If two primary reads from same pair
+            if a.qname in paired_end:  # If two primary reads from same pair
                 er.pe += 2
             else:
-                paired_end.add(qname)
+                paired_end.add(a.qname)
             if extended_tags and a.has_tag("ZA"):
                 DApri += float(a.get_tag("ZA"))
             if a.has_tag("NM"):
@@ -259,6 +298,14 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             er.minus += 1
         else:
             er.plus += 1
+
+        if a.flag & 1:
+            abq, ab, cbq, cb = base_quals_aligned_clipped(a)
+            aligned_base_quals += abq
+            aligned_bases += ab
+            clipped_base_quals += cbq
+            clipped_bases += cb
+
 
     cdef int tot = er.supp + total_pri
 
@@ -283,6 +330,11 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
     if len(reads2) == 0:
         er.pe = len(reads1)
     er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
+
+    if clipped_bases > 0 and aligned_bases > 0:
+        er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
+    else:
+        er.clip_qual_ratio = 0
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
@@ -677,9 +729,9 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
     return sub_cluster_calls
 
 
-cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
+cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
                  int to_assemble, int extended_tags):
-    #print("starting single")
+
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
@@ -693,7 +745,7 @@ cdef single(infile, rds, int insert_size, int insert_stdev, float insert_ppf, in
         if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
-            #print("finished single")
+
             return []
 
     # Group by template name to check for split reads
@@ -2103,7 +2155,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
     return results
 
 
-cdef one_edge(infile, u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
+cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
                    int min_support, int block_edge, int assemble, int extended_tags):
     #print("starting one edge")
     spanning_alignments = []
@@ -2294,7 +2346,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         if v in seen:
             seen.remove(v)
 
-        events += one_edge(bam, rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
+        events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
                                extended_tags)
 
     # Process any unconnected blocks
@@ -2307,7 +2359,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                 if len(rds) < lower_bound_support:
                     continue
 
-                res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
+                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
                 if res:
                     if isinstance(res, EventResult):
                         events.append(res)
@@ -2324,14 +2376,14 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             if len(rds) < lower_bound_support:
                 continue
 
-            res = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
+            res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
 
             if res:
                 if isinstance(res, EventResult):
                     events.append(res)
                 else:
                     events += res
-    #print("-finished multi")
+
     return events
 
 
@@ -2340,7 +2392,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     n_parts = len(data["parts"])
     events = []
-    #print("--starting block")
+
     if n_parts >= 1:
         # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
@@ -2351,15 +2403,15 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
 
         if len(rds) < lower_bound_support:
-            #print("--finished block")
+
             return []
 
-        e = single(bam, rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+        e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
                    assemble_contigs, extended_tags)
         if e:
             if isinstance(e, list):
                 events += e
             else:
                 events.append(e)
-    #print("--finished block")
+
     return events
