@@ -451,7 +451,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
-##FORMAT=<ID=SBT,Number=1,Type=Integer,Description="Strand-bias, one-sided binomial test p-value">
+##FORMAT=<ID=SBT,Number=1,Type=Float,Description="Strand-bias, one-sided binomial test p-value">
 ##FORMAT=<ID=NG,Number=1,Type=Float,Description="Mean number of small gaps < 30 bp">
 ##FORMAT=<ID=NSA,Number=1,Type=Float,Description="Mean number of SA tags per read">
 ##FORMAT=<ID=NXA,Number=1,Type=Float,Description="Mean number of XA tags per read">
@@ -538,7 +538,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
 ##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
 ##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
-##FORMAT=<ID=SBT,Number=1,Type=Integer,Description="Strand-bias, one-sided binomial test p-value">
+##FORMAT=<ID=SBT,Number=1,Type=Float,Description="Strand-bias, one-sided binomial test p-value">
 ##FORMAT=<ID=NG,Number=1,Type=Float,Description="Mean number of small gaps < 30 bp">
 ##FORMAT=<ID=NSA,Number=1,Type=Float,Description="Mean number of SA tags per read">
 ##FORMAT=<ID=NXA,Number=1,Type=Float,Description="Mean number of XA tags per read">
