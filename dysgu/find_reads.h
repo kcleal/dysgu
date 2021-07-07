@@ -220,13 +220,15 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
 
 
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage, char* region) {
+                          int threads, int paired_end, char* temp_f, int max_coverage, char* region, char *fasta) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
     int result;
     //htsFile *fp_in = hts_open(infile, "r");
     samFile *fp_in = sam_open(infile, "r");
+    result = hts_set_fai_filename(fp_in, fasta);
+    if (result != 0) { return -1; }
 
     hts_idx_t *index;
 
@@ -242,8 +244,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     if (!samHdr) { return -1;}
 
     htsFile *f_out = hts_open(outfile, "wb0");
+
     result = hts_set_threads(f_out, 1);
-        if (result != 0) { return -1; }
+    if (result != 0) { return -1; }
 
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }

@@ -56,7 +56,8 @@ def config(args):
     if kind not in opts:
         raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
     try:
-        bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
+        bam = pysam.AlignmentFile(args["bam"], opts[kind],
+                threads=args["procs"], reference_filename=args["reference"])
     except:
         raise RuntimeError("Problem opening bam/sam/cram, check file has .bam/.sam/.cram in file name, and file has a header")
 
@@ -180,7 +181,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region)
+                                    int threads, int paired_end, char* temp_f,
+                                    int max_coverage, char* region, char *fasta)
 
 def process(args):
 
@@ -206,6 +208,7 @@ def process(args):
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
+    cdef bytes fasta_b = args["reference"].encode("ascii")
     cdef bytes outfile_string_b = out_name.encode("ascii")
     cdef bytes temp_f = temp_dir.encode("ascii")
 
@@ -221,7 +224,8 @@ def process(args):
         regionbytes = region.encode("ascii")
 
         count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
-                                      args["procs"], pe, temp_f, args["max_cov"], regionbytes)
+                                      args["procs"], pe, temp_f,
+                                      args["max_cov"], regionbytes, fasta_b)
     else:
         args["outname"] = out_name
         bam, bam_i, clip_length, send_output, outbam = config(args)
