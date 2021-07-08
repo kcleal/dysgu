@@ -296,7 +296,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
            # INFO line
            ";".join([f"SVMETHOD=DYSGUv{version}",
                    f"SVTYPE={r['svtype']}",
-                   f"END={r['posB']}",
+                   f"END={r['posB']}" if r['chrA'] == r['chrB'] else f"END={r['posA'] + 1}",
                    f"CHR2={r['chrB']}",
                    f"GRP={r['grp_id']}",
                    f"NGRP={r['n_in_grp']}",
