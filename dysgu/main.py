@@ -217,7 +217,6 @@ def run_pipeline(ctx, **kwargs):
     make_wd(kwargs)
 
     apply_preset(kwargs)
-
     show_params()
 
     ctx = apply_ctx(ctx, kwargs)

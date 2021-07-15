@@ -168,7 +168,6 @@ def to_csv(df, args, names, outfile, extended, small_output):
 
 
 def vcf_to_df(path):
-
     # Parse sample
     header = ""
     with open(path, "r") as fin:
