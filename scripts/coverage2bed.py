@@ -7,7 +7,7 @@ from sys import stderr
 
 
 @click.command()
-@click.option("-w", help="Previous working directory for dysgu, converts all .bin files within --wd", required=False, type=click.Path())
+@click.option("-w", help="Previous working directory for dysgu, converts all .bin files within -w", required=False, type=click.Path())
 @click.option("-g", help="Converts all .bin files specified using pattern, e.g. 'wd/chr1*.bin", required=False, type=str)
 @click.option("-b", help="Converts single .bin file", required=False, type=click.Path())
 @click.option("--out-bin-size", help="Output bin size in base-pairs, must be a multiple of 100", type=click.IntRange(100, 10000000, clamp=True), default=100, show_default=True)

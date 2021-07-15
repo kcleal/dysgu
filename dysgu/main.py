@@ -46,21 +46,23 @@ presets = {"nanopore": {"mq": 20,
                         "max_cov": 150,
                         "pl": "nanopore",
                         "remap": "False",
-                        "clip_length": -1},
+                        "clip_length": -1,
+                        },
            "pacbio": {"mq": 20,
                       "min_support": 2,
                       "dist_norm": 600,
                       "max_cov": 150,
                       "pl": "pacbio",
                       "remap": "False",
-                      "clip_length": -1},
+                      "clip_length": -1,
+                      },
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
                   "dist_norm": defaults["dist_norm"],
                   "max_cov": defaults["max_cov"],
                   "pl": defaults["pl"],
-                  "remap": defaults["remap"]},
-
+                  "remap": defaults["remap"],
+                  },
            }
 
 new_options_set = {}
@@ -146,6 +148,10 @@ def cli():
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
+@click.option("-a", "--write_all", help="Write all alignments from SV-read template to temp file", is_flag=True, flag_value=True,
+              show_default=True, default=False)
+@click.option("--compression", help="Set temp file bam compression level. Default is uncompressed",
+              show_default=True, default="wb0", type=str)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
@@ -156,7 +162,9 @@ def cli():
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded  [default: {defaults['max_cov']}]", type=float, callback=add_option_set)
+@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
+                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]",
+              type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
 @click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
@@ -188,6 +196,8 @@ def cli():
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break and use sequence-based metrics in model scoring", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
+@click.option('-v', '--verbosity', help="0 = no contigs in output, 1 = output contigs for variants without ALT sequence called, 2 = output all contigs",
+              default='1', type=click.Choice(['0', '1', '2']), show_default=True)
 @click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
@@ -229,8 +239,10 @@ def run_pipeline(ctx, **kwargs):
         ctx.obj["search"] = None
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
-    sv2bam.process(ctx.obj)
 
+    max_cov_value = sv2bam.process(ctx.obj)
+
+    ctx.obj["max_cov"] = max_cov_value
     # Call SVs
     if kwargs["bam"] != "-":
         ctx.obj["ibam"] = kwargs["bam"]
@@ -254,12 +266,18 @@ def run_pipeline(ctx, **kwargs):
                                          "'fq' output is collated by name",
               default="bam", type=click.Choice(["bam", "fq", "fasta"]),
               show_default=True)
+@click.option("--reference", help="Reference file for opening cram files",
+              show_default=False, default="", required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
 @click.option("-r", "--reads", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
               default="None", type=str, show_default=True)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
               type=str)
+@click.option("--compression", help="Set output bam compression level. Default is uncompressed",
+              show_default=True, default="wb0", type=str)
+@click.option("-a", "--write_all", help="Write all alignments from SV-read template to temp file", is_flag=True, flag_value=True,
+              show_default=True, default=False)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore",
               default=defaults["clip_length"],
               type=int, show_default=True)
@@ -307,7 +325,9 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded  [default: {defaults['max_cov']}]", type=float, callback=add_option_set)
+@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
+                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]",
+              type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
 @click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
@@ -340,6 +360,8 @@ def get_reads(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--contigs", help="Generate consensus contigs for each side of break and use sequence-based metrics in model scoring", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
+@click.option('-v', '--verbosity', help="0 = no contigs in output, 1 = output contigs for variants without ALT sequence called, 2 = output all contigs",
+              default='1', type=click.Choice(['0', '1', '2']), show_default=True)
 @click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
@@ -352,7 +374,7 @@ def get_reads(ctx, **kwargs):
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
-    """Call structural variants"""
+    """Call structural variants from alignment file/stdin"""
     logging.info("[dysgu-call] Version: {}".format(version))
     make_wd(kwargs, call_func=True)
     if kwargs["sv_aligns"] is None:
@@ -406,11 +428,13 @@ def call_events(ctx, **kwargs):
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--add-kind", help="Add region-overlap 'kind' to vcf output", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
+@click.option('-v', '--verbosity', help="0 = no contigs in output, 1 = output contigs for variants without ALT sequence called, 2 = output all contigs",
+              default='1', type=click.Choice(['0', '1', '2']), show_default=True)
 #@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 #@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.pass_context
 def view_data(ctx, **kwargs):
-    """Convert .csv table(s) to .vcf. Merges multiple .csv files into wide .vcf format."""
+    """Merge .vcf/csv variant files"""
     # Add arguments to context insert_median, insert_stdev, read_length, out_name
     logging.info("[dysgu-merge] Version: {}".format(version))
     # make_wd(kwargs, call_func=True)
@@ -429,6 +453,10 @@ def test_command(ctx, **kwargs):
     tests_path = os.path.dirname(__file__) + "/tests"
 
     tests = list()
+    tests.append(["dysgu fetch",
+                  "-x ",
+                  pwd + '/wd_test',
+                  tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False",
                   "-o " + pwd + '/test.dysgu{}.vcf'.format(version),
@@ -442,14 +470,6 @@ def test_command(ctx, **kwargs):
                   tests_path + '/ref.fa',
                   pwd + '/wd_test2',
                   tests_path + '/small.bam'])
-    # opening cram with truncated reference doesnt work now
-    # tests.append(["dysgu run",
-    #               "-x --drop-gaps False",
-    #               "--regions " + tests_path + '/targets.bed',
-    #               "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
-    #               tests_path + '/ref.fa',
-    #               pwd + '/wd_test2',
-    #               tests_path + '/small.cram'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False --procs 2",
                   "--regions " + tests_path + '/targets.bed',

@@ -10,8 +10,6 @@
 #include "robin_hood.h"
 #include "htslib/htslib/sam.h"
 #include "htslib/htslib/hfile.h"
-//#include "htslib/sam.h"
-//#include "htslib/hfile.h"
 #include "xxhash64.h"
 
 
@@ -74,7 +72,6 @@ class CoverageTrack
             int current_cov = 0;
             int16_t high = 32000;
 
-            //for (const auto& v: cov_array) {
             for (int i = 0; i < cov_array.size(); i++) {
 
                 if (i >= index) {
@@ -101,7 +98,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
                        robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
                        const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
                        sam_hdr_t **samHdr, htsFile **f_out,
-                       std::string& temp_folder) {
+                       std::string& temp_folder, const bool write_all) {
 
     int result;
     bam1_t* aln;
@@ -161,7 +158,17 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         current_tid = tid;
     }
 
-    const uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
+    uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
+
+    if (!write_all) {  // rehash read name with flag, mostly prevents other 'normal' reads from template being written
+        char flag_bytes[sizeof flag];
+        std::copy(static_cast<const char*>(static_cast<const void*>(&flag)),
+                  static_cast<const char*>(static_cast<const void*>(&flag)) + sizeof flag,
+                  flag_bytes);
+
+        precalculated_hash = XXHash64::hash(flag_bytes, aln->core.l_qname, precalculated_hash);
+    }
+
     scope.back().first = precalculated_hash;
 
     // Add a new item to the queue for next iteration
@@ -182,7 +189,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         uint32_t length = bam_cigar_oplen(cigar[k]);
 
         if (!sv_read) {
-            if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {  // || op == BAM_CHARD_CLIP
+            if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {
                 read_names.insert(precalculated_hash);
                 sv_read = true;
 
@@ -202,31 +209,37 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         }
     }
 
-    if (!sv_read) { //&& (read_names.find(precalculated_hash) == read_names.end())) { // not an sv read template yet
+    if (!sv_read) { // not an sv read template yet
 
         // Check for discordant of supplementary
         if ((~flag & 2 && flag & 1) || flag & 2048) {
             read_names.insert(precalculated_hash);
+            sv_read = true;
             return 0;
         }
         // Check for SA tag
         if (bam_aux_get(aln, "SA")) {
             read_names.insert(precalculated_hash);
+            sv_read = true;
             return 0;
         }
     }
+
     return 0;
 }
 
 
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage, char* region) {
+                          int threads, int paired_end, char* temp_f, int max_coverage, char* region, char *fasta,
+                          const bool write_all, char* write_mode) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
     int result;
-    //htsFile *fp_in = hts_open(infile, "r");
+
     samFile *fp_in = sam_open(infile, "r");
+    result = hts_set_fai_filename(fp_in, fasta);
+    if (result != 0) { return -1; }
 
     hts_idx_t *index;
 
@@ -241,9 +254,10 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
     if (!samHdr) { return -1;}
 
-    htsFile *f_out = hts_open(outfile, "wb0");
+    htsFile *f_out = hts_open(outfile, write_mode);  // "wb0"
+
     result = hts_set_threads(f_out, 1);
-        if (result != 0) { return -1; }
+    if (result != 0) { return -1; }
 
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }
@@ -301,15 +315,13 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             region_string.erase(0, string_pos + delim.length());
 
             // Read alignment into the back of scope queue
-    //        while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
-
             while ( sam_itr_next(fp_in, iter, scope.back().second) >= 0 ) {
 
                 int success = process_alignment(current_tid, scope, write_queue,
                            max_scope, max_write_queue, clip_length,
                            read_names, cov_track, total,
                            n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                           &samHdr, &f_out, temp_folder);
+                           &samHdr, &f_out, temp_folder, write_all);
                 if (success < 0) {
                     std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                     break;
@@ -324,7 +336,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                        max_scope, max_write_queue, clip_length,
                        read_names, cov_track, total,
                        n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                       &samHdr, &f_out, temp_folder);
+                       &samHdr, &f_out, temp_folder, write_all);
             if (success < 0) {
                 std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                 break;

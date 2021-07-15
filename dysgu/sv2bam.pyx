@@ -15,7 +15,7 @@ from dysgu import io_funcs
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport unordered_set, Py_CoverageTrack
-from dysgu.coverage import get_insert_params
+from dysgu.coverage import get_insert_params, auto_max_cov
 
 import logging
 
@@ -56,7 +56,8 @@ def config(args):
     if kind not in opts:
         raise ValueError("Input file format not recognized, use .bam,.sam or .cram extension")
     try:
-        bam = pysam.AlignmentFile(args["bam"], opts[kind], threads=args["procs"])
+        bam = pysam.AlignmentFile(args["bam"], opts[kind],
+                threads=args["procs"], reference_filename=args["reference"])
     except:
         raise RuntimeError("Problem opening bam/sam/cram, check file has .bam/.sam/.cram in file name, and file has a header")
 
@@ -73,7 +74,7 @@ def config(args):
         send_output = pysam.AlignmentFile(v, "wb", template=bam)
         logging.info("Sending all reads to: {}".format(args["reads"]))
 
-    reads_out = pysam.AlignmentFile(args["outname"], "wbu", template=bam)
+    reads_out = pysam.AlignmentFile(args["outname"], args["compression"], template=bam)
 
     return bam, bam_i, clip_length, send_output, reads_out
 
@@ -180,7 +181,8 @@ cdef tuple get_reads(bam, bam_i, exc_tree, int clip_length, send_output, outbam,
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region)
+                                   int threads, int paired_end, char* temp_f, int max_coverage, char* region, char *fasta,
+                                   bint write_all, char* out_write_mode_b)
 
 def process(args):
 
@@ -203,11 +205,26 @@ def process(args):
         bname = "-"
         out_name = args["output"]
 
+    # update max cov automatically if applicable
+    args["max_cov"] = auto_max_cov(args["max_cov"], args["bam"])
+
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
+
+    cdef bytes fasta_b
+    if "reference" in args:
+        fasta_b = args["reference"].encode("ascii")
+    else:
+        fasta_b = "".encode("ascii")
+
     cdef bytes outfile_string_b = out_name.encode("ascii")
+    cdef bytes out_write_mode_b = args["compression"].encode("ascii")
+
     cdef bytes temp_f = temp_dir.encode("ascii")
+
+    cdef bint write_all = args["write_all"]
+
 
     cdef bytes regionbytes
 
@@ -221,12 +238,14 @@ def process(args):
         regionbytes = region.encode("ascii")
 
         count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
-                                      args["procs"], pe, temp_f, args["max_cov"], regionbytes)
+                                      args["procs"], pe, temp_f, int(args["max_cov"]), regionbytes, fasta_b, write_all,
+                                      out_write_mode_b)
     else:
         args["outname"] = out_name
         bam, bam_i, clip_length, send_output, outbam = config(args)
         count, insert_median, insert_stdev, read_length = get_reads(bam, bam_i, exc_tree, clip_length, send_output, outbam,
-                                                                args["min_size"], pe, temp_dir, args["max_cov"])
+                                                                    args["min_size"], pe, temp_dir, int(args["max_cov"],
+                                                                     ))
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))
         quit()
@@ -236,3 +255,4 @@ def process(args):
     logging.info("dysgu fetch {} written to {}, n={}, time={} h:m:s".format(args["bam"], out_name,
                                                             count,
                                                             str(datetime.timedelta(seconds=int(time.time() - t0)))))
+    return args["max_cov"]

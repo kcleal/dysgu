@@ -6,6 +6,7 @@ from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
 import logging
+import pysam
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
@@ -56,6 +57,48 @@ def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
                 else:
                     merged.append(list(higher)[:3] + [[higher[3]]])
     return merged
+
+
+def index_stats(f, rl=None):
+    if rl is None:
+        rl = []
+        for idx, a in enumerate(f.fetch()):
+            if not a.flag & 3840 and a.cigartuples is not None:
+                rl.append(a.infer_read_length())
+            if idx > 10000:
+                break
+        rl = np.median(rl)
+
+    s = f.get_index_statistics()
+    total = 0
+    ref_len = 0
+    for i in s:
+        total += i.mapped
+        ref_len += f.get_reference_length(i.contig)
+    cov = (total*rl/ref_len)*0.98
+
+    return cov, rl
+
+
+def auto_max_cov(mc, bname):
+    if mc == "auto":
+        if bname == "-":
+            logging.critical("Not possible to use max-cov == 'auto' with stdin")
+            quit()
+        aln_f = pysam.AlignmentFile(bname)
+        mc, rl = index_stats(aln_f)
+        mc = round(mc) * 6
+        if mc < 5:
+            logging.critical("Max-cov estimated as < 5? Set manually to proceed")
+            quit()
+        logging.info("Auto max-cov estimated {}x".format(mc))
+    else:
+        try:
+            mc = int(mc)
+        except:
+            logging.critical("Max-cov value not understood {}".format(mc))
+            quit()
+    return mc
 
 
 def median(L):

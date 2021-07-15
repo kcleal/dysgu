@@ -1,3 +1,4 @@
+
 ========
 dysgu-SV
 ========
@@ -69,6 +70,7 @@ For PacBio Sequel II HiFi reads, the `run` command is generally recommended as i
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
 
+
 Pipeline overview
 ~~~~~~~~~~~~~~~~~
 The first stage of the "run" pipeline is to separate SV-associated reads - split/discordant reads,
@@ -118,17 +120,32 @@ retained. In general the performance of models follows diploid > non-diploid > n
 Useful parameters
 -----------------
 The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.
-Also the --max-cov parameter may need to be adjusted for high coverage samples (default is 200); regions with higher
-coverage are ignored. The --thresholds parameter controls the probability value at which events are labelled with a
+
+The --max-cov parameter may need to be adjusted for high coverage samples (default is 200); regions with higher
+coverage are ignored for SV calling. Dysgu can automatically infer a max-cov value by setting `--max-cov auto`, which
+will correspond to ~6*whole-genome-coverage. However using 'auto', is only recommended for whole-genome samples.
+A helper script can be used to choose other max-cov values `scripts/suggest_max_coverage.py`
+
+The --thresholds parameter controls the probability value at which events are labelled with a
 'PASS', increasing these values increases precision at the expense of sensitivity.
+
+The verbosity of contig reporting can be controlled using '-v/--verbosity'. If you plan to use "merge" on output files,
+it is usually a good idea not to use "-v0" as contig sequences can help with merging.
 
 Resource requirements
 ---------------------
 Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and
 uses < 6 GB memory. Also note that when `fetch` is utilized (or using run command), a large temp file is generated consisting of SV-associated reads >5 Gb in size.
 
+
 Issues
 ------
+Currently cram files are only supported when using the "run" command. This is because pysam cannot use seek on
+a cram file.
+
+If the temp file created during the fetch stage of the pipeline is too big, the --compression level can be
+set to reduce space.
+
 If dysgu is taking a long time to run, this could be due to the complexity of the sample.
 Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome.
 In this case consider increasing the `clip-length` or setting `--contigs False`, or `--remap False`.

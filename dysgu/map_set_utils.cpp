@@ -1544,6 +1544,10 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   PyObject *SQ;
   PyObject *GT;
   PyObject *kind;
+  PyObject *ref_seq;
+  PyObject *variant_seq;
+  PyObject *left_ins_seq;
+  PyObject *right_ins_seq;
 };
 
 
@@ -3405,6 +3409,18 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2GT_4__del__(struct __p
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4kind___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4kind_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4kind_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_12__reduce_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14__setstate_cython__(CYTHON_UNUSED struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_5dysgu_13map_set_utils_6__pyx_unpickle_Py_CoverageTrack(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
@@ -17261,7 +17277,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set
  *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped             # <<<<<<<<<<<<<<
  *     cdef public int8_t svlen_precise
- *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind
+ *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
  */
 
 /* Python wrapper */
@@ -17638,7 +17654,8 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped_2__set__(stru
  *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise             # <<<<<<<<<<<<<<
- *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind
+ *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq
  */
 
 /* Python wrapper */
@@ -17718,7 +17735,8 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13svlen_precise_2__set_
 /* "dysgu/map_set_utils.pxd":249
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise
- *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, partners, GQ, SQ, GT, kind             # <<<<<<<<<<<<<<
+ *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \             # <<<<<<<<<<<<<<
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq
  */
 
 /* Python wrapper */
@@ -18504,6 +18522,12 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4type_4__del__(struct _
   return __pyx_r;
 }
 
+/* "dysgu/map_set_utils.pxd":250
+ *     cdef public int8_t svlen_precise
+ *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq             # <<<<<<<<<<<<<<
+ */
+
 /* Python wrapper */
 static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_8partners_1__get__(PyObject *__pyx_v_self); /*proto*/
 static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_8partners_1__get__(PyObject *__pyx_v_self) {
@@ -18932,6 +18956,354 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4kind_4__del__(struct _
   __Pyx_GOTREF(__pyx_v_self->kind);
   __Pyx_DECREF(__pyx_v_self->kind);
   __pyx_v_self->kind = Py_None;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_self->ref_seq);
+  __pyx_r = __pyx_v_self->ref_seq;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __Pyx_INCREF(__pyx_v_value);
+  __Pyx_GIVEREF(__pyx_v_value);
+  __Pyx_GOTREF(__pyx_v_self->ref_seq);
+  __Pyx_DECREF(__pyx_v_self->ref_seq);
+  __pyx_v_self->ref_seq = __pyx_v_value;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_5__del__(PyObject *__pyx_v_self); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_5__del__(PyObject *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_4__del__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__", 0);
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->ref_seq);
+  __Pyx_DECREF(__pyx_v_self->ref_seq);
+  __pyx_v_self->ref_seq = Py_None;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_self->variant_seq);
+  __pyx_r = __pyx_v_self->variant_seq;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __Pyx_INCREF(__pyx_v_value);
+  __Pyx_GIVEREF(__pyx_v_value);
+  __Pyx_GOTREF(__pyx_v_self->variant_seq);
+  __Pyx_DECREF(__pyx_v_self->variant_seq);
+  __pyx_v_self->variant_seq = __pyx_v_value;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_5__del__(PyObject *__pyx_v_self); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_5__del__(PyObject *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_4__del__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11variant_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__", 0);
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->variant_seq);
+  __Pyx_DECREF(__pyx_v_self->variant_seq);
+  __pyx_v_self->variant_seq = Py_None;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_self->left_ins_seq);
+  __pyx_r = __pyx_v_self->left_ins_seq;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __Pyx_INCREF(__pyx_v_value);
+  __Pyx_GIVEREF(__pyx_v_value);
+  __Pyx_GOTREF(__pyx_v_self->left_ins_seq);
+  __Pyx_DECREF(__pyx_v_self->left_ins_seq);
+  __pyx_v_self->left_ins_seq = __pyx_v_value;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_5__del__(PyObject *__pyx_v_self); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_5__del__(PyObject *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_4__del__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__", 0);
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->left_ins_seq);
+  __Pyx_DECREF(__pyx_v_self->left_ins_seq);
+  __pyx_v_self->left_ins_seq = Py_None;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_1__get__(PyObject *__pyx_v_self); /*proto*/
+static PyObject *__pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_1__get__(PyObject *__pyx_v_self) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq___get__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq___get__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__get__", 0);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_v_self->right_ins_seq);
+  __pyx_r = __pyx_v_self->right_ins_seq;
+  goto __pyx_L0;
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_3__set__(PyObject *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_2__set__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self), ((PyObject *)__pyx_v_value));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_2__set__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self, PyObject *__pyx_v_value) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__set__", 0);
+  __Pyx_INCREF(__pyx_v_value);
+  __Pyx_GIVEREF(__pyx_v_value);
+  __Pyx_GOTREF(__pyx_v_self->right_ins_seq);
+  __Pyx_DECREF(__pyx_v_self->right_ins_seq);
+  __pyx_v_self->right_ins_seq = __pyx_v_value;
+
+  /* function exit code */
+  __pyx_r = 0;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* Python wrapper */
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_5__del__(PyObject *__pyx_v_self); /*proto*/
+static int __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_5__del__(PyObject *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__ (wrapper)", 0);
+  __pyx_r = __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_4__del__(((struct __pyx_obj_5dysgu_13map_set_utils_EventResult *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_4__del__(struct __pyx_obj_5dysgu_13map_set_utils_EventResult *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__del__", 0);
+  __Pyx_INCREF(Py_None);
+  __Pyx_GIVEREF(Py_None);
+  __Pyx_GOTREF(__pyx_v_self->right_ins_seq);
+  __Pyx_DECREF(__pyx_v_self->right_ins_seq);
+  __pyx_v_self->right_ins_seq = Py_None;
 
   /* function exit code */
   __pyx_r = 0;
@@ -34224,6 +34596,10 @@ static PyObject *__pyx_tp_new_5dysgu_13map_set_utils_EventResult(PyTypeObject *t
   p->SQ = Py_None; Py_INCREF(Py_None);
   p->GT = Py_None; Py_INCREF(Py_None);
   p->kind = Py_None; Py_INCREF(Py_None);
+  p->ref_seq = Py_None; Py_INCREF(Py_None);
+  p->variant_seq = Py_None; Py_INCREF(Py_None);
+  p->left_ins_seq = Py_None; Py_INCREF(Py_None);
+  p->right_ins_seq = Py_None; Py_INCREF(Py_None);
   if (unlikely(__pyx_pw_5dysgu_13map_set_utils_11EventResult_1__cinit__(o, __pyx_empty_tuple, NULL) < 0)) goto bad;
   return o;
   bad:
@@ -34253,6 +34629,10 @@ static void __pyx_tp_dealloc_5dysgu_13map_set_utils_EventResult(PyObject *o) {
   Py_CLEAR(p->SQ);
   Py_CLEAR(p->GT);
   Py_CLEAR(p->kind);
+  Py_CLEAR(p->ref_seq);
+  Py_CLEAR(p->variant_seq);
+  Py_CLEAR(p->left_ins_seq);
+  Py_CLEAR(p->right_ins_seq);
   (*Py_TYPE(o)->tp_free)(o);
 }
 
@@ -34301,6 +34681,18 @@ static int __pyx_tp_traverse_5dysgu_13map_set_utils_EventResult(PyObject *o, vis
   if (p->kind) {
     e = (*v)(p->kind, a); if (e) return e;
   }
+  if (p->ref_seq) {
+    e = (*v)(p->ref_seq, a); if (e) return e;
+  }
+  if (p->variant_seq) {
+    e = (*v)(p->variant_seq, a); if (e) return e;
+  }
+  if (p->left_ins_seq) {
+    e = (*v)(p->left_ins_seq, a); if (e) return e;
+  }
+  if (p->right_ins_seq) {
+    e = (*v)(p->right_ins_seq, a); if (e) return e;
+  }
   return 0;
 }
 
@@ -34348,6 +34740,18 @@ static int __pyx_tp_clear_5dysgu_13map_set_utils_EventResult(PyObject *o) {
   Py_XDECREF(tmp);
   tmp = ((PyObject*)p->kind);
   p->kind = Py_None; Py_INCREF(Py_None);
+  Py_XDECREF(tmp);
+  tmp = ((PyObject*)p->ref_seq);
+  p->ref_seq = Py_None; Py_INCREF(Py_None);
+  Py_XDECREF(tmp);
+  tmp = ((PyObject*)p->variant_seq);
+  p->variant_seq = Py_None; Py_INCREF(Py_None);
+  Py_XDECREF(tmp);
+  tmp = ((PyObject*)p->left_ins_seq);
+  p->left_ins_seq = Py_None; Py_INCREF(Py_None);
+  Py_XDECREF(tmp);
+  tmp = ((PyObject*)p->right_ins_seq);
+  p->right_ins_seq = Py_None; Py_INCREF(Py_None);
   Py_XDECREF(tmp);
   return 0;
 }
@@ -35598,6 +36002,58 @@ static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_kind(PyObject *o, 
   }
 }
 
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_ref_seq(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_ref_seq(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_3__set__(o, v);
+  }
+  else {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_7ref_seq_5__del__(o);
+  }
+}
+
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_variant_seq(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_variant_seq(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_3__set__(o, v);
+  }
+  else {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_11variant_seq_5__del__(o);
+  }
+}
+
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_left_ins_seq(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_left_ins_seq(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_3__set__(o, v);
+  }
+  else {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_12left_ins_seq_5__del__(o);
+  }
+}
+
+static PyObject *__pyx_getprop_5dysgu_13map_set_utils_11EventResult_right_ins_seq(PyObject *o, CYTHON_UNUSED void *x) {
+  return __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_1__get__(o);
+}
+
+static int __pyx_setprop_5dysgu_13map_set_utils_11EventResult_right_ins_seq(PyObject *o, PyObject *v, CYTHON_UNUSED void *x) {
+  if (v) {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_3__set__(o, v);
+  }
+  else {
+    return __pyx_pw_5dysgu_13map_set_utils_11EventResult_13right_ins_seq_5__del__(o);
+  }
+}
+
 static PyMethodDef __pyx_methods_5dysgu_13map_set_utils_EventResult[] = {
   {"to_dict", (PyCFunction)__pyx_pw_5dysgu_13map_set_utils_11EventResult_3to_dict, METH_NOARGS, 0},
   {"from_dict", (PyCFunction)__pyx_pw_5dysgu_13map_set_utils_11EventResult_5from_dict, METH_O, 0},
@@ -35699,6 +36155,10 @@ static struct PyGetSetDef __pyx_getsets_5dysgu_13map_set_utils_EventResult[] = {
   {(char *)"SQ", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_SQ, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_SQ, (char *)0, 0},
   {(char *)"GT", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_GT, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_GT, (char *)0, 0},
   {(char *)"kind", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_kind, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_kind, (char *)0, 0},
+  {(char *)"ref_seq", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_ref_seq, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_ref_seq, (char *)0, 0},
+  {(char *)"variant_seq", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_variant_seq, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_variant_seq, (char *)0, 0},
+  {(char *)"left_ins_seq", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_left_ins_seq, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_left_ins_seq, (char *)0, 0},
+  {(char *)"right_ins_seq", __pyx_getprop_5dysgu_13map_set_utils_11EventResult_right_ins_seq, __pyx_setprop_5dysgu_13map_set_utils_11EventResult_right_ins_seq, (char *)0, 0},
   {0, 0, 0, 0, 0}
 };
 

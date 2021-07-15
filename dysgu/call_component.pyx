@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
-import click
+
 import numpy as np
 cimport numpy as np
 from numpy.random import normal
@@ -338,7 +338,6 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
-    # If a deletion has a poorly aligned section at the end of pos2, merge nearby events until target matches
     cdef int i, end, idx, opp, length, cigar_skip, n_aligned_bases, target_bases
     if svtype == 1:  # insertion (or other e.g. duplication/inversion within read)
         return event_pos + 1
@@ -375,7 +374,8 @@ cdef guess_informative_pair(aligns):
                     event_pos,
                     event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
                     a.cigartuples[cigar_index][1],
-                    a)
+                    a,
+                    cigar_index)
 
         elif 0 < b_cigar_info[5] < len(b.cigartuples) - 1:
             cigar_index = b_cigar_info[5]
@@ -386,7 +386,8 @@ cdef guess_informative_pair(aligns):
                     event_pos,
                     event_pos + 1 if ci[0] == 1 else event_pos + b.cigartuples[cigar_index][1] + 1,
                     b.cigartuples[cigar_index][1],
-                    b)
+                    b,
+                    cigar_index)
 
         a_pos = a_cigar_info[6]  # Position may have been inferred from SA tag, use this if available
         b_pos = b_cigar_info[6]
@@ -793,7 +794,8 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
                                             event_pos,
                                             within_read_end_position(event_pos, ci[0], a.cigartuples, cigar_index),
                                             a.cigartuples[cigar_index][1],
-                                            a))
+                                            a,
+                                            cigar_index))
 
             else:
                 gi = make_generic_insertion_item(a, insert_size, insert_stdev)
@@ -817,7 +819,24 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         posB = int(np.median(posB_arr))
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
-        svlen = int(np.mean([i[4] for i in spanning_alignments]))
+
+        # choose representative alignment to use
+        best_index = 0
+        best_dist = 1e9
+        for index in range(len(spanning_alignments)):
+            dist = abs(spanning_alignments[index][2] - posA) + abs(spanning_alignments[index][3] - posB)
+            if dist < best_dist:
+                best_index = index
+                best_dist = dist
+                if dist == 0:
+                    break
+
+        best_align = spanning_alignments[best_index][5]
+        svlen = spanning_alignments[best_index][4]
+        posA = spanning_alignments[best_index][2]
+        posB = spanning_alignments[best_index][3]
+
+        # svlen = int(np.mean([i[4] for i in spanning_alignments]))
         ab = abs(posB - posA)
 
         if svlen > 0:
@@ -883,16 +902,26 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         er.block_edge = 0
         er.ref_bases = ref_bases
         er.sqc = -1  # not calculated
-        #print("finished single1")
+
+        if er.svtype == "INS":
+            cigar_index = spanning_alignments[best_index][6]
+            start_ins = 0
+            ct = best_align.cigartuples
+            for i in range(cigar_index):
+                if ct[i][0] in {0, 1, 4, 7, 8}:
+                    start_ins += ct[i][1]
+            er.variant_seq = best_align.seq[start_ins:start_ins+svlen]
+            er.ref_seq = best_align.seq[start_ins - 1]
+
         return er
 
     elif len(informative) > 0:
-        #print("finished single2")
+
         return partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                                 min_support, extended_tags, to_assemble, [])
 
     elif len(generic_insertions) > 0:
-        #print("finished single3")
+
         # this is a bit confusing, generic insertions are used instead to make call, but bnd count is now 0
         return make_single_call([], insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                                 spanning_alignments, extended_tags, 0, generic_insertions)
@@ -1800,6 +1829,7 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         inferred_lens.append(i.inferred_sv_len)
                     else:
                         lens.append(i.inferred_sv_len)
+
             if len(lens) > 0:
                 svlen = int(np.mean(lens))
                 svlen_precise = 1
@@ -1808,6 +1838,7 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
+
         elif svtype == "DEL":
 
             main_svlen = abs(main_B_break - main_A_break)
@@ -2176,7 +2207,8 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
                                         event_pos,
                                         event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
                                         event_pos + a.cigartuples[cigar_index][1] + 1,
-                                        a))
+                                        a,
+                                        cigar_index))
 
     for cigar_info, a in v_reads_info:
         if not a.cigartuples:
@@ -2191,7 +2223,8 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
                                         event_pos,
                                         event_pos + 1 if ci[0] == 1 else event_pos + a.cigartuples[cigar_index][1] + 1,
                                         event_pos + a.cigartuples[cigar_index][1],
-                                        a))
+                                        a,
+                                        cigar_index))
 
     # info = {}
     cdef str svtype, jointype
@@ -2203,6 +2236,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
     # make call from spanning alignments if possible
     cdef EventResult_t er
     if len(spanning_alignments) > 0:
+
         posA_arr = [i[2] for i in spanning_alignments]
         posA = int(np.median(posA_arr))
         posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
@@ -2210,7 +2244,23 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         posB = int(np.median(posB_arr))
         posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
         chrom = spanning_alignments[0][1]
-        svlen = int(np.mean([i[4] for i in spanning_alignments]))
+
+        # choose representative alignment to use
+        best_index = 0
+        best_dist = 1e9
+        for index in range(len(spanning_alignments)):
+            dist = abs(spanning_alignments[index][2] - posA) + abs(spanning_alignments[index][3] - posB)
+            if dist < best_dist:
+                best_index = index
+                best_dist = dist
+                if dist == 0:
+                    break
+
+        best_align = spanning_alignments[best_index][5]
+        svlen = spanning_alignments[best_index][4]
+        posA = spanning_alignments[best_index][2]
+        posB = spanning_alignments[best_index][3]
+        #svlen = int(np.mean([i[4] for i in spanning_alignments]))
 
         if svlen > 0:
             jitter = ((posA_95 + posB_95) / 2) / svlen
@@ -2235,18 +2285,26 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         u_reads = [i[5] for i in spanning_alignments]
         v_reads = []
         count_attributes2(u_reads, v_reads, [i[5] for i in spanning_alignments], extended_tags, insert_ppf, [], er)
-        # if not attrs or attrs["su"] < min_support:
+
         if er.su < min_support:
-            #print("done one edge")
             return []
 
         assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
-        #print("done one edge")
+
+        if er.svtype == "INS":
+            cigar_index = spanning_alignments[best_index][6]
+            start_ins = 0
+            ct = best_align.cigartuples
+            for i in range(cigar_index):
+                if ct[i][0] in {0, 1, 4, 7, 8}:
+                    start_ins += ct[i][1]
+            er.variant_seq = best_align.seq[start_ins:start_ins+svlen]
+            er.ref_seq = best_align.seq[start_ins - 1]
+
         return [er]
 
     else:
         results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
-        #print("done one edge")
         return results
 
 

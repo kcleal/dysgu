@@ -133,20 +133,16 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     skip_event = False
     clip_length = 0
     high_quality_clip = False
+
     if cont:
 
-        # break_position = e["pos" + idx]
-        # clip_res = e[cont + idx + "clip_res"]
         if not clip_res:
             return to_add, skip_event, high_quality_clip, clip_length
-            # continue
 
         clip_seq, clip_side, length_other_clip = clip_res
         if length_other_clip > 3 and e.ref_bases < 50:
-            # continue
             return to_add, skip_event, high_quality_clip, clip_length
 
-        # if len(clip_seq) > max_clip_length:
         clip_length = len(clip_seq)
 
         if clip_side == 0:
@@ -154,19 +150,16 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 w = e.contig_left_weight
             else:
                 w = e.contig2_left_weight
-            # w = e[cont + "_left_weight"]
+
             if not w > 10:  # todo set as a parameter option
-                # continue
                 return to_add, skip_event, high_quality_clip, clip_length
 
         else:
-            # w = e[cont + "_right_weight"]
             if idx == "A":
                 w = e.contig_right_weight
             else:
                 w = e.contig2_right_weight
             if not w > 10:
-                # continue
                 return to_add, skip_event, high_quality_clip, clip_length
 
         avg_w = w / len(clip_seq)
@@ -185,7 +178,6 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
         if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
             skip_event = True
-            # break
             return to_add, skip_event, high_quality_clip, clip_length
 
         # Large alignment region
@@ -193,13 +185,13 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
         locs = merge_align_regions(el['locations'])
 
         if not locs:
-            # continue
             return to_add, skip_event, high_quality_clip, clip_length
 
         l_start, l_end = locs[0]
         ref_start2 = ref_seq_start + l_start
         ref_seq2 = ref_seq_clipped[l_start:l_end + 1]
 
+        # note query is ref seq, target is the event seq
         aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=6,
                                    gap_extend_penalty=1)
 
@@ -215,9 +207,14 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
         q_end = ref_start2 + aln_q_end
         edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position)
 
+        # notes
+        # -----
+        # for ins seqs, we could be re-mapping a duplicated sequence, or the 'other side' of the reference sequence
+        # so the novel sequence remains un-mappped. for a duplicated seq, the 'insertion' plus the reference might be
+        # remapped, or just part of the duplicated seq. A duplicated seq can also have additional novel bases at either
+        # end.
         if not edit_dist < 0:
 
-            # pos = e["pos" + idx]
             pos = break_position
             if clip_side == 0:
                 if q_end + 1 >= pos:
@@ -228,19 +225,31 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
                     overlap = 0
                     if q_end > pos:
-                        overlap = q_end - pos  # tandem
+                        overlap = q_end - pos  # duplicated sequence
 
                     svlen = overlap + aln_t_end_unmapped
+
+                    dangling_bases = aln_t_begin
+                    if dangling_bases < 3:
+                        if svlen <= len(clip_seq):
+                            e.variant_seq = clip_seq[-svlen:]
+                        else:
+                            e.left_ins_seq = clip_seq
+
+                    e.ref_seq = ref_seq_clipped[500 - 1]
 
                 else:
                     ref_gap = pos - q_end
                     target_gap = len(clip_seq) - target_end_optimal
 
                     if target_gap > ref_gap:
+                        # assume we have mapped the other part of the reference seq, i.e. insertion was unmapped
                         kind = "INS"
                         break_point = pos
                         break_point2 = pos
-                        svlen = target_gap
+                        svlen = target_gap - ref_gap
+
+                        e.variant_seq = clip_seq[target_end_optimal: target_end_optimal + svlen]
 
                     else:
                         kind = "DEL"
@@ -248,23 +257,30 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                         break_point2 = q_end
                         svlen = ref_gap
 
-                # discard alignments with large unmapped overhang
+                # discard alignments with large unmapped overhang (rarely happens)
                 if aln_t_begin > svlen:
-                    # continue
                     return to_add, skip_event, high_quality_clip, clip_length
+
+            # clip on right-hand-side
             else:
+
                 if q_begin - 1 <= pos:
                     kind = "INS"
                     break_point = pos
                     break_point2 = pos
 
-                    dangling_bases = len(clip_seq) - target_end_optimal
-                    if dangling_bases > 20:
-                        svlen = len(clip_seq)
-                    else:
-                        svlen = pos - q_begin
+                    overlap_left = pos - q_begin
+                    svlen = overlap_left + aln_t_begin
 
-                    svlen += aln_t_begin
+                    dangling_bases = len(clip_seq) - target_end_optimal
+
+                    if dangling_bases < 3:
+                        if svlen <= len(clip_seq):
+                            e.variant_seq = clip_seq[:svlen]
+                        else:
+                            e.right_ins_seq = clip_seq
+
+                    e.ref_seq = ref_seq_clipped[500 - 1]
 
                 else:
                     ref_gap = q_begin - pos
@@ -274,6 +290,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                         break_point = pos
                         break_point2 = pos
                         svlen = target_gap
+
                     else:
                         kind = "DEL"
                         break_point = pos
@@ -281,14 +298,12 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                         svlen = abs(break_point2 - break_point)
 
                 if len(clip_seq) - target_end_optimal > svlen:
-                    # continue
                     return to_add, skip_event, high_quality_clip, clip_length
 
             if kind == "DEL":
                 span = a.query_end - a.query_begin + 1
 
                 if span < len(clip_seq) * 0.4 and span < 50:
-                    # continue
                     return to_add, skip_event, high_quality_clip, clip_length
 
             if abs(svlen - e.svlen) > 20:
@@ -297,12 +312,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 e.remap_score = score
                 e.svtype = kind
                 e.svlen = svlen
-                # e['pos' + idx] = break_point
-                # if idx == "A":
-                #     other = "B"
-                # else:
-                #     other = "A"
-                # e['pos' + other] = break_point2
+
                 if idx == "A":
                     e.posA = break_point
                     e.posB = break_point2
@@ -328,12 +338,8 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     ref_seq_clipped = ref_seq_big[start_idx:end_idx]
                     e.ref_rep = compute_rep(ref_seq_clipped)
 
-                # new_events.append(e)
-                # added = 1
                 to_add = True
-                # break  # dont analyse contig2
 
-                # return -2
     return to_add, skip_event, high_quality_clip, clip_length
 
 
@@ -411,7 +417,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                 clip_res = clip_results[(index, idx)]
 
                 to_add, skip_event, hq, clip_length = process_contig(e, e.contig, e.posA, clip_res,
-                                                                               gstart, ref_seq_big, idx)
+                                                                     gstart, ref_seq_big, idx)
 
                 if not high_quality_clip and hq:
                     high_quality_clip = True
@@ -428,6 +434,11 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                 # basic filter
 
                 if e.su > min_support + 4:
+                    if clip_res[1] == 0:
+                        e.left_ins_seq = clip_res[0]
+                    if clip_res[1] == 1:
+                        e.right_ins_seq = clip_res[0]
+
                     new_events.append(e)
 
     return new_events

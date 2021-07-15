@@ -232,6 +232,9 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     samp = r["sample"]
     read_kind = r["type"]
 
+    r["posA"] = max(1, r["posA"])
+    r["posB"] = max(1, r["posB"])
+
     if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
         chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
         r["chrA"] = r["chrB"]
@@ -255,6 +258,14 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         info_extras.append(f"CONTIGA={r['contigA']}")
     if r["contigB"]:
         info_extras.append(f"CONTIGB={r['contigB']}")
+
+    if not r["variant_seq"]:
+        # info_extras.append(f"SVINSSEQ={r['variant_seq']}")
+    # else:
+        if r["left_ins_seq"]:
+            info_extras.append(f"LEFT_SVINSSEQ={r['left_ins_seq']}")
+        if r["right_ins_seq"]:
+            info_extras.append(f"RIGHT_SVINSSEQ={r['right_ins_seq']}")
 
     if add_kind:
         info_extras += [f"KIND={r['kind']}"]
@@ -292,11 +303,28 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     else:
         fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
-    rec = [r["chrA"], r["posA"], index, ".", f"<{r['svtype']}>", ".", "." if "filter" not in r else r['filter'],
+    if "variant_seq" in r and isinstance(r["variant_seq"], str):
+        if r['svtype'] == "INS":
+            alt_field = r.variant_seq.upper()
+
+        else:
+            alt_field = f"<{r['svtype']}>"
+    else:
+        alt_field = f"<{r['svtype']}>"
+
+    if "ref_seq" in r and isinstance(r["ref_seq"], str):
+        ref_field = r["ref_seq"]
+    else:
+        ref_field = "."
+
+    rec = [r["chrA"], r["posA"], index,
+           ref_field,
+           alt_field,
+           ".", "." if "filter" not in r else r['filter'],
            # INFO line
            ";".join([f"SVMETHOD=DYSGUv{version}",
                    f"SVTYPE={r['svtype']}",
-                   f"END={r['posB']}",
+                   f"END={r['posB']}" if r['chrA'] == r['chrB'] else f"END={r['posA'] + 1}",
                    f"CHR2={r['chrB']}",
                    f"GRP={r['grp_id']}",
                    f"NGRP={r['n_in_grp']}",
@@ -414,6 +442,9 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=EXPSEQ,Number=1,Type=String,Description="Expansion sequence">
 ##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##INFO=<ID=OL,Number=1,Type=Integer,Description="Query overlap in bp">
+##INFO=<ID=SVINSSEQ,Number=.,Type=String,Description="Sequence of insertion">
+##INFO=<ID=LEFT_SVINSSEQ,Number=.,Type=String,Description="Known left side of insertion for an insertion of unknown length">
+##INFO=<ID=RIGHT_SVINSSEQ,Number=.,Type=String,Description="Known right side of insertion for an insertion of unknown length">
 ##INFO=<ID=MeanPROB,Number=1,Type=Float,Description="Mean probability of event being true across samples">
 ##INFO=<ID=MaxPROB,Number=1,Type=Float,Description="Max probability of event being true across samples">
 ##ALT=<ID=DEL,Description="Deletion">
@@ -505,6 +536,9 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=EXPSEQ,Number=1,Type=String,Description="Expansion sequence">
 ##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
 ##INFO=<ID=OL,Number=1,Type=Integer,Description="Query overlap in bp">
+##INFO=<ID=SVINSSEQ,Number=.,Type=String,Description="Sequence of insertion">
+##INFO=<ID=LEFT_SVINSSEQ,Number=.,Type=String,Description="Known left side of insertion for an insertion of unknown length">
+##INFO=<ID=RIGHT_SVINSSEQ,Number=.,Type=String,Description="Known right side of insertion for an insertion of unknown length">
 ##INFO=<ID=MeanPROB,Number=1,Type=Float,Description="Mean probability of event being true across samples">
 ##INFO=<ID=MaxPROB,Number=1,Type=Float,Description="Max probability of event being true across samples">
 ##ALT=<ID=DEL,Description="Deletion">
@@ -592,6 +626,14 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
     add_kind = args["add_kind"] == "True"
     if args["metrics"]:
         small_output_f = False
+
+    if args["verbosity"] == '0':
+        df["contigA"] = [''] * len(df)
+        df["contigB"] = [''] * len(df)
+    elif args["verbosity"] == '1':
+        has_alt = [bool(i) for i in df["variant_seq"]]
+        df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
+        df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
 
     n_fields = len(col_names(extended_tags, small_output_f)[-1])
     for idx, r in df.iterrows():

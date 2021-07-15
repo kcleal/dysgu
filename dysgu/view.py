@@ -103,8 +103,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                     else:
                         # Merged with self event. Can happen with clusters of SVs with small spacing
                         # e.g. a is merged with b and c, where a is from sample1 and b and c are from sample2
-                        # safer not to merge, otherwise variants can be lost
-                        bad_i.add(item)
+                        # safer not to merge? otherwise variants can be lost
                         passed = False
                 if passed:  # enumerate support between components
                     g = f["partners"] + [f["event_id"]]
@@ -191,6 +190,9 @@ def vcf_to_df(path):
     parsed["chrA"] = df[0]
     parsed["posA"] = df[1]
     parsed["id"] = df[2]
+    parsed["ref_seq"] = df[3]
+    parsed["variant_seq"] = df[4]
+
     parsed["sample"] = [sample] * len(df)
     info = []
     for k in list(df[7]):
@@ -242,7 +244,10 @@ def vcf_to_df(path):
                "MCOV": ("mcov", float),
                "LNK": ("linked", int),
                "CONTIGA": ("contigA", str),
-               "CONTIGB": ("contigB", str), "GC": ("gc", float),
+               "CONTIGB": ("contigB", str),
+               "ref_seq": ("ref_seq", str),
+               "variant_seq": ("variant_seq", str),
+               "GC": ("gc", float),
                "NEIGH": ("neigh", int),
                "NEIGH10": ("neigh10kb", int),
                "REP": ("rep", float),
@@ -432,8 +437,7 @@ def check_raw_alignments(df, args, pon):
             for a in infile.fetch(chrom, pos - pad if pos - pad > 0 else 0, pos + pad):
                 if not a.cigartuples:
                     continue
-                # if pos == 3786481 and a.cigartuples[-1][0] == 4:
-                #     echo(a.cigartuples, abs(pos - a.pos), abs(pos - a.reference_end))
+
                 if a.cigartuples[0][0] == 4 and cs != 1:
                     current_pos = a.pos
                     if abs(current_pos - pos) < 8:

@@ -1534,6 +1534,10 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   PyObject *SQ;
   PyObject *GT;
   PyObject *kind;
+  PyObject *ref_seq;
+  PyObject *variant_seq;
+  PyObject *left_ins_seq;
+  PyObject *right_ins_seq;
 };
 
 

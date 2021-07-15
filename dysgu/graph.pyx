@@ -11,7 +11,6 @@ from cpython cimport array
 import array
 import re
 import logging
-import dataclasses
 
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair as cpp_pair
@@ -1142,7 +1141,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     else:
                         if opp != 4 and opp != 5:
                             event_pos += length
-                        elif opp == 4:
+                        elif opp == 4 and length >= clip_l:
                             clipped = 1
 
             if not added and contigs:
@@ -1341,11 +1340,14 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         seen_t.update(current_t)  # Only count edge once
 
+        # save memory by converting support between to 2d array
+        for t in current_t:
+            counts[t] = [array.array("L", m) for m in counts[t]]
+
     return counts, self_counts
 
 
-cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
-                         int min_support, int procs, int paired_end):
+cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_support, int procs, int paired_end):
 
     n2n = {}
     reads = {}
@@ -1364,7 +1366,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
         n2n[v] = key
 
     if support_estimate < min_support:
-        return {}
+        return
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
@@ -1376,7 +1378,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
             if len(n2n) >= min_support or len(reads) >= min_support:
                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
             else:
-                return {}
+                return
 
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
@@ -1385,11 +1387,7 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
             elif len(reads) >= min_support:
                 return {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
             else:
-                return {}
-
-    sb = {}
-    for edge, vd in support_between.items():
-        sb[edge] = vd
+                return
 
     # Debug:
     # echo("parts", partitions)
@@ -1405,4 +1403,4 @@ cpdef dict proc_component(node_to_name, component, read_buffer, infile, G,
     #     echo("s_between", sb)
     #     echo("s_within", support_within)
 
-    return {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+    return {"parts": partitions, "s_between": support_between, "reads": reads, "s_within": support_within, "n2n": n2n}

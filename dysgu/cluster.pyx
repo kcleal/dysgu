@@ -16,7 +16,6 @@ import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
 from dysgu.map_set_utils import timeit, echo
-import itertools
 import pickle
 
 import itertools
@@ -32,28 +31,15 @@ def filter_potential(input_events, tree, regions_only):
     potential = []
     cdef EventResult_t i
     for i in input_events:
-        # echo(i)
-        # if "posB" not in i:  # Skip events for which no posB was identified
-        #     continue
+
         if i.sqc is None:
             i.sqc = -1
         if i.svtype == "INS" and i.svlen_precise == 0 and not i.contig and not i.contig2:
             continue
-        # if "contig" not in i or i["contig"] == "":
-        #     i["contig"] = None
 
-        # if i.bnd is None:
-        #     i.bnd = 0
-        # if "remap_score" not in i or i["remap_score"] is None:
-        #     i["remap_score"] = 0
-        # if "scw" not in i or i["scw"] is None:
-        #     i["scw"] = 0
         # Remove events for which both ends are in --regions but no contig was found
         posA_intersects = io_funcs.intersecter_str_chrom(tree, i.chrA, i.posA, i.posA + 1)
         posB_intersects = io_funcs.intersecter_str_chrom(tree, i.chrB, i.posB, i.posB + 1)
-
-        # if (posA_intersects and posB_intersects) and (i.contig is None or i.contig2 is None):
-        #     continue
 
         # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
@@ -210,11 +196,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         ci = ei.contig
         ci2 = ei.contig2
+        ci_alt = ei.variant_seq
 
         cj = ej.contig
         cj2 = ej.contig2
+        cj_alt = ej.variant_seq
 
-        any_contigs_to_check = any((ci, ci2)) and any((cj, cj2))
+        any_contigs_to_check = any((ci, ci2, ci_alt)) and any((cj, cj2, cj_alt))
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
@@ -225,6 +213,10 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         m = False
         ml = max(ei.svlen, ej.svlen)
+        if ml == 0:
+            continue
+        l_ratio = min(ei.svlen, ej.svlen) / ml
+
         if ei.svtype == "INS":
             if aggressive_ins_merge:
                 m = True
@@ -232,10 +224,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 # if both have been remapped, make sure size is similar
                 if ei.spanning > 0 or ej.spanning > 0:
                     if paired_end:
+                        if isinstance(ei.variant_seq, str) and isinstance(ej.variant_seq, str):
+                            if l_ratio > 0.9:
+                                m = True
+                        else:
+                            m = True
+                    elif ml > 0 and l_ratio > 0.8:
                         m = True
-                    elif ml > 0 and min(ei.svlen, ej.svlen) / ml > 0.8:
-                        m = True
-                elif ei.remap_score > 0 and ej.remap_score > 0 and ml > 0 and min(ei.svlen, ej.svlen) / ml > 0.8:
+                elif ei.remap_score > 0 and ej.remap_score > 0 and ml > 0 and l_ratio > 0.8:
                     m = True
                 elif ei.remap_score == 0 or ej.remap_score == 0:  # merge if one break was not remapped
                     m = True
@@ -249,15 +245,20 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
-                l_ratio = min(ei.svlen, ej.svlen) / ml
+
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
 
         else:
             if ci and cj: v = ci, cj
             elif ci and cj2: v = ci, cj2
+            elif ci and cj_alt: v = ci, cj_alt
             elif ci2 and cj2: v = ci2, cj2
             elif ci2 and cj: v = ci2, cj
+            elif ci2 and cj_alt: v = ci2, cj_alt
+            elif ci_alt and cj: v = ci_alt, cj
+            elif ci_alt and cj2: v = ci_alt, cj2
+            elif ci_alt and cj_alt: v = ci_alt, cj_alt
             else: continue
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
@@ -285,7 +286,7 @@ def cut_components(G):
 cpdef srt_func(c):
     if c.type != "pe" and c.type != "":
         return 100 + c.su
-    return c.su
+    return c.su + (3 * c.spanning)
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
@@ -320,6 +321,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
         c = [node_to_event[n] for n in grp]
         best = sorted(c, key=srt_func, reverse=True)
         w0 = best[0]
+
         if not pick_best:
 
             # Weighting for base result
@@ -335,6 +337,13 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             new_b = ""
             svt = w0.svtype
             sqc = w0.sqc
+
+            best_var_seq = -1
+            try:
+                best_var_seq = len(w0.variant_seq) if isinstance(w0.variant_seq, str) else -1
+            except AttributeError:
+                pass
+
             for k in range(1, len(best)):
 
                 item = best[k]
@@ -368,7 +377,32 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                             w0.svlen = item.svlen
 
                         elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:  # increase svlen size
-                            w0.svlen = item.svlen
+                            if best_var_seq == -1:
+                                w0.svlen = item.svlen
+
+                        elif not remapped and item.remap_score > 0:  # try and use remapped seq for svlen
+                            var_seq = -1
+                            try:
+                                var_seq = len(item.variant_seq) if item.variant_seq is not None else -1
+                            except AttributeError:
+                                pass
+                            if var_seq != -1:
+                                w0.svlen = item.svlen
+
+                            else:
+
+                                left_ins, right_ins = -1, -1
+                                try:
+                                    left_ins = len(item.left_ins_seq) if isinstance(item.left_ins_seq, str) else -1
+                                except AttributeError:
+                                    pass
+                                try:
+                                    right_ins = len(item.right_ins_seq) if isinstance(item.right_ins_seq, str) else -1
+                                except AttributeError:
+                                    pass
+                                m = max(left_ins, right_ins)
+                                if m != -1:
+                                    w0.svlen = m + w0.svlen / 2
 
                 if item.sqc != -1 and sqc == 1:
                     w0.sqc = sqc
@@ -683,6 +717,17 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
     temp_dir = args["working_directory"]
+
+    if args["max_cov"] == "auto":
+        if args["ibam"] is not None:
+            mc = coverage.auto_max_cov(args["max_cov"], args["ibam"])
+        else:
+            mc = coverage.auto_max_cov(args["max_cov"], args["sv_aligns"])
+        args["max_cov"] = mc
+
+    else:
+        args["max_cov"] = int(args["max_cov"])
+
     if not args["ibam"]:
         # Make a new coverage track if one hasn't been created yet
         coverage_tracker = Py_CoverageTrack(temp_dir, infile, args["max_cov"])
@@ -736,7 +781,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     min_size = args["min_size"]
 
     read_buffer = genome_scanner.read_buffer
-
+    import resource
     t5 = time.time()
     G, node_to_name, bad_clip_counter = graph.construct_graph(genome_scanner,
                                             infile,
@@ -950,7 +995,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
-    preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
+
     preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
     preliminaries = post_call_metrics.strand_binom_t(preliminaries)
 
@@ -958,6 +1003,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call_metrics.compressability(preliminaries)
     preliminaries = post_call_metrics.get_gt_metric(preliminaries, add_gt=args["no_gt"])
+
+    # This has to be called after the genotype step, raw coverage values are needed
+    preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:
@@ -998,7 +1046,7 @@ def cluster_reads(args):
         has_index = False
 
     if not has_index and args["regions"] is not None:
-        logging.info("Input file has no index, attempting to index")
+        logging.info("Input file has no index, but --include was provided, attempting to index")
         infile.close()
         pysam.index(args["sv_aligns"])
         infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
@@ -1008,12 +1056,12 @@ def cluster_reads(args):
 
     ibam = None
     if args["ibam"] is not None:
-        kind = args["ibam"].split(".")[-1]
-        if kind == "stdin" or kind == "-" or kind not in opts:
+        kind2 = args["ibam"].split(".")[-1]
+        if kind2 == "stdin" or kind2 == "-" or kind2 not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
 
-        ibam = pysam.AlignmentFile(args["ibam"], opts[kind], threads=1,
-                                   reference_filename=None if kind != "cram" else args["reference"])
+        ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
+                                   reference_filename=None if kind2 != "cram" else args["reference"])
 
     if "RG" in infile.header:
         rg = infile.header["RG"]
