@@ -121,10 +121,18 @@ Useful parameters
 -----------------
 The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.
 
-The --max-cov parameter may need to be adjusted for high coverage samples (default is 200); regions with higher
-coverage are ignored for SV calling. Dysgu can automatically infer a max-cov value by setting `--max-cov auto`, which
-will correspond to ~6*whole-genome-coverage. However using 'auto', is only recommended for whole-genome samples.
-A helper script can be used to choose other max-cov values `scripts/suggest_max_coverage.py`
+The --max-cov parameter may need to be adjusted for high coverage samples (default is 200), or samples that might have
+high copy number aberrations. Regions with coverage exceeding `max-cov` are ignored for SV calling.
+Dysgu can automatically infer a max-cov value by setting `--max-cov auto`, which
+will correspond to ~6*whole-genome-coverage by default. However using 'auto', is only recommended for whole-genome samples.
+A helper script can be used to suggest different max-cov values with respect to mean genome coverage, for example
+to use of threshold of 25x genome coverage::
+
+
+    max_cov=$(python scripts/suggest_max_coverage.py -y 25 input.bam)
+    >>> Read-length 148.0 bp, mean whole-genome coverage estimate: 31.88, max-cov ~ 797
+
+    dysgu run --max-cov $max_cov reference.fa temp_dir input.bam > svs.vcf
 
 The --thresholds parameter controls the probability value at which events are labelled with a
 'PASS', increasing these values increases precision at the expense of sensitivity.
@@ -155,3 +163,12 @@ If sensitivity is lower than expected for paired-end data, check that the insert
 provide manually using the `-I` option otherwise.
 
 If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
+
+
+Citation
+--------
+For citation of dysgu, or to learn more about implementation details please see our pre-print:
+
+https://www.biorxiv.org/content/10.1101/2021.05.28.446147v1.full
+
+
