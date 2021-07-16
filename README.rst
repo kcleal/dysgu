@@ -167,7 +167,7 @@ If you input data or aligner do not seem to be working well with dysgu, please g
 
 Citation
 --------
-For citation of dysgu, or to learn more about implementation details please see our pre-print:
+To cite dysgu, or to learn more about implementation details please see our pre-print:
 
 https://www.biorxiv.org/content/10.1101/2021.05.28.446147v1.full
 
