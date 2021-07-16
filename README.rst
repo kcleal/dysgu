@@ -123,7 +123,7 @@ The most important parameter affecting sensitivity is --min-support, lower value
 
 The --max-cov parameter may need to be adjusted for high coverage samples (default is 200), or samples that might have
 high copy number aberrations. Regions with coverage exceeding `max-cov` are ignored for SV calling.
-Dysgu can automatically infer a max-cov value by setting `--max-cov auto`, which
+Dysgu can automatically infer a max-cov value for bam files by setting `--max-cov auto`, which
 will correspond to ~6*whole-genome-coverage by default. However using 'auto', is only recommended for whole-genome samples.
 A helper script can be used to suggest different max-cov values with respect to mean genome coverage, for example
 to use of threshold of 25x genome coverage::
