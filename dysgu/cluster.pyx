@@ -189,10 +189,10 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not loci_similar:
             continue
 
-        if loci_same:
-            if not both_in_include:
-                G.add_edge(i_id, j_id, loci_same=loci_same)
-                continue
+        # if loci_same:
+        #     if not both_in_include:
+        #         G.add_edge(i_id, j_id, loci_same=loci_same)
+        #         continue
 
         ci = ei.contig
         ci2 = ei.contig2
@@ -260,6 +260,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             elif ci_alt and cj2: v = ci_alt, cj2
             elif ci_alt and cj_alt: v = ci_alt, cj_alt
             else: continue
+
+            # echo(ei.remap_score == 0 or ej.remap_score == 0, ei.svlen, ej.svlen, v, assembler.check_contig_match(v[0], v[1], return_int=True))
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
             if ei.remap_score == 0 or ej.remap_score == 0:
@@ -338,11 +340,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             svt = w0.svtype
             sqc = w0.sqc
 
-            best_var_seq = -1
-            try:
-                best_var_seq = len(w0.variant_seq) if isinstance(w0.variant_seq, str) else -1
-            except AttributeError:
-                pass
+            best_var_seq = w0.variant_seq
 
             for k in range(1, len(best)):
 
@@ -375,34 +373,44 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                     if not spanned:
                         if item.spanning:
                             w0.svlen = item.svlen
+                            w0.variant_seq = item.variant_seq
 
                         elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:  # increase svlen size
                             if best_var_seq == -1:
                                 w0.svlen = item.svlen
 
-                        elif not remapped and item.remap_score > 0:  # try and use remapped seq for svlen
-                            var_seq = -1
-                            try:
-                                var_seq = len(item.variant_seq) if item.variant_seq is not None else -1
-                            except AttributeError:
-                                pass
-                            if var_seq != -1:
-                                w0.svlen = item.svlen
+                        # elif not remapped and item.remap_score > 0:  # try and use remapped seq for svlen
+                        #     var_seq = -1
+                        #     try:
+                        #         var_seq = len(item.variant_seq) if item.variant_seq is not None else -1
+                        #     except AttributeError:
+                        #         pass
+                        #     if var_seq != -1:
+                        #         w0.svlen = item.svlen
 
-                            else:
+                            # else:
+                            #
+                            #     left_ins, right_ins = -1, -1
+                            #     try:
+                            #         left_ins = len(item.left_ins_seq) if isinstance(item.left_ins_seq, str) else -1
+                            #     except AttributeError:
+                            #         pass
+                            #     try:
+                            #         right_ins = len(item.right_ins_seq) if isinstance(item.right_ins_seq, str) else -1
+                            #     except AttributeError:
+                            #         pass
+                            #     m = max(left_ins, right_ins)
+                            #     if m == -1:
+                            #         echo("hi", w0.svlen, m)
+                            #         w0.svlen = int(m + w0.svlen / 2)
+                        # update var seq
+                        if best_var_seq is None and isinstance(item.variant_seq, str):
+                            w0.variant_seq = item.variant_seq
+                            w0.svlen = item.svlen
+                            best_var_seq = item.variant_seq
+                        if w0.posA == w0.posB < item.posB:
+                            w0.posB = item.posB  # use other end of insertion if found as posB
 
-                                left_ins, right_ins = -1, -1
-                                try:
-                                    left_ins = len(item.left_ins_seq) if isinstance(item.left_ins_seq, str) else -1
-                                except AttributeError:
-                                    pass
-                                try:
-                                    right_ins = len(item.right_ins_seq) if isinstance(item.right_ins_seq, str) else -1
-                                except AttributeError:
-                                    pass
-                                m = max(left_ins, right_ins)
-                                if m != -1:
-                                    w0.svlen = m + w0.svlen / 2
 
                 if item.sqc != -1 and sqc == 1:
                     w0.sqc = sqc
@@ -963,7 +971,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                                     min_support=args["min_support"])
         logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
 
-
     # Merge across calls
     if args["merge_within"] == "True":
         merged = merge_events(block_edge_events, args["merge_dist"], regions, paired_end, try_rev=False, pick_best=False,
@@ -1101,8 +1108,6 @@ def cluster_reads(args):
 
     # Run dysgu here:
     events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome)
-
-    # logging.info("Extended tags: {}".format(extended_tags))
 
     df = pd.DataFrame.from_records([e.to_dict() for e in events])
     if not extended_tags:

@@ -213,6 +213,9 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
         # so the novel sequence remains un-mappped. for a duplicated seq, the 'insertion' plus the reference might be
         # remapped, or just part of the duplicated seq. A duplicated seq can also have additional novel bases at either
         # end.
+        var_seq = None
+        left_ins_seq = None
+        right_ins_seq = None
         if not edit_dist < 0:
 
             pos = break_position
@@ -229,12 +232,10 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
                     svlen = overlap + aln_t_end_unmapped
 
-                    dangling_bases = aln_t_begin
-                    if dangling_bases < 3:
-                        if svlen <= len(clip_seq):
-                            e.variant_seq = clip_seq[-svlen:]
-                        else:
-                            e.left_ins_seq = clip_seq
+                    if svlen <= len(clip_seq):
+                        var_seq = clip_seq[-svlen:]
+                    else:
+                        left_ins_seq = clip_seq
 
                     e.ref_seq = ref_seq_clipped[500 - 1]
 
@@ -248,8 +249,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                         break_point = pos
                         break_point2 = pos
                         svlen = target_gap - ref_gap
-
-                        e.variant_seq = clip_seq[target_end_optimal: target_end_optimal + svlen]
+                        var_seq = clip_seq[target_end_optimal: target_end_optimal + svlen]
 
                     else:
                         kind = "DEL"
@@ -272,14 +272,11 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     overlap_left = pos - q_begin
                     svlen = overlap_left + aln_t_begin
 
-                    dangling_bases = len(clip_seq) - target_end_optimal
-
-                    if dangling_bases < 3:
-                        if svlen <= len(clip_seq):
-                            e.variant_seq = clip_seq[:svlen]
-                        else:
-                            e.right_ins_seq = clip_seq
-
+                    # dangling_bases = len(clip_seq) - target_end_optimal
+                    if svlen <= len(clip_seq):
+                        var_seq = clip_seq[:svlen]
+                    else:
+                        right_ins_seq = clip_seq
                     e.ref_seq = ref_seq_clipped[500 - 1]
 
                 else:
@@ -337,6 +334,12 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
                     ref_seq_clipped = ref_seq_big[start_idx:end_idx]
                     e.ref_rep = compute_rep(ref_seq_clipped)
+
+                else:
+                    if var_seq: e.variant_seq = var_seq
+                    else:
+                        if left_ins_seq: e.left_ins_seq = left_ins_seq
+                        if right_ins_seq: e.right_ins_seq = right_ins_seq
 
                 to_add = True
 
@@ -411,12 +414,14 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
 
             e.scw = max(e.contig_left_weight, e.contig_right_weight)
 
-            for idx in "AB":
-                if (index, idx) not in clip_results:
-                    continue
-                clip_res = clip_results[(index, idx)]
+            # process longest soft-clip first
+            cr = [(idx, clip_results[(index, idx)]) for idx in "AB" if (index, idx) in clip_results]
+            cr = sorted(cr, key=lambda x: len(x[1][0]), reverse=True)
 
-                to_add, skip_event, hq, clip_length = process_contig(e, e.contig, e.posA, clip_res,
+            for idx, clip_res in cr:
+
+                to_add, skip_event, hq, clip_length = process_contig(e, e.contig,
+                                                                     e.posA if idx == "A" else e.posB, clip_res,
                                                                      gstart, ref_seq_big, idx)
 
                 if not high_quality_clip and hq:

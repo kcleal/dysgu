@@ -195,7 +195,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
-            lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
+        lenprec = r["svlen_precise"]
         n_expansion = r["n_expansion"]
         stride = r["stride"]
         exp_seq = r["exp_seq"]
@@ -222,7 +222,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
-            lenprec = 1 if "svlen_precise" not in r else r["svlen_precise"]
+        lenprec = r["svlen_precise"]
         n_expansion = r["n_expansion"]
         stride = r["stride"]
         exp_seq = r["exp_seq"]
@@ -248,7 +248,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
     info_extras = []
     if r["chrA"] == r["chrB"]:
-        # svlen = abs(r["posA"] - r["posB"])
         if 'svlen' in r:
             info_extras.append(f"SVLEN={r['svlen']}")
         else:

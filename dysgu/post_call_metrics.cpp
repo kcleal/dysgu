@@ -1440,7 +1440,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
  * 
  * cdef class EventResult:             # <<<<<<<<<<<<<<
  *     """Data holder for classifying alignments into SV types"""
- *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, grp_id, event_id, n_expansion, stride, ref_poly_bases
+ *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, contig_lc, contig_rc, contig2_lc, contig2_rc, \
  */
 struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   PyObject_HEAD
@@ -1448,6 +1448,10 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t contig_ref_end;
   int32_t contig2_ref_start;
   int32_t contig2_ref_end;
+  int32_t contig_lc;
+  int32_t contig_rc;
+  int32_t contig2_lc;
+  int32_t contig2_rc;
   int32_t grp_id;
   int32_t event_id;
   int32_t n_expansion;

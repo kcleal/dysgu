@@ -55,7 +55,7 @@ For paired-end data the `run` command is recommended which wraps `fetch` and `ca
 
     dysgu run reference.fa temp_dir input.bam > svs.vcf
 
-This will first call `fetch` which will create a temporary bam file plus other analysis files in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
+This will first run the `fetch` command that will create a temporary bam file plus other analysis files in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
 To make use of multiprocessing, set the "-p" parameter::
 
     dysgu run -p4 reference.fa temp_dir input.bam > svs.vcf
@@ -126,7 +126,7 @@ high copy number aberrations. Regions with coverage exceeding `max-cov` are igno
 Dysgu can automatically infer a max-cov value for bam files by setting `--max-cov auto`, which
 will correspond to ~6*whole-genome-coverage by default. However using 'auto', is only recommended for whole-genome samples.
 A helper script can be used to suggest different max-cov values with respect to mean genome coverage, for example
-to use of threshold of 25x genome coverage::
+to use of threshold of 25 x mean genome coverage::
 
 
     max_cov=$(python scripts/suggest_max_coverage.py -y 25 input.bam)

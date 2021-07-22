@@ -11,6 +11,7 @@ from dysgu import assembler
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes
+from dysgu.sv_category cimport AlignmentItem, classify_d
 from dysgu.post_call_metrics cimport soft_clip_qual_corr
 
 import warnings
@@ -30,53 +31,6 @@ np.random.seed(1)
 
 
 ctypedef EventResult EventResult_t
-
-
-cdef class AlignmentItem:
-    """Data holder for classifying alignments into SV types"""
-    cdef public int chrA, chrB, priA, priB, rA, rB, posA, endA, posB, endB, strandA, strandB, left_clipA, right_clipA,\
-        left_clipB, right_clipB, breakA_precise, breakB_precise, breakA, breakB, a_qstart, a_qend, b_qstart, b_qend,\
-        query_gap, read_overlaps_mate, size_inferred, query_overlap, inferred_sv_len
-    cdef public str svtype, join_type
-    cdef public object read_a, read_b
-    def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,
-                  int strandA, int strandB, int left_clipA, int right_clipA, int left_clipB, int right_clipB,
-                  int a_qstart, int a_qend, int b_qstart, int b_qend, int read_overlaps_mate, object read_a,
-                  object read_b):
-        self.chrA = chrA
-        self.chrB = chrB
-        self.priA = priA
-        self.priB = priB
-        self.rA = rA
-        self.rB = rB
-        self.posA = posA
-        self.endA = endA
-        self.posB = posB
-        self.endB = endB
-        self.strandA = strandA
-        self.strandB = strandB
-        self.left_clipA = left_clipA
-        self.right_clipA = right_clipA
-        self.left_clipB = left_clipB
-        self.right_clipB = right_clipB
-        self.a_qstart = a_qstart
-        self.a_qend = a_qend
-        self.b_qstart = b_qstart
-        self.b_qend = b_qend
-        self.read_overlaps_mate = read_overlaps_mate
-        self.read_a = read_a
-        self.read_b = read_b
-
-        # These will be determined
-        self.breakA_precise = 0
-        self.breakB_precise = 0
-        self.breakA = -1
-        self.breakB = -1
-        self.svtype = ""
-        self.join_type = ""
-        self.query_gap = 0
-        self.inferred_sv_len = -1
-        self.size_inferred = 0  # set to 1 if insertion size was inferred
 
 
 cdef n_aligned_bases(ct):
@@ -238,10 +192,6 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
 
     for a in spanning:
 
-        # qname = a.qname
-        # if qname not in seen:
-        #     seen.add(qname)
-
         if extended_tags:
             if a.has_tag("ZP"):
                 DP += float(a.get_tag("ZP"))
@@ -305,7 +255,6 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
             aligned_bases += ab
             clipped_base_quals += cbq
             clipped_bases += cb
-
 
     cdef int tot = er.supp + total_pri
 
@@ -451,7 +400,7 @@ cdef make_sv_alignment_item(a, b):
     a_ct = a.cigartuples
     b_ct = b.cigartuples
 
-    a_qstart, a_qend, b_qstart, b_qend = start_end_query_pair(a, b)
+    a_qstart, a_qend, b_qstart, b_qend, a_len, b_len = start_end_query_pair(a, b)
 
     # Soft-clips for the chosen pair, plus template start of alignment
     left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
@@ -472,7 +421,7 @@ cdef make_sv_alignment_item(a, b):
                            3 if b.flag & 16 == 0 else 5,
                            left_clip_a, right_clip_a,
                            left_clip_b, right_clip_b,
-                           a_qstart, a_qend, b_qstart, b_qend,
+                           a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,
                            read_overlaps_mate,
                            a, b
                            )
@@ -582,12 +531,16 @@ cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
                 er.contig2_ref_end = asmb["ref_end"]
                 er.contig2_left_weight = asmb["left_weight"]
                 er.contig2_right_weight = asmb["right_weight"]
+                er.contig2_lc = asmb["left_clips"]
+                er.contig2_rc = asmb["right_clips"]
             else:
                 er.contig = asmb["contig"]
                 er.contig_ref_start = asmb["ref_start"]
                 er.contig_ref_end = asmb["ref_end"]
                 er.contig_left_weight = asmb["left_weight"]
                 er.contig_right_weight = asmb["right_weight"]
+                er.contig_lc = asmb["left_clips"]
+                er.contig_rc = asmb["right_clips"]
 
         else:
             # assign contigs to current side
@@ -597,12 +550,16 @@ cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
                 er.contig_ref_end = asmb["ref_end"]
                 er.contig_left_weight = asmb["left_weight"]
                 er.contig_right_weight = asmb["right_weight"]
+                er.contig_lc = asmb["left_clips"]
+                er.contig_rc = asmb["right_clips"]
             else:
                 er.contig2 = asmb["contig"]
                 er.contig2_ref_start = asmb["ref_start"]
                 er.contig2_ref_end = asmb["ref_end"]
                 er.contig2_left_weight = asmb["left_weight"]
                 er.contig2_right_weight = asmb["right_weight"]
+                er.contig2_lc = asmb["left_clips"]
+                er.contig2_rc = asmb["right_clips"]
 
         ref_bases += asmb["ref_bases"]
     return ref_bases
@@ -636,8 +593,6 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     svtype, jointype = call_informative[0][0]
 
     make_call(si, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
-
-    min_found_support = call_informative[0][1]
 
     if len(sub_informative) > 0:
         count_attributes2(u_reads, v_reads, [], extended_tags, insert_ppf, generic_ins, er)
@@ -778,7 +733,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
                     v_item = make_sv_alignment_item(a, b)
                     classify_d(v_item)
                     informative.append(v_item)
-
                 else:
                     spanning_alignments.append(pair)
 
@@ -947,757 +901,9 @@ cdef tuple informative_pair(u, v):
         return pri_u, pri_v
 
 
-cdef void two_primary(AlignmentItem v):
-
-    if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):
-
-        if v.strandA == 3 and v.strandB == 5:  # DEL type
-            v.breakA = v.endA
-            if v.right_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.posB
-            if v.left_clipB:
-                v.breakB_precise = 1
-
-            if v.endA >= v.posB:
-                v.svtype = "INS"
-                v.join_type = "3to5"
-
-            else:
-                v.svtype = "DEL"
-                v.join_type = "3to5"
-
-        elif v.strandA == 5 and v.strandB == 3:  # DUP type
-            v.breakA = v.posA
-            if v.left_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.endB
-            if v.right_clipB:
-                v.breakB_precise = 1
-
-            v.svtype = "DUP"
-            v.join_type = "5to3"
-
-        else:  # INV type
-            # Break to left or right
-            if v.strandA == 5:
-
-                if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
-                    v.breakA = v.endA
-                    if v.right_clipA:
-                        v.breakA_precise = 1
-
-                    v.breakB = v.endB
-                    if v.right_clipB:
-                        v.breakB_precise = 1
-
-                    v.svtype = "INV"
-                    v.join_type = "3to3"
-
-                else:
-                    v.breakA = v.posA
-                    if v.left_clipA:
-                        v.breakA_precise = 1
-
-                    v.breakB = v.posB
-                    if v.right_clipB:
-                        v.breakB_precise = 1
-
-                    v.svtype = "INV"
-                    v.join_type = "5to5"
-
-            else:  # strand == 3
-                if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):  # only left clips
-
-                    if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right
-                        v.breakA = v.endA
-                        if v.right_clipA:
-                            v.breakA_precise = 1
-
-                        v.breakB = v.endB
-                        if v.right_clipB:
-                            v.breakB_precise = 1
-
-                        v.svtype = "INV"
-                        v.join_type = "3to3"
-
-                    else:  # guess left
-                        v.breakA = v.posA
-                        if v.left_clipA:
-                            v.breakA_precise = 1
-
-                        v.breakB = v.posB
-                        if v.left_clipB:
-                            v.breakB_precise = 1
-
-                        v.svtype = "INV"
-                        v.join_type = "5to5"
-
-                else:  # either no clips or right clips
-
-                    v.breakA = v.endA
-                    if v.left_clipA:
-                        v.breakA_precise = 1
-
-                    v.breakB = v.endB
-                    if v.right_clipB:
-                        v.breakB_precise = 1
-
-                    v.svtype = "INV"
-                    v.join_type = "3to3"
-
-    else:  # B < A
-
-        if v.strandA == 5 and v.strandB == 3:  # DEL type
-            v.breakA = v.posA
-            if v.left_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.endB
-            if v.right_clipB:
-                v.breakB_precise = 1
-
-            if v.endB >= v.posA:
-                v.svtype = "INS"
-                v.join_type = "3to5"
-
-            else:
-                v.svtype = "DEL"
-                v.join_type = "3to5"
-
-        elif v.strandB == 5 and v.strandA == 3:  # DUP type
-            v.breakA = v.endA
-            if v.right_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.posB
-            if v.left_clipB:
-                v.breakB_precise = 1
-
-            v.svtype = "DUP"
-            v.join_type = "5to3"
-
-            # INV type
-        elif v.strandA == 5:
-
-            if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            else:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.posB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-        elif v.strandA == 3:
-
-            if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
-                v.breakA = v.posA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.posB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-            else:
-
-                v.breakA = v.endA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-
-cdef void same_read(AlignmentItem v):
-
-    cdef int query_gap = 0
-    cdef int ref_gap = 0
-    cdef int query_overlap = 0
-    cdef int inferred_sv_len = -1
-
-    if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
-
-        if v.strandA == v.strandB:  # Same for 3 and 5 strand reads
-
-            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
-                if v.left_clipA:
-                    v.breakA = v.posA
-                    v.breakA_precise = 1
-                elif v.right_clipA:
-                    v.breakA = v.endA
-                    v.breakA_precise = 1
-                else:
-                    v.breakA = v.endA
-
-                if v.left_clipB:
-                    v.breakB = v.posB
-                    v.breakB_precise = 1
-                elif v.right_clipB:
-                    v.breakB = v.endB
-                    v.breakB_precise = 1
-                else:
-                    v.breakB = v.endB
-
-                v.svtype = "INS"
-                # Check if gap on query is bigger than gap on reference
-                # query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
-                ref_gap = abs(v.breakB - v.breakA)
-
-                if v.a_qstart > v.b_qstart:  # B is first on query seq
-                    align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
-                else:
-                    align_overlap = v.a_qend - v.b_qstart
-
-                v.inferred_sv_len = ref_gap - align_overlap
-                if align_overlap < 0:
-                    v.query_gap = align_overlap
-                else:
-                    v.query_overlap = align_overlap
-                v.join_type = "5to3"
-
-            elif not v.left_clipA and not v.right_clipB:
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-
-                # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qstart - v.a_qend  # as A is first
-                ref_gap = abs(v.breakB - v.breakA)
-                if query_gap < 0:
-                    ref_gap += abs(query_gap)
-                    v.query_overlap = abs(query_gap)
-                    v.query_gap = 0
-
-                else:
-                    v.query_overlap = 0
-                    v.query_gap = query_gap
-
-                if ref_gap < query_gap:
-                    v.svtype = "INS"
-                    v.join_type = "3to5"
-                    v.inferred_sv_len = query_gap
-
-                elif v.read_overlaps_mate:
-                    v.svtype = "DUP"
-                    v.join_type = "5to3"
-                else:
-                    v.svtype = "DEL"
-                    v.join_type = "3to5"
-                    v.inferred_sv_len = ref_gap
-
-            elif not v.right_clipA and not v.left_clipB:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "DUP"
-                v.join_type = "5to3"
-
-            elif not v.left_clipA and not v.left_clipB:
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            else:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-        elif v.strandA == 5 and v.strandB == 3:
-
-            # Break right
-            if not v.left_clipA and not v.left_clipB:
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            # Break left
-            elif not v.right_clipA and not v.right_clipB:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-            elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "DUP"
-                v.join_type = "5to3"
-
-            elif v.right_clipA and v.left_clipB:
-                v.breakA = v.endA
-                v.breakB = v.posB
-                v.svtype = "INV"
-                v.join_type = "3to5"
-
-            else:
-            # elif v.left_clipA and v.right_clipB:
-                v.breakA = v.posA
-                v.breakB = v.endB
-                v.svtype = "INV"
-                v.join_type = "5to3"
-
-        else:  # INV type
-            # Break left
-            if v.left_clipA and v.left_clipB:
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.breakA = v.posA
-                v.breakB = v.posB
-                v.svtype = "INV"
-                v.join_type = "5to5"
-            # Break right
-            elif v.right_clipA and v.right_clipB:
-                v.breakA = v.endA
-                v.breakB = v.endB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            else:  # Guess using pos only
-                v.breakA = v.posA
-                v.breakB = v.posB
-                v.svtype = "INV"
-                if v.strandA == 5:
-                    v.join_type = "5to5"
-                else:
-                    v.join_type = "3to3"
-
-    # B is first
-    else:
-        if v.strandA == v.strandB:
-
-            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
-                if v.left_clipA:
-                    v.breakA = v.posA
-                    v.breakA_precise = 1
-                elif v.right_clipA:
-                    v.breakA = v.endA
-                    v.breakA_precise = 1
-                else:
-                    v.breakA = v.endA
-
-                if v.left_clipB:
-                    v.breakB = v.posB
-                    v.breakB_precise = 1
-                elif v.right_clipB:
-                    v.breakB = v.endB
-                    v.breakB_precise = 1
-                else:
-                    v.breakB = v.endB
-
-                v.svtype = "INS"
-                # Check if gap on query is bigger than gap on reference
-                ref_gap = abs(v.breakA - v.breakB)
-
-                if v.a_qstart > v.b_qstart:  # B is first on query seq
-                    align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
-                else:
-                    align_overlap = v.a_qend - v.b_qstart
-
-                v.inferred_sv_len = ref_gap - align_overlap
-                if align_overlap < 0:
-                    v.query_gap = align_overlap
-                else:
-                    v.query_overlap = align_overlap
-
-                v.join_type = "5to3"
-
-            elif not v.left_clipB and not v.right_clipA:
-                v.breakA = v.posA
-                v.breakB = v.endB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-
-                # Check if gap on query is bigger than gap on reference; call insertion if it is
-                query_gap = v.b_qend - v.a_qstart  # as B is first
-                ref_gap = abs(v.breakA - v.breakB)
-
-                if query_gap < 0:
-                    ref_gap += abs(query_gap)
-                    v.query_overlap = abs(query_gap)
-                    v.query_gap = 0
-
-                else:
-                    v.query_overlap = 0
-                    v.query_gap = query_gap
-
-                if ref_gap < query_gap:
-                    v.svtype = "INS"
-                    v.join_type = "3to5"
-                    v.inferred_sv_len = query_gap
-
-                elif v.read_overlaps_mate:
-                    v.svtype = "DUP"
-                    v.join_type = "5to3"
-                else:
-                    v.svtype = "DEL"
-                    v.join_type = "3to5"
-                    v.inferred_sv_len = ref_gap
-
-            elif not v.right_clipB and not v.left_clipA:
-                v.breakA = v.endA
-                v.breakB = v.posB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.svtype = "DUP"
-                v.join_type = "5to3"
-
-            else:
-                v.breakA = v.posA
-                v.breakB = v.posB
-                v.svtype = "BND"
-                v.join_type = f"{v.strandA}to{v.strandB}"
-
-        else:  # INV type
-            # Break left
-            if v.left_clipA and v.left_clipB:
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.breakA = v.posA
-                v.breakB = v.posB
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-            # Break right
-            elif v.right_clipA and v.right_clipB:
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.breakA = v.endA
-                v.breakB = v.endB
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            else:  # Guess using pos only
-                v.breakA = v.posA
-                v.breakB = v.posB
-                v.svtype = "INV"
-                if v.strandA == 5:
-                    v.join_type = "5to5"
-                else:
-                    v.join_type = "3to3"
-
-
-cdef void different_read(AlignmentItem v):
-
-    if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
-
-        if v.strandA == 3 and v.strandB == 5:  # DEL type
-            v.breakA = v.endA
-            if v.right_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.posB
-            if v.left_clipB:
-                v.breakB_precise = 1
-
-            # v.svtype = "DEL"
-            v.svtype = "INS"
-            v.join_type = "3to5"
-
-        elif v.strandA == 5 and v.strandB == 3:  # DUP type
-            v.breakA = v.posA
-            if v.left_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.endB
-            if v.right_clipB:
-                v.breakB_precise = 1
-
-            v.svtype = "DUP"
-            v.join_type = "5to3"
-
-        elif v.strandA == v.strandB:
-            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested
-
-                if v.strandA == 3:  # Both forward strand
-                    v.breakA = v.endA
-                    if v.right_clipA:
-                        v.breakA_precise = 1
-
-                    v.breakB = v.endB
-                    if v.right_clipB:
-                        v.breakB_precise = 1
-                    v.svtype = "INV"
-                    v.join_type = "3to3"
-
-                else:  # Both forward strand
-                    v.breakA = v.posA
-                    if v.left_clipA:
-                        v.breakA_precise = 1
-
-                    v.breakB = v.posB
-                    if v.left_clipB:
-                        v.breakB_precise = 1
-                    v.svtype = "INV"
-                    v.join_type = "5to5"
-
-            elif not v.right_clipA and not v.right_clipB:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-            elif not v.left_clipA and not v.left_clipB:
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            elif v.right_clipA and v.left_clipB:
-                v.breakA = v.endA
-                v.breakA_precise = 1
-                v.breakB = v.posB
-                v.breakB_precise = 1
-                # v.svtype = "INV:DUP"
-                v.svtype = "INV"
-                v.join_type = "5to3"
-
-            else:
-                v.breakA = v.posA
-                v.breakA_precise = 1
-                v.breakB = v.endB
-                v.breakB_precise = 1
-                v.svtype = "INV"
-                # v.svtype = "INV:DUP"
-                v.join_type = "3to5"
-
-    else:  # B is first; B <= A
-
-        if v.strandA == 5 and v.strandB == 3:  # DEL type
-            v.breakA = v.posA
-            if v.left_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.endB
-            if v.right_clipB:
-                v.breakB_precise = 1
-
-            v.svtype = "INS"
-            v.join_type = "3to5"
-
-        elif v.strandA == 3 and v.strandB == 5:  # DUP type
-            v.breakA = v.endA
-            if v.right_clipA:
-                v.breakA_precise = 1
-
-            v.breakB = v.posB
-            if v.left_clipB:
-                v.breakB_precise = 1
-
-            v.svtype = "DUP"
-            v.join_type = "5to3"
-
-        elif v.strandA == v.strandB:  # INV type
-
-            if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
-                if v.left_clipA:
-                    v.breakA = v.posA
-                    v.breakA_precise = 1
-                elif v.right_clipA:
-                    v.breakA = v.endA
-                    v.breakA_precise = 1
-                else:
-                    v.breakA = v.endA
-
-                if v.left_clipB:
-                    v.breakB = v.posB
-                    v.breakB_precise = 1
-                elif v.right_clipB:
-                    v.breakB = v.endB
-                    v.breakB_precise = 1
-                else:
-                    v.breakB = v.endB
-                v.svtype = "DUP"
-                v.join_type = "5to3"
-
-            elif v.right_clipA and v.left_clipB:
-                v.breakA = v.endA
-                v.breakB = v.posB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.svtype = "DEL"
-                v.join_type = "3to5"
-
-            elif v.left_clipA and v.right_clipB:
-                v.breakA = v.posA
-                v.breakB = v.endB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
-                v.svtype = "DUP"
-                v.join_type = "5to3"
-
-            elif not v.left_clipB and not v.left_clipA:
-
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            elif not v.right_clipB and not v.right_clipA:
-
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-            elif v.strandA == 3:
-                v.breakA = v.endA
-                if v.right_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.endB
-                if v.right_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "3to3"
-
-            else:
-                v.breakA = v.posA
-                if v.left_clipA:
-                    v.breakA_precise = 1
-                v.breakB = v.posB
-                if v.left_clipB:
-                    v.breakB_precise = 1
-                v.svtype = "INV"
-                v.join_type = "5to5"
-
-
-cdef void translocation(AlignmentItem v):
-
-    v.svtype = "TRA"
-
-    if v.left_clipA:
-        v.breakA = v.posA
-        v.breakA_precise = 1
-    elif v.right_clipA:
-        v.breakA = v.endA
-        v.breakA_precise = 1
-    else:
-        v.breakA = v.posA
-        v.breakA_precise = 1
-
-    if v.left_clipB:
-        v.breakB = v.posB
-        v.breakB_precise = 1
-    elif v.right_clipB:
-        v.breakB = v.endB
-        v.breakB_precise = 1
-    else:
-        v.breakB = v.posB
-        v.breakB_precise = 1
-    v.join_type = f"{v.strandA}to{v.strandB}"
-
-    cdef int query_gap = 0
-    cdef int query_overlap = 0
-    if v.rA == v.rB:  # same read
-        if v.b_qstart < v.a_qstart:  # B is first on query
-            query_gap = v.a_qstart - v.b_qend
-            # query_gap = v.b_qstart - v.a_qend  # as A is first
-        else:
-            query_gap = v.b_qstart - v.a_qend
-        if query_gap < 0:
-            query_overlap = abs(query_gap)
-            query_gap = 0
-
-    v.query_gap = query_gap
-    v.query_overlap = query_overlap
-
-
-cdef void classify_d(AlignmentItem v):
-
-    v.breakA_precise = 0
-    v.breakB_precise = 0
-    if v.chrA != v.chrB:
-        translocation(v)
-    else:  # Intra-chromosomal. Find join type first, different for pri-sup, pri-pri
-        if v.priA and v.priB:  # Both primary
-            two_primary(v)
-        else:  # One is a supplementary
-            if v.rA == v.rB:
-                same_read(v)
-            else:
-                different_read(v)
-
-
 cdef tuple break_ops(positions, precise, int limit, float median_pos):
-
+    # Inspired by mosdepth algorithm +1 for start -1 for end using intervals where break site could occur
+    # Use insert size to set a limit on where break site could occur
     ops = []
     cdef int i
     for i in positions:
@@ -1739,6 +945,97 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
     return break_point, cipos95, is_precise
 
 
+def value_closest_to_mean(l):
+    # return value closest to mean
+    cdef float svlen_m = np.mean(l)
+    return min(l, key=lambda x:abs(x-svlen_m))
+
+
+cdef void set_ins_seq(EventResult_t er):
+    # if possible extract the insertion seq from alignment
+    if not er.svtype == "INS":
+        return
+
+    cdef int svlen = er.svlen
+    cdef int lc, lc2, start_i, end_i, start2_i, end2_i
+    cdef bint done
+    if er.svlen_precise:
+        if er.join_type == "5to3" or er.join_type == "3to5":
+            if er.contig and er.contig2:
+
+                lc = len(er.contig)
+                lc2 = len(er.contig2)
+                if er.contig_ref_start < er.contig2_ref_end:
+                    # use the aligned portion of contig as ins seq
+                    # count back from right clip
+                    done = False
+
+                    cont2 = er.contig2
+                    end2_i = lc2 - 1
+                    while cont2[end2_i].islower():
+                        end2_i -= 1
+                        if end2_i < 0:
+                            break
+                    start2_i = end2_i + 1 - svlen
+                    if start2_i >= 0:
+                        seq = cont2[start2_i: end2_i]
+                        er.variant_seq = seq
+                        done = True
+
+                    # try and use the left contig instead
+                    if not done:
+                        cont = er.contig
+                        start_i = 0
+                        while cont[start_i].islower():
+                            start_i += 1
+                            if start_i == lc:
+                                break
+
+                        end_i = start_i + svlen
+                        if end_i < (lc - start_i):
+                            seq = cont[start_i: end_i]
+                            er.variant_seq = seq
+
+                        else:
+                            if start_i > 20:
+                                er.left_ins_seq = cont[:start_i]
+                            if lc2 - end2_i > 20:
+                                er.right_ins_seq = cont2[-end2_i:]
+                # else:
+                #     happens rarely
+
+            else:
+                # try and use the soft clip portion of one, count from aligned base outwards
+                if er.contig and (er.contig[0].isupper() or er.contig[-1].isupper()):  # skip both ends clipped
+                    lc = len(er.contig)
+                    if er.contig[0].isupper() and er.contig[-1].islower():  # fetch right
+                        if er.contig_rc >= svlen:
+                            er.variant_seq = er.contig[lc - er.contig_rc: lc - er.contig_rc + svlen]
+                        else:
+                            er.right_ins_seq = er.contig[lc - er.contig_rc:]
+
+                    elif er.contig[-1].isupper() and er.contig[0].islower():   # fetch left
+                        if er.contig_lc >= svlen:
+                            er.variant_seq = er.contig[er.contig_lc - svlen: er.contig_lc]
+                        else:
+                            er.left_ins_seq = er.contig[:er.contig_lc]
+
+                elif er.contig2 and (er.contig2[0].isupper() or er.contig2[-1].isupper()):
+                    lc2 = len(er.contig2)
+                    if er.contig2[0].isupper() and er.contig2[-1].islower():
+
+                        if er.contig2_rc >= svlen:
+                            er.variant_seq = er.contig2[lc2 - er.contig2_rc: lc2 - er.contig2_rc + svlen]
+                        else:
+                            er.right_ins_seq = er.contig2[lc2 - er.contig2_rc:]
+
+                    elif er.contig2[-1].isupper() and er.contig2[0].islower():
+                        if er.contig2_lc >= svlen:
+                            er.variant_seq = er.contig2[er.contig2_lc - svlen: er.contig2_lc]
+                        else:
+                            er.left_ins_seq = er.contig2[:er.contig2_lc]
+
+
 cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int preciseA, int main_B_break, int cipos95B,
                                           int preciseB):
     # A or B break pay be in accurate, try and infer svlen and a more accurate break point(s)
@@ -1771,8 +1068,7 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
 
 cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointype,
                     int insert_size, int insert_stdev, EventResult_t er):
-    # Inspired by mosdepth algorithm +1 for start -1 for end using intervals where break site could occur
-    # Use insert size to set a limit on where break site could occur
+
     cdef int limit = insert_size + insert_stdev
     cdef AlignmentItem i
     # get bulk call
@@ -1783,6 +1079,7 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     cdef int main_A_break = 0
     cdef int main_B_break = 0
     cdef int cipos95A, cipos95B
+    cdef float svlen_m
 
     if svtype == "DEL":
         if median_A < median_B:
@@ -1829,12 +1126,13 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         inferred_lens.append(i.inferred_sv_len)
                     else:
                         lens.append(i.inferred_sv_len)
-
             if len(lens) > 0:
-                svlen = int(np.mean(lens))
+                svlen = value_closest_to_mean(lens)
                 svlen_precise = 1
+
             elif len(inferred_lens) > 0:
-                svlen = int(np.mean(inferred_lens))
+                svlen = value_closest_to_mean(inferred_lens)
+
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
@@ -1854,14 +1152,14 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         else:
                             lens.append(i.inferred_sv_len)
                 if len(lens) > 0:
-                    svlen = int(np.mean(lens))
+                    svlen = value_closest_to_mean(lens) #int(np.mean(lens))
                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
                         svlen_precise = 1
                     else:
                         svlen = main_svlen
                 else:
                     if len(inferred_lens) > 0:
-                        svlen = int(np.mean(inferred_lens))
+                        svlen = value_closest_to_mean(inferred_lens) #int(np.mean(inferred_lens))
                     else:
                         svlen = main_svlen
 
@@ -1871,8 +1169,10 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         else:
             svlen = abs(main_B_break - main_A_break)
     else:
-        svlen = 0
+        svlen = -1
 
+    if svlen == 0:
+        svlen = -1
     q_overlaps = int(np.mean([i.query_overlap for i in informative]))
     if q_overlaps != q_overlaps:
         q_overlaps = 0
@@ -1902,10 +1202,12 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
 cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
 
     # Find out which soft clip pairs are compatible with the chosen read pair
-    cdef int left_clipA = 1 if (a_ct[0][0] == 4 or a_ct[0][0] == 5) else 0
-    cdef int right_clipA = 1 if (a_ct[-1][0] == 4 or a_ct[-1][0] == 5) else 0
-    cdef int left_clipB = 1 if (b_ct[0][0] == 4 or b_ct[0][0] == 5) else 0
-    cdef int right_clipB = 1 if (b_ct[-1][0] == 4 or b_ct[-1][0] == 5) else 0
+    cl = (4, 5)
+
+    cdef int left_clipA = a_ct[0][1] if a_ct[0][0] in cl else 0
+    cdef int right_clipA = a_ct[-1][1] if a_ct[-1][0] in cl else 0
+    cdef int left_clipB = b_ct[0][1] if b_ct[0][0] in cl else 0
+    cdef int right_clipB = b_ct[-1][1] if b_ct[-1][0] in cl else 0
 
     cdef int a_template_start = 0
     cdef int b_template_start = 0
@@ -1973,36 +1275,31 @@ cdef query_start_end_from_cigartuples(r):
     # Infer the position on the query sequence of the alignment using cigar string
     cdef int end = 0
     cdef int start = 0
-    cdef bint i = 0
-    cdef int opp, slen
-    for opp, slen in r.cigartuples:
-        if opp == 0:
-            end += slen
-        elif opp == 4 or opp == 5:
-            if not i:
-                start += slen
-                end += slen
-                i = 1
-            else:
-                break
-        elif opp == 1:
-            end += slen
-        i = 1
-    return start, end
+    cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
+
+    end = query_length
+    if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
+        start += r.cigartuples[0][1]
+
+    if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
+        end -= r.cigartuples[-1][1]
+
+    return start, end, query_length
 
 
 cdef start_end_query_pair(r1, r2):
-    cdef int query_length, s1, e1, s2, e2, start_temp
+    cdef int query_length, s1, e1, s2, e2, start_temp, r1l, r2l
     # r1 and r2 might be on same read, if this is case infer the query position on the read
-    s1, e1 = query_start_end_from_cigartuples(r1)
-    s2, e2 = query_start_end_from_cigartuples(r2)
+    s1, e1, r1l = query_start_end_from_cigartuples(r1)
+    s2, e2, r2l = query_start_end_from_cigartuples(r2)
+
     if r1.flag & 64 == r2.flag & 64:  # same read
         if r2.flag & 16 != r1.flag & 16:  # different strand, count from end
-            query_length = r1.infer_read_length()  # Note, this also counts hard-clips
+            query_length = r1l  # Note, this also counts hard-clips
             start_temp = query_length - e2
             e2 = start_temp + e2 - s2
             s2 = start_temp
-    return s1, e1, s2, e2
+    return s1, e1, s2, e2, r1l, r2l
 
 
 def sort_by_length(x):
@@ -2045,6 +1342,8 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
         er.contig_ref_end = as1["ref_end"]
         er.contig_left_weight = as1["left_weight"]
         er.contig_right_weight = as1["right_weight"]
+        er.contig_lc = as1["left_clips"]
+        er.contig_rc = as1["right_clips"]
     if as2 is not None and "contig" in as2:
         er.contig2 = as2["contig"]
         rbases += as2["ref_bases"]
@@ -2052,6 +1351,8 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
         er.contig2_ref_end = as2["ref_end"]
         er.contig2_left_weight = as2["left_weight"]
         er.contig2_right_weight = as2["right_weight"]
+        er.contig2_lc = as2["left_clips"]
+        er.contig2_rc = as2["right_clips"]
     er.ref_bases = rbases
 
 
@@ -2087,7 +1388,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
             a_ct = a.cigartuples
             b_ct = b.cigartuples
 
-            a_qstart, a_qend, b_qstart, b_qend = start_end_query_pair(a, b)
+            a_qstart, a_qend, b_qstart, b_qend, a_len, b_len = start_end_query_pair(a, b)
 
             # Soft-clips for the chosen pair, plus template start of alignment
             left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
@@ -2103,17 +1404,13 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
                                    int(not b.flag & 2304),
                                    1 if a.flag & 64 else 2,
                                    1 if b.flag & 64 else 2,
-                                   a.pos,
-                                   a.reference_end,
-                                   b.pos,
-                                   b.reference_end,
+                                   a.pos, a.reference_end,
+                                   b.pos, b.reference_end,
                                    3 if a.flag & 16 == 0 else 5,
                                    3 if b.flag & 16 == 0 else 5,
-                                   left_clip_a,
-                                   right_clip_a,
-                                   left_clip_b,
-                                   right_clip_b,
-                                   a_qstart, a_qend, b_qstart, b_qend,
+                                   left_clip_a, right_clip_a,
+                                   left_clip_b, right_clip_b,
+                                   a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,
                                    read_overlaps_mate,
                                    a, b
                                    )
@@ -2151,6 +1448,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
 
     results = []
     cdef EventResult_t er
+
     for sub_informative in svtypes_res:
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
@@ -2181,6 +1479,7 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
                 continue
 
             assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
+
             results.append(er)
 
     return results
@@ -2260,7 +1559,6 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         svlen = spanning_alignments[best_index][4]
         posA = spanning_alignments[best_index][2]
         posB = spanning_alignments[best_index][3]
-        #svlen = int(np.mean([i[4] for i in spanning_alignments]))
 
         if svlen > 0:
             jitter = ((posA_95 + posB_95) / 2) / svlen
@@ -2305,6 +1603,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
 
     else:
         results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
+
         return results
 
 
@@ -2450,7 +1749,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
     n_parts = len(data["parts"])
     events = []
-
+    cdef EventResult_t e
     if n_parts >= 1:
         # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
@@ -2471,5 +1770,10 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events += e
             else:
                 events.append(e)
+
+    events = [e for e in events if e.svlen > 0 or e.svtype == "TRA"]
+    for e in events:
+        if e.svlen_precise:
+            set_ins_seq(e)
 
     return events
