@@ -1763,13 +1763,13 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
 
             return []
 
-        e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+        ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
                    assemble_contigs, extended_tags)
-        if e:
-            if isinstance(e, list):
-                events += e
+        if ev:
+            if isinstance(ev, list):
+                events += ev
             else:
-                events.append(e)
+                events.append(ev)
 
     events = [e for e in events if e.svlen > 0 or e.svtype == "TRA"]
     for e in events:

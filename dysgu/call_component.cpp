@@ -38,8 +38,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/pysam",
+            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -32974,6 +32974,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
   PyObject *__pyx_v_events = NULL;
   __pyx_t_5dysgu_14call_component_EventResult_t __pyx_v_e = 0;
   PyObject *__pyx_v_rds = NULL;
+  PyObject *__pyx_v_ev = NULL;
   __pyx_t_5dysgu_14call_component_EventResult_t __pyx_9genexpr23__pyx_v_e = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -33157,7 +33158,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
  * 
  *             return []             # <<<<<<<<<<<<<<
  * 
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
  */
       __Pyx_XDECREF(__pyx_r);
       __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1764, __pyx_L1_error)
@@ -33178,9 +33179,9 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
     /* "dysgu/call_component.pyx":1766
  *             return []
  * 
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,             # <<<<<<<<<<<<<<
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,             # <<<<<<<<<<<<<<
  *                    assemble_contigs, extended_tags)
- *         if e:
+ *         if ev:
  */
     __pyx_t_11 = __Pyx_PyInt_As_int(__pyx_v_insert_size); if (unlikely((__pyx_t_11 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1766, __pyx_L1_error)
     __pyx_t_10 = __Pyx_PyInt_As_int(__pyx_v_insert_stdev); if (unlikely((__pyx_t_10 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1766, __pyx_L1_error)
@@ -33190,10 +33191,10 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
 
     /* "dysgu/call_component.pyx":1767
  * 
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
  *                    assemble_contigs, extended_tags)             # <<<<<<<<<<<<<<
- *         if e:
- *             if isinstance(e, list):
+ *         if ev:
+ *             if isinstance(ev, list):
  */
     __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_v_assemble_contigs); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1767, __pyx_L1_error)
     __pyx_t_5 = __Pyx_PyInt_As_int(__pyx_v_extended_tags); if (unlikely((__pyx_t_5 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 1767, __pyx_L1_error)
@@ -33201,77 +33202,76 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
     /* "dysgu/call_component.pyx":1766
  *             return []
  * 
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,             # <<<<<<<<<<<<<<
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,             # <<<<<<<<<<<<<<
  *                    assemble_contigs, extended_tags)
- *         if e:
+ *         if ev:
  */
     __pyx_t_1 = __pyx_f_5dysgu_14call_component_single(__pyx_v_rds, __pyx_t_11, __pyx_t_10, __pyx_t_6, __pyx_t_9, __pyx_t_8, __pyx_t_7, __pyx_t_5); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1766, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_5dysgu_13map_set_utils_EventResult))))) __PYX_ERR(0, 1766, __pyx_L1_error)
-    __pyx_v_e = ((__pyx_t_5dysgu_14call_component_EventResult_t)__pyx_t_1);
+    __pyx_v_ev = __pyx_t_1;
     __pyx_t_1 = 0;
 
     /* "dysgu/call_component.pyx":1768
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
  *                    assemble_contigs, extended_tags)
- *         if e:             # <<<<<<<<<<<<<<
- *             if isinstance(e, list):
- *                 events += e
+ *         if ev:             # <<<<<<<<<<<<<<
+ *             if isinstance(ev, list):
+ *                 events += ev
  */
-    __pyx_t_3 = __Pyx_PyObject_IsTrue(((PyObject *)__pyx_v_e)); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 1768, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_IsTrue(__pyx_v_ev); if (unlikely(__pyx_t_3 < 0)) __PYX_ERR(0, 1768, __pyx_L1_error)
     if (__pyx_t_3) {
 
       /* "dysgu/call_component.pyx":1769
  *                    assemble_contigs, extended_tags)
- *         if e:
- *             if isinstance(e, list):             # <<<<<<<<<<<<<<
- *                 events += e
+ *         if ev:
+ *             if isinstance(ev, list):             # <<<<<<<<<<<<<<
+ *                 events += ev
  *             else:
  */
-      __pyx_t_3 = PyList_Check(((PyObject *)__pyx_v_e)); 
+      __pyx_t_3 = PyList_Check(__pyx_v_ev); 
       __pyx_t_15 = (__pyx_t_3 != 0);
       if (__pyx_t_15) {
 
         /* "dysgu/call_component.pyx":1770
- *         if e:
- *             if isinstance(e, list):
- *                 events += e             # <<<<<<<<<<<<<<
+ *         if ev:
+ *             if isinstance(ev, list):
+ *                 events += ev             # <<<<<<<<<<<<<<
  *             else:
- *                 events.append(e)
+ *                 events.append(ev)
  */
-        __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_v_events, ((PyObject *)__pyx_v_e)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1770, __pyx_L1_error)
+        __pyx_t_1 = PyNumber_InPlaceAdd(__pyx_v_events, __pyx_v_ev); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 1770, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
         __Pyx_DECREF_SET(__pyx_v_events, __pyx_t_1);
         __pyx_t_1 = 0;
 
         /* "dysgu/call_component.pyx":1769
  *                    assemble_contigs, extended_tags)
- *         if e:
- *             if isinstance(e, list):             # <<<<<<<<<<<<<<
- *                 events += e
+ *         if ev:
+ *             if isinstance(ev, list):             # <<<<<<<<<<<<<<
+ *                 events += ev
  *             else:
  */
         goto __pyx_L6;
       }
 
       /* "dysgu/call_component.pyx":1772
- *                 events += e
+ *                 events += ev
  *             else:
- *                 events.append(e)             # <<<<<<<<<<<<<<
+ *                 events.append(ev)             # <<<<<<<<<<<<<<
  * 
  *     events = [e for e in events if e.svlen > 0 or e.svtype == "TRA"]
  */
       /*else*/ {
-        __pyx_t_16 = __Pyx_PyObject_Append(__pyx_v_events, ((PyObject *)__pyx_v_e)); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 1772, __pyx_L1_error)
+        __pyx_t_16 = __Pyx_PyObject_Append(__pyx_v_events, __pyx_v_ev); if (unlikely(__pyx_t_16 == ((int)-1))) __PYX_ERR(0, 1772, __pyx_L1_error)
       }
       __pyx_L6:;
 
       /* "dysgu/call_component.pyx":1768
- *         e = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
+ *         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
  *                    assemble_contigs, extended_tags)
- *         if e:             # <<<<<<<<<<<<<<
- *             if isinstance(e, list):
- *                 events += e
+ *         if ev:             # <<<<<<<<<<<<<<
+ *             if isinstance(ev, list):
+ *                 events += ev
  */
     }
 
@@ -33286,7 +33286,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
   __pyx_L3:;
 
   /* "dysgu/call_component.pyx":1774
- *                 events.append(e)
+ *                 events.append(ev)
  * 
  *     events = [e for e in events if e.svlen > 0 or e.svtype == "TRA"]             # <<<<<<<<<<<<<<
  *     for e in events:
@@ -33480,6 +33480,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_call_from_block_model(PyObject 
   __Pyx_XDECREF(__pyx_v_events);
   __Pyx_XDECREF((PyObject *)__pyx_v_e);
   __Pyx_XDECREF(__pyx_v_rds);
+  __Pyx_XDECREF(__pyx_v_ev);
   __Pyx_XDECREF((PyObject *)__pyx_9genexpr23__pyx_v_e);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
