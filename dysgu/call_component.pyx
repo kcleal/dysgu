@@ -481,11 +481,19 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     v_item.svtype = "INS"
 
     # Try and guess the insertion size using insert size and distance to break
-    dist_to_break = aln.reference_end - aln.pos
-    v_item.size_inferred = 1
 
+    # constrain length if mate is found that maps in normal orientation the other side of break
+    # max_size = -1
+    # rl = aln.infer_read_length()
+    # if v_item.left_clipA:
+    #     if not aln.flag & 2 and aln.rname == aln.rnext and aln.pnext < v_item.breakA:
+    #         max_size = insert_size - aln.tlen
+
+    aln_span = aln.reference_end - aln.pos
+    v_item.size_inferred = 1
+    # echo(aln.qname, aln_span, max_size)
     if insert_std > 0:
-        rand_insert_pos = insert_size - dist_to_break + int(normal(0, insert_std))
+        rand_insert_pos = insert_size - aln_span + int(normal(0, insert_std))
     else:  # single read mode
         rand_insert_pos = 100
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
@@ -1114,10 +1122,11 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B, preciseB = break_ops(positionsB, breakB_precise, limit, median_B)
 
-    svlen_precise = 1
+    # svlen_precise = 1
+    svlen_precise = 0
     if informative[0].chrA == informative[0].chrB:
         if svtype == "INS":  # use inferred query gap to call svlen
-            svlen_precise = 0
+
             lens = []
             inferred_lens = []
             for i in informative:
@@ -1126,6 +1135,9 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         inferred_lens.append(i.inferred_sv_len)
                     else:
                         lens.append(i.inferred_sv_len)
+
+            echo("lens", lens)
+            echo("inferred lens", inferred_lens)
             if len(lens) > 0:
                 svlen = value_closest_to_mean(lens)
                 svlen_precise = 1

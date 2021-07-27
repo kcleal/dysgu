@@ -223,6 +223,12 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
             sv_read = true;
             return 0;
         }
+        // check mate on different chrom
+//        if (flag & 1 && aln->core.tid != aln->core.mtid) {
+//            read_names.insert(precalculated_hash);
+//            sv_read = true;
+//            return 0;
+//        }
     }
 
     return 0;
