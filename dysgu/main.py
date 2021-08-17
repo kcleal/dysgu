@@ -152,10 +152,10 @@ def cli():
               show_default=True, default=False)
 @click.option("--compression", help="Set temp file bam compression level. Default is uncompressed",
               show_default=True, default="wb0", type=str)
-@click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
+@click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
-                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200"
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200. "
                              "nanopore: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 900",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
@@ -176,6 +176,9 @@ def cli():
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
+@click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
+@click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
+              default=None, type=click.Path(exists=True))
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
 @click.option('--regions-only', help="If --regions is provided, call only events within target regions",
               default="False", type=click.Choice(["True", "False"]),

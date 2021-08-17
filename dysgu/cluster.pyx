@@ -644,7 +644,7 @@ def find_repeat_expansions(events, insert_stdev):
 
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
-                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size,
+                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size, max_single_size
                   ):
 
     potential_events = []
@@ -660,7 +660,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       lower_bound_support,
                                                       extended_tags,
                                                       assemble_contigs,
-                                                      ):
+                                                      max_single_size):
 
         if event:
             event.grp_id = grp_id
@@ -682,7 +682,8 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 def process_job(msg_queue, args):
 
     job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
-    lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size = args
+    lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size,\
+        max_single_size, = args
 
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
@@ -710,7 +711,8 @@ def process_job(msg_queue, args):
                                                    regions_only,
                                                    extended_tags,
                                                    assemble_contigs,
-                                                   rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
+                                                   rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
+                                                   max_single_size=max_single_size)
 
         if potential_events:
             for res in potential_events:
@@ -776,6 +778,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             if args["merge_dist"] is None:
                 args["merge_dist"] = 150
 
+    # set upper bound on single-partition size
+    max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
+
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
@@ -789,7 +794,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     min_size = args["min_size"]
 
     read_buffer = genome_scanner.read_buffer
-    import resource
+
     t5 = time.time()
     G, node_to_name, bad_clip_counter = graph.construct_graph(genome_scanner,
                                             infile,
@@ -859,7 +864,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             proc_args = (
                 job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs,
-                rel_diffs, diffs, min_size
+                rel_diffs, diffs, min_size, max_single_size
             )
 
             p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
@@ -908,7 +913,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                                                regions_only,
                                                                extended_tags,
                                                                assemble_contigs,
-                                                               rel_diffs=rel_diffs, diffs=diffs, min_size=min_size)
+                                                               rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
+                                                               max_single_size=max_single_size)
 
                     if potential_events:
                         block_edge_events += potential_events
@@ -917,8 +923,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
                     j_submitted, w_idx = heapq.heappop(minhq)
                     heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
-
-                    # w_idx = next(write_index)
                     msg_queues[w_idx][1].send(res)
 
 

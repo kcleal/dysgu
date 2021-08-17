@@ -117,6 +117,34 @@ Finally, if the diploid/non-diploid models are not picking up your SV of interes
 `--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
 retained. In general the performance of models follows diploid > non-diploid > no-contigs.
 
+Specifying regions of interest / excluding regions
+--------------------------------------------------
+
+Regions of the genome can be skipped from analysis by providing a .bed file using the `--exclude` option. This option
+takes precedence over the options detailed below, and acts as a hard filter, removing regions of the genome from analysis.
+
+Dysgu provides two ways to analyse regions of interest. Target genomic regions can be specified using a .bed file with
+the --search option. This will also act as a hard filter, limiting analysis only to those regions, while regions outside
+will be ignored.
+
+Alternatively, regions can be specified using the --regions option (.bed file). If this option is used, all reads not
+excluded by the --exclude/--search options will be analysed. Variants will then be
+labelled in the output vcf according to their intersection with those regions. The INFO > KIND column will be labelled
+with either 'intra-regional' - both SV ends within same interval, 'extra-regional' - neither SV end in an interval,
+'inter-regional' - SV ends in separate intervals, or 'hemi-regional' - one SV end in an interval. These labels may be
+useful for some targeted sequencing experiments.
+
+Additionally, there is also the --regions-only option. If this is set to 'True', then dysgu will search all reads in
+--regions and also analyse any mate-pairs that do not overlap those regions of interest. This method can be quicker to
+run when the regions of interest are small relative to the genome.
+
+For deep targeted sequencing experiments, the --regions-mm-only option can also be used, which can help prevent over
+clustering of reads. When set to 'True', dysgu will only use minimizer based clustering within the intervals specified
+by --regions.
+
+Also of note, it is possible to use --exclude, --search, and --regions at the same time.
+
+
 Useful parameters
 -----------------
 The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.

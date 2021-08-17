@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 from collections import Counter, defaultdict
+import logging
 
 import numpy as np
 cimport numpy as np
@@ -643,6 +644,9 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
 cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                       min_support, extended_tags, to_assemble, generic_insertions):
 
+    # set upper bound on number of reads in partition
+
+
     # spanning alignments is empty
     cdef AlignmentItem v_item
     cdef int idx = 0
@@ -670,12 +674,17 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
         try:
             Z = linkage(coords, 'single')
         except:
-            echo(informative[0].chrA)
-            echo(informative[0].breakA)
-            echo(coords)
-            echo(linkage(coords, 'single'))
-            quit()
-        clusters = fcluster(Z, insert_size, criterion='distance')
+            logging.warning("Linkage clustering failed, at chromosome tid {}, position {}. n-reads in cluster {}".format(
+                informative[0].chrA, informative[0].breakA, len(coords)))
+            return []
+
+        try:
+            clusters = fcluster(Z, insert_size, criterion='distance')
+        except:
+            logging.warning("fcluster function failed, at chromosome tid {}, position {}. n-reads in cluster {}".format(
+                informative[0].chrA, informative[0].breakA, len(coords)))
+            return []
+
         clusters_d = defaultdict(list)
         for cluster_id, v_item in zip(clusters, informative):
             clusters_d[cluster_id].append(v_item)
@@ -1136,8 +1145,6 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                     else:
                         lens.append(i.inferred_sv_len)
 
-            echo("lens", lens)
-            echo("inferred lens", inferred_lens)
             if len(lens) > 0:
                 svlen = value_closest_to_mean(lens)
                 svlen_precise = 1
@@ -1683,8 +1690,8 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
 
 cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support, int lower_bound_support,
-                 int assemble_contigs, int extended_tags):
-    #print("-starting multi")
+                 int assemble_contigs, int extended_tags, max_single_size):
+
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
     n2n = data["n2n"]
@@ -1722,7 +1729,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     if seen:
         for part_key in seen:
             d = data["parts"][part_key]
-            if len(d) >= lower_bound_support:
+            if max_single_size > len(d) >= lower_bound_support:
                 # Call single block, only collect local reads to the block
                 rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
                 if len(rds) < lower_bound_support:
@@ -1739,6 +1746,8 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     for k, d in data["s_within"].items():
         o_count = out_counts[k]
         i_counts = len(d)
+        if i_counts > max_single_size:
+            continue
 
         if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
             rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
@@ -1757,7 +1766,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support, extended_tags,
-                                 assemble_contigs):
+                                 assemble_contigs, max_single_size):
 
     n_parts = len(data["parts"])
     events = []
@@ -1765,14 +1774,15 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     if n_parts >= 1:
         # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
-                        assemble_contigs, extended_tags)
+                        assemble_contigs, extended_tags, max_single_size)
 
     elif n_parts == 0:
         # Possible single read only
+        if len(data["n2n"]) > max_single_size:
+            return []
+
         rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
-
         if len(rds) < lower_bound_support:
-
             return []
 
         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
