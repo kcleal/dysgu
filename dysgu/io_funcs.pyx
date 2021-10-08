@@ -6,12 +6,13 @@ import numpy as np
 cimport numpy as np
 import logging
 from map_set_utils import echo
-from collections import defaultdict
+from collections import defaultdict, deque, namedtuple
 import ncls
 import pkg_resources
 import sortedcontainers
 import pandas as pd
 import os
+import pysam
 
 
 DTYPE = np.float
@@ -192,6 +193,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         max_prob = np.max(probs)
         r = df_rows[best]
         gc = round(r["gc"], 2)
+        if gc == -1:
+            gc = "."
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
@@ -219,6 +222,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         bnd = r["bnd"]
         wr = r["spanning"]
         gc = round(r["gc"], 2)
+        if gc == -1:
+            gc = "."
         if not small_output:
             rep = r["rep"]
             repsc = r["rep_sc"]
@@ -232,8 +237,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     samp = r["sample"]
     read_kind = r["type"]
 
-    r["posA"] = max(1, r["posA"])
-    r["posB"] = max(1, r["posB"])
+    r["posA"] = max(1, r["posA"] + 1)  # convert to 1 based indexing
+    r["posB"] = max(1, r["posB"] + 1)
 
     if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
         chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
@@ -494,7 +499,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
 ##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
 ##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">
-##FORMAT=<ID=FCC,Number=1,Type=Float,Description="Fold-coverage change for SVs > 200 bp">
+##FORMAT=<ID=FCC,Number=1,Type=Float,Description="Fold-coverage change for SVs">
 ##FORMAT=<ID=STL,Number=1,Type=Integer,Description="N reads with small TLEN below 0.05% of distribution">
 ##FORMAT=<ID=RAS,Number=1,Type=Integer,Description="Reverse soft-clip to alignment score">
 ##FORMAT=<ID=FAS,Number=1,Type=Integer,Description="Forward soft-clip to alignment score">
@@ -584,7 +589,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
 ##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
 ##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">
-##FORMAT=<ID=FCC,Number=1,Type=Float,Description="Fold-coverage change for SVs > 200 bp">
+##FORMAT=<ID=FCC,Number=1,Type=Float,Description="Fold-coverage change for SVs">
 ##FORMAT=<ID=STL,Number=1,Type=Integer,Description="N reads with small TLEN below 0.05% of distribution">
 ##FORMAT=<ID=RAS,Number=1,Type=Integer,Description="Reverse soft-clip to alignment score">
 ##FORMAT=<ID=FAS,Number=1,Type=Integer,Description="Forward soft-clip to alignment score">
@@ -620,7 +625,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 
     for col in ['maxASsupp', 'neigh', 'neigh10kb']:
         if col in df.columns:
-            df[col] = [int(i) if i == i else 0 for i in df[col]]
+            df[col] = [int(i) if (i == i and i is not None) else 0 for i in df[col]]
 
     count = 0
     recs = []
@@ -645,7 +650,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
             continue
 
         format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields, small_output_f)
-        if "partners" in r and r["partners"] is not None:
+        if "partners" in r and r["partners"] is not None and r["partners"] != ".": #not np.isnan(r["partners"]):
             seen_idx |= set(r["partners"])
 
         r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output_f)
@@ -656,3 +661,6 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
     for rec in sorted(recs, key=lambda x: (x[0], x[1])):
         outfile.write("\t".join(list(map(str, rec))) + "\n")
     return count
+
+
+

@@ -468,6 +468,14 @@ def ref_repetitiveness(events, mode, ref_genome):
 cdef float median(np.ndarray[int16_t, ndim=1]  arr, int start, int end):
     s = int(start / 10)
     e = int(end / 10)
+    if s > e:
+        s1 = s
+        s = e
+        e = s1
+    if s < 1:
+        s = 1
+    if e > len(arr):
+        e = len(arr)
     if e > s:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -505,6 +513,20 @@ def strand_binom_t(events):
         else:
             e.strand_binom_t = 1
     return events
+
+
+def get_ref_base(events, ref_genome):
+    for e in events:
+        if not e.ref_seq:
+            if e.posA == 0:
+                e.posA = 1
+            try:
+                base = ref_genome.fetch(e.chrA, e.posA, e.posA+1).upper()
+                e.ref_seq = base
+            except:
+                pass
+    return events
+
 
 # from svtyper with minor modifications
 # https://github.com/hall-lab/svtyper/blob/master/svtyper/singlesample.py
@@ -605,6 +627,220 @@ def get_gt_metric(events, add_gt=False):
     return events
 
 
+cdef del_like(EventResult_t r):
+
+    ocn = r.outer_cn
+    icn = r.inner_cn
+    lower_cn = min(ocn, icn)
+    t = None
+    if r.inner_cn > r.outer_cn * 1.25:
+        try:
+            t = ((r.inner_cn - r.outer_cn) / (r.inner_cn + r.outer_cn)) * r.outer_cn
+        except ZeroDivisionError:
+            t = None
+
+    if bool(r.contig) ^ bool(r.contig2):
+        m = 2. * (r.sc + r.bnd - r.supp)
+    else:
+        m = r.sc + r.bnd - r.supp
+    mr = lower_cn - m
+    mr = 0 if mr < 0 else mr
+    variant_supp = 0
+    ref_supp = 0
+    if r.pe > 0 or r.spanning > 0:
+        variant_supp = r.pe + r.spanning * 0.5
+        ref_supp = lower_cn
+
+    elif r.remap_score > 0:
+        if r.bnd == 0:
+            variant_supp = max(r.sc, r.supp)
+        else:
+            if bool(r.contig) ^ bool(r.contig2):
+                m = 2.5 * (r.sc + r.bnd - r.supp)
+            else:
+                m = 3.5 * (r.sc + r.bnd - r.supp)
+            variant_supp = m
+        ref_supp = lower_cn
+
+    elif r.supp > 0:
+        variant_supp = r.supp
+        if t is not None:
+            ref_supp = t
+        else:
+            ref_supp = mr
+
+    elif r.NP > 0:
+        variant_supp = r.NP * 2
+        ref_supp = lower_cn
+    elif r.inner_cn != -1 and r.inner_cn < r.su:
+        variant_supp = r.su
+        ref_supp = r.inner_cn
+    elif r.outer_cn != -1 and r.inner_cn != -1:
+        variant_supp = r.inner_cn
+        ref_supp = r.outer_cn
+    else:
+        return 0, 0
+        # logging.warning("No genotype for", r.chrA, r.posA, "pe", r.pe, "np", r.NP, "su", r.su, "sr", r.supp, "bnd", r.bnd, "rms", r.remap_score, "icn", r.inner_cn, "ocn", r.outer_cn,
+        #       r.svtype)
+
+    return round(ref_supp), round(variant_supp)
+
+
+cdef ins_like(EventResult_t r):
+    ocn = r.outer_cn
+    icn = r.inner_cn
+    lower_cn = min(ocn, icn)
+
+    t = None
+    if r.outer_cn > 0:
+        cn_ratio = r.inner_cn / r.outer_cn
+    else:
+        cn_ratio = 2
+
+    if cn_ratio > 1.25:
+        try:
+            t = ((r.inner_cn - r.outer_cn) / (r.inner_cn + r.outer_cn)) * r.outer_cn
+        except ZeroDivisionError:
+            t = None
+
+    if bool(r.contig) ^ bool(r.contig2):
+        m = 2. * (r.sc + r.bnd - r.supp)
+    else:
+        m = r.sc + r.bnd - r.supp
+    mr = lower_cn - m
+    mr = 0 if mr < 0 else mr
+
+    variant_support = 0
+    ref_support = 0
+
+    if cn_ratio > 1.75:
+        ref_support = max(0, r.inner_cn - (2. * (r.inner_cn - r.outer_cn)))
+        variant_support = r.su
+
+    elif r.pe > 0 or r.spanning > 0:
+        variant_supp = r.pe + r.spanning * 0.5
+        ref_support = lower_cn
+
+    elif r.remap_score > 0:
+        variant_support = m
+        ref_support = mr
+
+    elif r.supp > 0:
+        variant_support = r.supp
+        if t is not None:
+            ref_support = t
+        else:
+            ref_support = mr
+
+    elif r.NP > 0:
+        variant_support = r.NP * 2
+        ref_support = lower_cn - variant_support
+
+    elif r.inner_cn > r.su:
+        variant_support = r.su
+        ref_support = r.inner_cn - r.su
+    else:
+        return 0, 0
+        # logging.warning("No genotype for", r.chrA, r.posA, "pe", r.pe, "np", r.NP, "su", r.su, "sr", r.supp, "bnd", r.bnd, "rms", r.remap_score, "icn", r.inner_cn, "ocn", r.outer_cn,
+        #       r.svtype)
+
+    return round(ref_support), round(variant_support)
+
+
+cdef ins_like_non_pe(EventResult_t r):
+    ocn = r.outer_cn
+    icn = r.inner_cn
+    lower_cn = min(ocn, icn)
+    higher_cn = max(ocn, icn)
+    sup = r.su - r.spanning
+    support_reads = max(int((higher_cn - lower_cn)), sup)
+    ref = int(higher_cn - sup)
+    if ref < 0:
+        ref = 0
+    return round(ref), round(support_reads)
+
+
+def bayes_gt2(ref, alt, is_dup, a, b):
+    if is_dup:  # specialized logic to handle non-destructive events such as duplications
+        p_alt = b
+    else:
+        p_alt = a
+
+    total = ref + alt
+    log_combo = log_choose(total, alt)
+
+    lp_het = log_combo + alt * math.log(p_alt[0], 10) + ref * math.log(1 - p_alt[0], 10)
+    lp_homalt = log_combo + alt * math.log(p_alt[1], 10) + ref * math.log(1 - p_alt[1], 10)
+
+    return lp_het, lp_homalt
+
+
+def get_gt_metric2(events, mode, add_gt=True):
+
+    params = {"DEL,TRA": [[0.5, 0.9], [0.2, 1 / 3.0]],
+              "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
+
+    pp = {}
+    for k, v in params.items():
+        for kk in k.split(","):
+            pp[kk] = v
+
+    if add_gt:
+        pass
+    else:
+        for e in events:
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
+        return events
+
+    for e in events:
+
+        a_params, b_params = pp[e.svtype]
+
+        if e.svtype == "DEL" or e.svtype == "TRA":
+            ref, support_reads = del_like(e)
+        else:
+            if mode == "pe":
+                ref, support_reads = ins_like(e)
+            else:
+                ref, support_reads = ins_like_non_pe(e)
+
+        if ref + support_reads <= 0:
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
+            continue
+
+        gt_lplist = bayes_gt2(ref, support_reads, e.svtype == "DUP", a_params, b_params)
+        best, second_best = sorted([(i, j) for i, j in enumerate(gt_lplist)], key=lambda x: x[1], reverse=True)[0:2]
+        gt_idx = best[0]
+
+        gt_sum = 0
+
+        for gt in gt_lplist:
+            try:
+                gt_sum += 10**gt
+            except OverflowError:
+                gt_sum += 0
+        if gt_sum > 0:
+            gt_sum_log = math.log(gt_sum, 10)
+            sample_qual = abs(-10 * (gt_lplist[0] - gt_sum_log))  # phred-scaled probability site is non-reference in this sample
+            phred_gq = min(-10 * (second_best[1] - best[1]), 200)
+            e.GQ = int(phred_gq)
+            e.SQ = sample_qual
+            if gt_idx == 0:
+                e.GT = '0/1'
+            elif gt_idx == 1:
+                e.GT = '1/1'
+        else:
+            e.GQ = '.'
+            e.SQ = '.'
+            e.GT = './.'
+
+    return events
+
+
 def compressability(events):
     cdef EventResult_t e
     for e in events:
@@ -647,7 +883,7 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
 
     X = df[[c[i] for i in cols]]
     X.columns = cols
-    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2}
+    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2, "BND": 4}
 
     X["SVTYPE"] = [keys[i] for i in X["SVTYPE"]]
     X["SVLEN"] = [i if i == i and i is not None else -1 for i in X["SVLEN"]]
@@ -659,7 +895,57 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
 
     pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
-
     df = df.assign(filter=["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], pred)])
+
+    return df
+
+
+def bayes_multiple_observations(obs, prior=0.5):
+    # goal is to calculate P(A | B1 & B2) where B1 and B2 are the two calls of a SV
+    # calculate the event probability given the event was called twice
+    # prior probability value of 0.5 as the classifier is assumed to be unbiased
+    p_A_given_B = 0
+    if len(obs) == 0:
+        raise ValueError("len(obs) == 0")
+    for p in obs:
+        p_B = (p * prior) + ((1 - p) * (1-prior))
+        p_A_given_B = (p * prior) / p_B
+        prior = p_A_given_B
+    return round(p_A_given_B, 3)
+
+
+def update_prob_at_sites(df, events, thresholds, parse_probs, default_prob):
+    # update probs for --sites using --sites-p or PROB/MeanPROB
+    # allow only 1 call per matching variant in --sites
+    new_probs = []
+    best_idx = {}  # best df idex for each of matching --sites (use prob from this run to determine, not combined prob)
+    for i, p, e in zip(df.index, df.prob, events):
+
+        if e.site_info:
+            site_id = e.site_info.id
+            if site_id not in best_idx:
+                best_idx[site_id] = (i, p)
+            elif best_idx[site_id][1] < p:
+                best_idx[site_id] = (i, p)
+
+            if e.site_info.svtype == e.svtype:
+                other_p = e.site_info.prob if parse_probs else default_prob
+                p2 = bayes_multiple_observations([p, other_p])
+                new_probs.append(p2)
+            else:
+                new_probs.append(p)
+        else:
+            new_probs.append(p)
+
+    df.prob = new_probs
+    df["PASS"] = ["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], new_probs)]
+
+    keep = [True] * len(df)
+    for i, e in enumerate(events):
+        if e.site_info:
+            best = best_idx[e.site_info.id]
+            if best[0] != i:
+                keep[i] = False
+    df = df[keep]
 
     return df

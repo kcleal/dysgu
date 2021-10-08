@@ -392,6 +392,8 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                     ref_locs.append((e.chrA, e.posA, e.posB, count))
                 else:
                     ref_locs.append((e.chrA, e.posB, e.posA, count))
+            elif e.site_info:
+                new_events.append(e)  # keep anyway if linked to site
 
     for chrom, gstart, gend, grp_idxs in merge_intervals(ref_locs, pad=1500, add_indexes=True):
         if gstart < 0:
@@ -417,10 +419,11 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
             # process longest soft-clip first
             cr = [(idx, clip_results[(index, idx)]) for idx in "AB" if (index, idx) in clip_results]
             cr = sorted(cr, key=lambda x: len(x[1][0]), reverse=True)
-
+            clip_res = None
             for idx, clip_res in cr:
 
-                to_add, skip_event, hq, clip_length = process_contig(e, e.contig,
+                to_add, skip_event, hq, clip_length = process_contig(e, #e.contig,
+                                                                     e.contig if idx == "A" else e.contig2,
                                                                      e.posA if idx == "A" else e.posB, clip_res,
                                                                      gstart, ref_seq_big, idx)
 
@@ -434,11 +437,11 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                     break
                 if clip_length > max_clip_length:
                     max_clip_length = clip_length
-
+            # echo(e.posA, e.site_info, not to_add, not skip_event, high_quality_clip, keep_unmapped, max_clip_length >= 18, e.su)
             if not to_add and not skip_event and high_quality_clip and keep_unmapped and max_clip_length >= 18:
                 # basic filter
-
-                if e.su > min_support + 4:
+                support_thresh = min_support + 4 if not e.site_info else 1
+                if e.su > support_thresh:
                     if clip_res[1] == 0:
                         e.left_ins_seq = clip_res[0]
                     if clip_res[1] == 1:
@@ -456,7 +459,7 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
     ref_locs = []
     for count, e in enumerate(events):
 
-        if e.spanning > 0:
+        if e.spanning > 0 or e.site_info:  # keeper is an event from --sites
             continue
 
         if e.chrA == e.chrB:

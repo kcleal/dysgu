@@ -151,7 +151,7 @@ This list can be used to re-genotype at the sample level::
 
     dysgu run --sites merged.vcf ref.fa wd sample1.bam > sample1.re_geno.vcf
 
-Dysgu can also accept --sites from other sources or SV callers, for example calls from other SV callers or read-types can be provided::
+Dysgu can also accept --sites from other sources, for example calls from other SV callers or read-types can be provided::
 
     dysgu run --sites manta.diploidSVs.vcf ref.fa wd sample1.bam > sample1.vcf
 
@@ -160,15 +160,14 @@ This can especially help discovery of events with low read-support.
 To output all variants in --sites including those with genotype 0/0 in the input sample, set '--all-sites True'.
 
 By default if a matching call is found in both --sites and the input sample, then the probability value
-(PROB value in the FORMAT field of the vcf) of the call will be modified. This behavior can be controlled by setting the
---sites-prob option (default value is 0.6), controlling the probability that a matching call in merged.vcf is a true
-variant. To turn this behavior off, set the --sites-prob value to 0.5, which implies an even chance that a matching site
+(PROB value in the FORMAT field of the output vcf) of the call will be modified. This behavior can be controlled by setting the
+--sites-prob option (default value is 0.6), controlling the probability that a matching call in --sites is a true
+variant in the input sample. To turn this behavior off, set the --sites-prob value to 0.5, which implies an even chance that a matching site
 in --sites is also a true variant in the input sample. For related individuals or samples, or if the
 --sites are from a trusted source, a higher --sites-prob value is recommended e.g. --sites-prob 0.8.
 
-A final option is to use the
-
-
+If the --sites vcf file is from a previous dysgu run, the PROB values can be utilized by setting '--parse-probs True'. This
+option can work well when inputting dysgu calls from a related individual.
 
 
 Useful parameters

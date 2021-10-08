@@ -144,6 +144,18 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
+@click.option("--sites", help="A vcf file of known variant sites. All sites will be genotyped in the output vcf",
+              required=False, type=click.Path())
+@click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
+              required=False, type=click.FloatRange(0, 1), default=0.6, show_default=True)
+@click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
+              default="True", type=click.Choice(["True", "False"]),
+              show_default=True)
+@click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
+              default="False", type=click.Choice(["True", "False"]),
+              show_default=True)
+@click.option("--all-sites", help="Output a genotype for all variants in --sites",
+              required=False, default="False", type=click.Choice(["True", "False"]))
 @click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
@@ -272,8 +284,8 @@ def run_pipeline(ctx, **kwargs):
               show_default=False, default="", required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
-@click.option("-r", "--reads", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
-              default="None", type=str, show_default=True)
+# @click.option("-r", "--reads", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
+#               default="None", type=str, show_default=True)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
               type=str)
 @click.option("--compression", help="Set output bam compression level. Default is uncompressed",
@@ -317,6 +329,21 @@ def get_reads(ctx, **kwargs):
 @click.option("-o", "--svs-out", help="Output file [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
+@click.option("--sites", help="A vcf file of known variant sites. Matching output variants are labelled with 'PASS' plus the ID from --sites",
+              required=False, type=click.Path())
+@click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
+              required=False, type=click.FloatRange(0, 1), default=0.6, show_default=True)
+@click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
+              default="True", type=click.Choice(["True", "False"]),
+              show_default=True)
+@click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
+              default="False", type=click.Choice(["True", "False"]),
+              show_default=True)
+@click.option("--all-sites", help="Output a genotype for all variants in --sites",
+              required=False, default="False", type=click.Choice(["True", "False"]))
+@click.option("--hom-ref-sites", help="If set to 'True' dysgu will output all variants in --sites including homozygous reference sites with"
+                                  " genotype 0/0",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
@@ -387,7 +414,7 @@ def call_events(ctx, **kwargs):
             if os.path.exists(pth):
                 kwargs["sv_aligns"] = pth
             else:
-                raise ValueError("Could not find {} in {}".format(bname, kwargs["working_directory"]))
+                raise ValueError("Could not find '{}'".format(kwargs["sv_aligns"]))
 
     if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
         raise ValueError("Only dip=False or contigs=False are supported, not both")

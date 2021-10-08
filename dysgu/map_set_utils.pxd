@@ -1,32 +1,17 @@
 #cython: language_level=3
 
 from libcpp.vector cimport vector as cpp_vector
-from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.utility cimport pair
-from libcpp.string cimport string as cpp_string
 
 import numpy as np
 cimport numpy as np
 
-# from pysam.libcalignmentfile cimport AlignmentFile
-# from pysam.libcalignedsegment cimport AlignedSegment
-# from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
-
-
-from libc.stdint cimport uint32_t, uint8_t, uint64_t, uint16_t, int32_t, int8_t
-
+from libc.stdint cimport uint64_t, int32_t, int8_t
 
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
 
-# ctypedef Py_Int2IntVecMap[int, int_vec_t] node_dict_t
-# ctypedef Py_IntVec2IntMap[int_vec_t, int] node_dict2_r_t
-
-from cython.operator cimport dereference as deref, preincrement as inc #dereference and increment operators
-
-from libcpp cimport bool
-# from pysam.libcalignedsegment cimport bam1_t
 
 ctypedef enum ReadEnum_t:
     DISCORDANT = 0
@@ -35,8 +20,8 @@ ctypedef enum ReadEnum_t:
     INSERTION = 3
     BREAKEND = 4
 
+
 cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
-    #static uint64_t hash(const void* input, uint64_t length, uint64_t seed)
     cdef uint64_t hash(void* input, uint64_t length, uint64_t seed) nogil
 
 
@@ -85,11 +70,8 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
 cdef class Py_CoverageTrack:
     cdef public int max_coverage, current_chrom
     cdef public str outpath
-    cdef public object cov_array #np.ndarray[np.int32, ndim=1] cov_array
+    cdef public object cov_array
     cdef public object infile
-    # cdef void add(self, object a)
-    # cdef void set_cov_array(self, int rname)
-    # cdef void write_track(self)
 
 
 cdef extern from "wrap_map_set2.h" nogil:
@@ -210,6 +192,71 @@ cdef class Py_IntSet:
     cdef int size(self) nogil
 
 
+cdef extern from "<map>" namespace "std" nogil:
+    cdef cppclass multimap[T, U, COMPARE=*, ALLOCATOR=*]:
+        ctypedef T key_type
+        ctypedef U mapped_type
+        ctypedef pair[const T, U] value_type
+        ctypedef COMPARE key_compare
+        ctypedef ALLOCATOR allocator_type
+        cppclass iterator:
+            pair[T, U]& operator*()
+            iterator operator++()
+            iterator operator--()
+            bint operator==(iterator)
+            bint operator!=(iterator)
+        cppclass reverse_iterator:
+            pair[T, U]& operator*()
+            iterator operator++()
+            iterator operator--()
+            bint operator==(reverse_iterator)
+            bint operator!=(reverse_iterator)
+        cppclass const_iterator(iterator):
+            pass
+        cppclass const_reverse_iterator(reverse_iterator):
+            pass
+        multimap() except +
+        multimap(multimap&) except +
+        U& operator[](T&)
+        bint operator==(multimap&, multimap&)
+        bint operator!=(multimap&, multimap&)
+        bint operator<(multimap&, multimap&)
+        bint operator>(multimap&, multimap&)
+        bint operator<=(multimap&, multimap&)
+        bint operator>=(multimap&, multimap&)
+        U& at(const T&) except +
+        const U& const_at "at"(const T&) except +
+        iterator begin()
+        const_iterator const_begin "begin" ()
+        void clear()
+        size_t count(const T&)
+        bint empty()
+        iterator end()
+        const_iterator const_end "end" ()
+        pair[iterator, iterator] equal_range(const T&)
+        #pair[const_iterator, const_iterator] equal_range(key_type&)
+        void erase(iterator)
+        void erase(iterator, iterator)
+        size_t erase(const T&)
+        iterator find(const T&)
+        const_iterator const_find "find" (const T&)
+        pair[iterator, bint] insert(pair[T, U]) except + # XXX pair[T,U]&
+        iterator insert(iterator, pair[T, U]) except + # XXX pair[T,U]&
+        #void insert(input_iterator, input_iterator)
+        #key_compare key_comp()
+        iterator lower_bound(const T&)
+        const_iterator const_lower_bound "lower_bound"(const T&)
+        size_t max_size()
+        reverse_iterator rbegin()
+        const_reverse_iterator const_rbegin "rbegin"()
+        reverse_iterator rend()
+        const_reverse_iterator const_rend "rend"()
+        size_t size()
+        void swap(multimap&)
+        iterator upper_bound(const T&)
+        const_iterator const_upper_bound "upper_bound"(const T&)
+
+
 cdef int cigar_exists(r)
 
 
@@ -228,7 +275,7 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end) nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2) nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil
@@ -248,4 +295,4 @@ cdef class EventResult:
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
-        partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq
+        partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info

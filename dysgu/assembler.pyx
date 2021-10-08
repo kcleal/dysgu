@@ -430,16 +430,8 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
     cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
 
-    # if nodes_to_visit2.size() > 0 and nodes_to_visit2[0] == -1:
-    #     idx = nodes_to_visit2[1]
-    #     idx2 = nodes_to_visit2[2]
-    #     echo("Bad node", nodes_to_visit2[1], list(node_dict_r.keys())[idx], list(node_dict_r.keys())[idx2])
-    #
-    #     for r in rd:
-    #         echo(f"{r.rname}:{r.pos}   {r.qname}")
-    #     quit()
-
     cdef cpp_deque[int] path2
+
     path2 = score_best_path(G, nodes_to_visit2, node_weights)
 
     if path2.size() < 50:
@@ -490,11 +482,13 @@ cdef dict get_consensus(rd, int position, int max_distance):
             m = vec[0]
             sequence += lowermap[m]
         else:
+            m = vec[0]
             if ref_start == -1:
                 ref_start = vec[1]
+
             elif vec[1] > ref_end:
                 ref_end = vec[1]
-            m = vec[0]
+
             sequence += basemap[m]
 
         vec.assign(vec.size(), 0)
@@ -507,8 +501,9 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef int i, start_seq, end_seq
     cdef int original_right_sc = longest_right_sc
     end_seq = len(seq)
+
     if longest_right_sc > 0:
-        for i in range(len(seq), len(seq) - longest_right_sc, -1):
+        for i in range(len(seq) - 1, len(seq) - longest_right_sc, -1):
             if path_qual[i] < 0.5:
                 end_seq = i
         end_seq = min(len(seq) - longest_right_sc + 300, end_seq)
@@ -565,8 +560,8 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
     cdef bint started = False
     cdef int opp, length
 
-    longest_left_sc = 0
-    longest_right_sc = 0
+    cdef int longest_left_sc = 0
+    cdef int longest_right_sc = 0
 
     parts = []
     for opp, length in ct:
@@ -648,6 +643,7 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             return trim_sequence_from_cigar(r, position, max_distance)
 
         else:
+
             longest_left_sc = 0
             longest_right_sc = 0
             seq = ""
@@ -682,7 +678,6 @@ cpdef dict base_assemble(rd, int position, int max_distance):
 cpdef float compute_rep(seq):
 
     cdef unordered_map[float, int] last_visited
-    # cdef cpp_vector[float] tot
     cdef float tot_amount = 0
     cdef float total_seen = 0
     cdef int k, i, diff
@@ -702,30 +697,19 @@ cpdef float compute_rep(seq):
             a = xxhasher(sub_ptr, k, 42)
             if last_visited.find(a) != last_visited.end():
                 diff = i - last_visited[a]
-                #amount = (((diff * exp(-decay * diff)) / diff) * k) / max_amount
-
                 x = exp(-decay * diff)
                 amount = (k * x) / max_amount
 
             else:
                 amount = 0
             if i > k:
-                # tot.push_back(amount)
                 tot_amount += amount
                 total_seen += 1
             last_visited[a] = i
             sub_ptr += 1
 
-    # if tot.size() == 0:
     if total_seen == 0:
         return 0
-    # cdef float t = 0
-    # for amount in tot:
-    #     t += amount
-    # echo(t / tot.size())
-    # echo(tot_amount / total_seen)
-    # quit()
-    # return t / tot.size()
 
     return tot_amount / total_seen
 
@@ -763,7 +747,7 @@ cdef tuple get_rep(contig_seq):
         clip_rep = clip_rep / clip_seen
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
-# @timeit
+
 def contig_info(events):
 
     cdef EventResult_t e

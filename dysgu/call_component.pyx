@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 from collections import Counter, defaultdict
 import logging
-
 import numpy as np
 cimport numpy as np
 from numpy.random import normal
@@ -15,16 +14,15 @@ from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, c
 from dysgu.sv_category cimport AlignmentItem, classify_d
 from dysgu.post_call_metrics cimport soft_clip_qual_corr
 
-import warnings
 from pysam.libcalignedsegment cimport AlignedSegment
-from libc.stdint cimport uint64_t
-
 from pysam.libchtslib cimport bam_get_qname
+
+from libc.stdint cimport uint64_t
 
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import fcluster
 
-
+import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -32,6 +30,13 @@ np.random.seed(1)
 
 
 ctypedef EventResult EventResult_t
+
+ctypedef enum ReadEnum_t:
+    DISCORDANT = 0
+    SPLIT = 1
+    DELETION = 2
+    INSERTION = 3
+    BREAKEND = 4
 
 
 cdef n_aligned_bases(ct):
@@ -111,10 +116,6 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
     cdef AlignedSegment a
 
     for index, a in enumerate(itertools.chain(reads1, reads2, [i.read_a for i in generic_ins])):
-
-        # qname = a.qname
-        # if qname not in seen:
-        #     seen.add(qname)
 
         if extended_tags:
             if a.has_tag("ZP"):
@@ -481,18 +482,9 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
 
     v_item.svtype = "INS"
 
-    # Try and guess the insertion size using insert size and distance to break
-
-    # constrain length if mate is found that maps in normal orientation the other side of break
-    # max_size = -1
-    # rl = aln.infer_read_length()
-    # if v_item.left_clipA:
-    #     if not aln.flag & 2 and aln.rname == aln.rnext and aln.pnext < v_item.breakA:
-    #         max_size = insert_size - aln.tlen
-
     aln_span = aln.reference_end - aln.pos
     v_item.size_inferred = 1
-    # echo(aln.qname, aln_span, max_size)
+
     if insert_std > 0:
         rand_insert_pos = insert_size - aln_span + int(normal(0, insert_std))
     else:  # single read mode
@@ -506,6 +498,7 @@ cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
     if not asmb:
         return 0
     cdef int ref_bases = 0
+
     if spanning:
         er.contig = asmb["contig"]
         ref_bases += asmb["ref_bases"]
@@ -571,11 +564,12 @@ cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
                 er.contig2_rc = asmb["right_clips"]
 
         ref_bases += asmb["ref_bases"]
+
     return ref_bases
 
 
 cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble, spanning_alignments,
-                      extended_tags, svlen_precise, generic_ins):
+                      extended_tags, svlen_precise, generic_ins, site):
 
     cdef EventResult_t er = EventResult()
 
@@ -594,9 +588,14 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
             precise_a.append(v_item.breakA)
         if v_item.breakB_precise:
             precise_b.append(v_item.breakB)
-        u_reads.append(v_item.read_a)
+
+        if v_item.read_a is not None:
+            u_reads.append(v_item.read_a)
         if v_item.read_b is not None:
             v_reads.append(v_item.read_b)
+
+    if not u_reads and not v_reads:
+        return
 
     call_informative = Counter([(itm.svtype, itm.join_type) for itm in si]).most_common()
     svtype, jointype = call_informative[0][0]
@@ -621,6 +620,7 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     as1 = None
     as2 = None
     ref_bases = 0
+
     if to_assemble or len(spanning_alignments) > 0:
         if er.preciseA:
             as1 = assembler.base_assemble(u_reads, er.posA, 500)
@@ -628,29 +628,80 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
         if er.preciseB:
             as2 = assembler.base_assemble(v_reads, er.posB, 500)
             ref_bases += assign_contig_to_break(as2, er, "B", 0)
+
     er.linked = 0
     er.block_edge = 0
     er.ref_bases = ref_bases
     er.svlen_precise = svlen_precise  # if 0 then soft-clip will be remapped
-    if er.svlen_precise == 0:
+    if svlen_precise == 0:
         corr_score = soft_clip_qual_corr(u_reads + v_reads)
         er.sqc = corr_score
     else:
         er.sqc = -1
 
+    if site:
+        er.site_info = site
+
     return er
 
 
+def assign_sites_to_clusters(sites_info, clusters, informative, coords, cluster_count):
+
+    if cluster_count == 1 and len(sites_info) == 1:
+        return {1: informative},  {1: sites_info[0]}
+
+    clusters_d = defaultdict(list)
+    for cluster_id, v_item in zip(clusters, informative):
+        clusters_d[cluster_id].append(v_item)
+
+    # reads have cluster ids, assign any sites to these ids
+    # get the mean coords of each cluster
+    c_count = np.zeros(cluster_count)
+    x_sum = np.zeros_like(c_count)
+    y_sum = np.zeros_like(c_count)
+    for i in range(len(coords)):
+        c_id = clusters[i]
+        x_sum[c_id - 1] += coords[i, 0]  # c_id are >= 1
+        y_sum[c_id - 1] += coords[i, 1]
+        c_count[c_id - 1] += 1
+
+    m_x = x_sum / c_count
+    m_y = x_sum / c_count
+
+    c_xy = {}
+    for cluster_id in clusters_d.keys():
+        c_xy[cluster_id] = (m_x[cluster_id - 1], m_y[cluster_id - 1])
+
+    # assign sites to clusters in greedy fashion
+    sites_to_clusters = {}
+    un_partitoned = sites_info
+    c = cluster_count
+    while len(un_partitoned) > 0 and c > 0 and len(c_xy) > 0:
+        s = un_partitoned.pop()
+        best_id = -1
+        best_dist = 1e9
+        for cluster_id, (x, y) in c_xy.items():
+            sep = np.sqrt((s.start - x)**2 + (s.end - y)**2)
+            if sep < best_dist:
+                best_id = cluster_id
+                best_dist = sep
+        if best_id == -1:
+            raise ValueError("best_id", best_id, coords, sites_info, cluster_id)
+        sites_to_clusters[best_id] = s
+        del c_xy[best_id]
+        c -= 1
+
+    return clusters_d, sites_to_clusters
+
+
 cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
-                      min_support, extended_tags, to_assemble, generic_insertions):
-
-    # set upper bound on number of reads in partition
-
+                      min_support, extended_tags, to_assemble, generic_insertions, sites_info):
 
     # spanning alignments is empty
     cdef AlignmentItem v_item
     cdef int idx = 0
-    cdef np.ndarray[double, ndim=2] coords = np.zeros((len(informative), 2))
+    cdef np.ndarray[double, ndim=2] coords = np.zeros((len(informative) + len(sites_info), 2))
+    # cdef np.ndarray[double, ndim=2] coords = np.zeros((len(informative), 2))
     cdef int firstA = informative[0].breakA
     cdef int firstB = informative[0].breakB
     cdef int br_a, br_b, seperation
@@ -660,13 +711,22 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
         for v_item in informative:
             br_a = v_item.breakA
             br_b = v_item.breakB
+
             coords[idx, 0] = br_a
             coords[idx, 1] = br_b
             idx += 1
             if idx > 0 and not try_cluster:
-                seperation = np.sqrt((br_a - firstA)**2 + (br_b - firstB)**2)
-                if seperation > insert_size:
+                sep = np.sqrt((br_a - firstA)**2 + (br_b - firstB)**2)
+                if sep > insert_size:
                     try_cluster = True
+
+        # sites added here to influence clustering
+        if sites_info and len(informative) > 1:
+            try_cluster = True
+            for ii in sites_info:
+                coords[idx, 0] = ii.start
+                coords[idx, 1] = ii.end
+                idx += 1
 
     sub_cluster_calls = []
     cdef EventResult_t er
@@ -685,17 +745,46 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
                 informative[0].chrA, informative[0].breakA, len(coords)))
             return []
 
-        clusters_d = defaultdict(list)
-        for cluster_id, v_item in zip(clusters, informative):
-            clusters_d[cluster_id].append(v_item)
-        blocks = clusters_d.values()
-        for sub_informative in blocks:
-            er = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
-                                    spanning_alignments, extended_tags, 1, generic_insertions)
-            sub_cluster_calls.append(er)
+        # cluster ids start are >=1, so bincount 0 is always 0
+        cluster_count = len(np.bincount(clusters)) - 1
+
+        if sites_info:
+            # assign sites to exactly one cluster
+            clusters_d, sites_2_clusters = assign_sites_to_clusters(sites_info, clusters, informative, coords, cluster_count)
+            for cid, sub_informative in clusters_d.items():
+                if cid in sites_2_clusters:
+                    st = sites_2_clusters[cid]
+                else:
+                    st = None
+                er = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
+                                      spanning_alignments, extended_tags, 1, generic_insertions, st)
+                sub_cluster_calls.append(er)
+
+        else:
+            if cluster_count == 1:
+                er = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
+                                      spanning_alignments, extended_tags, 1, generic_insertions, None)
+                sub_cluster_calls.append(er)
+
+            else:
+                clusters_d = defaultdict(list)
+                for cluster_id, v_item in zip(clusters, informative):
+                    clusters_d[cluster_id].append(v_item)
+
+                for sub_informative in clusters_d.values():
+                    er = make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
+                                          spanning_alignments, extended_tags, 1, generic_insertions, None)
+                    sub_cluster_calls.append(er)
+
     else:
+
+        if sites_info:
+            st = sites_info[0]
+        else:
+            st = None
+
         er = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
-                                spanning_alignments, extended_tags, 1, generic_insertions)
+                              spanning_alignments, extended_tags, 1, generic_insertions, st)
 
         sub_cluster_calls.append(er)
 
@@ -703,15 +792,13 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
 
 
 cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
-                 int to_assemble, int extended_tags):
+            int to_assemble, int extended_tags, sites_info):
 
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for _, i in rds]))
-
-    show = False
 
     if n_templates == 1:
         # Filter uninteresting reads
@@ -777,8 +864,8 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     cdef str svtype, jointype
     cdef bint passed
     cdef EventResult_t er
-    if len(spanning_alignments) > 0:
 
+    if len(spanning_alignments) > 0:
         # make call from spanning alignments if possible
         svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
@@ -858,7 +945,7 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         as2 = None
         ref_bases = 0
 
-        if to_assemble: # or len(spanning_alignments) > 0:
+        if to_assemble:
             if er.preciseA:
                 as1 = assembler.base_assemble(u_reads, er.posA, 500)
                 ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
@@ -887,15 +974,19 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         return er
 
     elif len(informative) > 0:
-
         return partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
-                                min_support, extended_tags, to_assemble, [])
+                                min_support, extended_tags, to_assemble, [], sites_info)
 
     elif len(generic_insertions) > 0:
 
+        if sites_info:
+            site = sites_info[0]
+        else:
+            site = None
+
         # this is a bit confusing, generic insertions are used instead to make call, but bnd count is now 0
         return make_single_call([], insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
-                                spanning_alignments, extended_tags, 0, generic_insertions)
+                                spanning_alignments, extended_tags, 0, generic_insertions, site)
 
 
 cdef tuple informative_pair(u, v):
@@ -1131,7 +1222,6 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, -limit, median_A)
         main_B_break, cipos95B, preciseB = break_ops(positionsB, breakB_precise, limit, median_B)
 
-    # svlen_precise = 1
     svlen_precise = 0
     if informative[0].chrA == informative[0].chrB:
         if svtype == "INS":  # use inferred query gap to call svlen
@@ -1375,7 +1465,8 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
     er.ref_bases = rbases
 
 
-cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float insert_ppf, int min_support, int block_edge, int assemble, int extended_tags):
+cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float insert_ppf, int min_support,
+                     int block_edge, int assemble, int extended_tags, info):
 
     grp_u = defaultdict(list)
     grp_v = defaultdict(list)
@@ -1497,15 +1588,32 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
             if er.su < min_support:
                 continue
 
+            er.svlen_precise = 1  # prevent remapping
+
             assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
 
+            if info:
+                info = [st for st in info if st.svtype == er.svtype]
+                if len(info) > 0:
+                    if len(info) == 1:
+                        site = info[0]
+                    else:
+                        best_i = 0
+                        best_sep = 1000000000
+                        for si, site in enumerate(info):
+                            sep = np.sqrt((site.start - er.posA)**2 + (site.end - er.posB)**2)
+                            if sep < best_sep:
+                                best_sep = sep
+                                best_i = si
+                        site = info[best_i]
+                    er.site_info = site
             results.append(er)
 
     return results
 
 
 cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
-                   int min_support, int block_edge, int assemble, int extended_tags):
+                   int min_support, int block_edge, int assemble, int extended_tags, info):
     #print("starting one edge")
     spanning_alignments = []
     u_reads = []
@@ -1544,7 +1652,6 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
                                         a,
                                         cigar_index))
 
-    # info = {}
     cdef str svtype, jointype
 
     if len(spanning_alignments) > 0:
@@ -1553,6 +1660,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
 
     # make call from spanning alignments if possible
     cdef EventResult_t er
+
     if len(spanning_alignments) > 0:
 
         posA_arr = [i[2] for i in spanning_alignments]
@@ -1618,26 +1726,45 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
             er.variant_seq = best_align.seq[start_ins:start_ins+svlen]
             er.ref_seq = best_align.seq[start_ins - 1]
 
+        if info:
+            info = [i for i in info if i.svtype == er.svtype]
+            if len(info) > 0:
+                site = info[0]
+                if len(info) > 1:
+                    best_i = 0
+                    best_sep = 1000000000
+                    for si, site in enumerate(info):
+                        sep = np.sqrt((site.start - er.posA)**2 + (site.end - er.posB)**2)
+                        if sep < best_sep:
+                            best_sep = sep
+                            best_i = si
+                    site = info[best_i]
+                er.site_info = site
         return [er]
 
     else:
-        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags)
-
+        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, extended_tags, info)
         return results
 
 
 def fpos_srt(x):
     return x[0][4]
 
-cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer):
+
+cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, sites_index):
 
     cdef int j, int_node, steps
     cdef uint64_t p
     cdef uint64_t v
     cdef AlignedSegment a
+
     aligns = []
     fpos = []
+    site_info = []
     for int_node in nodes_info:
+
+        if sites_index and int_node in sites_index:
+            continue  # node is from --sites
 
         n = n2n[int_node]
         if int_node in buffered_reads:
@@ -1690,21 +1817,33 @@ cdef list get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer)
 
 
 cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support, int lower_bound_support,
-                 int assemble_contigs, int extended_tags, max_single_size):
+                 int assemble_contigs, int extended_tags, int max_single_size, info):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
+
     n2n = data["n2n"]
     seen = set(data["parts"].keys())
 
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     cdef int buffered_reads = 0  # Only buffer reads for smallish components, otherwise memory issues
     cdef bint add_to_buffer = 1
+
+    cdef int int_node
+    cdef unsigned long[:] partition
+
     events = []
+
+    if info:
+        sites_info = list(info.values())
+    else:
+        sites_info = []
+
+    # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
     for (u, v), d in data["s_between"].items():
 
-        rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer)   # [(Nodeinfo, alignment)..]
-        rd_v = get_reads(bam, d[1], data["reads"], data["n2n"], add_to_buffer)
+        rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer, info)   # [(Nodeinfo, alignment)..]
+        rd_v = get_reads(bam, d[1], data["reads"], data["n2n"], add_to_buffer, info)
 
         total_reads = len(rd_u) + len(rd_v)
 
@@ -1723,19 +1862,23 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             seen.remove(v)
 
         events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
-                               extended_tags)
+                            extended_tags, sites_info)
 
-    # Process any unconnected blocks
+    # Process any singles / unconnected blocks
     if seen:
         for part_key in seen:
             d = data["parts"][part_key]
-            if max_single_size > len(d) >= lower_bound_support:
+
+            lb = lower_bound_support if len(sites_info) == 0 else 1
+            if max_single_size > len(d) >= lb:
                 # Call single block, only collect local reads to the block
-                rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
-                if len(rds) < lower_bound_support:
+                rds = get_reads(bam, d, data["reads"], data["n2n"], 0, info)
+
+                if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
                     continue
 
-                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
+                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                             extended_tags, sites_info)
                 if res:
                     if isinstance(res, EventResult):
                         events.append(res)
@@ -1750,11 +1893,14 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             continue
 
         if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
-            rds = get_reads(bam, d, data["reads"], data["n2n"], 0)
-            if len(rds) < lower_bound_support:
-                continue
 
-            res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, extended_tags)
+            rds = get_reads(bam, d, data["reads"], data["n2n"], 0, info)
+
+            if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+                    continue
+
+            res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                         extended_tags, sites_info)
 
             if res:
                 if isinstance(res, EventResult):
@@ -1766,34 +1912,46 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support, extended_tags,
-                                 assemble_contigs, max_single_size):
+                                 assemble_contigs, max_single_size, sites_index):
 
     n_parts = len(data["parts"])
     events = []
+    if "info" in data:
+        info = data["info"]
+    else:
+        info = None
+
+    # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
     cdef EventResult_t e
     if n_parts >= 1:
         # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
-                        assemble_contigs, extended_tags, max_single_size)
+                        assemble_contigs, extended_tags, max_single_size, info)
 
     elif n_parts == 0:
         # Possible single read only
         if len(data["n2n"]) > max_single_size:
             return []
 
-        rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0)
-        if len(rds) < lower_bound_support:
+        rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0, info)
+
+        if info:
+            sites_info = list(info.values())
+        else:
+            sites_info = []
+
+        if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
             return []
 
-        ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support,
-                   assemble_contigs, extended_tags)
+        ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                    extended_tags, sites_info)
         if ev:
             if isinstance(ev, list):
                 events += ev
             else:
                 events.append(ev)
 
-    events = [e for e in events if e.svlen > 0 or e.svtype == "TRA"]
+    events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
     for e in events:
         if e.svlen_precise:
             set_ins_seq(e)

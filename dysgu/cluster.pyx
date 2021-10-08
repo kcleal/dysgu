@@ -16,6 +16,7 @@ import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
 from dysgu.map_set_utils import timeit, echo
+from dysgu import sites_utils
 import pickle
 
 import itertools
@@ -32,6 +33,9 @@ def filter_potential(input_events, tree, regions_only):
     cdef EventResult_t i
     for i in input_events:
 
+        if i.site_info:
+            potential.append(i)
+            continue
         if i.sqc is None:
             i.sqc = -1
         if i.svtype == "INS" and i.svlen_precise == 0 and not i.contig and not i.contig2:
@@ -286,9 +290,10 @@ def cut_components(G):
 
 
 cpdef srt_func(c):
+    # keeper_bias = 0 if not c.site_info else 10000
     if c.type != "pe" and c.type != "":
-        return 100 + c.su
-    return c.su + (3 * c.spanning)
+        return 100 + c.su # + keeper_bias
+    return c.su + (3 * c.spanning) # + keeper_bias
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
@@ -360,16 +365,15 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 if item.maxASsupp > w0.maxASsupp:
                     w0.maxASsupp = item.maxASsupp
 
-                if item.svtype == "DEL" and svt == "DEL":
+                if item.svtype == "DEL" and svt == "DEL": # and not w0.site_info:
                     if not spanned:
-
                         if item.spanning:
                             w0.svlen = item.svlen
 
                         elif min_size > w0.svlen < item.svlen:  # increase svlen size
                             w0.svlen = item.svlen
 
-                elif item.svtype == "INS" and svt == "INS":
+                elif item.svtype == "INS" and svt == "INS": # and not w0.site_info:
                     if not spanned:
                         if item.spanning:
                             w0.svlen = item.svlen
@@ -379,30 +383,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                             if best_var_seq == -1:
                                 w0.svlen = item.svlen
 
-                        # elif not remapped and item.remap_score > 0:  # try and use remapped seq for svlen
-                        #     var_seq = -1
-                        #     try:
-                        #         var_seq = len(item.variant_seq) if item.variant_seq is not None else -1
-                        #     except AttributeError:
-                        #         pass
-                        #     if var_seq != -1:
-                        #         w0.svlen = item.svlen
-
-                            # else:
-                            #
-                            #     left_ins, right_ins = -1, -1
-                            #     try:
-                            #         left_ins = len(item.left_ins_seq) if isinstance(item.left_ins_seq, str) else -1
-                            #     except AttributeError:
-                            #         pass
-                            #     try:
-                            #         right_ins = len(item.right_ins_seq) if isinstance(item.right_ins_seq, str) else -1
-                            #     except AttributeError:
-                            #         pass
-                            #     m = max(left_ins, right_ins)
-                            #     if m == -1:
-                            #         echo("hi", w0.svlen, m)
-                            #         w0.svlen = int(m + w0.svlen / 2)
                         # update var seq
                         if best_var_seq is None and isinstance(item.variant_seq, str):
                             w0.variant_seq = item.variant_seq
@@ -644,8 +624,8 @@ def find_repeat_expansions(events, insert_stdev):
 
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
-                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size, max_single_size
-                  ):
+                  merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size, max_single_size,
+                  sites_index):
 
     potential_events = []
     grp_id = event_id
@@ -660,7 +640,8 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       lower_bound_support,
                                                       extended_tags,
                                                       assemble_contigs,
-                                                      max_single_size):
+                                                      max_single_size,
+                                                      sites_index):
 
         if event:
             event.grp_id = grp_id
@@ -683,7 +664,7 @@ def process_job(msg_queue, args):
 
     job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs, rel_diffs, diffs, min_size,\
-        max_single_size, = args
+        max_single_size, sites_index = args
 
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
@@ -712,7 +693,7 @@ def process_job(msg_queue, args):
                                                    extended_tags,
                                                    assemble_contigs,
                                                    rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
-                                                   max_single_size=max_single_size)
+                                                   max_single_size=max_single_size, sites_index=sites_index)
 
         if potential_events:
             for res in potential_events:
@@ -795,8 +776,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     read_buffer = genome_scanner.read_buffer
 
+    # Iterator over input sites
+    sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
+                                        default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
+
     t5 = time.time()
-    G, node_to_name, bad_clip_counter = graph.construct_graph(genome_scanner,
+    G, node_to_name, bad_clip_counter, sites_adder = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
@@ -815,7 +800,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             contigs=args["contigs"],
                                             norm_thresh=args["dist_norm"],
                                             spd_thresh=args["spd"],
-                                            mm_only=args["regions_mm_only"] == "True")
+                                            mm_only=args["regions_mm_only"] == "True",
+                                            sites=sites_info)
+
+    sites_index = None
+    if sites_adder:
+        sites_index = sites_adder.sites_index
 
     logging.info("Graph constructed")
 
@@ -864,7 +854,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             proc_args = (
                 job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, extended_tags, assemble_contigs,
-                rel_diffs, diffs, min_size, max_single_size
+                rel_diffs, diffs, min_size, max_single_size, sites_index
             )
 
             p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
@@ -894,7 +884,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                 component[ci] = cmp[cmp_idx]
                 ci += 1
 
-            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support, args["procs"], paired_end)
+            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
+                                       args["procs"], paired_end, sites_index)
 
             if res:
 
@@ -914,7 +905,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                                                extended_tags,
                                                                assemble_contigs,
                                                                rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
-                                                               max_single_size=max_single_size)
+                                                               max_single_size=max_single_size,
+                                                               sites_index=sites_index)
 
                     if potential_events:
                         block_edge_events += potential_events
@@ -965,8 +957,11 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
             os.remove(f"{tdir}/job_{p}.done.pkl")
 
-    #
     logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
+
+    keeps = len([i for i in block_edge_events if i.site_info])
+    if keeps:
+        logging.info("Number of matching SVs from --sites {}".format(keeps))
 
     preliminaries = []
     if args["remap"] == "True" and args["contigs"] == "True":
@@ -986,11 +981,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     # Filter for absolute support and size here
     before = len(merged)
+
     if not args["keep_small"]:
-        merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and event.su >= args["min_support"]]
+        # todo decide on this
+        merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
+        # merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and event.su >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
     else:
-        merged = [event for event in merged if event.su >= args["min_support"]]
+        merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
         logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
 
     # Add read-type information
@@ -1013,10 +1011,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call_metrics.compressability(preliminaries)
-    preliminaries = post_call_metrics.get_gt_metric(preliminaries, add_gt=args["no_gt"])
+    preliminaries = post_call_metrics.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
 
     # This has to be called after the genotype step, raw coverage values are needed
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
+
+    preliminaries = post_call_metrics.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:
@@ -1026,7 +1026,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         logging.critical("No events found")
         quit()
 
-    return preliminaries, extended_tags
+    return preliminaries, extended_tags, sites_adder
 
 
 def cluster_reads(args):
@@ -1111,7 +1111,7 @@ def cluster_reads(args):
     regions = io_funcs.overlap_regions(args["regions"])
 
     # Run dysgu here:
-    events, extended_tags = pipe1(args, infile, kind, regions, ibam, ref_genome)
+    events, extended_tags, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome)
 
     df = pd.DataFrame.from_records([e.to_dict() for e in events])
     if not extended_tags:
@@ -1119,6 +1119,13 @@ def cluster_reads(args):
             del df[cl]
 
     df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"], args["thresholds"])
+
+    if args["sites"]:
+        df = post_call_metrics.update_prob_at_sites(df, events, args["thresholds"], parse_probs=args["parse_probs"] == "True",
+                                        default_prob=args["sites_prob"])
+        df["site_id"] = ["." if not s else s.id for s in df["site_info"]]
+        if args["all_sites"] == "True":
+            df = sites_utils.append_uncalled(df, site_adder, infile, parse_probs=args["parse_probs"] == "True")
 
     if len(df) > 0:
         df = df.sort_values(["kind", "chrA", "posA"])

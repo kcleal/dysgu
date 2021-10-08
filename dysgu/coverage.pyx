@@ -140,7 +140,7 @@ def get_insert_params(L, mads=8):  # default for lumpy is 10
     L = [v for v in L if v < upper_cutoff]
     new_len = len(L)
     removed = c - new_len
-    logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
+    logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
     mean, stdev = mean_std(L)
     return mean, stdev
 

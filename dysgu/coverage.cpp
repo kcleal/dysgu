@@ -2955,6 +2955,7 @@ static const char __pyx_k_GenomeScanner_get_read_length[] = "GenomeScanner.get_r
 static const char __pyx_k_merge_intervals_locals_lambda[] = "merge_intervals.<locals>.<lambda>";
 static const char __pyx_k_unable_to_allocate_array_data[] = "unable to allocate array data.";
 static const char __pyx_k_strided_and_direct_or_indirect[] = "<strided and direct or indirect>";
+static const char __pyx_k_Calculating_insert_size_Removed[] = "Calculating insert size. Removed {} outliers with insert size >= {}";
 static const char __pyx_k_Cant_infer_read_length_after_10[] = "Cant infer read length after 10 million reads, is max-tlen < 8000?";
 static const char __pyx_k_Cant_infer_read_length_no_reads[] = "Cant infer read length, no reads?";
 static const char __pyx_k_Not_possible_to_use_index_stats[] = "Not possible to use index_stats on a cram file";
@@ -2973,7 +2974,6 @@ static const char __pyx_k_Max_cov_estimated_as_5_Set_manua[] = "Max-cov estimate
 static const char __pyx_k_Not_possible_to_use_max_cov_auto[] = "Not possible to use max-cov == 'auto' with stdin";
 static const char __pyx_k_Out_of_bounds_on_buffer_access_a[] = "Out of bounds on buffer access (axis %d)";
 static const char __pyx_k_Read_buffer_has_overflowed_incre[] = "Read buffer has overflowed, increase --buffer-size";
-static const char __pyx_k_Removed_outliers_with_insert_siz[] = "Removed {} outliers with insert size >= {}";
 static const char __pyx_k_Unable_to_convert_item_to_object[] = "Unable to convert item to object";
 static const char __pyx_k_got_differing_extents_in_dimensi[] = "got differing extents in dimension %d (got %d and %d)";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
@@ -2985,6 +2985,7 @@ static PyObject *__pyx_n_s_AlignmentFile;
 static PyObject *__pyx_kp_u_Auto_max_cov_estimated_x;
 static PyObject *__pyx_n_s_BufferError;
 static PyObject *__pyx_kp_s_Buffer_view_does_not_expose_stri;
+static PyObject *__pyx_kp_u_Calculating_insert_size_Removed;
 static PyObject *__pyx_kp_s_Can_only_create_a_buffer_that_is;
 static PyObject *__pyx_kp_s_Cannot_assign_to_read_only_memor;
 static PyObject *__pyx_kp_s_Cannot_create_writable_memory_vi;
@@ -3023,7 +3024,6 @@ static PyObject *__pyx_kp_s_Out_of_bounds_on_buffer_access_a;
 static PyObject *__pyx_n_s_PickleError;
 static PyObject *__pyx_kp_u_Read_buffer_has_overflowed_incre;
 static PyObject *__pyx_kp_u_Read_length;
-static PyObject *__pyx_kp_u_Removed_outliers_with_insert_siz;
 static PyObject *__pyx_n_u_SA;
 static PyObject *__pyx_kp_u_Total_input_reads;
 static PyObject *__pyx_n_s_TypeError;
@@ -6679,7 +6679,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
  *     L = [v for v in L if v < upper_cutoff]
  *     new_len = len(L)             # <<<<<<<<<<<<<<
  *     removed = c - new_len
- *     logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
+ *     logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
  */
   __pyx_t_1 = PyObject_Length(__pyx_v_L); if (unlikely(__pyx_t_1 == ((Py_ssize_t)-1))) __PYX_ERR(0, 141, __pyx_L1_error)
   __pyx_t_4 = PyInt_FromSsize_t(__pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 141, __pyx_L1_error)
@@ -6691,7 +6691,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
  *     L = [v for v in L if v < upper_cutoff]
  *     new_len = len(L)
  *     removed = c - new_len             # <<<<<<<<<<<<<<
- *     logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
+ *     logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
  *     mean, stdev = mean_std(L)
  */
   __pyx_t_4 = PyNumber_Subtract(__pyx_v_c, __pyx_v_new_len); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 142, __pyx_L1_error)
@@ -6702,7 +6702,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
   /* "dysgu/coverage.pyx":143
  *     new_len = len(L)
  *     removed = c - new_len
- *     logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))             # <<<<<<<<<<<<<<
+ *     logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))             # <<<<<<<<<<<<<<
  *     mean, stdev = mean_std(L)
  *     return mean, stdev
  */
@@ -6711,7 +6711,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
   __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_info); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Removed_outliers_with_insert_siz, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_kp_u_Calculating_insert_size_Removed, __pyx_n_s_format); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 143, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_t_9 = NULL;
   __pyx_t_10 = 0;
@@ -6778,7 +6778,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
 
   /* "dysgu/coverage.pyx":144
  *     removed = c - new_len
- *     logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
+ *     logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
  *     mean, stdev = mean_std(L)             # <<<<<<<<<<<<<<
  *     return mean, stdev
  * 
@@ -6852,7 +6852,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_12get_insert_params(CYTHON_UNUSED PyO
   __pyx_t_2 = 0;
 
   /* "dysgu/coverage.pyx":145
- *     logging.info("Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
+ *     logging.info("Calculating insert size. Removed {} outliers with insert size >= {}".format(removed, upper_cutoff))
  *     mean, stdev = mean_std(L)
  *     return mean, stdev             # <<<<<<<<<<<<<<
  * 
@@ -30161,6 +30161,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_Auto_max_cov_estimated_x, __pyx_k_Auto_max_cov_estimated_x, sizeof(__pyx_k_Auto_max_cov_estimated_x), 0, 1, 0, 0},
   {&__pyx_n_s_BufferError, __pyx_k_BufferError, sizeof(__pyx_k_BufferError), 0, 0, 1, 1},
   {&__pyx_kp_s_Buffer_view_does_not_expose_stri, __pyx_k_Buffer_view_does_not_expose_stri, sizeof(__pyx_k_Buffer_view_does_not_expose_stri), 0, 0, 1, 0},
+  {&__pyx_kp_u_Calculating_insert_size_Removed, __pyx_k_Calculating_insert_size_Removed, sizeof(__pyx_k_Calculating_insert_size_Removed), 0, 1, 0, 0},
   {&__pyx_kp_s_Can_only_create_a_buffer_that_is, __pyx_k_Can_only_create_a_buffer_that_is, sizeof(__pyx_k_Can_only_create_a_buffer_that_is), 0, 0, 1, 0},
   {&__pyx_kp_s_Cannot_assign_to_read_only_memor, __pyx_k_Cannot_assign_to_read_only_memor, sizeof(__pyx_k_Cannot_assign_to_read_only_memor), 0, 0, 1, 0},
   {&__pyx_kp_s_Cannot_create_writable_memory_vi, __pyx_k_Cannot_create_writable_memory_vi, sizeof(__pyx_k_Cannot_create_writable_memory_vi), 0, 0, 1, 0},
@@ -30199,7 +30200,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_PickleError, __pyx_k_PickleError, sizeof(__pyx_k_PickleError), 0, 0, 1, 1},
   {&__pyx_kp_u_Read_buffer_has_overflowed_incre, __pyx_k_Read_buffer_has_overflowed_incre, sizeof(__pyx_k_Read_buffer_has_overflowed_incre), 0, 1, 0, 0},
   {&__pyx_kp_u_Read_length, __pyx_k_Read_length, sizeof(__pyx_k_Read_length), 0, 1, 0, 0},
-  {&__pyx_kp_u_Removed_outliers_with_insert_siz, __pyx_k_Removed_outliers_with_insert_siz, sizeof(__pyx_k_Removed_outliers_with_insert_siz), 0, 1, 0, 0},
   {&__pyx_n_u_SA, __pyx_k_SA, sizeof(__pyx_k_SA), 0, 1, 0, 1},
   {&__pyx_kp_u_Total_input_reads, __pyx_k_Total_input_reads, sizeof(__pyx_k_Total_input_reads), 0, 1, 0, 0},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
