@@ -80,11 +80,7 @@ This is achieved using the `fetch` command, which can be run independently if ne
     dysgu fetch samp1_temp input.bam
 
 
-For example, to save time, `dysgu fetch` can be run in a stream during mapping/sorting. In the example below, dysgu reads from stdin and
-all SV associated reads will be placed in `temp_dir/temp_dir.dysgu_reads.bam`, and all input alignments will be placed in all_reads.bam::
-
-    dysgu fetch -r all_reads.bam temp_dir -
-
+All SV associated reads will be placed in `samp1_temp/input.dysgu_reads.bam`.
 The next stage of the pipeline is to call SVs using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
 size metrics from the main alignment file. If this is not provided, dysgu will use the input.bam in the samp1_temp folder which may be less accurate. Alternatively,
 the insert size can be specified manually using the -I option::
@@ -143,6 +139,36 @@ clustering of reads. When set to 'True', dysgu will only use minimizer based clu
 by --regions.
 
 Also of note, it is possible to use --exclude, --search, and --regions at the same time.
+
+
+Genotype list of sites
+----------------------
+Calls from multiple samples can be merged into a unified site list::
+
+    dysgu merge sample1.vcf sample2.vcf ... > merged.vcf
+
+This list can be used to re-genotype at the sample level::
+
+    dysgu run --sites merged.vcf ref.fa wd sample1.bam > sample1.re_geno.vcf
+
+Dysgu can also accept --sites from other sources or SV callers, for example calls from other SV callers or read-types can be provided::
+
+    dysgu run --sites manta.diploidSVs.vcf ref.fa wd sample1.bam > sample1.vcf
+
+This can especially help discovery of events with low read-support.
+
+To output all variants in --sites including those with genotype 0/0 in the input sample, set '--all-sites True'.
+
+By default if a matching call is found in both --sites and the input sample, then the probability value
+(PROB value in the FORMAT field of the vcf) of the call will be modified. This behavior can be controlled by setting the
+--sites-prob option (default value is 0.6), controlling the probability that a matching call in merged.vcf is a true
+variant. To turn this behavior off, set the --sites-prob value to 0.5, which implies an even chance that a matching site
+in --sites is also a true variant in the input sample. For related individuals or samples, or if the
+--sites are from a trusted source, a higher --sites-prob value is recommended e.g. --sites-prob 0.8.
+
+A final option is to use the
+
+
 
 
 Useful parameters
