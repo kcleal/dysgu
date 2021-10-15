@@ -37,6 +37,7 @@ defaults = {
             "pl": "pe",
             "remap": "True",
             "drop_gaps": "True",
+            "trust_ins_len": "True"
             }
 
 
@@ -47,6 +48,7 @@ presets = {"nanopore": {"mq": 20,
                         "pl": "nanopore",
                         "remap": "False",
                         "clip_length": -1,
+                        "trust_ins_len": False
                         },
            "pacbio": {"mq": 20,
                       "min_support": 2,
@@ -55,6 +57,7 @@ presets = {"nanopore": {"mq": 20,
                       "pl": "pacbio",
                       "remap": "False",
                       "clip_length": -1,
+                      "trust_ins_len": True
                       },
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
@@ -62,6 +65,7 @@ presets = {"nanopore": {"mq": 20,
                   "max_cov": defaults["max_cov"],
                   "pl": defaults["pl"],
                   "remap": defaults["remap"],
+                  "trust_ins_len": defaults["trust_ins_len"]
                   },
            }
 
@@ -167,8 +171,8 @@ def cli():
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200. "
-                             "nanopore: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 900",
+                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200 --trust-ins-len True. "
+                             "nanopore: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 900 --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -186,6 +190,8 @@ def cli():
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
+@click.option('--trust-ins-len', help="Trust insertion length from cigar, for high error rate reads use False",
+              default=defaults["trust_ins_len"], type=click.Choice(["True", "False"]), show_default=True, callback=add_option_set)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
@@ -366,6 +372,8 @@ def get_reads(ctx, **kwargs):
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
+@click.option('--trust-ins-len', help="Trust insertion length from cigar, for high error rate reads use False",
+              default=defaults["trust_ins_len"], type=click.Choice(["True", "False"]), show_default=True, callback=add_option_set)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))

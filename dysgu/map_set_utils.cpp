@@ -10389,9 +10389,9 @@ static int __pyx_f_5dysgu_13map_set_utils_is_reciprocal_overlapping(int __pyx_v_
 /* "dysgu/map_set_utils.pyx":260
  * 
  * 
- * cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:             # <<<<<<<<<<<<<<
- *     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+ * cdef bint span_position_distance2(int x1, int x2, int y1, int y2):             # <<<<<<<<<<<<<<
  *     cdef int span1, span2, max_span
+ *     cdef float span_distance, position_distance, center1, center2
  */
 
 static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1, int __pyx_v_x2, int __pyx_v_y1, int __pyx_v_y2) {
@@ -10415,7 +10415,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("span_position_distance2", 0);
 
-  /* "dysgu/map_set_utils.pyx":264
+  /* "dysgu/map_set_utils.pyx":263
  *     cdef int span1, span2, max_span
  *     cdef float span_distance, position_distance, center1, center2
  *     if x1 == x2:             # <<<<<<<<<<<<<<
@@ -10425,7 +10425,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   __pyx_t_1 = ((__pyx_v_x1 == __pyx_v_x2) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":265
+    /* "dysgu/map_set_utils.pyx":264
  *     cdef float span_distance, position_distance, center1, center2
  *     if x1 == x2:
  *         span1 = 1             # <<<<<<<<<<<<<<
@@ -10434,7 +10434,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
  */
     __pyx_v_span1 = 1;
 
-    /* "dysgu/map_set_utils.pyx":266
+    /* "dysgu/map_set_utils.pyx":265
  *     if x1 == x2:
  *         span1 = 1
  *         center1 = x1             # <<<<<<<<<<<<<<
@@ -10443,7 +10443,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
  */
     __pyx_v_center1 = __pyx_v_x1;
 
-    /* "dysgu/map_set_utils.pyx":264
+    /* "dysgu/map_set_utils.pyx":263
  *     cdef int span1, span2, max_span
  *     cdef float span_distance, position_distance, center1, center2
  *     if x1 == x2:             # <<<<<<<<<<<<<<
@@ -10453,7 +10453,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
     goto __pyx_L3;
   }
 
-  /* "dysgu/map_set_utils.pyx":268
+  /* "dysgu/map_set_utils.pyx":267
  *         center1 = x1
  *     else:
  *         span1 = c_abs(x2 - x1)             # <<<<<<<<<<<<<<
@@ -10463,7 +10463,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   /*else*/ {
     __pyx_v_span1 = abs((__pyx_v_x2 - __pyx_v_x1));
 
-    /* "dysgu/map_set_utils.pyx":269
+    /* "dysgu/map_set_utils.pyx":268
  *     else:
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2             # <<<<<<<<<<<<<<
@@ -10474,7 +10474,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   }
   __pyx_L3:;
 
-  /* "dysgu/map_set_utils.pyx":270
+  /* "dysgu/map_set_utils.pyx":269
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:             # <<<<<<<<<<<<<<
@@ -10484,7 +10484,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   __pyx_t_1 = ((__pyx_v_y1 == __pyx_v_y2) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":271
+    /* "dysgu/map_set_utils.pyx":270
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:
  *         span2 = 1             # <<<<<<<<<<<<<<
@@ -10493,7 +10493,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
  */
     __pyx_v_span2 = 1;
 
-    /* "dysgu/map_set_utils.pyx":272
+    /* "dysgu/map_set_utils.pyx":271
  *     if y1 == y2:
  *         span2 = 1
  *         center2 = y2             # <<<<<<<<<<<<<<
@@ -10502,7 +10502,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
  */
     __pyx_v_center2 = __pyx_v_y2;
 
-    /* "dysgu/map_set_utils.pyx":270
+    /* "dysgu/map_set_utils.pyx":269
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:             # <<<<<<<<<<<<<<
@@ -10512,7 +10512,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
     goto __pyx_L4;
   }
 
-  /* "dysgu/map_set_utils.pyx":274
+  /* "dysgu/map_set_utils.pyx":273
  *         center2 = y2
  *     else:
  *         span2 = c_abs(y2 - y1)             # <<<<<<<<<<<<<<
@@ -10522,29 +10522,29 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   /*else*/ {
     __pyx_v_span2 = abs((__pyx_v_y2 - __pyx_v_y1));
 
-    /* "dysgu/map_set_utils.pyx":275
+    /* "dysgu/map_set_utils.pyx":274
  *     else:
  *         span2 = c_abs(y2 - y1)
  *         center2 = (y1 + y2) / 2             # <<<<<<<<<<<<<<
  * 
- *     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+ *     position_distance = c_fabs(center1 - center2)
  */
     __pyx_v_center2 = (((double)(__pyx_v_y1 + __pyx_v_y2)) / 2.0);
   }
   __pyx_L4:;
 
-  /* "dysgu/map_set_utils.pyx":277
+  /* "dysgu/map_set_utils.pyx":276
  *         center2 = (y1 + y2) / 2
  * 
- *     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer             # <<<<<<<<<<<<<<
+ *     position_distance = c_fabs(center1 - center2)             # <<<<<<<<<<<<<<
  *     if position_distance > 2000:
  *         return 0
  */
   __pyx_v_position_distance = fabs((__pyx_v_center1 - __pyx_v_center2));
 
-  /* "dysgu/map_set_utils.pyx":278
+  /* "dysgu/map_set_utils.pyx":277
  * 
- *     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+ *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:             # <<<<<<<<<<<<<<
  *         return 0
  *     max_span = max(span1, span2)
@@ -10552,8 +10552,8 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   __pyx_t_1 = ((__pyx_v_position_distance > 2000.0) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":279
- *     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+    /* "dysgu/map_set_utils.pyx":278
+ *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:
  *         return 0             # <<<<<<<<<<<<<<
  *     max_span = max(span1, span2)
@@ -10562,21 +10562,21 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":278
+    /* "dysgu/map_set_utils.pyx":277
  * 
- *     position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+ *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:             # <<<<<<<<<<<<<<
  *         return 0
  *     max_span = max(span1, span2)
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":280
+  /* "dysgu/map_set_utils.pyx":279
  *     if position_distance > 2000:
  *         return 0
  *     max_span = max(span1, span2)             # <<<<<<<<<<<<<<
  *     span_distance = <float>c_abs(span1 - span2) / max_span
- *     # echo("pd", position_distance, center1, center2)
+ *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:
  */
   __pyx_t_2 = __pyx_v_span2;
   __pyx_t_3 = __pyx_v_span1;
@@ -10587,30 +10587,30 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   }
   __pyx_v_max_span = __pyx_t_4;
 
-  /* "dysgu/map_set_utils.pyx":281
+  /* "dysgu/map_set_utils.pyx":280
  *         return 0
  *     max_span = max(span1, span2)
  *     span_distance = <float>c_abs(span1 - span2) / max_span             # <<<<<<<<<<<<<<
- *     # echo("pd", position_distance, center1, center2)
- *     # echo((position_distance / max_span), span_distance, center1, center2 )
+ *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:
+ *         return 1
  */
   __pyx_t_5 = ((float)abs((__pyx_v_span1 - __pyx_v_span2)));
   if (unlikely(__pyx_v_max_span == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 281, __pyx_L1_error)
+    __PYX_ERR(0, 280, __pyx_L1_error)
   }
   __pyx_v_span_distance = (__pyx_t_5 / ((float)__pyx_v_max_span));
 
-  /* "dysgu/map_set_utils.pyx":284
- *     # echo("pd", position_distance, center1, center2)
- *     # echo((position_distance / max_span), span_distance, center1, center2 )
+  /* "dysgu/map_set_utils.pyx":281
+ *     max_span = max(span1, span2)
+ *     span_distance = <float>c_abs(span1 - span2) / max_span
  *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:             # <<<<<<<<<<<<<<
- *     # if position_distance < 100 and span_distance < 0.08:
  *         return 1
+ *     return 0
  */
   if (unlikely(__pyx_v_max_span == 0)) {
     PyErr_SetString(PyExc_ZeroDivisionError, "float division");
-    __PYX_ERR(0, 284, __pyx_L1_error)
+    __PYX_ERR(0, 281, __pyx_L1_error)
   }
   __pyx_t_6 = (((__pyx_v_position_distance / ((float)__pyx_v_max_span)) < 0.2) != 0);
   if (__pyx_t_6) {
@@ -10623,9 +10623,9 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   __pyx_L7_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":286
+    /* "dysgu/map_set_utils.pyx":282
+ *     span_distance = <float>c_abs(span1 - span2) / max_span
  *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:
- *     # if position_distance < 100 and span_distance < 0.08:
  *         return 1             # <<<<<<<<<<<<<<
  *     return 0
  * 
@@ -10633,17 +10633,17 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
     __pyx_r = 1;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":284
- *     # echo("pd", position_distance, center1, center2)
- *     # echo((position_distance / max_span), span_distance, center1, center2 )
+    /* "dysgu/map_set_utils.pyx":281
+ *     max_span = max(span1, span2)
+ *     span_distance = <float>c_abs(span1 - span2) / max_span
  *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:             # <<<<<<<<<<<<<<
- *     # if position_distance < 100 and span_distance < 0.08:
  *         return 1
+ *     return 0
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":287
- *     # if position_distance < 100 and span_distance < 0.08:
+  /* "dysgu/map_set_utils.pyx":283
+ *     if (position_distance / max_span) < 0.2 and span_distance < 0.3:
  *         return 1
  *     return 0             # <<<<<<<<<<<<<<
  * 
@@ -10655,9 +10655,9 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   /* "dysgu/map_set_utils.pyx":260
  * 
  * 
- * cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:             # <<<<<<<<<<<<<<
- *     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+ * cdef bint span_position_distance2(int x1, int x2, int y1, int y2):             # <<<<<<<<<<<<<<
  *     cdef int span1, span2, max_span
+ *     cdef float span_distance, position_distance, center1, center2
  */
 
   /* function exit code */
@@ -10669,15 +10669,15 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance2(int __pyx_v_x1
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":290
+/* "dysgu/map_set_utils.pyx":286
  * 
  * 
  * cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,             # <<<<<<<<<<<<<<
- *                                  bint paired_end, int cigar_len1, int cigar_len2) nogil:
+ *                                  bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil:
  *     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
  */
 
-static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1, int __pyx_v_x2, int __pyx_v_y1, int __pyx_v_y2, float __pyx_v_norm, float __pyx_v_thresh, __pyx_t_5dysgu_13map_set_utils_ReadEnum_t __pyx_v_read_enum, int __pyx_v_paired_end, int __pyx_v_cigar_len1, int __pyx_v_cigar_len2) {
+static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1, int __pyx_v_x2, int __pyx_v_y1, int __pyx_v_y2, float __pyx_v_norm, float __pyx_v_thresh, __pyx_t_5dysgu_13map_set_utils_ReadEnum_t __pyx_v_read_enum, int __pyx_v_paired_end, int __pyx_v_cigar_len1, int __pyx_v_cigar_len2, int __pyx_v_trust_ins_len) {
   int __pyx_v_span1;
   int __pyx_v_span2;
   int __pyx_v_max_span;
@@ -10696,42 +10696,48 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
 
-  /* "dysgu/map_set_utils.pyx":295
+  /* "dysgu/map_set_utils.pyx":291
  *     cdef int span1, span2, max_span
  *     cdef float span_distance, position_distance, center1, center2
  *     if read_enum == BREAKEND:             # <<<<<<<<<<<<<<
  *         return 0
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
  */
   __pyx_t_1 = ((__pyx_v_read_enum == __pyx_e_5dysgu_13map_set_utils_BREAKEND) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":296
+    /* "dysgu/map_set_utils.pyx":292
  *     cdef float span_distance, position_distance, center1, center2
  *     if read_enum == BREAKEND:
  *         return 0             # <<<<<<<<<<<<<<
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
  *         span1 = cigar_len1
  */
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":295
+    /* "dysgu/map_set_utils.pyx":291
  *     cdef int span1, span2, max_span
  *     cdef float span_distance, position_distance, center1, center2
  *     if read_enum == BREAKEND:             # <<<<<<<<<<<<<<
  *         return 0
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":297
+  /* "dysgu/map_set_utils.pyx":293
  *     if read_enum == BREAKEND:
  *         return 0
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:             # <<<<<<<<<<<<<<
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:             # <<<<<<<<<<<<<<
  *         span1 = cigar_len1
  *         span2 = cigar_len2
  */
+  __pyx_t_2 = (__pyx_v_trust_ins_len != 0);
+  if (__pyx_t_2) {
+  } else {
+    __pyx_t_1 = __pyx_t_2;
+    goto __pyx_L5_bool_binop_done;
+  }
   __pyx_t_2 = ((__pyx_v_read_enum == __pyx_e_5dysgu_13map_set_utils_INSERTION) != 0);
   if (__pyx_t_2) {
   } else {
@@ -10749,17 +10755,17 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   __pyx_L5_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":298
+    /* "dysgu/map_set_utils.pyx":294
  *         return 0
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
  *         span1 = cigar_len1             # <<<<<<<<<<<<<<
  *         span2 = cigar_len2
  *         center1 = x1
  */
     __pyx_v_span1 = __pyx_v_cigar_len1;
 
-    /* "dysgu/map_set_utils.pyx":299
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+    /* "dysgu/map_set_utils.pyx":295
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
  *         span1 = cigar_len1
  *         span2 = cigar_len2             # <<<<<<<<<<<<<<
  *         center1 = x1
@@ -10767,7 +10773,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
     __pyx_v_span2 = __pyx_v_cigar_len2;
 
-    /* "dysgu/map_set_utils.pyx":300
+    /* "dysgu/map_set_utils.pyx":296
  *         span1 = cigar_len1
  *         span2 = cigar_len2
  *         center1 = x1             # <<<<<<<<<<<<<<
@@ -10776,7 +10782,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
     __pyx_v_center1 = __pyx_v_x1;
 
-    /* "dysgu/map_set_utils.pyx":301
+    /* "dysgu/map_set_utils.pyx":297
  *         span2 = cigar_len2
  *         center1 = x1
  *         center2 = y1             # <<<<<<<<<<<<<<
@@ -10785,17 +10791,17 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
     __pyx_v_center2 = __pyx_v_y1;
 
-    /* "dysgu/map_set_utils.pyx":297
+    /* "dysgu/map_set_utils.pyx":293
  *     if read_enum == BREAKEND:
  *         return 0
- *     if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:             # <<<<<<<<<<<<<<
+ *     if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:             # <<<<<<<<<<<<<<
  *         span1 = cigar_len1
  *         span2 = cigar_len2
  */
     goto __pyx_L4;
   }
 
-  /* "dysgu/map_set_utils.pyx":303
+  /* "dysgu/map_set_utils.pyx":299
  *         center2 = y1
  *     else:
  *         if x1 == x2:             # <<<<<<<<<<<<<<
@@ -10806,7 +10812,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     __pyx_t_1 = ((__pyx_v_x1 == __pyx_v_x2) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/map_set_utils.pyx":304
+      /* "dysgu/map_set_utils.pyx":300
  *     else:
  *         if x1 == x2:
  *             span1 = 1             # <<<<<<<<<<<<<<
@@ -10815,7 +10821,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_span1 = 1;
 
-      /* "dysgu/map_set_utils.pyx":305
+      /* "dysgu/map_set_utils.pyx":301
  *         if x1 == x2:
  *             span1 = 1
  *             center1 = x1             # <<<<<<<<<<<<<<
@@ -10824,17 +10830,17 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_center1 = __pyx_v_x1;
 
-      /* "dysgu/map_set_utils.pyx":303
+      /* "dysgu/map_set_utils.pyx":299
  *         center2 = y1
  *     else:
  *         if x1 == x2:             # <<<<<<<<<<<<<<
  *             span1 = 1
  *             center1 = x1
  */
-      goto __pyx_L8;
+      goto __pyx_L9;
     }
 
-    /* "dysgu/map_set_utils.pyx":307
+    /* "dysgu/map_set_utils.pyx":303
  *             center1 = x1
  *         else:
  *             span1 = c_abs(x2 - x1)             # <<<<<<<<<<<<<<
@@ -10844,7 +10850,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     /*else*/ {
       __pyx_v_span1 = abs((__pyx_v_x2 - __pyx_v_x1));
 
-      /* "dysgu/map_set_utils.pyx":308
+      /* "dysgu/map_set_utils.pyx":304
  *         else:
  *             span1 = c_abs(x2 - x1)
  *             center1 = (x1 + x2) / 2             # <<<<<<<<<<<<<<
@@ -10853,9 +10859,9 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_center1 = (((double)(__pyx_v_x1 + __pyx_v_x2)) / 2.0);
     }
-    __pyx_L8:;
+    __pyx_L9:;
 
-    /* "dysgu/map_set_utils.pyx":309
+    /* "dysgu/map_set_utils.pyx":305
  *             span1 = c_abs(x2 - x1)
  *             center1 = (x1 + x2) / 2
  *         if y1 == y2:             # <<<<<<<<<<<<<<
@@ -10865,7 +10871,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     __pyx_t_1 = ((__pyx_v_y1 == __pyx_v_y2) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/map_set_utils.pyx":310
+      /* "dysgu/map_set_utils.pyx":306
  *             center1 = (x1 + x2) / 2
  *         if y1 == y2:
  *             span2 = 1             # <<<<<<<<<<<<<<
@@ -10874,7 +10880,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_span2 = 1;
 
-      /* "dysgu/map_set_utils.pyx":311
+      /* "dysgu/map_set_utils.pyx":307
  *         if y1 == y2:
  *             span2 = 1
  *             center2 = y2             # <<<<<<<<<<<<<<
@@ -10883,17 +10889,17 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_center2 = __pyx_v_y2;
 
-      /* "dysgu/map_set_utils.pyx":309
+      /* "dysgu/map_set_utils.pyx":305
  *             span1 = c_abs(x2 - x1)
  *             center1 = (x1 + x2) / 2
  *         if y1 == y2:             # <<<<<<<<<<<<<<
  *             span2 = 1
  *             center2 = y2
  */
-      goto __pyx_L9;
+      goto __pyx_L10;
     }
 
-    /* "dysgu/map_set_utils.pyx":313
+    /* "dysgu/map_set_utils.pyx":309
  *             center2 = y2
  *         else:
  *             span2 = c_abs(y2 - y1)             # <<<<<<<<<<<<<<
@@ -10903,7 +10909,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     /*else*/ {
       __pyx_v_span2 = abs((__pyx_v_y2 - __pyx_v_y1));
 
-      /* "dysgu/map_set_utils.pyx":314
+      /* "dysgu/map_set_utils.pyx":310
  *         else:
  *             span2 = c_abs(y2 - y1)
  *             center2 = (y1 + y2) / 2             # <<<<<<<<<<<<<<
@@ -10912,11 +10918,11 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
       __pyx_v_center2 = (((double)(__pyx_v_y1 + __pyx_v_y2)) / 2.0);
     }
-    __pyx_L9:;
+    __pyx_L10:;
   }
   __pyx_L4:;
 
-  /* "dysgu/map_set_utils.pyx":316
+  /* "dysgu/map_set_utils.pyx":312
  *             center2 = (y1 + y2) / 2
  * 
  *     max_span = max(span1, span2)             # <<<<<<<<<<<<<<
@@ -10932,7 +10938,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   }
   __pyx_v_max_span = __pyx_t_5;
 
-  /* "dysgu/map_set_utils.pyx":317
+  /* "dysgu/map_set_utils.pyx":313
  * 
  *     max_span = max(span1, span2)
  *     position_distance = c_fabs(center1 - center2)             # <<<<<<<<<<<<<<
@@ -10941,7 +10947,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
   __pyx_v_position_distance = fabs((__pyx_v_center1 - __pyx_v_center2));
 
-  /* "dysgu/map_set_utils.pyx":318
+  /* "dysgu/map_set_utils.pyx":314
  *     max_span = max(span1, span2)
  *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:             # <<<<<<<<<<<<<<
@@ -10951,7 +10957,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   __pyx_t_1 = ((__pyx_v_position_distance > 2000.0) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":319
+    /* "dysgu/map_set_utils.pyx":315
  *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:
  *         return 0             # <<<<<<<<<<<<<<
@@ -10961,7 +10967,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":318
+    /* "dysgu/map_set_utils.pyx":314
  *     max_span = max(span1, span2)
  *     position_distance = c_fabs(center1 - center2)
  *     if position_distance > 2000:             # <<<<<<<<<<<<<<
@@ -10970,7 +10976,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":321
+  /* "dysgu/map_set_utils.pyx":317
  *         return 0
  * 
  *     span_distance = <float>c_abs(span1 - span2) / max_span             # <<<<<<<<<<<<<<
@@ -10986,11 +10992,11 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     #ifdef WITH_THREAD
     __Pyx_PyGILState_Release(__pyx_gilstate_save);
     #endif
-    __PYX_ERR(0, 321, __pyx_L1_error)
+    __PYX_ERR(0, 317, __pyx_L1_error)
   }
   __pyx_v_span_distance = (__pyx_t_6 / ((float)__pyx_v_max_span));
 
-  /* "dysgu/map_set_utils.pyx":323
+  /* "dysgu/map_set_utils.pyx":319
  *     span_distance = <float>c_abs(span1 - span2) / max_span
  * 
  *     if not paired_end or read_enum == SPLIT:             # <<<<<<<<<<<<<<
@@ -11001,14 +11007,14 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   if (!__pyx_t_2) {
   } else {
     __pyx_t_1 = __pyx_t_2;
-    goto __pyx_L12_bool_binop_done;
+    goto __pyx_L13_bool_binop_done;
   }
   __pyx_t_2 = ((__pyx_v_read_enum == __pyx_e_5dysgu_13map_set_utils_SPLIT) != 0);
   __pyx_t_1 = __pyx_t_2;
-  __pyx_L12_bool_binop_done:;
+  __pyx_L13_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":325
+    /* "dysgu/map_set_utils.pyx":321
  *     if not paired_end or read_enum == SPLIT:
  *         # span position distance:
  *         if (position_distance / norm) + span_distance < thresh:             # <<<<<<<<<<<<<<
@@ -11023,12 +11029,12 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
       #ifdef WITH_THREAD
       __Pyx_PyGILState_Release(__pyx_gilstate_save);
       #endif
-      __PYX_ERR(0, 325, __pyx_L1_error)
+      __PYX_ERR(0, 321, __pyx_L1_error)
     }
     __pyx_t_1 = ((((__pyx_v_position_distance / __pyx_v_norm) + __pyx_v_span_distance) < __pyx_v_thresh) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/map_set_utils.pyx":326
+      /* "dysgu/map_set_utils.pyx":322
  *         # span position distance:
  *         if (position_distance / norm) + span_distance < thresh:
  *             return 1             # <<<<<<<<<<<<<<
@@ -11038,7 +11044,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
       __pyx_r = 1;
       goto __pyx_L0;
 
-      /* "dysgu/map_set_utils.pyx":325
+      /* "dysgu/map_set_utils.pyx":321
  *     if not paired_end or read_enum == SPLIT:
  *         # span position distance:
  *         if (position_distance / norm) + span_distance < thresh:             # <<<<<<<<<<<<<<
@@ -11047,7 +11053,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
     }
 
-    /* "dysgu/map_set_utils.pyx":327
+    /* "dysgu/map_set_utils.pyx":323
  *         if (position_distance / norm) + span_distance < thresh:
  *             return 1
  *         return 0             # <<<<<<<<<<<<<<
@@ -11057,7 +11063,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":323
+    /* "dysgu/map_set_utils.pyx":319
  *     span_distance = <float>c_abs(span1 - span2) / max_span
  * 
  *     if not paired_end or read_enum == SPLIT:             # <<<<<<<<<<<<<<
@@ -11066,7 +11072,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":329
+  /* "dysgu/map_set_utils.pyx":325
  *         return 0
  * 
  *     if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3             # <<<<<<<<<<<<<<
@@ -11081,20 +11087,20 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     #ifdef WITH_THREAD
     __Pyx_PyGILState_Release(__pyx_gilstate_save);
     #endif
-    __PYX_ERR(0, 329, __pyx_L1_error)
+    __PYX_ERR(0, 325, __pyx_L1_error)
   }
   __pyx_t_2 = (((__pyx_v_position_distance / ((float)__pyx_v_max_span)) < __pyx_v_thresh) != 0);
   if (__pyx_t_2) {
   } else {
     __pyx_t_1 = __pyx_t_2;
-    goto __pyx_L16_bool_binop_done;
+    goto __pyx_L17_bool_binop_done;
   }
   __pyx_t_2 = ((__pyx_v_span_distance < __pyx_v_thresh) != 0);
   __pyx_t_1 = __pyx_t_2;
-  __pyx_L16_bool_binop_done:;
+  __pyx_L17_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":330
+    /* "dysgu/map_set_utils.pyx":326
  * 
  *     if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3
  *         return 1             # <<<<<<<<<<<<<<
@@ -11104,7 +11110,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
     __pyx_r = 1;
     goto __pyx_L0;
 
-    /* "dysgu/map_set_utils.pyx":329
+    /* "dysgu/map_set_utils.pyx":325
  *         return 0
  * 
  *     if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3             # <<<<<<<<<<<<<<
@@ -11113,7 +11119,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
  */
   }
 
-  /* "dysgu/map_set_utils.pyx":331
+  /* "dysgu/map_set_utils.pyx":327
  *     if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3
  *         return 1
  *     return 0             # <<<<<<<<<<<<<<
@@ -11123,11 +11129,11 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   __pyx_r = 0;
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":290
+  /* "dysgu/map_set_utils.pyx":286
  * 
  * 
  * cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,             # <<<<<<<<<<<<<<
- *                                  bint paired_end, int cigar_len1, int cigar_len2) nogil:
+ *                                  bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil:
  *     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
  */
 
@@ -11139,7 +11145,7 @@ static int __pyx_f_5dysgu_13map_set_utils_span_position_distance(int __pyx_v_x1,
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":334
+/* "dysgu/map_set_utils.pyx":330
  * 
  * 
  * cdef float position_distance(int x1, int x2, int y1, int y2) nogil:             # <<<<<<<<<<<<<<
@@ -11155,7 +11161,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   float __pyx_r;
   int __pyx_t_1;
 
-  /* "dysgu/map_set_utils.pyx":338
+  /* "dysgu/map_set_utils.pyx":334
  *     cdef int span1, span2
  *     cdef float center1, center2
  *     if x1 == x2:             # <<<<<<<<<<<<<<
@@ -11165,7 +11171,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   __pyx_t_1 = ((__pyx_v_x1 == __pyx_v_x2) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":339
+    /* "dysgu/map_set_utils.pyx":335
  *     cdef float center1, center2
  *     if x1 == x2:
  *         span1 = 1             # <<<<<<<<<<<<<<
@@ -11174,7 +11180,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
  */
     __pyx_v_span1 = 1;
 
-    /* "dysgu/map_set_utils.pyx":340
+    /* "dysgu/map_set_utils.pyx":336
  *     if x1 == x2:
  *         span1 = 1
  *         center1 = x1             # <<<<<<<<<<<<<<
@@ -11183,7 +11189,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
  */
     __pyx_v_center1 = __pyx_v_x1;
 
-    /* "dysgu/map_set_utils.pyx":338
+    /* "dysgu/map_set_utils.pyx":334
  *     cdef int span1, span2
  *     cdef float center1, center2
  *     if x1 == x2:             # <<<<<<<<<<<<<<
@@ -11193,7 +11199,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
     goto __pyx_L3;
   }
 
-  /* "dysgu/map_set_utils.pyx":342
+  /* "dysgu/map_set_utils.pyx":338
  *         center1 = x1
  *     else:
  *         span1 = c_abs(x2 - x1)             # <<<<<<<<<<<<<<
@@ -11203,7 +11209,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   /*else*/ {
     __pyx_v_span1 = abs((__pyx_v_x2 - __pyx_v_x1));
 
-    /* "dysgu/map_set_utils.pyx":343
+    /* "dysgu/map_set_utils.pyx":339
  *     else:
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2             # <<<<<<<<<<<<<<
@@ -11214,7 +11220,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   }
   __pyx_L3:;
 
-  /* "dysgu/map_set_utils.pyx":344
+  /* "dysgu/map_set_utils.pyx":340
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:             # <<<<<<<<<<<<<<
@@ -11224,7 +11230,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   __pyx_t_1 = ((__pyx_v_y1 == __pyx_v_y2) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/map_set_utils.pyx":345
+    /* "dysgu/map_set_utils.pyx":341
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:
  *         span2 = 1             # <<<<<<<<<<<<<<
@@ -11233,7 +11239,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
  */
     __pyx_v_span2 = 1;
 
-    /* "dysgu/map_set_utils.pyx":346
+    /* "dysgu/map_set_utils.pyx":342
  *     if y1 == y2:
  *         span2 = 1
  *         center2 = y2             # <<<<<<<<<<<<<<
@@ -11242,7 +11248,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
  */
     __pyx_v_center2 = __pyx_v_y2;
 
-    /* "dysgu/map_set_utils.pyx":344
+    /* "dysgu/map_set_utils.pyx":340
  *         span1 = c_abs(x2 - x1)
  *         center1 = (x1 + x2) / 2
  *     if y1 == y2:             # <<<<<<<<<<<<<<
@@ -11252,7 +11258,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
     goto __pyx_L4;
   }
 
-  /* "dysgu/map_set_utils.pyx":348
+  /* "dysgu/map_set_utils.pyx":344
  *         center2 = y2
  *     else:
  *         span2 = c_abs(y2 - y1)             # <<<<<<<<<<<<<<
@@ -11262,7 +11268,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   /*else*/ {
     __pyx_v_span2 = abs((__pyx_v_y2 - __pyx_v_y1));
 
-    /* "dysgu/map_set_utils.pyx":349
+    /* "dysgu/map_set_utils.pyx":345
  *     else:
  *         span2 = c_abs(y2 - y1)
  *         center2 = (y1 + y2) / 2             # <<<<<<<<<<<<<<
@@ -11273,7 +11279,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   }
   __pyx_L4:;
 
-  /* "dysgu/map_set_utils.pyx":350
+  /* "dysgu/map_set_utils.pyx":346
  *         span2 = c_abs(y2 - y1)
  *         center2 = (y1 + y2) / 2
  *     return c_fabs(center1 - center2)             # <<<<<<<<<<<<<<
@@ -11283,7 +11289,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   __pyx_r = fabs((__pyx_v_center1 - __pyx_v_center2));
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":334
+  /* "dysgu/map_set_utils.pyx":330
  * 
  * 
  * cdef float position_distance(int x1, int x2, int y1, int y2) nogil:             # <<<<<<<<<<<<<<
@@ -11296,7 +11302,7 @@ static float __pyx_f_5dysgu_13map_set_utils_position_distance(int __pyx_v_x1, in
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":355
+/* "dysgu/map_set_utils.pyx":351
  * cdef class EventResult:
  *     """Data holder for classifying alignments into SV types"""
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -11325,7 +11331,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "dysgu/map_set_utils.pyx":357
+  /* "dysgu/map_set_utils.pyx":353
  *     def __cinit__(self):
  *         # set a few variables
  *         self.svlen_precise = 1             # <<<<<<<<<<<<<<
@@ -11334,7 +11340,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->svlen_precise = 1;
 
-  /* "dysgu/map_set_utils.pyx":358
+  /* "dysgu/map_set_utils.pyx":354
  *         # set a few variables
  *         self.svlen_precise = 1
  *         self.rep = 0             # <<<<<<<<<<<<<<
@@ -11343,7 +11349,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->rep = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":359
+  /* "dysgu/map_set_utils.pyx":355
  *         self.svlen_precise = 1
  *         self.rep = 0
  *         self.ref_rep = 0             # <<<<<<<<<<<<<<
@@ -11352,7 +11358,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->ref_rep = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":360
+  /* "dysgu/map_set_utils.pyx":356
  *         self.rep = 0
  *         self.ref_rep = 0
  *         self.NMpri = 0             # <<<<<<<<<<<<<<
@@ -11361,7 +11367,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->NMpri = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":361
+  /* "dysgu/map_set_utils.pyx":357
  *         self.ref_rep = 0
  *         self.NMpri = 0
  *         self.NMbase = 0             # <<<<<<<<<<<<<<
@@ -11370,7 +11376,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->NMbase = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":362
+  /* "dysgu/map_set_utils.pyx":358
  *         self.NMpri = 0
  *         self.NMbase = 0
  *         self.mcov = 0             # <<<<<<<<<<<<<<
@@ -11379,7 +11385,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->mcov = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":363
+  /* "dysgu/map_set_utils.pyx":359
  *         self.NMbase = 0
  *         self.mcov = 0
  *         self.neigh = 0             # <<<<<<<<<<<<<<
@@ -11388,7 +11394,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->neigh = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":364
+  /* "dysgu/map_set_utils.pyx":360
  *         self.mcov = 0
  *         self.neigh = 0
  *         self.ref_bases = 0             # <<<<<<<<<<<<<<
@@ -11397,7 +11403,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->ref_bases = 0;
 
-  /* "dysgu/map_set_utils.pyx":365
+  /* "dysgu/map_set_utils.pyx":361
  *         self.neigh = 0
  *         self.ref_bases = 0
  *         self.n_sa = 0             # <<<<<<<<<<<<<<
@@ -11406,7 +11412,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->n_sa = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":366
+  /* "dysgu/map_set_utils.pyx":362
  *         self.ref_bases = 0
  *         self.n_sa = 0
  *         self.n_gaps = 0             # <<<<<<<<<<<<<<
@@ -11415,7 +11421,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->n_gaps = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":367
+  /* "dysgu/map_set_utils.pyx":363
  *         self.n_sa = 0
  *         self.n_gaps = 0
  *         self.compress = 0             # <<<<<<<<<<<<<<
@@ -11424,7 +11430,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
  */
   __pyx_v_self->compress = 0.0;
 
-  /* "dysgu/map_set_utils.pyx":355
+  /* "dysgu/map_set_utils.pyx":351
  * cdef class EventResult:
  *     """Data holder for classifying alignments into SV types"""
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -11438,7 +11444,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult___cinit__(struct __pyx_
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":369
+/* "dysgu/map_set_utils.pyx":365
  *         self.compress = 0
  * 
  *     def to_dict(self):             # <<<<<<<<<<<<<<
@@ -11478,7 +11484,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("to_dict", 0);
 
-  /* "dysgu/map_set_utils.pyx":370
+  /* "dysgu/map_set_utils.pyx":366
  * 
  *     def to_dict(self):
  *         return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}             # <<<<<<<<<<<<<<
@@ -11487,17 +11493,17 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
  */
   __Pyx_XDECREF(__pyx_r);
   { /* enter inner scope */
-    __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 370, __pyx_L5_error)
+    __pyx_t_1 = PyDict_New(); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 366, __pyx_L5_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = PyObject_Dir(((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 370, __pyx_L5_error)
+    __pyx_t_2 = PyObject_Dir(((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 366, __pyx_L5_error)
     __Pyx_GOTREF(__pyx_t_2);
     if (likely(PyList_CheckExact(__pyx_t_2)) || PyTuple_CheckExact(__pyx_t_2)) {
       __pyx_t_3 = __pyx_t_2; __Pyx_INCREF(__pyx_t_3); __pyx_t_4 = 0;
       __pyx_t_5 = NULL;
     } else {
-      __pyx_t_4 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 370, __pyx_L5_error)
+      __pyx_t_4 = -1; __pyx_t_3 = PyObject_GetIter(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 366, __pyx_L5_error)
       __Pyx_GOTREF(__pyx_t_3);
-      __pyx_t_5 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 370, __pyx_L5_error)
+      __pyx_t_5 = Py_TYPE(__pyx_t_3)->tp_iternext; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 366, __pyx_L5_error)
     }
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     for (;;) {
@@ -11505,17 +11511,17 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
         if (likely(PyList_CheckExact(__pyx_t_3))) {
           if (__pyx_t_4 >= PyList_GET_SIZE(__pyx_t_3)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_2 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 370, __pyx_L5_error)
+          __pyx_t_2 = PyList_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 366, __pyx_L5_error)
           #else
-          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 370, __pyx_L5_error)
+          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 366, __pyx_L5_error)
           __Pyx_GOTREF(__pyx_t_2);
           #endif
         } else {
           if (__pyx_t_4 >= PyTuple_GET_SIZE(__pyx_t_3)) break;
           #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
-          __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 370, __pyx_L5_error)
+          __pyx_t_2 = PyTuple_GET_ITEM(__pyx_t_3, __pyx_t_4); __Pyx_INCREF(__pyx_t_2); __pyx_t_4++; if (unlikely(0 < 0)) __PYX_ERR(0, 366, __pyx_L5_error)
           #else
-          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 370, __pyx_L5_error)
+          __pyx_t_2 = PySequence_ITEM(__pyx_t_3, __pyx_t_4); __pyx_t_4++; if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 366, __pyx_L5_error)
           __Pyx_GOTREF(__pyx_t_2);
           #endif
         }
@@ -11525,7 +11531,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
           PyObject* exc_type = PyErr_Occurred();
           if (exc_type) {
             if (likely(__Pyx_PyErr_GivenExceptionMatches(exc_type, PyExc_StopIteration))) PyErr_Clear();
-            else __PYX_ERR(0, 370, __pyx_L5_error)
+            else __PYX_ERR(0, 366, __pyx_L5_error)
           }
           break;
         }
@@ -11533,24 +11539,24 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
       }
       __Pyx_XDECREF_SET(__pyx_7genexpr__pyx_v_v, __pyx_t_2);
       __pyx_t_2 = 0;
-      __pyx_t_7 = (__Pyx_PySequence_ContainsTF(__pyx_n_u__13, __pyx_7genexpr__pyx_v_v, Py_NE)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 370, __pyx_L5_error)
+      __pyx_t_7 = (__Pyx_PySequence_ContainsTF(__pyx_n_u__13, __pyx_7genexpr__pyx_v_v, Py_NE)); if (unlikely(__pyx_t_7 < 0)) __PYX_ERR(0, 366, __pyx_L5_error)
       __pyx_t_8 = (__pyx_t_7 != 0);
       if (__pyx_t_8) {
       } else {
         __pyx_t_6 = __pyx_t_8;
         goto __pyx_L9_bool_binop_done;
       }
-      __pyx_t_8 = (__Pyx_PyUnicode_Equals(__pyx_7genexpr__pyx_v_v, __pyx_n_u_to_dict, Py_NE)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 370, __pyx_L5_error)
+      __pyx_t_8 = (__Pyx_PyUnicode_Equals(__pyx_7genexpr__pyx_v_v, __pyx_n_u_to_dict, Py_NE)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 366, __pyx_L5_error)
       if (__pyx_t_8) {
       } else {
         __pyx_t_6 = __pyx_t_8;
         goto __pyx_L9_bool_binop_done;
       }
-      __pyx_t_8 = (__Pyx_PyUnicode_Equals(__pyx_7genexpr__pyx_v_v, __pyx_n_u_from_dict, Py_NE)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 370, __pyx_L5_error)
+      __pyx_t_8 = (__Pyx_PyUnicode_Equals(__pyx_7genexpr__pyx_v_v, __pyx_n_u_from_dict, Py_NE)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 366, __pyx_L5_error)
       __pyx_t_6 = __pyx_t_8;
       __pyx_L9_bool_binop_done:;
       if (__pyx_t_6) {
-        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_getattribute); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 370, __pyx_L5_error)
+        __pyx_t_9 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_getattribute); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 366, __pyx_L5_error)
         __Pyx_GOTREF(__pyx_t_9);
         __pyx_t_10 = NULL;
         if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_9))) {
@@ -11564,10 +11570,10 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
         }
         __pyx_t_2 = (__pyx_t_10) ? __Pyx_PyObject_Call2Args(__pyx_t_9, __pyx_t_10, __pyx_7genexpr__pyx_v_v) : __Pyx_PyObject_CallOneArg(__pyx_t_9, __pyx_7genexpr__pyx_v_v);
         __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
-        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 370, __pyx_L5_error)
+        if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 366, __pyx_L5_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-        if (unlikely(PyDict_SetItem(__pyx_t_1, (PyObject*)__pyx_7genexpr__pyx_v_v, (PyObject*)__pyx_t_2))) __PYX_ERR(0, 370, __pyx_L5_error)
+        if (unlikely(PyDict_SetItem(__pyx_t_1, (PyObject*)__pyx_7genexpr__pyx_v_v, (PyObject*)__pyx_t_2))) __PYX_ERR(0, 366, __pyx_L5_error)
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
       }
     }
@@ -11583,7 +11589,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":369
+  /* "dysgu/map_set_utils.pyx":365
  *         self.compress = 0
  * 
  *     def to_dict(self):             # <<<<<<<<<<<<<<
@@ -11607,7 +11613,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2to_dict(struct _
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":372
+/* "dysgu/map_set_utils.pyx":368
  *         return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}
  * 
  *     def from_dict(self, d):             # <<<<<<<<<<<<<<
@@ -11650,22 +11656,22 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("from_dict", 0);
 
-  /* "dysgu/map_set_utils.pyx":373
+  /* "dysgu/map_set_utils.pyx":369
  * 
  *     def from_dict(self, d):
  *         allowed = set(dir(self))             # <<<<<<<<<<<<<<
  *         for k, v in d.items():
  *             if k in allowed:
  */
-  __pyx_t_1 = PyObject_Dir(((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 373, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Dir(((PyObject *)__pyx_v_self)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 369, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PySet_New(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 373, __pyx_L1_error)
+  __pyx_t_2 = PySet_New(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 369, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_allowed = ((PyObject*)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "dysgu/map_set_utils.pyx":374
+  /* "dysgu/map_set_utils.pyx":370
  *     def from_dict(self, d):
  *         allowed = set(dir(self))
  *         for k, v in d.items():             # <<<<<<<<<<<<<<
@@ -11675,9 +11681,9 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   __pyx_t_3 = 0;
   if (unlikely(__pyx_v_d == Py_None)) {
     PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "items");
-    __PYX_ERR(0, 374, __pyx_L1_error)
+    __PYX_ERR(0, 370, __pyx_L1_error)
   }
-  __pyx_t_1 = __Pyx_dict_iterator(__pyx_v_d, 0, __pyx_n_s_items, (&__pyx_t_4), (&__pyx_t_5)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 374, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_dict_iterator(__pyx_v_d, 0, __pyx_n_s_items, (&__pyx_t_4), (&__pyx_t_5)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 370, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XDECREF(__pyx_t_2);
   __pyx_t_2 = __pyx_t_1;
@@ -11685,7 +11691,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   while (1) {
     __pyx_t_7 = __Pyx_dict_iter_next(__pyx_t_2, __pyx_t_4, &__pyx_t_3, &__pyx_t_1, &__pyx_t_6, NULL, __pyx_t_5);
     if (unlikely(__pyx_t_7 == 0)) break;
-    if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 374, __pyx_L1_error)
+    if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 370, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_XDECREF_SET(__pyx_v_k, __pyx_t_1);
@@ -11693,25 +11699,25 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
     __Pyx_XDECREF_SET(__pyx_v_v, __pyx_t_6);
     __pyx_t_6 = 0;
 
-    /* "dysgu/map_set_utils.pyx":375
+    /* "dysgu/map_set_utils.pyx":371
  *         allowed = set(dir(self))
  *         for k, v in d.items():
  *             if k in allowed:             # <<<<<<<<<<<<<<
  *                 self.__setattr__(k, v)
  *         return self
  */
-    __pyx_t_8 = (__Pyx_PySet_ContainsTF(__pyx_v_k, __pyx_v_allowed, Py_EQ)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 375, __pyx_L1_error)
+    __pyx_t_8 = (__Pyx_PySet_ContainsTF(__pyx_v_k, __pyx_v_allowed, Py_EQ)); if (unlikely(__pyx_t_8 < 0)) __PYX_ERR(0, 371, __pyx_L1_error)
     __pyx_t_9 = (__pyx_t_8 != 0);
     if (__pyx_t_9) {
 
-      /* "dysgu/map_set_utils.pyx":376
+      /* "dysgu/map_set_utils.pyx":372
  *         for k, v in d.items():
  *             if k in allowed:
  *                 self.__setattr__(k, v)             # <<<<<<<<<<<<<<
  *         return self
  * 
  */
-      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_setattr); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 376, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_setattr); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 372, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
       __pyx_t_10 = NULL;
       __pyx_t_7 = 0;
@@ -11728,7 +11734,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
       #if CYTHON_FAST_PYCALL
       if (PyFunction_Check(__pyx_t_1)) {
         PyObject *__pyx_temp[3] = {__pyx_t_10, __pyx_v_k, __pyx_v_v};
-        __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 376, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 372, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
         __Pyx_GOTREF(__pyx_t_6);
       } else
@@ -11736,13 +11742,13 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
       #if CYTHON_FAST_PYCCALL
       if (__Pyx_PyFastCFunction_Check(__pyx_t_1)) {
         PyObject *__pyx_temp[3] = {__pyx_t_10, __pyx_v_k, __pyx_v_v};
-        __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 376, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_1, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 372, __pyx_L1_error)
         __Pyx_XDECREF(__pyx_t_10); __pyx_t_10 = 0;
         __Pyx_GOTREF(__pyx_t_6);
       } else
       #endif
       {
-        __pyx_t_11 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 376, __pyx_L1_error)
+        __pyx_t_11 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 372, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_11);
         if (__pyx_t_10) {
           __Pyx_GIVEREF(__pyx_t_10); PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_10); __pyx_t_10 = NULL;
@@ -11753,14 +11759,14 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
         __Pyx_INCREF(__pyx_v_v);
         __Pyx_GIVEREF(__pyx_v_v);
         PyTuple_SET_ITEM(__pyx_t_11, 1+__pyx_t_7, __pyx_v_v);
-        __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_11, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 376, __pyx_L1_error)
+        __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_11, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 372, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_6);
         __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
       }
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
 
-      /* "dysgu/map_set_utils.pyx":375
+      /* "dysgu/map_set_utils.pyx":371
  *         allowed = set(dir(self))
  *         for k, v in d.items():
  *             if k in allowed:             # <<<<<<<<<<<<<<
@@ -11771,7 +11777,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   }
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-  /* "dysgu/map_set_utils.pyx":377
+  /* "dysgu/map_set_utils.pyx":373
  *             if k in allowed:
  *                 self.__setattr__(k, v)
  *         return self             # <<<<<<<<<<<<<<
@@ -11783,7 +11789,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   __pyx_r = ((PyObject *)__pyx_v_self);
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":372
+  /* "dysgu/map_set_utils.pyx":368
  *         return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}
  * 
  *     def from_dict(self, d):             # <<<<<<<<<<<<<<
@@ -11809,7 +11815,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4from_dict(struct
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":379
+/* "dysgu/map_set_utils.pyx":375
  *         return self
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -11841,7 +11847,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6__repr__(struct 
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__repr__", 0);
 
-  /* "dysgu/map_set_utils.pyx":380
+  /* "dysgu/map_set_utils.pyx":376
  * 
  *     def __repr__(self):
  *         return str(self.to_dict())             # <<<<<<<<<<<<<<
@@ -11849,7 +11855,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6__repr__(struct 
  *     def __getstate__(self):  # for pickling
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_to_dict); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 380, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_to_dict); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11863,17 +11869,17 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6__repr__(struct 
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 380, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 380, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_CallOneArg(((PyObject *)(&PyUnicode_Type)), __pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":379
+  /* "dysgu/map_set_utils.pyx":375
  *         return self
  * 
  *     def __repr__(self):             # <<<<<<<<<<<<<<
@@ -11894,7 +11900,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6__repr__(struct 
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":382
+/* "dysgu/map_set_utils.pyx":378
  *         return str(self.to_dict())
  * 
  *     def __getstate__(self):  # for pickling             # <<<<<<<<<<<<<<
@@ -11926,7 +11932,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8__getstate__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__getstate__", 0);
 
-  /* "dysgu/map_set_utils.pyx":383
+  /* "dysgu/map_set_utils.pyx":379
  * 
  *     def __getstate__(self):  # for pickling
  *         return self.to_dict()             # <<<<<<<<<<<<<<
@@ -11934,7 +11940,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8__getstate__(str
  *     def __setstate__(self, d):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_to_dict); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 383, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_to_dict); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 379, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -11948,14 +11954,14 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8__getstate__(str
   }
   __pyx_t_1 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 383, __pyx_L1_error)
+  if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 379, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "dysgu/map_set_utils.pyx":382
+  /* "dysgu/map_set_utils.pyx":378
  *         return str(self.to_dict())
  * 
  *     def __getstate__(self):  # for pickling             # <<<<<<<<<<<<<<
@@ -11976,7 +11982,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8__getstate__(str
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pyx":385
+/* "dysgu/map_set_utils.pyx":381
  *         return self.to_dict()
  * 
  *     def __setstate__(self, d):             # <<<<<<<<<<<<<<
@@ -12016,7 +12022,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__setstate__", 0);
 
-  /* "dysgu/map_set_utils.pyx":386
+  /* "dysgu/map_set_utils.pyx":382
  * 
  *     def __setstate__(self, d):
  *         for k, v in d.items():             # <<<<<<<<<<<<<<
@@ -12025,9 +12031,9 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
   __pyx_t_2 = 0;
   if (unlikely(__pyx_v_d == Py_None)) {
     PyErr_Format(PyExc_AttributeError, "'NoneType' object has no attribute '%.30s'", "items");
-    __PYX_ERR(0, 386, __pyx_L1_error)
+    __PYX_ERR(0, 382, __pyx_L1_error)
   }
-  __pyx_t_5 = __Pyx_dict_iterator(__pyx_v_d, 0, __pyx_n_s_items, (&__pyx_t_3), (&__pyx_t_4)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 386, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_dict_iterator(__pyx_v_d, 0, __pyx_n_s_items, (&__pyx_t_3), (&__pyx_t_4)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 382, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_XDECREF(__pyx_t_1);
   __pyx_t_1 = __pyx_t_5;
@@ -12035,7 +12041,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
   while (1) {
     __pyx_t_7 = __Pyx_dict_iter_next(__pyx_t_1, __pyx_t_3, &__pyx_t_2, &__pyx_t_5, &__pyx_t_6, NULL, __pyx_t_4);
     if (unlikely(__pyx_t_7 == 0)) break;
-    if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 386, __pyx_L1_error)
+    if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 382, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_GOTREF(__pyx_t_6);
     __Pyx_XDECREF_SET(__pyx_v_k, __pyx_t_5);
@@ -12043,12 +12049,12 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
     __Pyx_XDECREF_SET(__pyx_v_v, __pyx_t_6);
     __pyx_t_6 = 0;
 
-    /* "dysgu/map_set_utils.pyx":387
+    /* "dysgu/map_set_utils.pyx":383
  *     def __setstate__(self, d):
  *         for k, v in d.items():
  *             self.__setattr__(k, v)             # <<<<<<<<<<<<<<
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_setattr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 387, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_setattr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 383, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __pyx_t_8 = NULL;
     __pyx_t_7 = 0;
@@ -12065,7 +12071,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_5)) {
       PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_k, __pyx_v_v};
-      __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 387, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 383, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_GOTREF(__pyx_t_6);
     } else
@@ -12073,13 +12079,13 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
       PyObject *__pyx_temp[3] = {__pyx_t_8, __pyx_v_k, __pyx_v_v};
-      __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 387, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-__pyx_t_7, 2+__pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 383, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_8); __pyx_t_8 = 0;
       __Pyx_GOTREF(__pyx_t_6);
     } else
     #endif
     {
-      __pyx_t_9 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 387, __pyx_L1_error)
+      __pyx_t_9 = PyTuple_New(2+__pyx_t_7); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 383, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_9);
       if (__pyx_t_8) {
         __Pyx_GIVEREF(__pyx_t_8); PyTuple_SET_ITEM(__pyx_t_9, 0, __pyx_t_8); __pyx_t_8 = NULL;
@@ -12090,7 +12096,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
       __Pyx_INCREF(__pyx_v_v);
       __Pyx_GIVEREF(__pyx_v_v);
       PyTuple_SET_ITEM(__pyx_t_9, 1+__pyx_t_7, __pyx_v_v);
-      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_9, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 387, __pyx_L1_error)
+      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_9, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 383, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
     }
@@ -12099,7 +12105,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "dysgu/map_set_utils.pyx":385
+  /* "dysgu/map_set_utils.pyx":381
  *         return self.to_dict()
  * 
  *     def __setstate__(self, d):             # <<<<<<<<<<<<<<
@@ -38344,7 +38350,7 @@ static int __Pyx_modinit_function_export_code(void) {
   if (__Pyx_ExportFunction("cigar_clip", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_cigar_clip, "int (PyObject *, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   if (__Pyx_ExportFunction("is_overlapping", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_is_overlapping, "int (int, int, int, int, int __pyx_skip_dispatch)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   if (__Pyx_ExportFunction("is_reciprocal_overlapping", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_is_reciprocal_overlapping, "int (int, int, int, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
-  if (__Pyx_ExportFunction("span_position_distance", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_span_position_distance, "int (int, int, int, int, float, float, __pyx_t_5dysgu_13map_set_utils_ReadEnum_t, int, int, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
+  if (__Pyx_ExportFunction("span_position_distance", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_span_position_distance, "int (int, int, int, int, float, float, __pyx_t_5dysgu_13map_set_utils_ReadEnum_t, int, int, int, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   if (__Pyx_ExportFunction("position_distance", (void (*)(void))__pyx_f_5dysgu_13map_set_utils_position_distance, "float (int, int, int, int)") < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -38445,15 +38451,15 @@ static int __Pyx_modinit_type_init_code(void) {
   if (PyObject_SetAttr(__pyx_m, __pyx_n_s_Py_IntSet, (PyObject *)&__pyx_type_5dysgu_13map_set_utils_Py_IntSet) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
   if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_13map_set_utils_Py_IntSet) < 0) __PYX_ERR(0, 172, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_Py_IntSet = &__pyx_type_5dysgu_13map_set_utils_Py_IntSet;
-  if (PyType_Ready(&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 353, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 349, __pyx_L1_error)
   #if PY_VERSION_HEX < 0x030800B1
   __pyx_type_5dysgu_13map_set_utils_EventResult.tp_print = 0;
   #endif
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_5dysgu_13map_set_utils_EventResult.tp_dictoffset && __pyx_type_5dysgu_13map_set_utils_EventResult.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_5dysgu_13map_set_utils_EventResult.tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_EventResult, (PyObject *)&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 353, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 353, __pyx_L1_error)
+  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_EventResult, (PyObject *)&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 349, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_13map_set_utils_EventResult) < 0) __PYX_ERR(0, 349, __pyx_L1_error)
   __pyx_ptype_5dysgu_13map_set_utils_EventResult = &__pyx_type_5dysgu_13map_set_utils_EventResult;
   if (PyType_Ready(&__pyx_type_5dysgu_13map_set_utils___pyx_scope_struct__timeit) < 0) __PYX_ERR(0, 29, __pyx_L1_error)
   #if PY_VERSION_HEX < 0x030800B1

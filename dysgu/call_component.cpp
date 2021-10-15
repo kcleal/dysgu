@@ -38,8 +38,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/pysam",
+            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",

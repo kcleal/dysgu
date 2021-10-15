@@ -378,7 +378,7 @@ cdef class PairedEndScoper:
         self.loci.clear()
 
     cdef vector[int] find_other_nodes(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                                      ReadEnum_t read_enum, int length_from_cigar) nogil:
+                                      ReadEnum_t read_enum, int length_from_cigar, bint trust_ins_len) nogil:
 
         cdef int idx, i, count_back, steps, node_name2
         cdef int sep = 0
@@ -419,7 +419,7 @@ cdef class PairedEndScoper:
 
             steps = 0
             if local_it != forward_scope.end():
-                while steps < 4:
+                while steps < 6:
                     vitem = dereference(local_it)
 
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
@@ -440,7 +440,7 @@ cdef class PairedEndScoper:
 
                             sep = c_abs(vitem.first - pos2)
                             sep2 = c_abs(vitem.second.pos2 - current_pos)
-                            # echo("mad dist", self.max_dist, sep, sep2)
+
                             if sep < self.max_dist and sep2 < self.max_dist:
                                 if sep < 35:
 
@@ -448,17 +448,17 @@ cdef class PairedEndScoper:
                                         max_span = max(length_from_cigar, vitem.second.length_from_cigar)
                                         span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
                                         # echo("hi", node_name2, (length_from_cigar, vitem.second.length_from_cigar), span_distance, self.thresh)
-                                        if span_distance < 0.7:
+                                        if span_distance < 0.8:
                                             found_exact.push_back(node_name2)
-                                    else:  # cluster anyway
+                                    else:
                                         found_exact.push_back(node_name2)
 
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                     found2.push_back(node_name2)
-                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                 found2.push_back(node_name2)
 
-                        elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                        elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                             found2.push_back(node_name2)
 
                     if sep >= self.max_dist:
@@ -478,11 +478,9 @@ cdef class PairedEndScoper:
                     predecrement(local_it)  # Move back one before staring search, otherwise same value is processed twice
 
                     steps = 0
-                    while steps < 4:
+                    while steps < 6:
                         vitem = dereference(local_it)
                         if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
-                        # if (read_enum == DELETION and vitem.second.read_enum != DELETION) or (read_enum == INSERTION and vitem.second.read_enum != INSERTION) \
-                        #   or (vitem.second.read_enum == DELETION and read_enum != DELETION) or (vitem.second.read_enum == INSERTION and read_enum != INSERTION):
                             steps += 1
                             continue  # Dont connect insertions to deletions
                         node_name2 = vitem.second.node_name
@@ -502,19 +500,20 @@ cdef class PairedEndScoper:
                                             max_span = max(length_from_cigar, vitem.second.length_from_cigar)
                                             span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
                                             # echo("hi2", node_name2, (length_from_cigar, vitem.second.length_from_cigar), span_distance, self.thresh)
-                                            if span_distance < 0.7:
+                                            if span_distance < 0.8:
                                                 found_exact.push_back(node_name2)
-                                        else:  # cluster anyway
+                                        else:
                                             found_exact.push_back(node_name2)
-                                        # found_exact.push_back(node_name2)
 
-                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                                        found_exact.push_back(node_name2)
+
+                                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                         found2.push_back(node_name2)
 
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                     found2.push_back(node_name2)
 
-                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar):
+                            elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                 found2.push_back(node_name2)
 
                         if local_it == forward_scope.begin() or sep >= self.max_dist:
@@ -533,9 +532,9 @@ cdef class PairedEndScoper:
         # Add to scopes, if event is within read, add two references to forward scope. Otherwise when the
         # first break point drops from the local scope, the forward scope break will not connect with other
         # events that are added later. This is a fix for long read deletions mainly
-        cdef cpp_map[int, LocalVal]* forward_scope  # = &self.chrom_scope[chrom2]
+        cdef cpp_map[int, LocalVal]* forward_scope
         if chrom2 == 10000000:
-            forward_scope = &self.chrom_scope.back()  #[self.end_index]
+            forward_scope = &self.chrom_scope.back()
         else:
             forward_scope = &self.chrom_scope[chrom2]
 
@@ -549,32 +548,10 @@ cdef class PairedEndScoper:
         if read_enum == DELETION:
             forward_scope.insert(pp)
 
-        # local_it = self.loci.find(current_pos)
-        # if local_it == self.loci.end():
-        #     self.loci[current_pos] = make_local_val(chrom2, pos2, node_name, read_enum, length_from_cigar)
-        # else:
-        #     dereference(local_it).second = make_local_val(chrom2, pos2, node_name, read_enum, length_from_cigar)
-
         # Add to forward scope
         pp.first = pos2
         pp.second = make_local_val(current_chrom, current_pos, node_name, read_enum, length_from_cigar)
         forward_scope.insert(pp)
-
-        # local_it = forward_scope.find(pos2)
-        # if local_it == forward_scope.end():
-        #     dereference(forward_scope)[pos2] = make_local_val(current_chrom, current_pos, node_name, read_enum, length_from_cigar)
-        # else:
-        #     dereference(local_it).second = make_local_val(current_chrom, current_pos, node_name, read_enum, length_from_cigar)
-
-        # if read_enum == DELETION:
-
-
-
-            # local_it = forward_scope.find(current_pos)
-            # if local_it == forward_scope.end():
-            #     dereference(forward_scope)[current_pos] = make_local_val(chrom2, pos2, node_name, read_enum, length_from_cigar)
-            # else:
-            #     dereference(local_it).second = make_local_val(chrom2, pos2, node_name, read_enum, length_from_cigar)
 
 
 cdef class TemplateEdges:
@@ -829,7 +806,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
                        int flag, int chrom, tell, int cigar_index, int event_pos,
                        int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
                        bint p1_overlaps, bint p2_overlaps, bint mm_only, int clip_l, site_adder,
-                       int length_from_cigar):
+                       int length_from_cigar, bint trust_ins_len):
 
     # Adds relevant information to graph and other data structures for further processing
     cdef int other_node
@@ -848,7 +825,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     both_overlap = p1_overlaps and p2_overlaps
 
     if read_enum != BREAKEND and not mm_only: #(not mm_only or not both_overlap):
-        other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar)
+        other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar, trust_ins_len)
 
         for other_node in other_nodes:
             if not G.hasEdge(node_name, other_node):
@@ -966,7 +943,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                             TemplateEdges_t template_edges, NodeToName node_to_name,
                             int cigar_pos2, int mapq_thresh, ClipScoper_t clip_scope,
                             ReadEnum_t read_enum, bad_clip_counter, bint mm_only, site_adder,
-                            int length_from_cigar):
+                            int length_from_cigar, bint trust_ins_len):
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
@@ -1058,7 +1035,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
         add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,
-                               mm_only, clip_l, site_adder, length_from_cigar)
+                               mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
 
     ###
     else:  # Single end
@@ -1079,7 +1056,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
-                                           mm_only, clip_l, site_adder, 0)
+                                           mm_only, clip_l, site_adder, 0, trust_ins_len)
 
                 if index > 0:
                     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
@@ -1087,7 +1064,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
-                                           mm_only, clip_l, site_adder, length_from_cigar)
+                                           mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
@@ -1096,7 +1073,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 pos2 = event_pos
             add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                    tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                   current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar)
+                                   current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
 
 
 cdef struct CigarEvent:
@@ -1251,7 +1228,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None):
+                            sites=None, bint trust_ins_len=True):
 
     t0 = time.time()
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
@@ -1322,7 +1299,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
-                                      bad_clip_counter, mm_only, site_adder, 0)
+                                      bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
                     added = True
 
                 for cigar_index, (opp, length) in enumerate(r.cigartuples):
@@ -1362,7 +1339,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
-                                          mm_only, site_adder, 0)
+                                          mm_only, site_adder, 0, trust_ins_len)
                 else:
                     # Use whole read, could be normal or discordant
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
@@ -1381,7 +1358,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                      mm_only, site_adder, 0)
+                                      mm_only, site_adder, 0, trust_ins_len)
 
             # process within-read events
             if not events_to_add.empty():
@@ -1399,7 +1376,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter,
-                                      mm_only, site_adder, v.length)
+                                      mm_only, site_adder, v.length, trust_ins_len)
 
                     preincrement(itr_events)
 

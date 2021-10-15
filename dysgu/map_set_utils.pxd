@@ -275,7 +275,7 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2) nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil
 
 
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil

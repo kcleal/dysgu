@@ -257,8 +257,7 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
         return True
 
 
-cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:
-    # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
+cdef bint span_position_distance2(int x1, int x2, int y1, int y2):
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
     if x1 == x2:
@@ -274,27 +273,24 @@ cdef bint span_position_distance2(int x1, int x2, int y1, int y2): # nogil:
         span2 = c_abs(y2 - y1)
         center2 = (y1 + y2) / 2
 
-    position_distance = c_fabs(center1 - center2) # 1 #distance_normalizer
+    position_distance = c_fabs(center1 - center2)
     if position_distance > 2000:
         return 0
     max_span = max(span1, span2)
     span_distance = <float>c_abs(span1 - span2) / max_span
-    # echo("pd", position_distance, center1, center2)
-    # echo((position_distance / max_span), span_distance, center1, center2 )
     if (position_distance / max_span) < 0.2 and span_distance < 0.3:
-    # if position_distance < 100 and span_distance < 0.08:
         return 1
     return 0
 
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,
-                                 bint paired_end, int cigar_len1, int cigar_len2) nogil:
+                                 bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
     if read_enum == BREAKEND:
         return 0
-    if read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+    if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
         span1 = cigar_len1
         span2 = cigar_len2
         center1 = x1

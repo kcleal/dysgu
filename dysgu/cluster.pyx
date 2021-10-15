@@ -801,7 +801,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             norm_thresh=args["dist_norm"],
                                             spd_thresh=args["spd"],
                                             mm_only=args["regions_mm_only"] == "True",
-                                            sites=sites_info)
+                                            sites=sites_info,
+                                            trust_ins_len=args["trust_ins_len"] == "True")
 
     sites_index = None
     if sites_adder:
