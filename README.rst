@@ -167,7 +167,7 @@ in --sites is also a true variant in the input sample. For related individuals o
 --sites are from a trusted source, a higher --sites-prob value is recommended e.g. --sites-prob 0.8.
 
 If the --sites vcf file is from a previous dysgu run, the PROB values can be utilized by setting '--parse-probs True'. This
-option can work well when inputting dysgu calls from a related individual.
+option can work well when using dysgu calls from a related individual.
 
 
 Useful parameters
