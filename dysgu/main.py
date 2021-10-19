@@ -48,7 +48,7 @@ presets = {"nanopore": {"mq": 20,
                         "pl": "nanopore",
                         "remap": "False",
                         "clip_length": -1,
-                        "trust_ins_len": False
+                        "trust_ins_len": "False"
                         },
            "pacbio": {"mq": 20,
                       "min_support": 2,
@@ -57,7 +57,7 @@ presets = {"nanopore": {"mq": 20,
                       "pl": "pacbio",
                       "remap": "False",
                       "clip_length": -1,
-                      "trust_ins_len": True
+                      "trust_ins_len": "True"
                       },
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
