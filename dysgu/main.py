@@ -11,6 +11,8 @@ import warnings
 from dysgu import cluster, view, sv2bam
 import datetime
 import logging
+from dysgu.map_set_utils import echo
+
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -87,6 +89,11 @@ def apply_preset(kwargs):
 
     for k, v in presets[kwargs["mode"]].items():
         if k in new_options_set and new_options_set[k] is not None:
+
+            # use the presents option if new_options_set is default
+            # if new_options_set[k] == defaults[k]:
+            #     kwargs[k] = v
+
             kwargs[k] = new_options_set[k]
         else:
             kwargs[k] = v
@@ -190,8 +197,8 @@ def cli():
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
-@click.option('--trust-ins-len', help="Trust insertion length from cigar, for high error rate reads use False",
-              default=defaults["trust_ins_len"], type=click.Choice(["True", "False"]), show_default=True, callback=add_option_set)
+@click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
+              type=str, callback=add_option_set)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
@@ -372,8 +379,8 @@ def get_reads(ctx, **kwargs):
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
-@click.option('--trust-ins-len', help="Trust insertion length from cigar, for high error rate reads use False",
-              default=defaults["trust_ins_len"], type=click.Choice(["True", "False"]), show_default=True, callback=add_option_set)
+@click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
+              type=str, callback=add_option_set)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
@@ -429,9 +436,7 @@ def call_events(ctx, **kwargs):
     logging.info("Input file is: {}".format(kwargs["sv_aligns"]))
 
     apply_preset(kwargs)
-
     show_params()
-
     ctx = apply_ctx(ctx, kwargs)
 
     cluster.cluster_reads(ctx.obj)
