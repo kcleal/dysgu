@@ -49,7 +49,7 @@ def merge_simple(intervals):
                 merged.append(higher)
     return merged
 
-def parse_search_regions(search, exclude, bam):
+def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
 
     if search is not None and exclude is None:
         s = ""
@@ -58,7 +58,7 @@ def parse_search_regions(search, exclude, bam):
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.strip().split("\t", 4)[:3]
-                s += f"{chrom}:{start}-{end},"
+                s += f"{chrom}{first_delim}{start}-{end}{sep}"
         if len(s) == 0:
             raise ValueError("Search regions not understood")
         return s
@@ -100,7 +100,7 @@ def parse_search_regions(search, exclude, bam):
         if chrom in excl:
             v = multirange_diff(v, excl[chrom])
         for start, end in v:
-            s += f"{chrom}:{start}-{end},"
+            s += f"{chrom}{first_delim}{start}-{end}{sep}"
     if len(s) == 0:
         raise ValueError("Search/exclude regions not understood")
     return s
@@ -124,8 +124,8 @@ def assert_indexed_input(bam, fasta):
 
 cdef extern from "find_reads.h":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                                   int threads, int paired_end, char* temp_f, int max_coverage, char* region, char *fasta,
-                                   bint write_all, char* out_write_mode_b)
+                                   int threads, int paired_end, char* temp_f, int max_coverage, char* region,
+                                   char* max_cov_ignore, char *fasta, bint write_all, char* out_write_mode_b)
 
 def process(args):
 
@@ -171,12 +171,18 @@ def process(args):
     region = ".,"
     if args["search"] or args["exclude"]:
         bam = assert_indexed_input(args["bam"], args["reference"])
-        region = parse_search_regions(args["search"], args["exclude"], bam)  # target regions in string format
+        region = parse_search_regions(args["search"], args["exclude"], bam)  # target regions in string format i.e. {chrom}:{start}-{end},
 
     regionbytes = region.encode("ascii")
 
+    max_cov_ignore = ".,"
+    if args["regions"]:
+        bam = assert_indexed_input(args["bam"], args["reference"])
+        max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
+    max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
+
     count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
-                                  args["procs"], pe, temp_f, int(args["max_cov"]), regionbytes, fasta_b, write_all,
+                                  args["procs"], pe, temp_f, int(args["max_cov"]), regionbytes, max_cov_ignore_bytes, fasta_b, write_all,
                                   out_write_mode_b)
 
     if count < 0:

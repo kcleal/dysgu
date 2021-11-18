@@ -6,6 +6,7 @@
 #include <queue>
 #include <map>
 #include <fstream>
+#include <sstream>
 
 #include "robin_hood.h"
 #include "htslib/htslib/sam.h"
@@ -23,6 +24,14 @@ class CoverageTrack
         std::vector<int32_t> cov_array;  // Assume coverage never overflows int32
         int max_coverage;
         int index = 0;
+
+
+//        bool region_intervals = false;
+//        std::map<std::string, Intervals::IntervalTree<int> > all_intervals_tree;
+//
+//        void add_interval(std::string chrom, int r_start, int r_end) {
+//            all_intervals_tree[chrom].insert({r_start, r_end});
+//        }
 
         void add(int index_start, int index_end) {
             cov_array[index_start / 10] += 1;
@@ -236,7 +245,8 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
 
 
 int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage, char* region, char *fasta,
+                          int threads, int paired_end, char* temp_f, int max_coverage, char* region,
+                          char* max_cov_ignore_regions, char *fasta,
                           const bool write_all, char* write_mode) {
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
@@ -289,6 +299,40 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     CoverageTrack cov_track;
     cov_track.max_coverage = max_coverage;
 
+    // Add any capture regions from --regions to interval tree
+//    std::string mcs = max_cov_ignore_regions;
+//    std::cerr << mcs << std::endl;
+//    if (mcs != ".,") {
+//
+//        cov_track.region_intervals = true;
+//        std::istringstream input;
+//        input.str(mcs);
+//
+//        std::string segment;
+//        std::string chrom;
+//        int r_start;
+//        int r_end;
+//
+//        while (true) {
+//
+//            std::getline(input, segment, '-');
+//            chrom = segment;
+//            if (chrom.size() == 0) {break;}
+//
+//            segment = "";
+//            std::getline(input, segment, '-');
+//            r_start = std::stoi(segment);
+//            segment = "";
+//
+//            std::getline(input, segment, '-');
+//            r_end = std::stoi(segment);
+//            segment = "";
+//            std::cerr << chrom << " " << r_start << " " << r_end << std::endl;
+//            cov_track.add_interval(chrom, r_start, r_end);
+//        }
+//    }
+
+
     std::string temp_folder = temp_f;
 
     int current_tid = -1;
@@ -305,7 +349,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         int string_pos;
         std::string delim = ",";
         std::string token;
-
         char *token_ptr;
 
         while ((string_pos = region_string.find(delim)) != std::string::npos) {

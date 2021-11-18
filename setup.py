@@ -89,25 +89,17 @@ if "--htslib" in sys.argv:
     else:
         raise ValueError("--htslib path does not exists")
 
-#
-# if os.getenv("PATH", None):
-#     for i in os.environ["PATH"].split(":"):
-#         if "htslib" in os.path.basename(i):
-#             print(glob.glob(i))
-#             if any("libhts" in i for i in glob.glob(i + "/*")):
-#                 htslib = i
-#                 break
 
 if htslib is None:
     print("Using packaged htslib")
     htslib = os.path.join(root, "dysgu/htslib")
 
 
-libraries = [f"{htslib}/hts"]  # Library name for libhts.so
+libraries = [f"{htslib}/hts"]
 library_dirs = [htslib, numpy.get_include(), f"{htslib}/htslib"] + pysam.get_include()
-include_dirs = [numpy.get_include(), root, # htslib,
+include_dirs = [numpy.get_include(), root,
                 f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
-runtime_dirs = [htslib]  # os.path.join(root, "dysgu/htslib")
+runtime_dirs = [htslib]
 
 # extra_link_args = ["-L ./dysgu/htslib", "-L ./dysgu/htslib/htslib"]
 
@@ -140,7 +132,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.3.0',
+    version='1.3.1',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',

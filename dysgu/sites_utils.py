@@ -43,6 +43,9 @@ def parse_variant_seqs_dysgu(r, svt, chrom, start, chrom2, stop, paired_end, ref
     return a_left, a_right
 
 
+Site = namedtuple("Site", ["chrom", "start", "chrom2", "end", "svtype", "index", "id", "svlen", "prob"])
+
+
 def vcf_reader(pth, infile, ref_genome_pth, paired_end, parse_probs, default_prob=0.6, pass_only=True):
     if pth is None:
         return None
@@ -53,7 +56,6 @@ def vcf_reader(pth, infile, ref_genome_pth, paired_end, parse_probs, default_pro
 
     # variants must be fed into graph in roughly sorted order
     recs = {}
-    Site = namedtuple("Site", ["chrom", "start", "chrom2", "end", "svtype", "index", "id", "svlen", "prob"])
 
     not_parsed = []
     for idx, r in enumerate(vcf):

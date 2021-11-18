@@ -297,8 +297,6 @@ def run_pipeline(ctx, **kwargs):
               show_default=False, default="", required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
-# @click.option("-r", "--reads", help="Output file for all input alignments, use '-' or 'stdout' for stdout",
-#               default="None", type=str, show_default=True)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
               type=str)
 @click.option("--compression", help="Set output bam compression level. Default is uncompressed",
@@ -319,6 +317,8 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
+@click.option('--regions', help="bed file of target regions. --max-cov is ignored within these regions", default=None,
+              type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
