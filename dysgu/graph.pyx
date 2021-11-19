@@ -38,6 +38,8 @@ from dysgu.map_set_utils cimport MinimizerTable
 from dysgu.map_set_utils import echo
 from dysgu.post_call_metrics import BadClipCounter
 
+from dysgu.map_set_utils import echo  # for debugging
+
 ctypedef cpp_pair[int, int] cpp_item
 
 ctypedef map_set_utils.Py_IntSet Py_IntSet

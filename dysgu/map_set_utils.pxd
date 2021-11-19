@@ -67,11 +67,15 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         bint empty()
 
 
-cdef class Py_CoverageTrack:
-    cdef public int max_coverage, current_chrom
-    cdef public str outpath
-    cdef public object cov_array
-    cdef public object infile
+cdef extern from "find_reads.h" nogil:
+    cdef cppclass CoverageTrack:
+        CoverageTrack() nogil
+
+        void add(int, int)
+        bint cov_val_good(int, int, int)
+        void set_cov_array(int)
+        void write_track(char*)
+        void set_max_cov(int)
 
 
 cdef extern from "wrap_map_set2.h" nogil:

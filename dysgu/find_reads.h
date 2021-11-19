@@ -32,21 +32,21 @@ class CoverageTrack
 //        void add_interval(std::string chrom, int r_start, int r_end) {
 //            all_intervals_tree[chrom].insert({r_start, r_end});
 //        }
+        void set_max_cov(int m) {
+            max_coverage = m;
+        }
 
         void add(int index_start, int index_end) {
             cov_array[index_start / 10] += 1;
             cov_array[index_end / 10] -= 1;
         }
 
-        bool cov_val_good(bam1_t* aln, int current_tid) {
+        bool cov_val_good(int current_tid, int aln_tid, int pos) {
             // Work out the coverage value up until alignment pos. Assumes that alignments dropping out of the queue
             // will not overlap the ones being read into the queue
 
-            if (aln->core.tid != current_tid) {
-                return true;  // Assumed, but might not be the case
-            }
+            if (aln_tid != current_tid) { return true; }  // Assumed, but might not be the case
 
-            int pos = aln->core.pos;
             int target_index = (pos / 10) + 1;  // Make sure the pos bin is tested
             int current_cov = cov_array[index];
 
@@ -80,10 +80,9 @@ class CoverageTrack
 
             int current_cov = 0;
             int16_t high = 32000;
-
             for (int i = 0; i < cov_array.size(); i++) {
 
-                if (i >= index) {
+                if (i > index) {
                     int v = cov_array[i];
                     current_cov += v;
                 } else {
@@ -115,12 +114,12 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
 
     if (scope.size() > max_scope) {
         scope_item = scope[0];
-
+        aln = scope_item.second;
         // check if read is SV-read and in low coverage region, push to write queue
-        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
-            write_queue.push_back(scope_item.second);
+        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(current_tid, aln->core.tid, aln->core.pos)) {
+            write_queue.push_back(aln);
         } else {
-            bam_destroy1(scope_item.second);
+            bam_destroy1(aln);
         }
         scope.pop_front();
     }
@@ -232,12 +231,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
             sv_read = true;
             return 0;
         }
-        // check mate on different chrom
-//        if (flag & 1 && aln->core.tid != aln->core.mtid) {
-//            read_names.insert(precalculated_hash);
-//            sv_read = true;
-//            return 0;
-//        }
+
     }
 
     return 0;
@@ -394,12 +388,14 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     }
 
     // Deal with reads still in the queue
+    bam1_t* aln;
     while (scope.size() > 0) {
         scope_item = scope[0];
-        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(scope_item.second, current_tid)) {
-            write_queue.push_back(scope_item.second);
+        aln = scope_item.second;
+        if (read_names.find(scope_item.first) != read_names.end() && cov_track.cov_val_good(current_tid, aln->core.tid, aln->core.pos)) {
+            write_queue.push_back(aln);
         } else {
-            bam_destroy1(scope_item.second);
+            bam_destroy1(aln);
         }
         scope.pop_front();
     }

@@ -36,69 +36,6 @@ def timeit(method):
     return timed
 
 
-cdef class Py_CoverageTrack:
-
-    def __init__(self, outpath, infile, max_coverage):
-        self.current_chrom = -1
-        self.outpath = outpath
-        self.cov_array = np.array([], dtype="int32")
-        self.infile = infile
-        self.max_coverage = max_coverage
-
-    def add(self, a):
-        if a.flag & 1284 or a.cigartuples is None or a.mapq == 0:  # not primary, duplicate or unmapped?
-            return
-
-        if self.current_chrom != a.rname:
-            self.write_track()
-            self.set_cov_array(a.rname)
-            self.current_chrom = a.rname
-
-        cdef int32_t[:] arr = self.cov_array
-        if int(a.pos  / 10) > len(arr) - 1:
-            return
-
-        cdef int index_start = a.pos
-        cdef int index_bin = int(index_start / 10)
-        cdef int opp, length
-
-        for opp, length in a.cigartuples:
-            if index_bin > len(arr) - 1:
-                break
-            if opp == 2:
-                index_start += length
-                index_bin = int(index_start / 10)
-            elif opp == 0 or opp == 7 or opp == 8:
-                arr[index_bin] += 1
-                index_start += length
-                index_bin = int(index_start / 10)
-                if index_bin < len(arr):
-                    arr[index_bin] -= 1
-
-    def set_cov_array(self, int rname):
-        chrom_length = self.infile.get_reference_length(self.infile.get_reference_name(rname))
-        self.cov_array = np.resize(self.cov_array, int(chrom_length / 10) + 1)
-        self.cov_array.fill(0)
-
-    def write_track(self):
-        cdef np.ndarray[int16_t, ndim=1] ca = self.cov_array.astype("int16")  # old style buffer for .tofile function
-        cdef int current_cov = 0
-        cdef int16_t v
-        cdef int i
-        if self.current_chrom != -1:
-            out_path = "{}/{}.dysgu_chrom.bin".format(self.outpath, self.infile.get_reference_name(self.current_chrom))
-            for i in range(len(ca)):
-                v = ca[i]
-                current_cov += v
-                if current_cov < 32000:
-                    ca[i] = current_cov
-                elif current_cov < 0:
-                    ca[i] = 0  # sanity check
-                elif current_cov >= 32000:
-                    ca[i] = 32000
-            ca.tofile(out_path)
-
-
 cdef class Py_DiGraph:
     """DiGraph, weighted"""
     def __cinit__(self):

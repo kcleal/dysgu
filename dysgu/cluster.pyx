@@ -14,7 +14,7 @@ import pysam
 import sys
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, Py_CoverageTrack, EventResult
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import timeit, echo
 from dysgu import sites_utils
 import pickle
@@ -721,16 +721,17 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     if not args["ibam"]:
         # Make a new coverage track if one hasn't been created yet
-        coverage_tracker = Py_CoverageTrack(temp_dir, infile, args["max_cov"])
+        cov_track_path = temp_dir
     else:
-        coverage_tracker = None
+        cov_track_path = None
 
-    genome_scanner = coverage.GenomeScanner(infile, args["max_cov"], args["regions"], args["procs"],
+    genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], args["procs"],
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
                                             min_within_size=args["min_size"],
-                                            coverage_tracker=coverage_tracker)
+                                            cov_track_path=cov_track_path,
+                                            paired_end=paired_end)
 
     insert_median, insert_stdev, read_len = -1, -1, -1
     if args["template_size"] != "":

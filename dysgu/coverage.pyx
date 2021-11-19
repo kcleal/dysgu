@@ -10,6 +10,7 @@ import pysam
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
+from dysgu.map_set_utils cimport CoverageTrack
 from dysgu.map_set_utils import echo
 
 
@@ -145,12 +146,14 @@ def get_insert_params(L, mads=8):  # default for lumpy is 10
     return mean, stdev
 
 
-class GenomeScanner:
 
-    def __init__(self, inputbam, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin,
-                 clip_length=30, min_within_size=30, coverage_tracker=None):
+cdef class GenomeScanner:
+
+    def __init__(self, inputbam, int mapq_threshold, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin,
+                 clip_length=30, min_within_size=30, cov_track_path=None, paired_end=True):
 
         self.input_bam = inputbam
+        self.mapq_threshold = mapq_threshold
         self.max_cov = max_cov
         self.include_regions = include_regions
         self.overlap_regions = io_funcs.overlap_regions(include_regions, int_chroms=True, infile=inputbam)
@@ -170,7 +173,7 @@ class GenomeScanner:
 
         self.reads_dropped = 0
         self.depth_d = {}
-        self.cov_track = coverage_tracker
+        self.cov_track_path = cov_track_path
 
         self.first = 1  # Not possible to get first position in a target fetch region, so buffer first read instead
         self.read_buffer = dict()
@@ -179,10 +182,17 @@ class GenomeScanner:
         self.last_tell = 0
         self.no_tell = True if stdin else False
         self.extended_tags = False
+        self.paired_end = paired_end
+
+        self.cpp_cov_track = CoverageTrack()
+        self.current_tid = -1
 
     def _get_reads(self):
         # Two options, reads are collected from whole genome, or from target regions only
+        cdef int index_start, opp, length, chrom_length
+        cdef bytes out_path
 
+        cdef int mq_thresh = self.mapq_threshold
         # Scan whole genome
         if not self.include_regions or not self.regions_only:
 
@@ -192,26 +202,87 @@ class GenomeScanner:
 
             tell = 0 if self.no_tell else self.input_bam.tell()
 
-            for aln in self.input_bam:
+            # when 'run' command is invoked, run this block. cov track already exists from find-reads
+            if self.cov_track_path is None:
+                for aln in self.input_bam:
 
-                self._add_to_bin_buffer(aln, tell)
-                tell = 0 if self.no_tell else self.input_bam.tell()
+                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:  # not primary, duplicate or unmapped?
+                        continue
 
-                # Add to coverage track here
-                if self.cov_track is not None:
-                    self.cov_track.add(aln)
+                    self._add_to_bin_buffer(aln, tell)
+                    tell = 0 if self.no_tell else self.input_bam.tell()
 
-                while len(self.staged_reads) > 0:
-                    yield self.staged_reads.popleft()
+                    while len(self.staged_reads) > 0:
+                        yield self.staged_reads.popleft()
+
+            # when 'call' command was run only. generate coverage track here
+            else:
+
+                self.cpp_cov_track.set_max_cov(self.max_cov)
+                if self.paired_end:
+                    q_size = 100000
+                else:
+                    q_size = 500
+
+                for aln in self.input_bam:
+
+                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
+                        continue
+
+                    # prepare cov array
+                    if aln.rname != self.current_tid:
+
+                        if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
+                            out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
+                            self.cpp_cov_track.write_track(out_path)
+
+                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(aln.rname))
+                        self.current_tid = aln.rname
+                        self.cpp_cov_track.set_cov_array(chrom_length)
+
+                    # Add to coverage track here
+                    index_start = 0
+                    pos = aln.pos
+                    good_read = False
+                    if aln.flag & 2048:
+                        good_read = True
+                    elif not aln.flag & 2:
+                        good_read = True
+                    for opp, length in aln.cigartuples:
+                        if opp == 4 and length >= self.clip_length:
+                            good_read = True
+                        elif opp == 2:
+                            index_start += length
+                            if length >= self.min_within_size:
+                                good_read = True
+                        elif opp == 1 and length >= self.min_within_size:
+                            good_read = True
+                        elif opp == 0 or opp == 7 or opp == 8:
+                            self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
+                            index_start += length
+
+                    if not good_read:
+                        continue
+
+                    self._add_to_bin_buffer(aln, tell)
+                    tell = 0 if self.no_tell else self.input_bam.tell()
+
+                    while len(self.staged_reads) > 0:
+                        yield self.staged_reads.popleft()
+
+                if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
+                    out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
+                    self.cpp_cov_track.write_track(out_path)
 
             if len(self.current_bin) > 0:
                 yield self.current_bin
 
-            if self.cov_track is not None:
-                self.cov_track.write_track()
-
         # Scan input regions
         else:
+
+            if self.cov_track_path is not None:
+                raise Exception("--regions-only is not currently supported via the 'call' command")
+
             # Reads must be fed into graph in sorted order, find regions of interest first
             intervals_to_check = []  # Containing include_regions, and also mate pairs
             pad = 1000
@@ -243,8 +314,7 @@ class GenomeScanner:
             seen_reads = set([])  # Avoid reading same alignment twice, shouldn't happen anyway
             for c, s, e in itv:
 
-                tell = -1  # buffer first read because tell till likely be wrong
-                # tell = 0 if self.no_tell else self.input_bam.tell()
+                tell = -1  # buffer first read because tell will likely be wrong
                 for a in self.input_bam.fetch(c, int(s), int(e)):
 
                     name = a.qname.__hash__(), a.flag, a.pos
@@ -293,15 +363,41 @@ class GenomeScanner:
         else:
             file_iter = self.input_bam
 
-        for a in file_iter:  # self.input_bam:
+        for a in file_iter:
 
-            if ibam is None:
+            if ibam is None:  # iterate input_bam not ibam
+
+                if a.flag & 1284 or a.mapq < self.mapq_threshold or a.cigartuples is None:
+                    continue
+
                 tell = 0 if self.no_tell else self.input_bam.tell()
                 if self.no_tell:  # Buffer reads if coming from stdin
                     self._add_to_bin_buffer(a, tell)
 
                     # Add to coverage track here
+                    # prepare cov array
+                    if a.rname != self.current_tid:
 
+                        if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
+                            out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path.outpath, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
+                            self.cpp_cov_track.write_track(out_path)
+
+                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(a.rname))
+                        self.current_tid = a.rname
+                        self.cpp_cov_track.set_cov_array(chrom_length)
+
+                    # Add to coverage track here
+                    index_start = 0
+                    pos = a.pos
+                    for opp, length in a.cigartuples:
+                        if opp == 2:
+                            index_start += length
+                        elif opp == 0 or opp == 7 or opp == 8:
+                            end = index_start + length
+                            self.cpp_cov_track.add(pos + index_start, pos + end)
+                            index_start += length
+
+            #
             if len(approx_read_length_l) < 200000:
                 flag = a.flag
                 if a.seq is not None:
