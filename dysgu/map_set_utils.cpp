@@ -1270,7 +1270,7 @@ typedef std::pair<int,int>  __pyx_t_5dysgu_13map_set_utils_cpp_item;
  */
 typedef std::pair<long,int>  __pyx_t_5dysgu_13map_set_utils_cpp_long_item;
 
-/* "dysgu/map_set_utils.pxd":112
+/* "dysgu/map_set_utils.pxd":113
  * 
  * 
  * cdef class Py_DiGraph:             # <<<<<<<<<<<<<<
@@ -1284,7 +1284,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_DiGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":141
+/* "dysgu/map_set_utils.pxd":142
  * 
  * 
  * cdef class Py_SimpleGraph:             # <<<<<<<<<<<<<<
@@ -1298,7 +1298,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph {
 };
 
 
-/* "dysgu/map_set_utils.pxd":167
+/* "dysgu/map_set_utils.pxd":168
  * 
  * 
  * cdef class Py_Int2IntMap:             # <<<<<<<<<<<<<<
@@ -1312,7 +1312,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_Int2IntMap {
 };
 
 
-/* "dysgu/map_set_utils.pxd":189
+/* "dysgu/map_set_utils.pxd":190
  * 
  * 
  * cdef class Py_IntSet:             # <<<<<<<<<<<<<<
@@ -1326,7 +1326,7 @@ struct __pyx_obj_5dysgu_13map_set_utils_Py_IntSet {
 };
 
 
-/* "dysgu/map_set_utils.pxd":288
+/* "dysgu/map_set_utils.pxd":289
  * 
  * 
  * cdef class EventResult:             # <<<<<<<<<<<<<<
@@ -9078,7 +9078,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10__setstate__(st
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":290
+/* "dysgu/map_set_utils.pxd":291
  * cdef class EventResult:
  *     """Data holder for classifying alignments into SV types"""
  *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, contig_lc, contig_rc, contig2_lc, contig2_rc, \             # <<<<<<<<<<<<<<
@@ -9108,7 +9108,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_16contig_ref_star
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_ref_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_ref_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9146,7 +9146,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_16contig_ref_start_2__s
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig_ref_start = __pyx_t_1;
 
   /* function exit code */
@@ -9182,7 +9182,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14contig_ref_end_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_ref_end); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_ref_end); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9220,7 +9220,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14contig_ref_end_2__set
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig_ref_end = __pyx_t_1;
 
   /* function exit code */
@@ -9256,7 +9256,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_17contig2_ref_sta
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_ref_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_ref_start); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9294,7 +9294,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_17contig2_ref_start_2__
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig2_ref_start = __pyx_t_1;
 
   /* function exit code */
@@ -9330,7 +9330,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_15contig2_ref_end
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_ref_end); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_ref_end); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9368,7 +9368,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_15contig2_ref_end_2__se
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig2_ref_end = __pyx_t_1;
 
   /* function exit code */
@@ -9404,7 +9404,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9contig_lc___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_lc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_lc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9442,7 +9442,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9contig_lc_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig_lc = __pyx_t_1;
 
   /* function exit code */
@@ -9478,7 +9478,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9contig_rc___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_rc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig_rc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9516,7 +9516,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9contig_rc_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig_rc = __pyx_t_1;
 
   /* function exit code */
@@ -9552,7 +9552,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10contig2_lc___ge
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_lc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_lc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9590,7 +9590,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_10contig2_lc_2__set__(s
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig2_lc = __pyx_t_1;
 
   /* function exit code */
@@ -9626,7 +9626,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10contig2_rc___ge
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_rc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->contig2_rc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9664,7 +9664,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_10contig2_rc_2__set__(s
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 290, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
   __pyx_v_self->contig2_rc = __pyx_t_1;
 
   /* function exit code */
@@ -9678,7 +9678,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_10contig2_rc_2__set__(s
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":291
+/* "dysgu/map_set_utils.pxd":292
  *     """Data holder for classifying alignments into SV types"""
  *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, contig_lc, contig_rc, contig2_lc, contig2_rc, \
  *         grp_id, event_id, n_expansion, stride, ref_poly_bases             # <<<<<<<<<<<<<<
@@ -9708,7 +9708,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6grp_id___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->grp_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->grp_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9746,7 +9746,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6grp_id_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
   __pyx_v_self->grp_id = __pyx_t_1;
 
   /* function exit code */
@@ -9782,7 +9782,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8event_id___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->event_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->event_id); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9820,7 +9820,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8event_id_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
   __pyx_v_self->event_id = __pyx_t_1;
 
   /* function exit code */
@@ -9856,7 +9856,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_11n_expansion___g
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_expansion); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_expansion); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9894,7 +9894,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11n_expansion_2__set__(
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
   __pyx_v_self->n_expansion = __pyx_t_1;
 
   /* function exit code */
@@ -9930,7 +9930,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6stride___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->stride); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->stride); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -9968,7 +9968,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6stride_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
   __pyx_v_self->stride = __pyx_t_1;
 
   /* function exit code */
@@ -10004,7 +10004,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14ref_poly_bases_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ref_poly_bases); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ref_poly_bases); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10042,7 +10042,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14ref_poly_bases_2__set
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 291, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
   __pyx_v_self->ref_poly_bases = __pyx_t_1;
 
   /* function exit code */
@@ -10056,7 +10056,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14ref_poly_bases_2__set
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":292
+/* "dysgu/map_set_utils.pxd":293
  *     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, contig_lc, contig_rc, contig2_lc, contig2_rc, \
  *         grp_id, event_id, n_expansion, stride, ref_poly_bases
  *     cdef public float contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress             # <<<<<<<<<<<<<<
@@ -10086,7 +10086,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_18contig_left_wei
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig_left_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig_left_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10124,7 +10124,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_18contig_left_weight_2_
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->contig_left_weight = __pyx_t_1;
 
   /* function exit code */
@@ -10160,7 +10160,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_19contig_right_we
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig_right_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig_right_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10198,7 +10198,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_19contig_right_weight_2
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->contig_right_weight = __pyx_t_1;
 
   /* function exit code */
@@ -10234,7 +10234,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_19contig2_left_we
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig2_left_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig2_left_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10272,7 +10272,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_19contig2_left_weight_2
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->contig2_left_weight = __pyx_t_1;
 
   /* function exit code */
@@ -10308,7 +10308,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_20contig2_right_w
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig2_right_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->contig2_right_weight); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10346,7 +10346,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_20contig2_right_weight_
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->contig2_right_weight = __pyx_t_1;
 
   /* function exit code */
@@ -10382,7 +10382,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_rep___get__(
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->ref_rep); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->ref_rep); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10420,7 +10420,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7ref_rep_2__set__(struc
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->ref_rep = __pyx_t_1;
 
   /* function exit code */
@@ -10456,7 +10456,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8compress___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->compress); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->compress); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10494,7 +10494,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8compress_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 292, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 293, __pyx_L1_error)
   __pyx_v_self->compress = __pyx_t_1;
 
   /* function exit code */
@@ -10508,7 +10508,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8compress_2__set__(stru
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":294
+/* "dysgu/map_set_utils.pxd":295
  *     cdef public float contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress
  * 
  *     cdef public int32_t su, pe, supp, sc, NP, maxASsupp, plus, minus, spanning, double_clips, n_unmapped_mates, n_small_tlen, bnd, ras, fas, cipos95A, cipos95B             # <<<<<<<<<<<<<<
@@ -10538,7 +10538,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2su___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->su); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->su); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10576,7 +10576,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2su_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->su = __pyx_t_1;
 
   /* function exit code */
@@ -10612,7 +10612,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2pe___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->pe); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->pe); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10650,7 +10650,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2pe_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->pe = __pyx_t_1;
 
   /* function exit code */
@@ -10686,7 +10686,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4supp___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->supp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->supp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10724,7 +10724,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4supp_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->supp = __pyx_t_1;
 
   /* function exit code */
@@ -10760,7 +10760,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2sc___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->sc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->sc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10798,7 +10798,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2sc_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->sc = __pyx_t_1;
 
   /* function exit code */
@@ -10834,7 +10834,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2NP___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->NP); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->NP); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10872,7 +10872,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2NP_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->NP = __pyx_t_1;
 
   /* function exit code */
@@ -10908,7 +10908,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9maxASsupp___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->maxASsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->maxASsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -10946,7 +10946,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9maxASsupp_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->maxASsupp = __pyx_t_1;
 
   /* function exit code */
@@ -10982,7 +10982,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4plus___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->plus); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->plus); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11020,7 +11020,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4plus_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->plus = __pyx_t_1;
 
   /* function exit code */
@@ -11056,7 +11056,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_5minus___get__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->minus); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->minus); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11094,7 +11094,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_5minus_2__set__(struct 
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->minus = __pyx_t_1;
 
   /* function exit code */
@@ -11130,7 +11130,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8spanning___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->spanning); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->spanning); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11168,7 +11168,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8spanning_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->spanning = __pyx_t_1;
 
   /* function exit code */
@@ -11204,7 +11204,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_12double_clips___
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->double_clips); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->double_clips); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11242,7 +11242,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12double_clips_2__set__
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->double_clips = __pyx_t_1;
 
   /* function exit code */
@@ -11278,7 +11278,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_16n_unmapped_mate
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_unmapped_mates); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_unmapped_mates); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11316,7 +11316,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_16n_unmapped_mates_2__s
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->n_unmapped_mates = __pyx_t_1;
 
   /* function exit code */
@@ -11352,7 +11352,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_12n_small_tlen___
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_small_tlen); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_small_tlen); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11390,7 +11390,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_12n_small_tlen_2__set__
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->n_small_tlen = __pyx_t_1;
 
   /* function exit code */
@@ -11426,7 +11426,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3bnd___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->bnd); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->bnd); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11464,7 +11464,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3bnd_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->bnd = __pyx_t_1;
 
   /* function exit code */
@@ -11500,7 +11500,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3ras___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ras); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ras); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11538,7 +11538,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3ras_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->ras = __pyx_t_1;
 
   /* function exit code */
@@ -11574,7 +11574,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3fas___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->fas); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->fas); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11612,7 +11612,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3fas_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->fas = __pyx_t_1;
 
   /* function exit code */
@@ -11648,7 +11648,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8cipos95A___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->cipos95A); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->cipos95A); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11686,7 +11686,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8cipos95A_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->cipos95A = __pyx_t_1;
 
   /* function exit code */
@@ -11722,7 +11722,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8cipos95B___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->cipos95B); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->cipos95B); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11760,7 +11760,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8cipos95B_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 294, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
   __pyx_v_self->cipos95B = __pyx_t_1;
 
   /* function exit code */
@@ -11774,7 +11774,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8cipos95B_2__set__(stru
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":295
+/* "dysgu/map_set_utils.pxd":296
  * 
  *     cdef public int32_t su, pe, supp, sc, NP, maxASsupp, plus, minus, spanning, double_clips, n_unmapped_mates, n_small_tlen, bnd, ras, fas, cipos95A, cipos95B
  *     cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps             # <<<<<<<<<<<<<<
@@ -11804,7 +11804,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2DP___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DP); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DP); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11842,7 +11842,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2DP_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->DP = __pyx_t_1;
 
   /* function exit code */
@@ -11878,7 +11878,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_5DApri___get__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DApri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DApri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11916,7 +11916,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_5DApri_2__set__(struct 
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->DApri = __pyx_t_1;
 
   /* function exit code */
@@ -11952,7 +11952,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2DN___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DN); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DN); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -11990,7 +11990,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2DN_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->DN = __pyx_t_1;
 
   /* function exit code */
@@ -12026,7 +12026,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_5NMpri___get__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMpri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMpri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12064,7 +12064,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_5NMpri_2__set__(struct 
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->NMpri = __pyx_t_1;
 
   /* function exit code */
@@ -12100,7 +12100,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6DAsupp___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DAsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->DAsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12138,7 +12138,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6DAsupp_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->DAsupp = __pyx_t_1;
 
   /* function exit code */
@@ -12174,7 +12174,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6NMsupp___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12212,7 +12212,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6NMsupp_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->NMsupp = __pyx_t_1;
 
   /* function exit code */
@@ -12248,7 +12248,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_7MAPQpri___get__(
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->MAPQpri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->MAPQpri); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12286,7 +12286,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_7MAPQpri_2__set__(struc
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->MAPQpri = __pyx_t_1;
 
   /* function exit code */
@@ -12322,7 +12322,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8MAPQsupp___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->MAPQsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->MAPQsupp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12360,7 +12360,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8MAPQsupp_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->MAPQsupp = __pyx_t_1;
 
   /* function exit code */
@@ -12396,7 +12396,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6NMbase___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMbase); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->NMbase); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12434,7 +12434,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6NMbase_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->NMbase = __pyx_t_1;
 
   /* function exit code */
@@ -12470,7 +12470,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4n_sa___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_sa); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_sa); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12508,7 +12508,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4n_sa_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->n_sa = __pyx_t_1;
 
   /* function exit code */
@@ -12544,7 +12544,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4n_xa___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_xa); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_xa); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12582,7 +12582,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4n_xa_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->n_xa = __pyx_t_1;
 
   /* function exit code */
@@ -12618,7 +12618,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6n_gaps___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_gaps); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->n_gaps); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12656,7 +12656,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6n_gaps_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 295, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 296, __pyx_L1_error)
   __pyx_v_self->n_gaps = __pyx_t_1;
 
   /* function exit code */
@@ -12670,7 +12670,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6n_gaps_2__set__(struct
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":297
+/* "dysgu/map_set_utils.pxd":298
  *     cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
  * 
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp             # <<<<<<<<<<<<<<
@@ -12700,7 +12700,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4posA___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->posA); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->posA); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12738,7 +12738,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4posA_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->posA = __pyx_t_1;
 
   /* function exit code */
@@ -12774,7 +12774,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4posB___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->posB); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->posB); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12812,7 +12812,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4posB_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->posB = __pyx_t_1;
 
   /* function exit code */
@@ -12848,7 +12848,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_5svlen___get__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->svlen); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->svlen); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12886,7 +12886,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_5svlen_2__set__(struct 
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->svlen = __pyx_t_1;
 
   /* function exit code */
@@ -12922,7 +12922,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9query_gap___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->query_gap); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->query_gap); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -12960,7 +12960,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9query_gap_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->query_gap = __pyx_t_1;
 
   /* function exit code */
@@ -12996,7 +12996,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_13query_overlap__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->query_overlap); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->query_overlap); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13034,7 +13034,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13query_overlap_2__set_
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->query_overlap = __pyx_t_1;
 
   /* function exit code */
@@ -13070,7 +13070,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_10block_edge___ge
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->block_edge); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->block_edge); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13108,7 +13108,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_10block_edge_2__set__(s
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->block_edge = __pyx_t_1;
 
   /* function exit code */
@@ -13144,7 +13144,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9ref_bases___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ref_bases); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->ref_bases); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13182,7 +13182,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9ref_bases_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->ref_bases = __pyx_t_1;
 
   /* function exit code */
@@ -13218,7 +13218,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_11remap_score___g
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->remap_score); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->remap_score); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13256,7 +13256,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_11remap_score_2__set__(
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->remap_score = __pyx_t_1;
 
   /* function exit code */
@@ -13292,7 +13292,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14bad_clip_count_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->bad_clip_count); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->bad_clip_count); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13330,7 +13330,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14bad_clip_count_2__set
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->bad_clip_count = __pyx_t_1;
 
   /* function exit code */
@@ -13366,7 +13366,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8remap_ed___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->remap_ed); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->remap_ed); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13404,7 +13404,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remap_ed_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->remap_ed = __pyx_t_1;
 
   /* function exit code */
@@ -13440,7 +13440,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8n_in_grp___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_in_grp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int32_t(__pyx_v_self->n_in_grp); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13478,7 +13478,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8n_in_grp_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 297, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int32_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int32_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
   __pyx_v_self->n_in_grp = __pyx_t_1;
 
   /* function exit code */
@@ -13492,7 +13492,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8n_in_grp_2__set__(stru
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":298
+/* "dysgu/map_set_utils.pxd":299
  * 
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
  *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t             # <<<<<<<<<<<<<<
@@ -13522,7 +13522,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6jitter___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->jitter); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->jitter); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13560,7 +13560,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6jitter_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->jitter = __pyx_t_1;
 
   /* function exit code */
@@ -13596,7 +13596,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3sqc___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->sqc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->sqc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13634,7 +13634,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3sqc_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->sqc = __pyx_t_1;
 
   /* function exit code */
@@ -13670,7 +13670,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3scw___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->scw); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->scw); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13708,7 +13708,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3scw_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->scw = __pyx_t_1;
 
   /* function exit code */
@@ -13744,7 +13744,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->clip_qual_ratio); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->clip_qual_ratio); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13782,7 +13782,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_15clip_qual_ratio_2__se
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->clip_qual_ratio = __pyx_t_1;
 
   /* function exit code */
@@ -13818,7 +13818,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8outer_cn___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->outer_cn); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->outer_cn); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13856,7 +13856,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8outer_cn_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->outer_cn = __pyx_t_1;
 
   /* function exit code */
@@ -13892,7 +13892,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8inner_cn___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->inner_cn); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->inner_cn); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -13930,7 +13930,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8inner_cn_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->inner_cn = __pyx_t_1;
 
   /* function exit code */
@@ -13966,7 +13966,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3fcc___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->fcc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->fcc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14004,7 +14004,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3fcc_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->fcc = __pyx_t_1;
 
   /* function exit code */
@@ -14040,7 +14040,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_3rep___get__(stru
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->rep); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->rep); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14078,7 +14078,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_3rep_2__set__(struct __
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->rep = __pyx_t_1;
 
   /* function exit code */
@@ -14114,7 +14114,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6rep_sc___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->rep_sc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->rep_sc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14152,7 +14152,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6rep_sc_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->rep_sc = __pyx_t_1;
 
   /* function exit code */
@@ -14188,7 +14188,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_2gc___get__(struc
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->gc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->gc); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14226,7 +14226,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_2gc_2__set__(struct __p
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->gc = __pyx_t_1;
 
   /* function exit code */
@@ -14262,7 +14262,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_5neigh___get__(st
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->neigh); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->neigh); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14300,7 +14300,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_5neigh_2__set__(struct 
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->neigh = __pyx_t_1;
 
   /* function exit code */
@@ -14336,7 +14336,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_9neigh10kb___get_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->neigh10kb); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->neigh10kb); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14374,7 +14374,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_9neigh10kb_2__set__(str
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->neigh10kb = __pyx_t_1;
 
   /* function exit code */
@@ -14410,7 +14410,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14raw_reads_10kb_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->raw_reads_10kb); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->raw_reads_10kb); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14448,7 +14448,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14raw_reads_10kb_2__set
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->raw_reads_10kb = __pyx_t_1;
 
   /* function exit code */
@@ -14484,7 +14484,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_4mcov___get__(str
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->mcov); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->mcov); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14522,7 +14522,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4mcov_2__set__(struct _
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->mcov = __pyx_t_1;
 
   /* function exit code */
@@ -14558,7 +14558,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->strand_binom_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = PyFloat_FromDouble(__pyx_v_self->strand_binom_t); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14596,7 +14596,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 298, __pyx_L1_error)
+  __pyx_t_1 = __pyx_PyFloat_AsFloat(__pyx_v_value); if (unlikely((__pyx_t_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
   __pyx_v_self->strand_binom_t = __pyx_t_1;
 
   /* function exit code */
@@ -14610,7 +14610,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_14strand_binom_t_2__set
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":299
+/* "dysgu/map_set_utils.pxd":300
  *     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
  *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped             # <<<<<<<<<<<<<<
@@ -14640,7 +14640,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseA___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->preciseA); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->preciseA); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14678,7 +14678,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseA_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
   __pyx_v_self->preciseA = __pyx_t_1;
 
   /* function exit code */
@@ -14714,7 +14714,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseB___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->preciseB); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->preciseB); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14752,7 +14752,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8preciseB_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
   __pyx_v_self->preciseB = __pyx_t_1;
 
   /* function exit code */
@@ -14788,7 +14788,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_6linked___get__(s
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->linked); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->linked); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14826,7 +14826,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_6linked_2__set__(struct
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
   __pyx_v_self->linked = __pyx_t_1;
 
   /* function exit code */
@@ -14862,7 +14862,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8modified___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->modified); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->modified); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14900,7 +14900,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8modified_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
   __pyx_v_self->modified = __pyx_t_1;
 
   /* function exit code */
@@ -14936,7 +14936,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped___get__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->remapped); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong(__pyx_v_self->remapped); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -14974,7 +14974,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped_2__set__(stru
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 299, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_v_value); if (unlikely((__pyx_t_1 == (int)-1) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
   __pyx_v_self->remapped = __pyx_t_1;
 
   /* function exit code */
@@ -14988,7 +14988,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped_2__set__(stru
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":300
+/* "dysgu/map_set_utils.pxd":301
  *     cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise             # <<<<<<<<<<<<<<
@@ -15018,7 +15018,7 @@ static PyObject *__pyx_pf_5dysgu_13map_set_utils_11EventResult_13svlen_precise__
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__get__", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int8_t(__pyx_v_self->svlen_precise); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 300, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int8_t(__pyx_v_self->svlen_precise); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 301, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
@@ -15056,7 +15056,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13svlen_precise_2__set_
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__set__", 0);
-  __pyx_t_1 = __Pyx_PyInt_As_int8_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 300, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_As_int8_t(__pyx_v_value); if (unlikely((__pyx_t_1 == ((int8_t)-1)) && PyErr_Occurred())) __PYX_ERR(2, 301, __pyx_L1_error)
   __pyx_v_self->svlen_precise = __pyx_t_1;
 
   /* function exit code */
@@ -15070,7 +15070,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13svlen_precise_2__set_
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":301
+/* "dysgu/map_set_utils.pxd":302
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \             # <<<<<<<<<<<<<<
@@ -15860,7 +15860,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4type_4__del__(struct _
   return __pyx_r;
 }
 
-/* "dysgu/map_set_utils.pxd":302
+/* "dysgu/map_set_utils.pxd":303
  *     cdef public int8_t svlen_precise
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
  *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info             # <<<<<<<<<<<<<<

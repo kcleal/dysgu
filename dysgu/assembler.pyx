@@ -55,6 +55,8 @@ cdef extern from "wrap_map_set2.h" nogil:
         void idx_2_vec(int, cpp_vector[int]) nogil
         void key_2_vec(uint64_t, cpp_vector[int]) nogil
 
+    cdef void graph_node_2_vec(uint64_t, cpp_vector[int]) nogil
+
 
 basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', 'N', 'N', 'N'])
 lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', 'n', 'n', 'n'])
@@ -274,7 +276,6 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
 
 cdef cpp_deque[int] topo_sort2(DiGraph& G):
-    # https://networkx.github.io/documentation/networkx-1.9/_modules/networkx/algorithms/dag.html#topological_sort
 
     cdef unordered_set[int] seen
     cdef unordered_set[int] explored
@@ -285,6 +286,8 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
     cdef cpp_vector[int] neighbors
     cdef int v, n, w
 
+    cdef cpp_vector[int] debug_res
+
     with nogil:
 
         for v in range(G.numberOfNodes()):  # process all vertices in G
@@ -292,16 +295,16 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
                 continue
 
             fringe.clear()
-            fringe.push_back(v)   # nodes yet to look at
+            fringe.push_back(v)  # nodes yet to look at
 
             while fringe.size() != 0:
 
-                w = fringe.back()  # depth first search
-                if explored.find(w) != explored.end():  #explored.has_key(w) == 1: # already looked down this branch
+                w = fringe.back() # depth first search
+                if explored.find(w) != explored.end():  # already looked down this branch
                     fringe.pop_back()
                     continue
 
-                seen.insert(w)     # mark as seen
+                seen.insert(w)
 
                 # Check successors for cycles and for new nodes
                 if new_nodes.size() > 0:
@@ -317,17 +320,19 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
                             order.push_back(n)
                             order.push_back(w)
                             # return order
-                            raise ValueError("Graph contains a cycle.")
+                            debug_res = graph_node_2_vec(n, debug_res)
+                            raise ValueError("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
+
                         new_nodes.push_back(n)
 
-                if new_nodes.size() > 0:   # Add new_nodes to fringe
+                if new_nodes.size() > 0:  # Add new_nodes to fringe
                     fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
 
-                else:           # No new nodes so w is fully explored
+                else:  # No new nodes so w is fully explored
                     explored.insert(w)
 
                     order.push_front(w)
-                    fringe.pop_back()    # done considering this node
+                    fringe.pop_back()  # done considering this node
 
     return order
 

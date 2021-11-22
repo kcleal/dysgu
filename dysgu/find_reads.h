@@ -41,6 +41,14 @@ class CoverageTrack
             cov_array[index_end / 10] -= 1;
         }
 
+        int get_cov(int pos) {
+            int idx = pos / 10;
+            if (pos > 0 && idx <= cov_array.size()) {
+                return cov_array[idx];
+            }
+            return -1;
+        }
+
         bool cov_val_good(int current_tid, int aln_tid, int pos) {
             // Work out the coverage value up until alignment pos. Assumes that alignments dropping out of the queue
             // will not overlap the ones being read into the queue
@@ -198,11 +206,9 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
 
         if (!sv_read) {
             if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {
-                read_names.insert(precalculated_hash);
                 sv_read = true;
 
             } else if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
-                read_names.insert(precalculated_hash);
                 sv_read = true;
             }
         }
@@ -218,20 +224,18 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     }
 
     if (!sv_read) { // not an sv read template yet
-
         // Check for discordant of supplementary
         if ((~flag & 2 && flag & 1) || flag & 2048) {
-            read_names.insert(precalculated_hash);
             sv_read = true;
-            return 0;
         }
         // Check for SA tag
-        if (bam_aux_get(aln, "SA")) {
-            read_names.insert(precalculated_hash);
+        else if (bam_aux_get(aln, "SA")) {
             sv_read = true;
-            return 0;
         }
+    }
 
+    if (sv_read) {
+        read_names.insert(precalculated_hash);
     }
 
     return 0;

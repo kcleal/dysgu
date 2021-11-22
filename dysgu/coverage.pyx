@@ -260,6 +260,8 @@ cdef class GenomeScanner:
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
                             index_start += length
+                    # int current_tid, int aln_tid, int pos
+                    # echo(self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos), self.cpp_cov_track.get_cov(pos), pos)
 
                     if not good_read:
                         continue

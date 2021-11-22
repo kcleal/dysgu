@@ -72,6 +72,7 @@ cdef extern from "find_reads.h" nogil:
         CoverageTrack() nogil
 
         void add(int, int)
+        int get_cov(int)
         bint cov_val_good(int, int, int)
         void set_cov_array(int)
         void write_track(char*)
