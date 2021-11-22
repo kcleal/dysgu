@@ -490,13 +490,12 @@ class TwoWayMap
 };
 
 
-void graph_node_2_vec(int index, std::vector<int>& v) {
-    uint64_t packed_data = index_key_map[index];
-    v[0] = packed_data & 15;  // 4 bits set to 1
-    v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits
-    v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits
-    v[3] = (packed_data >> 59) & 15;
-    }
+void graph_node_2_vec(uint64_t packed_data, std::vector<int>& v) {  // used for debugging
+    v.push_back(packed_data & 15);
+    v.push_back((packed_data >> 4) & 4294967295);
+    v.push_back((packed_data >> 36) & 8388607);
+    v.push_back((packed_data >> 59) & 15);
+}
 
 
 typedef robin_hood::unordered_set<long> set_of_long_t;

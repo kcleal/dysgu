@@ -185,8 +185,8 @@ def cli():
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
-@click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
-                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]",
+@click.option('--max-cov', help=f"Genomic regions with coverage > max-cov discarded."
+                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Set to -1 to ignore",
               type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
@@ -310,15 +310,15 @@ def run_pipeline(ctx, **kwargs):
               type=int, show_default=True)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
-@click.option('--max-cov', help="Regions with > max-cov that do no overlap 'include' are discarded",
+@click.option('--max-cov', help="Genomic regions with coverage > max-cov are discarded. Set to -1 to ignore.",
               default=defaults["max_cov"], type=float, show_default=True)
 @click.option("-p", "--procs", help="Compression threads to use for writing bam", type=cpu_range, default=1,
               show_default=True)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
-@click.option('--regions', help="bed file of target regions. --max-cov is ignored within these regions", default=None,
-              type=click.Path(exists=True))
+# @click.option('--regions', help="bed file of target regions. --max-cov is ignored within these regions", default=None,
+#               type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -368,7 +368,7 @@ def get_reads(ctx, **kwargs):
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
               type=int, show_default=True)
 @click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
-                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]",
+                                f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Regions with > max-cov that do no overlap 'include' are discarded. Set to -1 to ignore.",
               type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
@@ -436,6 +436,9 @@ def call_events(ctx, **kwargs):
     logging.info("Input file is: {}".format(kwargs["sv_aligns"]))
 
     apply_preset(kwargs)
+
+    if kwargs["max_cov"] == "-1":
+        kwargs["max_cov"] = 1e6
     show_params()
     ctx = apply_ctx(ctx, kwargs)
 

@@ -320,7 +320,7 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
                             order.push_back(n)
                             order.push_back(w)
                             # return order
-                            debug_res = graph_node_2_vec(n, debug_res)
+                            graph_node_2_vec(n, debug_res)
                             raise ValueError("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
 
                         new_nodes.push_back(n)

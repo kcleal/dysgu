@@ -82,7 +82,9 @@ def index_stats(f, rl=None):
 
 
 def auto_max_cov(mc, bname):
-    if mc == "auto":
+    if mc == "-1":
+        mc = 1e6  # high number
+    elif mc == "auto":
         if bname == "-":
             raise NotImplementedError("Not possible to use max-cov == 'auto' with stdin")
 
