@@ -193,6 +193,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not loci_similar:
             continue
 
+        if paired_end and ei.su == ej.su == 1 and not ej.preciseA and not ej.preciseB:
+            continue
         # if loci_same:
         #     if not both_in_include:
         #         G.add_edge(i_id, j_id, loci_same=loci_same)

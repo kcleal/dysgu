@@ -1344,6 +1344,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           mm_only, site_adder, 0, trust_ins_len)
                 else:
                     # Use whole read, could be normal or discordant
+                    # r.flag & 2 and : this now overrides discordant flag
+                    # if abs(r.tlen) < max_dist and r.rname == r.rnext:
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
                         if not clipped:
                             continue

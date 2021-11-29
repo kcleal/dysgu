@@ -191,8 +191,9 @@ cdef class GenomeScanner:
 
     def _get_reads(self):
         # Two options, reads are collected from whole genome, or from target regions only
-        cdef int index_start, opp, length, chrom_length
+        cdef int index_start, opp, length, chrom_length, pos
         cdef bytes out_path
+        cdef bint good_read
 
         cdef int mq_thresh = self.mapq_threshold
         # Scan whole genome
@@ -262,10 +263,11 @@ cdef class GenomeScanner:
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
                             index_start += length
-                    # int current_tid, int aln_tid, int pos
-                    # echo(self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos), self.cpp_cov_track.get_cov(pos), pos)
 
                     if not good_read:
+                        continue
+
+                    if not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
                         continue
 
                     self._add_to_bin_buffer(aln, tell)

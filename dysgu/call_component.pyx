@@ -977,6 +977,27 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         return partition_single(informative, insert_size, insert_stdev, insert_ppf, spanning_alignments,
                                 min_support, extended_tags, to_assemble, [], sites_info)
 
+        # if len(informative) == 1 and len(tmp) > 1 and insert_stdev > 0 and er_list[0].svtype == "DEL":
+        #     # check to make sure call makes sense in terms of insert size etc
+        #     t_name = informative[0].read_a.qname
+        #     sv_start = er_list[0].posA
+        #     sv_end = er_list[0].posB
+        #     echo("SV", sv_start, sv_end)
+        #     for temp_name, alignments in tmp.items():
+        #         left_break, right_break = 1e9, -1e9
+        #         echo(temp_name, t_name == temp_name)
+        #         if temp_name != t_name:
+        #             for _, i in alignments:
+        #                 if i.pos <= left_break and i.reference_end < left_break:
+        #                     left_break = i.reference_end
+        #                 elif i.pos > right_break:
+        #                     right_break = i.pos
+        #             echo(left_break, right_break)
+        #
+        #     echo("insert")
+        # echo(insert_size, insert_ppf, insert_stdev)
+        # return er_list
+
     elif len(generic_insertions) > 0:
 
         if sites_info:
