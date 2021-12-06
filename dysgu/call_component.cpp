@@ -34344,7 +34344,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
  *             if add_to_buffer:
  *                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice             # <<<<<<<<<<<<<<
  *             continue
- *         else:  # Try next few reads, not sure why this occurs
+ *         else:  # Try next few reads, find the read in the bgzf block?
  */
         if (unlikely(__Pyx_SetItemInt(__pyx_v_buffered_reads, __pyx_v_int_node, ((PyObject *)__pyx_v_a), int, 1, __Pyx_PyInt_From_int, 0, 1, 1) < 0)) __PYX_ERR(0, 1818, __pyx_L1_error)
 
@@ -34361,7 +34361,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
  *             if add_to_buffer:
  *                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
  *             continue             # <<<<<<<<<<<<<<
- *         else:  # Try next few reads, not sure why this occurs
+ *         else:  # Try next few reads, find the read in the bgzf block?
  *             steps = 0
  */
       goto __pyx_L9_continue;
@@ -34377,28 +34377,28 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
 
     /* "dysgu/call_component.pyx":1821
  *             continue
- *         else:  # Try next few reads, not sure why this occurs
+ *         else:  # Try next few reads, find the read in the bgzf block?
  *             steps = 0             # <<<<<<<<<<<<<<
- *             while steps < 5:
+ *             while steps < 25:
  *                 try:
  */
     /*else*/ {
       __pyx_v_steps = 0;
 
       /* "dysgu/call_component.pyx":1822
- *         else:  # Try next few reads, not sure why this occurs
+ *         else:  # Try next few reads, find the read in the bgzf block?
  *             steps = 0
- *             while steps < 5:             # <<<<<<<<<<<<<<
+ *             while steps < 25:             # <<<<<<<<<<<<<<
  *                 try:
  *                     a = next(infile)
  */
       while (1) {
-        __pyx_t_8 = ((__pyx_v_steps < 5) != 0);
+        __pyx_t_8 = ((__pyx_v_steps < 25) != 0);
         if (!__pyx_t_8) break;
 
         /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 5:
+ *             while steps < 25:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:
@@ -34413,7 +34413,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
           /*try:*/ {
 
             /* "dysgu/call_component.pyx":1824
- *             while steps < 5:
+ *             while steps < 25:
  *                 try:
  *                     a = next(infile)             # <<<<<<<<<<<<<<
  *                 except StopIteration:
@@ -34427,7 +34427,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
 
             /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 5:
+ *             while steps < 25:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:
@@ -34481,7 +34481,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
 
           /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 5:
+ *             while steps < 25:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:

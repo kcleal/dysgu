@@ -1817,9 +1817,9 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
             if add_to_buffer:
                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
             continue
-        else:  # Try next few reads, not sure why this occurs
+        else:  # Try next few reads, find the read in the bgzf block?
             steps = 0
-            while steps < 5:
+            while steps < 50:
                 try:
                     a = next(infile)
                 except StopIteration:
