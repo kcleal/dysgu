@@ -176,9 +176,10 @@ def process(args):
     regionbytes = region.encode("ascii")
 
     max_cov_ignore = ".,"
-    if args["regions"]:
-        bam = assert_indexed_input(args["bam"], args["reference"])
-        max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
+    # under development:
+    # if args["regions"]:
+    #     bam = assert_indexed_input(args["bam"], args["reference"])
+    #     max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
     max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
 
     count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
