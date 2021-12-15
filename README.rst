@@ -206,7 +206,13 @@ The --thresholds parameter controls the probability value at which events are la
 'PASS', increasing these values increases precision at the expense of sensitivity.
 
 The verbosity of contig reporting can be controlled using '-v/--verbosity'. If you plan to use "merge" on output files,
-it is usually a good idea not to use "-v0" as contig sequences can help with merging.
+it is a good idea to use "-v2" as contig sequences can help with merging.
+
+--trust-ins-len applies to long-read data (pacbio, nanopore modes). If set to 'True', insertion length as stated in
+the alignment cigar string is assumed to be correct and more stringent clustering is utilized. This can improve sensitivity at multi-allelic
+sites but at the expense of increasing duplicate true-positive calls that arise mostly at SVs with
+ambiguous candidate alignments.
+
 
 Resource requirements
 ---------------------
