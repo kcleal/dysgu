@@ -90,9 +90,18 @@ the insert size can be specified manually using the -I option::
 
 Merging SVs from multiple files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If you plan on merging samples, it is recommended that the -'v2' option be used when running the 'run/call' modules; this will
+ensure that all consensus sequences will be reported in the vcf file to help with downstream merging.
 Multiple output vcf files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
 
-    dysgu merge pacbio.vcf illumina.vcf > combined.vcf
+    dysgu merge sample1.vcf sample2.vcf > combined.vcf
+
+Merging SVs between platforms at multiallelic/complex sites is still tricky and there is a trade off between under merging
+(leading to duplication) and over merging (leading to loss of multiallelic/complex SVs). Setting the '--merge-within True' option will perform
+a single round of merging for each input file before merging across input files. This will shift the balance to over merging, but reduces the
+problem of duplication::
+
+    dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
 
 For help use::
 
@@ -145,11 +154,17 @@ Genotype list of sites
 ----------------------
 Calls from multiple samples can be merged into a unified site list::
 
+    dysgu run -v2 ref.fa wd1 sample1.bam > sample1.vcf
+    dysgu run -v2 ref.fa wd2 sample2.bam > sample2.vcf
     dysgu merge sample1.vcf sample2.vcf ... > merged.vcf
 
-This list can be used to re-genotype at the sample level::
+This list can be used to re-genotype at the sample level. Here, to save time, the temporary files in the working directory 'wd1' are re-used::
 
-    dysgu run --sites merged.vcf ref.fa wd sample1.bam > sample1.re_geno.vcf
+    dysgu call --ibam sample1.bam --sites merged.vcf ref.fa wd1 wd1/sample1.dysgu_reads.bam > sample1.re_geno.vcf
+
+This is equivalent to running::
+
+    dysgu run --sites merged.vcf ref.fa wd1 sample1.bam > sample1.re_geno.vcf
 
 Dysgu can also accept --sites from other sources, for example calls from other SV callers or read-types can be provided::
 

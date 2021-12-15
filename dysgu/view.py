@@ -117,7 +117,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
         return df
     else:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
-                                     same_sample=True)
+                                     same_sample=True, aggressive_ins_merge=True,)
         return pd.DataFrame.from_records(found)
 
 

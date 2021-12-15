@@ -195,20 +195,29 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         if paired_end and ei.su == ej.su == 1 and not ej.preciseA and not ej.preciseB:
             continue
-        # if loci_same:
-        #     if not both_in_include:
-        #         G.add_edge(i_id, j_id, loci_same=loci_same)
-        #         continue
+
+
 
         ci = ei.contig
         ci2 = ei.contig2
         ci_alt = ei.variant_seq
+        if isinstance(ci_alt, str):
+            if len(ci_alt) > 0 and ci_alt[0] in "<.":
+                ci_alt = ""
 
         cj = ej.contig
         cj2 = ej.contig2
         cj_alt = ej.variant_seq
+        if isinstance(cj_alt, str):
+            if len(cj_alt) > 0 and cj_alt[0] in "<.":
+                cj_alt = ""
 
         any_contigs_to_check = any((ci, ci2, ci_alt)) and any((cj, cj2, cj_alt))
+
+        # dont merge deletion events with low/poor evidence
+        if same_sample and not loci_same and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0:
+            continue
+
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
@@ -222,6 +231,11 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if ml == 0:
             continue
         l_ratio = min(ei.svlen, ej.svlen) / ml
+
+        # if ei["posA"] == 829172 or ej["posA"] == 829172:
+        #     echo(ei)
+        #     echo(ej)
+        #     echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -258,13 +272,16 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         else:
             if ci and cj: v = ci, cj
             elif ci and cj2: v = ci, cj2
-            elif ci and cj_alt: v = ci, cj_alt
             elif ci2 and cj2: v = ci2, cj2
             elif ci2 and cj: v = ci2, cj
-            elif ci2 and cj_alt: v = ci2, cj_alt
-            elif ci_alt and cj: v = ci_alt, cj
-            elif ci_alt and cj2: v = ci_alt, cj2
+
+            # elif ci and cj_alt: v = ci, cj_alt
+            # elif ci2 and cj_alt: v = ci2, cj_alt
+            # elif ci_alt and cj: v = ci_alt, cj
+            # elif ci_alt and cj2: v = ci_alt, cj2
+
             elif ci_alt and cj_alt: v = ci_alt, cj_alt
+
             else: continue
 
             # echo(ei.remap_score == 0 or ej.remap_score == 0, ei.svlen, ej.svlen, v, assembler.check_contig_match(v[0], v[1], return_int=True))
@@ -277,6 +294,25 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
+
+            # see if alt sequence can be found in other contig
+            else:
+                if ci_alt and cj:
+                    if assembler.check_contig_match(ci_alt, cj, return_int=True):
+                        G.add_edge(i_id, j_id, loci_same=True)
+                        continue
+                if ci_alt and cj2:
+                    if assembler.check_contig_match(ci_alt, cj2, return_int=True):
+                        G.add_edge(i_id, j_id, loci_same=True)
+                        continue
+                if cj_alt and ci:
+                    if assembler.check_contig_match(cj_alt, ci, return_int=True):
+                        G.add_edge(i_id, j_id, loci_same=True)
+                        continue
+                if cj_alt and ci2:
+                    if assembler.check_contig_match(cj_alt, ci2, return_int=True):
+                        G.add_edge(i_id, j_id, loci_same=True)
+                        continue
 
     return G
 
@@ -756,11 +792,11 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         if args["mode"] == "pacbio":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 50
+                args["merge_dist"] = 500
         elif args["mode"] == "nanopore":
             max_dist, max_clust_dist = 100, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 150
+                args["merge_dist"] = 500
 
     # set upper bound on single-partition size
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads

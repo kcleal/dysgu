@@ -39,8 +39,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "./dysgu",
+            "/opt/anaconda3/lib/python3.8/site-packages/pysam",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -34379,7 +34379,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
  *             continue
  *         else:  # Try next few reads, find the read in the bgzf block?
  *             steps = 0             # <<<<<<<<<<<<<<
- *             while steps < 25:
+ *             while steps < 50:
  *                 try:
  */
     /*else*/ {
@@ -34388,17 +34388,17 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
       /* "dysgu/call_component.pyx":1822
  *         else:  # Try next few reads, find the read in the bgzf block?
  *             steps = 0
- *             while steps < 25:             # <<<<<<<<<<<<<<
+ *             while steps < 50:             # <<<<<<<<<<<<<<
  *                 try:
  *                     a = next(infile)
  */
       while (1) {
-        __pyx_t_8 = ((__pyx_v_steps < 25) != 0);
+        __pyx_t_8 = ((__pyx_v_steps < 50) != 0);
         if (!__pyx_t_8) break;
 
         /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 25:
+ *             while steps < 50:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:
@@ -34413,7 +34413,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
           /*try:*/ {
 
             /* "dysgu/call_component.pyx":1824
- *             while steps < 25:
+ *             while steps < 50:
  *                 try:
  *                     a = next(infile)             # <<<<<<<<<<<<<<
  *                 except StopIteration:
@@ -34427,7 +34427,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
 
             /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 25:
+ *             while steps < 50:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:
@@ -34481,7 +34481,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_get_reads(PyObject *__pyx_v_inf
 
           /* "dysgu/call_component.pyx":1823
  *             steps = 0
- *             while steps < 25:
+ *             while steps < 50:
  *                 try:             # <<<<<<<<<<<<<<
  *                     a = next(infile)
  *                 except StopIteration:

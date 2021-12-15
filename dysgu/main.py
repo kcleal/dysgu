@@ -218,7 +218,7 @@ def cli():
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 50 bp for single-end reads",
+                                   "reads, or 500 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
@@ -398,7 +398,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 50 bp for single-end reads",
+                                   "reads, or 500 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
@@ -462,7 +462,7 @@ def call_events(ctx, **kwargs):
 @click.option("--merge-within", help="Perform additional merge within input samples, prior to --merge-across",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Distance threshold for merging",
-              default=250, type=int, show_default=True)
+              default=500, type=int, show_default=True)
 @click.option("--separate", help="Keep merged tables separate, adds --post-fix to file names, csv format only",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",

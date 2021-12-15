@@ -703,7 +703,7 @@ cdef get_query_pos_from_cigartuples(r):
         start += r.cigartuples[0][1]
     if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
         end -= r.cigartuples[-1][1]
-    return start, end, r.pos, r.reference_end, r.rname, r.mapq, 0
+    return start, end, r.pos, r.reference_end, r.rname, r.mapq, "input"
 
 
 cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
@@ -738,15 +738,15 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
 
         # If another local alignment is found use only this, usually corresponds to the other side of an insertion/dup
         if aln_chrom == chrom2 and position_distance(aln_start, aln_end, ref_start, ref_end) < thresh:
-            query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq)]
+            query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand)]
             break
 
-        query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq))
+        query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand))
 
     query_aligns = sorted(query_aligns)
     cdef int index = 0
     for index in range(len(query_aligns)):
-        if len(query_aligns[index]) == 7:
+        if query_aligns[index][-1] == "input":
             break
 
     return query_aligns, index
@@ -756,8 +756,10 @@ cdef connect_right(a, b, r, paired, max_dist, mq_thresh):
     event_pos = a[3]
     chrom = a[4]
     pos2 = b[2]
+    pos2_end = b[3]
     chrom2 = b[4]
     pos2_mq = b[5]
+    same_strand = b[6]
     if pos2_mq < mq_thresh:
         return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
     if paired:
@@ -768,7 +770,10 @@ cdef connect_right(a, b, r, paired, max_dist, mq_thresh):
             (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):  # is primary, is proper pair. Use primary mate info, not SA
             return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
 
-    return event_pos, chrom, pos2, chrom2, 0
+    if same_strand:
+        return event_pos, chrom, pos2, chrom2, 0
+    else:
+        return event_pos, chrom, pos2_end, chrom2, 0
 
 
 cdef connect_left(a, b, r, paired, max_dist, mq_thresh):
@@ -854,11 +859,11 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
     # Debug:
     # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
-    # look = {'V300082976L4C001R0311226430'}
+    # look = {'V100003378L3C001R005710380'}
     # node_look = {28, 93}
     # if r.qname in look:
     # if node_name in node_look:
-    # if r.qname == "m64004_190803_004451/165347754/ccs":
+    # if r.qname == "m694824/15000/CCS":
     #     echo("@", r.flag, node_name, chrom, event_pos, chrom2, pos2, list(other_nodes),
     #          count_sc_edges, cigar_index, length_from_cigar)
 
@@ -1054,6 +1059,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2, _ = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
+
                     cigar_index = 0
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
@@ -1067,6 +1073,10 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
                                            mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
+
+                # if r.qname == "m66002/15000/CCS":
+                #     echo("EVENT POS", event_pos, pos2, all_aligns, index)
+
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
             if r.cigartuples[cigar_index][0] != 1:  # If not insertion
@@ -1287,8 +1297,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             event_pos = r.pos
             added = False
             clipped = 0
-            # if r.qname == "D00360:19:H8VDAADXX:1:2115:11458:48827":
-            #     echo("hi")
+
             events_to_add.clear()
 
             if len(r.cigartuples) > 1:
@@ -1384,7 +1393,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
                     preincrement(itr_events)
 
-    add_template_edges(G, template_edges)
+    if paired_end:
+        add_template_edges(G, template_edges)
 
     if site_adder:
         logging.info(f"Added {site_adder.count} variants from input sites")
@@ -1544,7 +1554,6 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
     cdef int support_estimate = 0
     cdef int v
     info = None
-    # echo("compenet", component)
 
     if min_support >= 3 and len(component) == 1 and not sites_index:
         return
