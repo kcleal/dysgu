@@ -282,7 +282,7 @@ cdef count_attributes2(reads1, reads2, spanning, int extended_tags, float insert
         er.pe = len(reads1)
     er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
 
-    if clipped_bases > 0 and aligned_bases > 0:
+    if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:
         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
     else:
         er.clip_qual_ratio = 0
