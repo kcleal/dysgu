@@ -264,8 +264,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         info_extras.append(f"CONTIGB={r['contigB']}")
 
     if not r["variant_seq"]:
-        # info_extras.append(f"SVINSSEQ={r['variant_seq']}")
-    # else:
         if r["left_ins_seq"]:
             info_extras.append(f"LEFT_SVINSSEQ={r['left_ins_seq']}")
         if r["right_ins_seq"]:
@@ -275,11 +273,21 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         info_extras += [f"KIND={r['kind']}"]
 
     if not small_output:
-        info_extras += [
-                    f"REP={'%.3f' % float(rep)}",
-                    f"REPSC={'%.3f' % float(repsc)}",
 
-                    ]
+        try:
+            info_extras.append(f"REP={'%.3f' % float(rep)}")
+        except ValueError:  # rep is "."
+            info_extras.append("REP=0")
+
+        try:
+            info_extras.append(f"REPSC={'%.3f' % float(repsc)}")
+        except ValueError:
+            info_extras.append("REPSC=0")
+
+        # info_extras += [
+        #             f"REP={'%.3f' % float(rep)}",
+        #             f"REPSC={'%.3f' % float(repsc)}",
+        #             ]
 
     info_extras += [
                     f"GC={gc}",

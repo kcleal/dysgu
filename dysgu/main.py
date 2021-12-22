@@ -165,7 +165,7 @@ def cli():
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
-@click.option("--all-sites", help="Output a genotype for all variants in --sites",
+@click.option("--all-sites", help="Output a genotype for all variants in --sites (including homozygous reference 0/0)",
               required=False, default="False", type=click.Choice(["True", "False"]))
 @click.option('--pfix', help="Post-fix to add to temp alignment files", default="dysgu_reads", type=str)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
@@ -352,11 +352,11 @@ def get_reads(ctx, **kwargs):
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
-@click.option("--all-sites", help="Output a genotype for all variants in --sites",
+@click.option("--all-sites", help="Output a genotype for all variants in --sites (including homozygous reference 0/0)",
               required=False, default="False", type=click.Choice(["True", "False"]))
-@click.option("--hom-ref-sites", help="If set to 'True' dysgu will output all variants in --sites including homozygous reference sites with"
-                                  " genotype 0/0",
-              default="True", type=click.Choice(["True", "False"]), show_default=True)
+# @click.option("--hom-ref-sites", help="If set to 'True' dysgu will output all variants in --sites including homozygous reference sites with"
+#                                   " genotype 0/0",
+#               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
