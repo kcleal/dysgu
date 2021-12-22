@@ -1,6 +1,7 @@
 #cython: language_level=3
 
 from dysgu.map_set_utils cimport is_overlapping
+from dysgu.map_set_utils import echo
 
 
 cdef class AlignmentItem:
@@ -800,5 +801,7 @@ cdef void classify_d(AlignmentItem v):
                 same_read(v)
             else:
                 different_read(v)
+
+
     # Debug
     # echo(v.read_a.qname, v.rA == v.rB, v.priA and v.priB, v.inferred_sv_len, "strands", v.strandA == v.strandB, "pos", v.posA, v.posB, "breaks", v.breakA, v.breakB, "a_q > b_q", v.a_qstart > v.b_qstart)

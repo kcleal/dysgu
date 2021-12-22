@@ -39,8 +39,8 @@
             "-Wno-deprecated-declarations"
         ],
         "include_dirs": [
-            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/pysam",
+            "./dysgu",
             "/opt/anaconda3/lib/python3.8/site-packages/numpy/core/include",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu",
             "/Users/kezcleal/Documents/Data/fusion_finder_development/dysgu/dysgu/htslib/htslib",
@@ -8528,14 +8528,14 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
  *         er.pe = len(reads1)
  *     er.su = er.pe + er.supp + (2*er.spanning) + er.bnd             # <<<<<<<<<<<<<<
  * 
- *     if clipped_bases > 0 and aligned_bases > 0:
+ *     if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:
  */
   __pyx_v_er->su = (((__pyx_v_er->pe + __pyx_v_er->supp) + (2 * __pyx_v_er->spanning)) + __pyx_v_er->bnd);
 
   /* "dysgu/call_component.pyx":285
  *     er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
  * 
- *     if clipped_bases > 0 and aligned_bases > 0:             # <<<<<<<<<<<<<<
+ *     if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:             # <<<<<<<<<<<<<<
  *         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
  *     else:
  */
@@ -8546,13 +8546,19 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
     goto __pyx_L88_bool_binop_done;
   }
   __pyx_t_10 = ((__pyx_v_aligned_bases > 0.0) != 0);
+  if (__pyx_t_10) {
+  } else {
+    __pyx_t_19 = __pyx_t_10;
+    goto __pyx_L88_bool_binop_done;
+  }
+  __pyx_t_10 = ((__pyx_v_clipped_base_quals > 0.0) != 0);
   __pyx_t_19 = __pyx_t_10;
   __pyx_L88_bool_binop_done:;
   if (__pyx_t_19) {
 
     /* "dysgu/call_component.pyx":286
  * 
- *     if clipped_bases > 0 and aligned_bases > 0:
+ *     if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:
  *         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)             # <<<<<<<<<<<<<<
  *     else:
  *         er.clip_qual_ratio = 0
@@ -8576,7 +8582,7 @@ static PyObject *__pyx_f_5dysgu_14call_component_count_attributes2(PyObject *__p
     /* "dysgu/call_component.pyx":285
  *     er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
  * 
- *     if clipped_bases > 0 and aligned_bases > 0:             # <<<<<<<<<<<<<<
+ *     if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:             # <<<<<<<<<<<<<<
  *         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
  *     else:
  */

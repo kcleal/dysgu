@@ -1749,6 +1749,12 @@ static PyTypeObject *__Pyx_ImportType(PyObject* module, const char *module_name,
 /* GetVTable.proto */
 static void* __Pyx_GetVtable(PyObject *dict);
 
+/* Import.proto */
+static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level);
+
+/* ImportFrom.proto */
+static PyObject* __Pyx_ImportFrom(PyObject* module, PyObject* name);
+
 /* PyDictVersioning.proto */
 #if CYTHON_USE_DICT_VERSIONS && CYTHON_USE_TYPE_SLOTS
 #define __PYX_DICT_VERSION_INIT  ((PY_UINT64_T) -1)
@@ -2010,6 +2016,7 @@ static const char __pyx_k_5to3[] = "5to3";
 static const char __pyx_k_5to5[] = "5to5";
 static const char __pyx_k_chrA[] = "chrA";
 static const char __pyx_k_chrB[] = "chrB";
+static const char __pyx_k_echo[] = "echo";
 static const char __pyx_k_endA[] = "endA";
 static const char __pyx_k_endB[] = "endB";
 static const char __pyx_k_main[] = "__main__";
@@ -2023,6 +2030,7 @@ static const char __pyx_k_a_len[] = "a_len";
 static const char __pyx_k_b_len[] = "b_len";
 static const char __pyx_k_a_qend[] = "a_qend";
 static const char __pyx_k_b_qend[] = "b_qend";
+static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_read_a[] = "read_a";
 static const char __pyx_k_read_b[] = "read_b";
 static const char __pyx_k_reduce[] = "__reduce__";
@@ -2045,6 +2053,7 @@ static const char __pyx_k_reduce_cython[] = "__reduce_cython__";
 static const char __pyx_k_setstate_cython[] = "__setstate_cython__";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_read_overlaps_mate[] = "read_overlaps_mate";
+static const char __pyx_k_dysgu_map_set_utils[] = "dysgu.map_set_utils";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
 static const char __pyx_k_numpy_core_umath_failed_to_impor[] = "numpy.core.umath failed to import";
@@ -2071,9 +2080,12 @@ static PyObject *__pyx_n_s_b_qstart;
 static PyObject *__pyx_n_s_chrA;
 static PyObject *__pyx_n_s_chrB;
 static PyObject *__pyx_n_s_cline_in_traceback;
+static PyObject *__pyx_n_s_dysgu_map_set_utils;
+static PyObject *__pyx_n_s_echo;
 static PyObject *__pyx_n_s_endA;
 static PyObject *__pyx_n_s_endB;
 static PyObject *__pyx_n_s_getstate;
+static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_left_clipA;
 static PyObject *__pyx_n_s_left_clipB;
 static PyObject *__pyx_n_s_main;
@@ -2187,7 +2199,7 @@ static PyObject *__pyx_tuple__4;
 static PyObject *__pyx_tuple__5;
 /* Late includes */
 
-/* "dysgu/sv_category.pyx":13
+/* "dysgu/sv_category.pyx":14
  *     # cdef public str svtype, join_type
  *     # cdef public object read_a, read_b
  *     def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,             # <<<<<<<<<<<<<<
@@ -2298,149 +2310,149 @@ static int __pyx_pw_5dysgu_11sv_category_13AlignmentItem_1__cinit__(PyObject *__
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_chrB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 1); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 1); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
         if (likely((values[2] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_priA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 2); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 2); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  3:
         if (likely((values[3] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_priB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 3); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 3); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  4:
         if (likely((values[4] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 4); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 4); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  5:
         if (likely((values[5] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_rB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 5); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 5); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  6:
         if (likely((values[6] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_posA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 6); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 6); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  7:
         if (likely((values[7] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_endA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 7); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 7); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  8:
         if (likely((values[8] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_posB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 8); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 8); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  9:
         if (likely((values[9] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_endB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 9); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 9); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 10:
         if (likely((values[10] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_strandA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 10); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 10); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 11:
         if (likely((values[11] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_strandB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 11); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 11); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 12:
         if (likely((values[12] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_left_clipA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 12); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 12); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 13:
         if (likely((values[13] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_right_clipA)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 13); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 13); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 14:
         if (likely((values[14] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_left_clipB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 14); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 14); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 15:
         if (likely((values[15] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_right_clipB)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 15); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 15); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 16:
         if (likely((values[16] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_a_qstart)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 16); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 16); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 17:
         if (likely((values[17] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_a_qend)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 17); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 17); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 18:
         if (likely((values[18] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_b_qstart)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 18); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 18); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 19:
         if (likely((values[19] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_b_qend)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 19); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 19); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 20:
         if (likely((values[20] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_a_len)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 20); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 20); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 21:
         if (likely((values[21] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_b_len)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 21); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 21); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 22:
         if (likely((values[22] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_read_overlaps_mate)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 22); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 22); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 23:
         if (likely((values[23] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_read_a)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 23); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 23); __PYX_ERR(1, 14, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case 24:
         if (likely((values[24] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_read_b)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 24); __PYX_ERR(1, 13, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, 24); __PYX_ERR(1, 14, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(1, 13, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(1, 14, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 25) {
       goto __pyx_L5_argtuple_error;
@@ -2471,35 +2483,35 @@ static int __pyx_pw_5dysgu_11sv_category_13AlignmentItem_1__cinit__(PyObject *__
       values[23] = PyTuple_GET_ITEM(__pyx_args, 23);
       values[24] = PyTuple_GET_ITEM(__pyx_args, 24);
     }
-    __pyx_v_chrA = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_chrA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_chrB = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_chrB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_priA = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_priA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_priB = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_priB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_rA = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_rA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_rB = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_rB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_posA = __Pyx_PyInt_As_int(values[6]); if (unlikely((__pyx_v_posA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_endA = __Pyx_PyInt_As_int(values[7]); if (unlikely((__pyx_v_endA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_posB = __Pyx_PyInt_As_int(values[8]); if (unlikely((__pyx_v_posB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_endB = __Pyx_PyInt_As_int(values[9]); if (unlikely((__pyx_v_endB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 13, __pyx_L3_error)
-    __pyx_v_strandA = __Pyx_PyInt_As_int(values[10]); if (unlikely((__pyx_v_strandA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_strandB = __Pyx_PyInt_As_int(values[11]); if (unlikely((__pyx_v_strandB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_left_clipA = __Pyx_PyInt_As_int(values[12]); if (unlikely((__pyx_v_left_clipA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_right_clipA = __Pyx_PyInt_As_int(values[13]); if (unlikely((__pyx_v_right_clipA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_left_clipB = __Pyx_PyInt_As_int(values[14]); if (unlikely((__pyx_v_left_clipB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_right_clipB = __Pyx_PyInt_As_int(values[15]); if (unlikely((__pyx_v_right_clipB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
-    __pyx_v_a_qstart = __Pyx_PyInt_As_int(values[16]); if (unlikely((__pyx_v_a_qstart == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_a_qend = __Pyx_PyInt_As_int(values[17]); if (unlikely((__pyx_v_a_qend == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_b_qstart = __Pyx_PyInt_As_int(values[18]); if (unlikely((__pyx_v_b_qstart == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_b_qend = __Pyx_PyInt_As_int(values[19]); if (unlikely((__pyx_v_b_qend == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_a_len = __Pyx_PyInt_As_int(values[20]); if (unlikely((__pyx_v_a_len == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_b_len = __Pyx_PyInt_As_int(values[21]); if (unlikely((__pyx_v_b_len == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
-    __pyx_v_read_overlaps_mate = __Pyx_PyInt_As_int(values[22]); if (unlikely((__pyx_v_read_overlaps_mate == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_chrA = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_chrA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_chrB = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_chrB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_priA = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_priA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_priB = __Pyx_PyInt_As_int(values[3]); if (unlikely((__pyx_v_priB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_rA = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_rA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_rB = __Pyx_PyInt_As_int(values[5]); if (unlikely((__pyx_v_rB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_posA = __Pyx_PyInt_As_int(values[6]); if (unlikely((__pyx_v_posA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_endA = __Pyx_PyInt_As_int(values[7]); if (unlikely((__pyx_v_endA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_posB = __Pyx_PyInt_As_int(values[8]); if (unlikely((__pyx_v_posB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_endB = __Pyx_PyInt_As_int(values[9]); if (unlikely((__pyx_v_endB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 14, __pyx_L3_error)
+    __pyx_v_strandA = __Pyx_PyInt_As_int(values[10]); if (unlikely((__pyx_v_strandA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_strandB = __Pyx_PyInt_As_int(values[11]); if (unlikely((__pyx_v_strandB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_left_clipA = __Pyx_PyInt_As_int(values[12]); if (unlikely((__pyx_v_left_clipA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_right_clipA = __Pyx_PyInt_As_int(values[13]); if (unlikely((__pyx_v_right_clipA == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_left_clipB = __Pyx_PyInt_As_int(values[14]); if (unlikely((__pyx_v_left_clipB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_right_clipB = __Pyx_PyInt_As_int(values[15]); if (unlikely((__pyx_v_right_clipB == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 15, __pyx_L3_error)
+    __pyx_v_a_qstart = __Pyx_PyInt_As_int(values[16]); if (unlikely((__pyx_v_a_qstart == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_a_qend = __Pyx_PyInt_As_int(values[17]); if (unlikely((__pyx_v_a_qend == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_b_qstart = __Pyx_PyInt_As_int(values[18]); if (unlikely((__pyx_v_b_qstart == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_b_qend = __Pyx_PyInt_As_int(values[19]); if (unlikely((__pyx_v_b_qend == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_a_len = __Pyx_PyInt_As_int(values[20]); if (unlikely((__pyx_v_a_len == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_b_len = __Pyx_PyInt_As_int(values[21]); if (unlikely((__pyx_v_b_len == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 16, __pyx_L3_error)
+    __pyx_v_read_overlaps_mate = __Pyx_PyInt_As_int(values[22]); if (unlikely((__pyx_v_read_overlaps_mate == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 17, __pyx_L3_error)
     __pyx_v_read_a = values[23];
     __pyx_v_read_b = values[24];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 13, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 25, 25, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(1, 14, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("dysgu.sv_category.AlignmentItem.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -2517,7 +2529,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "dysgu/sv_category.pyx":18
+  /* "dysgu/sv_category.pyx":19
  *                   int read_overlaps_mate, object read_a,
  *                   object read_b):
  *         self.chrA = chrA             # <<<<<<<<<<<<<<
@@ -2526,7 +2538,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->chrA = __pyx_v_chrA;
 
-  /* "dysgu/sv_category.pyx":19
+  /* "dysgu/sv_category.pyx":20
  *                   object read_b):
  *         self.chrA = chrA
  *         self.chrB = chrB             # <<<<<<<<<<<<<<
@@ -2535,7 +2547,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->chrB = __pyx_v_chrB;
 
-  /* "dysgu/sv_category.pyx":20
+  /* "dysgu/sv_category.pyx":21
  *         self.chrA = chrA
  *         self.chrB = chrB
  *         self.priA = priA             # <<<<<<<<<<<<<<
@@ -2544,7 +2556,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->priA = __pyx_v_priA;
 
-  /* "dysgu/sv_category.pyx":21
+  /* "dysgu/sv_category.pyx":22
  *         self.chrB = chrB
  *         self.priA = priA
  *         self.priB = priB             # <<<<<<<<<<<<<<
@@ -2553,7 +2565,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->priB = __pyx_v_priB;
 
-  /* "dysgu/sv_category.pyx":22
+  /* "dysgu/sv_category.pyx":23
  *         self.priA = priA
  *         self.priB = priB
  *         self.rA = rA             # <<<<<<<<<<<<<<
@@ -2562,7 +2574,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->rA = __pyx_v_rA;
 
-  /* "dysgu/sv_category.pyx":23
+  /* "dysgu/sv_category.pyx":24
  *         self.priB = priB
  *         self.rA = rA
  *         self.rB = rB             # <<<<<<<<<<<<<<
@@ -2571,7 +2583,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->rB = __pyx_v_rB;
 
-  /* "dysgu/sv_category.pyx":24
+  /* "dysgu/sv_category.pyx":25
  *         self.rA = rA
  *         self.rB = rB
  *         self.posA = posA             # <<<<<<<<<<<<<<
@@ -2580,7 +2592,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->posA = __pyx_v_posA;
 
-  /* "dysgu/sv_category.pyx":25
+  /* "dysgu/sv_category.pyx":26
  *         self.rB = rB
  *         self.posA = posA
  *         self.endA = endA             # <<<<<<<<<<<<<<
@@ -2589,7 +2601,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->endA = __pyx_v_endA;
 
-  /* "dysgu/sv_category.pyx":26
+  /* "dysgu/sv_category.pyx":27
  *         self.posA = posA
  *         self.endA = endA
  *         self.posB = posB             # <<<<<<<<<<<<<<
@@ -2598,7 +2610,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->posB = __pyx_v_posB;
 
-  /* "dysgu/sv_category.pyx":27
+  /* "dysgu/sv_category.pyx":28
  *         self.endA = endA
  *         self.posB = posB
  *         self.endB = endB             # <<<<<<<<<<<<<<
@@ -2607,7 +2619,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->endB = __pyx_v_endB;
 
-  /* "dysgu/sv_category.pyx":28
+  /* "dysgu/sv_category.pyx":29
  *         self.posB = posB
  *         self.endB = endB
  *         self.strandA = strandA             # <<<<<<<<<<<<<<
@@ -2616,7 +2628,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->strandA = __pyx_v_strandA;
 
-  /* "dysgu/sv_category.pyx":29
+  /* "dysgu/sv_category.pyx":30
  *         self.endB = endB
  *         self.strandA = strandA
  *         self.strandB = strandB             # <<<<<<<<<<<<<<
@@ -2625,7 +2637,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->strandB = __pyx_v_strandB;
 
-  /* "dysgu/sv_category.pyx":30
+  /* "dysgu/sv_category.pyx":31
  *         self.strandA = strandA
  *         self.strandB = strandB
  *         self.left_clipA = left_clipA             # <<<<<<<<<<<<<<
@@ -2634,7 +2646,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->left_clipA = __pyx_v_left_clipA;
 
-  /* "dysgu/sv_category.pyx":31
+  /* "dysgu/sv_category.pyx":32
  *         self.strandB = strandB
  *         self.left_clipA = left_clipA
  *         self.right_clipA = right_clipA             # <<<<<<<<<<<<<<
@@ -2643,7 +2655,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->right_clipA = __pyx_v_right_clipA;
 
-  /* "dysgu/sv_category.pyx":32
+  /* "dysgu/sv_category.pyx":33
  *         self.left_clipA = left_clipA
  *         self.right_clipA = right_clipA
  *         self.left_clipB = left_clipB             # <<<<<<<<<<<<<<
@@ -2652,7 +2664,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->left_clipB = __pyx_v_left_clipB;
 
-  /* "dysgu/sv_category.pyx":33
+  /* "dysgu/sv_category.pyx":34
  *         self.right_clipA = right_clipA
  *         self.left_clipB = left_clipB
  *         self.right_clipB = right_clipB             # <<<<<<<<<<<<<<
@@ -2661,7 +2673,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->right_clipB = __pyx_v_right_clipB;
 
-  /* "dysgu/sv_category.pyx":34
+  /* "dysgu/sv_category.pyx":35
  *         self.left_clipB = left_clipB
  *         self.right_clipB = right_clipB
  *         self.a_qstart = a_qstart             # <<<<<<<<<<<<<<
@@ -2670,7 +2682,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->a_qstart = __pyx_v_a_qstart;
 
-  /* "dysgu/sv_category.pyx":35
+  /* "dysgu/sv_category.pyx":36
  *         self.right_clipB = right_clipB
  *         self.a_qstart = a_qstart
  *         self.a_qend = a_qend             # <<<<<<<<<<<<<<
@@ -2679,7 +2691,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->a_qend = __pyx_v_a_qend;
 
-  /* "dysgu/sv_category.pyx":36
+  /* "dysgu/sv_category.pyx":37
  *         self.a_qstart = a_qstart
  *         self.a_qend = a_qend
  *         self.b_qstart = b_qstart             # <<<<<<<<<<<<<<
@@ -2688,7 +2700,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->b_qstart = __pyx_v_b_qstart;
 
-  /* "dysgu/sv_category.pyx":37
+  /* "dysgu/sv_category.pyx":38
  *         self.a_qend = a_qend
  *         self.b_qstart = b_qstart
  *         self.b_qend = b_qend             # <<<<<<<<<<<<<<
@@ -2697,7 +2709,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->b_qend = __pyx_v_b_qend;
 
-  /* "dysgu/sv_category.pyx":38
+  /* "dysgu/sv_category.pyx":39
  *         self.b_qstart = b_qstart
  *         self.b_qend = b_qend
  *         self.a_len = a_len             # <<<<<<<<<<<<<<
@@ -2706,7 +2718,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->a_len = __pyx_v_a_len;
 
-  /* "dysgu/sv_category.pyx":39
+  /* "dysgu/sv_category.pyx":40
  *         self.b_qend = b_qend
  *         self.a_len = a_len
  *         self.b_len = b_len             # <<<<<<<<<<<<<<
@@ -2715,7 +2727,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->b_len = __pyx_v_b_len;
 
-  /* "dysgu/sv_category.pyx":40
+  /* "dysgu/sv_category.pyx":41
  *         self.a_len = a_len
  *         self.b_len = b_len
  *         self.read_overlaps_mate = read_overlaps_mate             # <<<<<<<<<<<<<<
@@ -2724,7 +2736,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->read_overlaps_mate = __pyx_v_read_overlaps_mate;
 
-  /* "dysgu/sv_category.pyx":41
+  /* "dysgu/sv_category.pyx":42
  *         self.b_len = b_len
  *         self.read_overlaps_mate = read_overlaps_mate
  *         self.read_a = read_a             # <<<<<<<<<<<<<<
@@ -2737,7 +2749,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
   __Pyx_DECREF(__pyx_v_self->read_a);
   __pyx_v_self->read_a = __pyx_v_read_a;
 
-  /* "dysgu/sv_category.pyx":42
+  /* "dysgu/sv_category.pyx":43
  *         self.read_overlaps_mate = read_overlaps_mate
  *         self.read_a = read_a
  *         self.read_b = read_b             # <<<<<<<<<<<<<<
@@ -2750,7 +2762,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
   __Pyx_DECREF(__pyx_v_self->read_b);
   __pyx_v_self->read_b = __pyx_v_read_b;
 
-  /* "dysgu/sv_category.pyx":45
+  /* "dysgu/sv_category.pyx":46
  * 
  *         # These will be determined
  *         self.breakA_precise = 0             # <<<<<<<<<<<<<<
@@ -2759,7 +2771,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->breakA_precise = 0;
 
-  /* "dysgu/sv_category.pyx":46
+  /* "dysgu/sv_category.pyx":47
  *         # These will be determined
  *         self.breakA_precise = 0
  *         self.breakB_precise = 0             # <<<<<<<<<<<<<<
@@ -2768,7 +2780,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->breakB_precise = 0;
 
-  /* "dysgu/sv_category.pyx":47
+  /* "dysgu/sv_category.pyx":48
  *         self.breakA_precise = 0
  *         self.breakB_precise = 0
  *         self.breakA = -1             # <<<<<<<<<<<<<<
@@ -2777,7 +2789,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->breakA = -1;
 
-  /* "dysgu/sv_category.pyx":48
+  /* "dysgu/sv_category.pyx":49
  *         self.breakB_precise = 0
  *         self.breakA = -1
  *         self.breakB = -1             # <<<<<<<<<<<<<<
@@ -2786,7 +2798,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->breakB = -1;
 
-  /* "dysgu/sv_category.pyx":49
+  /* "dysgu/sv_category.pyx":50
  *         self.breakA = -1
  *         self.breakB = -1
  *         self.svtype = ""             # <<<<<<<<<<<<<<
@@ -2799,7 +2811,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
   __Pyx_DECREF(__pyx_v_self->svtype);
   __pyx_v_self->svtype = __pyx_kp_u_;
 
-  /* "dysgu/sv_category.pyx":50
+  /* "dysgu/sv_category.pyx":51
  *         self.breakB = -1
  *         self.svtype = ""
  *         self.join_type = ""             # <<<<<<<<<<<<<<
@@ -2812,7 +2824,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
   __Pyx_DECREF(__pyx_v_self->join_type);
   __pyx_v_self->join_type = __pyx_kp_u_;
 
-  /* "dysgu/sv_category.pyx":51
+  /* "dysgu/sv_category.pyx":52
  *         self.svtype = ""
  *         self.join_type = ""
  *         self.query_gap = 0             # <<<<<<<<<<<<<<
@@ -2821,7 +2833,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->query_gap = 0;
 
-  /* "dysgu/sv_category.pyx":52
+  /* "dysgu/sv_category.pyx":53
  *         self.join_type = ""
  *         self.query_gap = 0
  *         self.inferred_sv_len = -1             # <<<<<<<<<<<<<<
@@ -2830,7 +2842,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->inferred_sv_len = -1;
 
-  /* "dysgu/sv_category.pyx":53
+  /* "dysgu/sv_category.pyx":54
  *         self.query_gap = 0
  *         self.inferred_sv_len = -1
  *         self.size_inferred = 0  # set to 1 if insertion size was inferred             # <<<<<<<<<<<<<<
@@ -2839,7 +2851,7 @@ static int __pyx_pf_5dysgu_11sv_category_13AlignmentItem___cinit__(struct __pyx_
  */
   __pyx_v_self->size_inferred = 0;
 
-  /* "dysgu/sv_category.pyx":13
+  /* "dysgu/sv_category.pyx":14
  *     # cdef public str svtype, join_type
  *     # cdef public object read_a, read_b
  *     def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,             # <<<<<<<<<<<<<<
@@ -5674,7 +5686,7 @@ static PyObject *__pyx_pf_5dysgu_11sv_category_13AlignmentItem_4__setstate_cytho
   return __pyx_r;
 }
 
-/* "dysgu/sv_category.pyx":56
+/* "dysgu/sv_category.pyx":57
  * 
  * 
  * cdef void two_primary(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -5690,7 +5702,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
   int __pyx_t_4;
   __Pyx_RefNannySetupContext("two_primary", 0);
 
-  /* "dysgu/sv_category.pyx":58
+  /* "dysgu/sv_category.pyx":59
  * cdef void two_primary(AlignmentItem v):
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):             # <<<<<<<<<<<<<<
@@ -5714,7 +5726,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":60
+    /* "dysgu/sv_category.pyx":61
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type             # <<<<<<<<<<<<<<
@@ -5732,7 +5744,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_L8_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":61
+      /* "dysgu/sv_category.pyx":62
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -5742,7 +5754,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->endA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":62
+      /* "dysgu/sv_category.pyx":63
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -5752,7 +5764,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":63
+        /* "dysgu/sv_category.pyx":64
  *             v.breakA = v.endA
  *             if v.right_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -5761,7 +5773,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":62
+        /* "dysgu/sv_category.pyx":63
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -5770,7 +5782,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":65
+      /* "dysgu/sv_category.pyx":66
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -5780,7 +5792,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->posB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":66
+      /* "dysgu/sv_category.pyx":67
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -5790,7 +5802,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":67
+        /* "dysgu/sv_category.pyx":68
  *             v.breakB = v.posB
  *             if v.left_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -5799,7 +5811,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":66
+        /* "dysgu/sv_category.pyx":67
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -5808,7 +5820,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":69
+      /* "dysgu/sv_category.pyx":70
  *                 v.breakB_precise = 1
  * 
  *             if v.endA >= v.posB:             # <<<<<<<<<<<<<<
@@ -5818,7 +5830,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = ((__pyx_v_v->endA >= __pyx_v_v->posB) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":70
+        /* "dysgu/sv_category.pyx":71
  * 
  *             if v.endA >= v.posB:
  *                 v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -5831,7 +5843,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INS;
 
-        /* "dysgu/sv_category.pyx":71
+        /* "dysgu/sv_category.pyx":72
  *             if v.endA >= v.posB:
  *                 v.svtype = "INS"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -5844,7 +5856,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-        /* "dysgu/sv_category.pyx":69
+        /* "dysgu/sv_category.pyx":70
  *                 v.breakB_precise = 1
  * 
  *             if v.endA >= v.posB:             # <<<<<<<<<<<<<<
@@ -5854,7 +5866,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         goto __pyx_L12;
       }
 
-      /* "dysgu/sv_category.pyx":74
+      /* "dysgu/sv_category.pyx":75
  * 
  *             else:
  *                 v.svtype = "DEL"             # <<<<<<<<<<<<<<
@@ -5868,7 +5880,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DEL;
 
-        /* "dysgu/sv_category.pyx":75
+        /* "dysgu/sv_category.pyx":76
  *             else:
  *                 v.svtype = "DEL"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -5883,7 +5895,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       }
       __pyx_L12:;
 
-      /* "dysgu/sv_category.pyx":60
+      /* "dysgu/sv_category.pyx":61
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type             # <<<<<<<<<<<<<<
@@ -5893,7 +5905,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":77
+    /* "dysgu/sv_category.pyx":78
  *                 v.join_type = "3to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -5911,7 +5923,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_L13_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":78
+      /* "dysgu/sv_category.pyx":79
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -5921,7 +5933,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->posA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":79
+      /* "dysgu/sv_category.pyx":80
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -5931,7 +5943,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":80
+        /* "dysgu/sv_category.pyx":81
  *             v.breakA = v.posA
  *             if v.left_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -5940,7 +5952,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":79
+        /* "dysgu/sv_category.pyx":80
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -5949,7 +5961,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":82
+      /* "dysgu/sv_category.pyx":83
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -5959,7 +5971,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->endB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":83
+      /* "dysgu/sv_category.pyx":84
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -5969,7 +5981,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":84
+        /* "dysgu/sv_category.pyx":85
  *             v.breakB = v.endB
  *             if v.right_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -5978,7 +5990,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":83
+        /* "dysgu/sv_category.pyx":84
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -5987,7 +5999,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":86
+      /* "dysgu/sv_category.pyx":87
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -6000,7 +6012,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-      /* "dysgu/sv_category.pyx":87
+      /* "dysgu/sv_category.pyx":88
  * 
  *             v.svtype = "DUP"
  *             v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -6013,7 +6025,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-      /* "dysgu/sv_category.pyx":77
+      /* "dysgu/sv_category.pyx":78
  *                 v.join_type = "3to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -6023,7 +6035,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":91
+    /* "dysgu/sv_category.pyx":92
  *         else:  # INV type
  *             # Break to left or right
  *             if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -6034,7 +6046,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = ((__pyx_v_v->strandA == 5) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":93
+        /* "dysgu/sv_category.pyx":94
  *             if v.strandA == 5:
  * 
  *                 if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):             # <<<<<<<<<<<<<<
@@ -6067,7 +6079,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_L19_bool_binop_done:;
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":94
+          /* "dysgu/sv_category.pyx":95
  * 
  *                 if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -6077,7 +6089,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":95
+          /* "dysgu/sv_category.pyx":96
  *                 if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                     v.breakA = v.endA
  *                     if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6087,7 +6099,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":96
+            /* "dysgu/sv_category.pyx":97
  *                     v.breakA = v.endA
  *                     if v.right_clipA:
  *                         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6096,7 +6108,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakA_precise = 1;
 
-            /* "dysgu/sv_category.pyx":95
+            /* "dysgu/sv_category.pyx":96
  *                 if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                     v.breakA = v.endA
  *                     if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6105,7 +6117,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":98
+          /* "dysgu/sv_category.pyx":99
  *                         v.breakA_precise = 1
  * 
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -6115,7 +6127,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":99
+          /* "dysgu/sv_category.pyx":100
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6125,7 +6137,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":100
+            /* "dysgu/sv_category.pyx":101
  *                     v.breakB = v.endB
  *                     if v.right_clipB:
  *                         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6134,7 +6146,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakB_precise = 1;
 
-            /* "dysgu/sv_category.pyx":99
+            /* "dysgu/sv_category.pyx":100
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6143,7 +6155,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":102
+          /* "dysgu/sv_category.pyx":103
  *                         v.breakB_precise = 1
  * 
  *                     v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -6156,7 +6168,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INV;
 
-          /* "dysgu/sv_category.pyx":103
+          /* "dysgu/sv_category.pyx":104
  * 
  *                     v.svtype = "INV"
  *                     v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -6169,7 +6181,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-          /* "dysgu/sv_category.pyx":93
+          /* "dysgu/sv_category.pyx":94
  *             if v.strandA == 5:
  * 
  *                 if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):             # <<<<<<<<<<<<<<
@@ -6179,7 +6191,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           goto __pyx_L18;
         }
 
-        /* "dysgu/sv_category.pyx":106
+        /* "dysgu/sv_category.pyx":107
  * 
  *                 else:
  *                     v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -6190,7 +6202,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->posA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":107
+          /* "dysgu/sv_category.pyx":108
  *                 else:
  *                     v.breakA = v.posA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6200,7 +6212,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":108
+            /* "dysgu/sv_category.pyx":109
  *                     v.breakA = v.posA
  *                     if v.left_clipA:
  *                         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6209,7 +6221,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakA_precise = 1;
 
-            /* "dysgu/sv_category.pyx":107
+            /* "dysgu/sv_category.pyx":108
  *                 else:
  *                     v.breakA = v.posA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6218,7 +6230,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":110
+          /* "dysgu/sv_category.pyx":111
  *                         v.breakA_precise = 1
  * 
  *                     v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -6228,7 +6240,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->posB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":111
+          /* "dysgu/sv_category.pyx":112
  * 
  *                     v.breakB = v.posB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6238,7 +6250,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":112
+            /* "dysgu/sv_category.pyx":113
  *                     v.breakB = v.posB
  *                     if v.right_clipB:
  *                         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6247,7 +6259,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakB_precise = 1;
 
-            /* "dysgu/sv_category.pyx":111
+            /* "dysgu/sv_category.pyx":112
  * 
  *                     v.breakB = v.posB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6256,7 +6268,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":114
+          /* "dysgu/sv_category.pyx":115
  *                         v.breakB_precise = 1
  * 
  *                     v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -6269,7 +6281,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INV;
 
-          /* "dysgu/sv_category.pyx":115
+          /* "dysgu/sv_category.pyx":116
  * 
  *                     v.svtype = "INV"
  *                     v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -6284,7 +6296,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         }
         __pyx_L18:;
 
-        /* "dysgu/sv_category.pyx":91
+        /* "dysgu/sv_category.pyx":92
  *         else:  # INV type
  *             # Break to left or right
  *             if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -6294,7 +6306,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         goto __pyx_L17;
       }
 
-      /* "dysgu/sv_category.pyx":118
+      /* "dysgu/sv_category.pyx":119
  * 
  *             else:  # strand == 3
  *                 if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):  # only left clips             # <<<<<<<<<<<<<<
@@ -6328,7 +6340,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_L29_bool_binop_done:;
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":120
+          /* "dysgu/sv_category.pyx":121
  *                 if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):  # only left clips
  * 
  *                     if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right             # <<<<<<<<<<<<<<
@@ -6358,7 +6370,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_L35_bool_binop_done:;
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":121
+            /* "dysgu/sv_category.pyx":122
  * 
  *                     if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right
  *                         v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -6368,7 +6380,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_3 = __pyx_v_v->endA;
             __pyx_v_v->breakA = __pyx_t_3;
 
-            /* "dysgu/sv_category.pyx":122
+            /* "dysgu/sv_category.pyx":123
  *                     if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right
  *                         v.breakA = v.endA
  *                         if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6378,7 +6390,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
             if (__pyx_t_1) {
 
-              /* "dysgu/sv_category.pyx":123
+              /* "dysgu/sv_category.pyx":124
  *                         v.breakA = v.endA
  *                         if v.right_clipA:
  *                             v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6387,7 +6399,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
               __pyx_v_v->breakA_precise = 1;
 
-              /* "dysgu/sv_category.pyx":122
+              /* "dysgu/sv_category.pyx":123
  *                     if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right
  *                         v.breakA = v.endA
  *                         if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6396,7 +6408,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             }
 
-            /* "dysgu/sv_category.pyx":125
+            /* "dysgu/sv_category.pyx":126
  *                             v.breakA_precise = 1
  * 
  *                         v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -6406,7 +6418,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_3 = __pyx_v_v->endB;
             __pyx_v_v->breakB = __pyx_t_3;
 
-            /* "dysgu/sv_category.pyx":126
+            /* "dysgu/sv_category.pyx":127
  * 
  *                         v.breakB = v.endB
  *                         if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6416,7 +6428,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
             if (__pyx_t_1) {
 
-              /* "dysgu/sv_category.pyx":127
+              /* "dysgu/sv_category.pyx":128
  *                         v.breakB = v.endB
  *                         if v.right_clipB:
  *                             v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6425,7 +6437,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
               __pyx_v_v->breakB_precise = 1;
 
-              /* "dysgu/sv_category.pyx":126
+              /* "dysgu/sv_category.pyx":127
  * 
  *                         v.breakB = v.endB
  *                         if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6434,7 +6446,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             }
 
-            /* "dysgu/sv_category.pyx":129
+            /* "dysgu/sv_category.pyx":130
  *                             v.breakB_precise = 1
  * 
  *                         v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -6447,7 +6459,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __Pyx_DECREF(__pyx_v_v->svtype);
             __pyx_v_v->svtype = __pyx_n_u_INV;
 
-            /* "dysgu/sv_category.pyx":130
+            /* "dysgu/sv_category.pyx":131
  * 
  *                         v.svtype = "INV"
  *                         v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -6460,7 +6472,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __Pyx_DECREF(__pyx_v_v->join_type);
             __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-            /* "dysgu/sv_category.pyx":120
+            /* "dysgu/sv_category.pyx":121
  *                 if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):  # only left clips
  * 
  *                     if (v.posA < v.posB and v.left_clipB) or (v.posB < v.posA and v.left_clipA):  # guess right             # <<<<<<<<<<<<<<
@@ -6470,7 +6482,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             goto __pyx_L34;
           }
 
-          /* "dysgu/sv_category.pyx":133
+          /* "dysgu/sv_category.pyx":134
  * 
  *                     else:  # guess left
  *                         v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -6481,7 +6493,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_3 = __pyx_v_v->posA;
             __pyx_v_v->breakA = __pyx_t_3;
 
-            /* "dysgu/sv_category.pyx":134
+            /* "dysgu/sv_category.pyx":135
  *                     else:  # guess left
  *                         v.breakA = v.posA
  *                         if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6491,7 +6503,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
             if (__pyx_t_1) {
 
-              /* "dysgu/sv_category.pyx":135
+              /* "dysgu/sv_category.pyx":136
  *                         v.breakA = v.posA
  *                         if v.left_clipA:
  *                             v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6500,7 +6512,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
               __pyx_v_v->breakA_precise = 1;
 
-              /* "dysgu/sv_category.pyx":134
+              /* "dysgu/sv_category.pyx":135
  *                     else:  # guess left
  *                         v.breakA = v.posA
  *                         if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6509,7 +6521,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             }
 
-            /* "dysgu/sv_category.pyx":137
+            /* "dysgu/sv_category.pyx":138
  *                             v.breakA_precise = 1
  * 
  *                         v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -6519,7 +6531,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_3 = __pyx_v_v->posB;
             __pyx_v_v->breakB = __pyx_t_3;
 
-            /* "dysgu/sv_category.pyx":138
+            /* "dysgu/sv_category.pyx":139
  * 
  *                         v.breakB = v.posB
  *                         if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -6529,7 +6541,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
             if (__pyx_t_1) {
 
-              /* "dysgu/sv_category.pyx":139
+              /* "dysgu/sv_category.pyx":140
  *                         v.breakB = v.posB
  *                         if v.left_clipB:
  *                             v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6538,7 +6550,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
               __pyx_v_v->breakB_precise = 1;
 
-              /* "dysgu/sv_category.pyx":138
+              /* "dysgu/sv_category.pyx":139
  * 
  *                         v.breakB = v.posB
  *                         if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -6547,7 +6559,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             }
 
-            /* "dysgu/sv_category.pyx":141
+            /* "dysgu/sv_category.pyx":142
  *                             v.breakB_precise = 1
  * 
  *                         v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -6560,7 +6572,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
             __Pyx_DECREF(__pyx_v_v->svtype);
             __pyx_v_v->svtype = __pyx_n_u_INV;
 
-            /* "dysgu/sv_category.pyx":142
+            /* "dysgu/sv_category.pyx":143
  * 
  *                         v.svtype = "INV"
  *                         v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -6575,7 +6587,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           }
           __pyx_L34:;
 
-          /* "dysgu/sv_category.pyx":118
+          /* "dysgu/sv_category.pyx":119
  * 
  *             else:  # strand == 3
  *                 if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):  # only left clips             # <<<<<<<<<<<<<<
@@ -6585,7 +6597,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           goto __pyx_L28;
         }
 
-        /* "dysgu/sv_category.pyx":146
+        /* "dysgu/sv_category.pyx":147
  *                 else:  # either no clips or right clips
  * 
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -6596,7 +6608,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":147
+          /* "dysgu/sv_category.pyx":148
  * 
  *                     v.breakA = v.endA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6606,7 +6618,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":148
+            /* "dysgu/sv_category.pyx":149
  *                     v.breakA = v.endA
  *                     if v.left_clipA:
  *                         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6615,7 +6627,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakA_precise = 1;
 
-            /* "dysgu/sv_category.pyx":147
+            /* "dysgu/sv_category.pyx":148
  * 
  *                     v.breakA = v.endA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6624,7 +6636,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":150
+          /* "dysgu/sv_category.pyx":151
  *                         v.breakA_precise = 1
  * 
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -6634,7 +6646,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":151
+          /* "dysgu/sv_category.pyx":152
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6644,7 +6656,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":152
+            /* "dysgu/sv_category.pyx":153
  *                     v.breakB = v.endB
  *                     if v.right_clipB:
  *                         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6653,7 +6665,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
             __pyx_v_v->breakB_precise = 1;
 
-            /* "dysgu/sv_category.pyx":151
+            /* "dysgu/sv_category.pyx":152
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6662,7 +6674,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           }
 
-          /* "dysgu/sv_category.pyx":154
+          /* "dysgu/sv_category.pyx":155
  *                         v.breakB_precise = 1
  * 
  *                     v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -6675,7 +6687,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INV;
 
-          /* "dysgu/sv_category.pyx":155
+          /* "dysgu/sv_category.pyx":156
  * 
  *                     v.svtype = "INV"
  *                     v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -6694,7 +6706,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     }
     __pyx_L7:;
 
-    /* "dysgu/sv_category.pyx":58
+    /* "dysgu/sv_category.pyx":59
  * cdef void two_primary(AlignmentItem v):
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA < v.endB):             # <<<<<<<<<<<<<<
@@ -6704,7 +6716,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":159
+  /* "dysgu/sv_category.pyx":160
  *     else:  # B < A
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type             # <<<<<<<<<<<<<<
@@ -6723,7 +6735,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_L46_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":160
+      /* "dysgu/sv_category.pyx":161
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -6733,7 +6745,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->posA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":161
+      /* "dysgu/sv_category.pyx":162
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6743,7 +6755,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":162
+        /* "dysgu/sv_category.pyx":163
  *             v.breakA = v.posA
  *             if v.left_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6752,7 +6764,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":161
+        /* "dysgu/sv_category.pyx":162
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -6761,7 +6773,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":164
+      /* "dysgu/sv_category.pyx":165
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -6771,7 +6783,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->endB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":165
+      /* "dysgu/sv_category.pyx":166
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6781,7 +6793,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":166
+        /* "dysgu/sv_category.pyx":167
  *             v.breakB = v.endB
  *             if v.right_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6790,7 +6802,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":165
+        /* "dysgu/sv_category.pyx":166
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -6799,7 +6811,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":168
+      /* "dysgu/sv_category.pyx":169
  *                 v.breakB_precise = 1
  * 
  *             if v.endB >= v.posA:             # <<<<<<<<<<<<<<
@@ -6809,7 +6821,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = ((__pyx_v_v->endB >= __pyx_v_v->posA) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":169
+        /* "dysgu/sv_category.pyx":170
  * 
  *             if v.endB >= v.posA:
  *                 v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -6822,7 +6834,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INS;
 
-        /* "dysgu/sv_category.pyx":170
+        /* "dysgu/sv_category.pyx":171
  *             if v.endB >= v.posA:
  *                 v.svtype = "INS"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -6835,7 +6847,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-        /* "dysgu/sv_category.pyx":168
+        /* "dysgu/sv_category.pyx":169
  *                 v.breakB_precise = 1
  * 
  *             if v.endB >= v.posA:             # <<<<<<<<<<<<<<
@@ -6845,7 +6857,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         goto __pyx_L50;
       }
 
-      /* "dysgu/sv_category.pyx":173
+      /* "dysgu/sv_category.pyx":174
  * 
  *             else:
  *                 v.svtype = "DEL"             # <<<<<<<<<<<<<<
@@ -6859,7 +6871,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DEL;
 
-        /* "dysgu/sv_category.pyx":174
+        /* "dysgu/sv_category.pyx":175
  *             else:
  *                 v.svtype = "DEL"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -6874,7 +6886,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       }
       __pyx_L50:;
 
-      /* "dysgu/sv_category.pyx":159
+      /* "dysgu/sv_category.pyx":160
  *     else:  # B < A
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type             # <<<<<<<<<<<<<<
@@ -6884,7 +6896,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       goto __pyx_L45;
     }
 
-    /* "dysgu/sv_category.pyx":176
+    /* "dysgu/sv_category.pyx":177
  *                 v.join_type = "3to5"
  * 
  *         elif v.strandB == 5 and v.strandA == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -6902,7 +6914,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_L51_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":177
+      /* "dysgu/sv_category.pyx":178
  * 
  *         elif v.strandB == 5 and v.strandA == 3:  # DUP type
  *             v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -6912,7 +6924,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->endA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":178
+      /* "dysgu/sv_category.pyx":179
  *         elif v.strandB == 5 and v.strandA == 3:  # DUP type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6922,7 +6934,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":179
+        /* "dysgu/sv_category.pyx":180
  *             v.breakA = v.endA
  *             if v.right_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -6931,7 +6943,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":178
+        /* "dysgu/sv_category.pyx":179
  *         elif v.strandB == 5 and v.strandA == 3:  # DUP type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -6940,7 +6952,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":181
+      /* "dysgu/sv_category.pyx":182
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -6950,7 +6962,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_3 = __pyx_v_v->posB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":182
+      /* "dysgu/sv_category.pyx":183
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -6960,7 +6972,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":183
+        /* "dysgu/sv_category.pyx":184
  *             v.breakB = v.posB
  *             if v.left_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -6969,7 +6981,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":182
+        /* "dysgu/sv_category.pyx":183
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -6978,7 +6990,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
       }
 
-      /* "dysgu/sv_category.pyx":185
+      /* "dysgu/sv_category.pyx":186
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -6991,7 +7003,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-      /* "dysgu/sv_category.pyx":186
+      /* "dysgu/sv_category.pyx":187
  * 
  *             v.svtype = "DUP"
  *             v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -7004,7 +7016,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-      /* "dysgu/sv_category.pyx":176
+      /* "dysgu/sv_category.pyx":177
  *                 v.join_type = "3to5"
  * 
  *         elif v.strandB == 5 and v.strandA == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -7014,7 +7026,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       goto __pyx_L45;
     }
 
-    /* "dysgu/sv_category.pyx":189
+    /* "dysgu/sv_category.pyx":190
  * 
  *             # INV type
  *         elif v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -7024,7 +7036,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_t_1 = ((__pyx_v_v->strandA == 5) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":191
+      /* "dysgu/sv_category.pyx":192
  *         elif v.strandA == 5:
  * 
  *             if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):             # <<<<<<<<<<<<<<
@@ -7057,7 +7069,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_L56_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":192
+        /* "dysgu/sv_category.pyx":193
  * 
  *             if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -7067,7 +7079,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":193
+        /* "dysgu/sv_category.pyx":194
  *             if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7077,7 +7089,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":194
+          /* "dysgu/sv_category.pyx":195
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7086,7 +7098,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":193
+          /* "dysgu/sv_category.pyx":194
  *             if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7095,7 +7107,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":196
+        /* "dysgu/sv_category.pyx":197
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -7105,7 +7117,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":197
+        /* "dysgu/sv_category.pyx":198
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7115,7 +7127,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":198
+          /* "dysgu/sv_category.pyx":199
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7124,7 +7136,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":197
+          /* "dysgu/sv_category.pyx":198
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7133,7 +7145,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":200
+        /* "dysgu/sv_category.pyx":201
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -7146,7 +7158,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":201
+        /* "dysgu/sv_category.pyx":202
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -7159,7 +7171,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":191
+        /* "dysgu/sv_category.pyx":192
  *         elif v.strandA == 5:
  * 
  *             if not (v.left_clipA or v.left_clipB) and (v.right_clipA or v.right_clipB):             # <<<<<<<<<<<<<<
@@ -7169,7 +7181,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         goto __pyx_L55;
       }
 
-      /* "dysgu/sv_category.pyx":204
+      /* "dysgu/sv_category.pyx":205
  * 
  *             else:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -7180,7 +7192,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":205
+        /* "dysgu/sv_category.pyx":206
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7190,7 +7202,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":206
+          /* "dysgu/sv_category.pyx":207
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7199,7 +7211,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":205
+          /* "dysgu/sv_category.pyx":206
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7208,7 +7220,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":208
+        /* "dysgu/sv_category.pyx":209
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -7218,7 +7230,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":209
+        /* "dysgu/sv_category.pyx":210
  * 
  *                 v.breakB = v.posB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7228,7 +7240,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":210
+          /* "dysgu/sv_category.pyx":211
  *                 v.breakB = v.posB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7237,7 +7249,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":209
+          /* "dysgu/sv_category.pyx":210
  * 
  *                 v.breakB = v.posB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7246,7 +7258,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":212
+        /* "dysgu/sv_category.pyx":213
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -7259,7 +7271,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":213
+        /* "dysgu/sv_category.pyx":214
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -7274,7 +7286,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       }
       __pyx_L55:;
 
-      /* "dysgu/sv_category.pyx":189
+      /* "dysgu/sv_category.pyx":190
  * 
  *             # INV type
  *         elif v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -7284,7 +7296,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       goto __pyx_L45;
     }
 
-    /* "dysgu/sv_category.pyx":215
+    /* "dysgu/sv_category.pyx":216
  *                 v.join_type = "5to5"
  * 
  *         elif v.strandA == 3:             # <<<<<<<<<<<<<<
@@ -7294,7 +7306,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
     __pyx_t_1 = ((__pyx_v_v->strandA == 3) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":217
+      /* "dysgu/sv_category.pyx":218
  *         elif v.strandA == 3:
  * 
  *             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):             # <<<<<<<<<<<<<<
@@ -7327,7 +7339,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       __pyx_L66_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":218
+        /* "dysgu/sv_category.pyx":219
  * 
  *             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -7337,7 +7349,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":219
+        /* "dysgu/sv_category.pyx":220
  *             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
  *                 v.breakA = v.posA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7347,7 +7359,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":220
+          /* "dysgu/sv_category.pyx":221
  *                 v.breakA = v.posA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7356,7 +7368,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":219
+          /* "dysgu/sv_category.pyx":220
  *             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
  *                 v.breakA = v.posA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7365,7 +7377,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":222
+        /* "dysgu/sv_category.pyx":223
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -7375,7 +7387,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":223
+        /* "dysgu/sv_category.pyx":224
  * 
  *                 v.breakB = v.posB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7385,7 +7397,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":224
+          /* "dysgu/sv_category.pyx":225
  *                 v.breakB = v.posB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7394,7 +7406,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":223
+          /* "dysgu/sv_category.pyx":224
  * 
  *                 v.breakB = v.posB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7403,7 +7415,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":226
+        /* "dysgu/sv_category.pyx":227
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -7416,7 +7428,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":227
+        /* "dysgu/sv_category.pyx":228
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -7429,7 +7441,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":217
+        /* "dysgu/sv_category.pyx":218
  *         elif v.strandA == 3:
  * 
  *             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):             # <<<<<<<<<<<<<<
@@ -7439,7 +7451,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         goto __pyx_L65;
       }
 
-      /* "dysgu/sv_category.pyx":231
+      /* "dysgu/sv_category.pyx":232
  *             else:
  * 
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -7450,7 +7462,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":232
+        /* "dysgu/sv_category.pyx":233
  * 
  *                 v.breakA = v.endA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7460,7 +7472,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":233
+          /* "dysgu/sv_category.pyx":234
  *                 v.breakA = v.endA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7469,7 +7481,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":232
+          /* "dysgu/sv_category.pyx":233
  * 
  *                 v.breakA = v.endA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7478,7 +7490,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":235
+        /* "dysgu/sv_category.pyx":236
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -7488,7 +7500,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":236
+        /* "dysgu/sv_category.pyx":237
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7498,7 +7510,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":237
+          /* "dysgu/sv_category.pyx":238
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7507,7 +7519,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":236
+          /* "dysgu/sv_category.pyx":237
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7516,7 +7528,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
  */
         }
 
-        /* "dysgu/sv_category.pyx":239
+        /* "dysgu/sv_category.pyx":240
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -7529,7 +7541,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":240
+        /* "dysgu/sv_category.pyx":241
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -7544,7 +7556,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
       }
       __pyx_L65:;
 
-      /* "dysgu/sv_category.pyx":215
+      /* "dysgu/sv_category.pyx":216
  *                 v.join_type = "5to5"
  * 
  *         elif v.strandA == 3:             # <<<<<<<<<<<<<<
@@ -7556,7 +7568,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
   }
   __pyx_L3:;
 
-  /* "dysgu/sv_category.pyx":56
+  /* "dysgu/sv_category.pyx":57
  * 
  * 
  * cdef void two_primary(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -7568,7 +7580,7 @@ static void __pyx_f_5dysgu_11sv_category_two_primary(struct __pyx_obj_5dysgu_11s
   __Pyx_RefNannyFinishContext();
 }
 
-/* "dysgu/sv_category.pyx":243
+/* "dysgu/sv_category.pyx":244
  * 
  * 
  * cdef void same_read(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -7595,7 +7607,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("same_read", 0);
 
-  /* "dysgu/sv_category.pyx":245
+  /* "dysgu/sv_category.pyx":246
  * cdef void same_read(AlignmentItem v):
  * 
  *     cdef int query_gap = 0             # <<<<<<<<<<<<<<
@@ -7604,7 +7616,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
   __pyx_v_query_gap = 0;
 
-  /* "dysgu/sv_category.pyx":246
+  /* "dysgu/sv_category.pyx":247
  * 
  *     cdef int query_gap = 0
  *     cdef int ref_gap = 0             # <<<<<<<<<<<<<<
@@ -7613,7 +7625,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
   __pyx_v_ref_gap = 0;
 
-  /* "dysgu/sv_category.pyx":247
+  /* "dysgu/sv_category.pyx":248
  *     cdef int query_gap = 0
  *     cdef int ref_gap = 0
  *     cdef int query_overlap = 0             # <<<<<<<<<<<<<<
@@ -7622,7 +7634,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
   __pyx_v_query_overlap = 0;
 
-  /* "dysgu/sv_category.pyx":248
+  /* "dysgu/sv_category.pyx":249
  *     cdef int ref_gap = 0
  *     cdef int query_overlap = 0
  *     cdef int inferred_sv_len = -1             # <<<<<<<<<<<<<<
@@ -7631,7 +7643,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
   __pyx_v_inferred_sv_len = -1;
 
-  /* "dysgu/sv_category.pyx":250
+  /* "dysgu/sv_category.pyx":251
  *     cdef int inferred_sv_len = -1
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first             # <<<<<<<<<<<<<<
@@ -7655,7 +7667,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":252
+    /* "dysgu/sv_category.pyx":253
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
  * 
  *         if v.strandA == v.strandB:  # Same for 3 and 5 strand reads             # <<<<<<<<<<<<<<
@@ -7665,7 +7677,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
     __pyx_t_1 = ((__pyx_v_v->strandA == __pyx_v_v->strandB) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":254
+      /* "dysgu/sv_category.pyx":255
  *         if v.strandA == v.strandB:  # Same for 3 and 5 strand reads
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -7675,7 +7687,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_t_1 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_v_v->posA, __pyx_v_v->endA, __pyx_v_v->posB, __pyx_v_v->endB, 0) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":255
+        /* "dysgu/sv_category.pyx":256
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7685,7 +7697,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":256
+          /* "dysgu/sv_category.pyx":257
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:
  *                     v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -7695,7 +7707,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->posA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":257
+          /* "dysgu/sv_category.pyx":258
  *                 if v.left_clipA:
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7704,7 +7716,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":255
+          /* "dysgu/sv_category.pyx":256
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -7714,7 +7726,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L9;
         }
 
-        /* "dysgu/sv_category.pyx":258
+        /* "dysgu/sv_category.pyx":259
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7724,7 +7736,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":259
+          /* "dysgu/sv_category.pyx":260
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -7734,7 +7746,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":260
+          /* "dysgu/sv_category.pyx":261
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -7743,7 +7755,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":258
+          /* "dysgu/sv_category.pyx":259
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -7753,7 +7765,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L9;
         }
 
-        /* "dysgu/sv_category.pyx":262
+        /* "dysgu/sv_category.pyx":263
  *                     v.breakA_precise = 1
  *                 else:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -7766,7 +7778,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L9:;
 
-        /* "dysgu/sv_category.pyx":264
+        /* "dysgu/sv_category.pyx":265
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -7776,7 +7788,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":265
+          /* "dysgu/sv_category.pyx":266
  * 
  *                 if v.left_clipB:
  *                     v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -7786,7 +7798,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->posB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":266
+          /* "dysgu/sv_category.pyx":267
  *                 if v.left_clipB:
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7795,7 +7807,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":264
+          /* "dysgu/sv_category.pyx":265
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -7805,7 +7817,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L10;
         }
 
-        /* "dysgu/sv_category.pyx":267
+        /* "dysgu/sv_category.pyx":268
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7815,7 +7827,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":268
+          /* "dysgu/sv_category.pyx":269
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -7825,7 +7837,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":269
+          /* "dysgu/sv_category.pyx":270
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -7834,7 +7846,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":267
+          /* "dysgu/sv_category.pyx":268
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -7844,7 +7856,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L10;
         }
 
-        /* "dysgu/sv_category.pyx":271
+        /* "dysgu/sv_category.pyx":272
  *                     v.breakB_precise = 1
  *                 else:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -7857,7 +7869,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L10:;
 
-        /* "dysgu/sv_category.pyx":273
+        /* "dysgu/sv_category.pyx":274
  *                     v.breakB = v.endB
  * 
  *                 v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -7870,17 +7882,17 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INS;
 
-        /* "dysgu/sv_category.pyx":276
+        /* "dysgu/sv_category.pyx":277
  *                 # Check if gap on query is bigger than gap on reference
  *                 # query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
  *                 ref_gap = abs(v.breakB - v.breakA)             # <<<<<<<<<<<<<<
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq
  */
-        __pyx_t_3 = abs((__pyx_v_v->breakB - __pyx_v_v->breakA)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 276, __pyx_L1_error)
+        __pyx_t_3 = abs((__pyx_v_v->breakB - __pyx_v_v->breakA)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 277, __pyx_L1_error)
         __pyx_v_ref_gap = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":278
+        /* "dysgu/sv_category.pyx":279
  *                 ref_gap = abs(v.breakB - v.breakA)
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq             # <<<<<<<<<<<<<<
@@ -7890,19 +7902,19 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_v->a_qstart > __pyx_v_v->b_qstart) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":279
+          /* "dysgu/sv_category.pyx":280
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq
  *                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments             # <<<<<<<<<<<<<<
  *                 else:
  *                     align_overlap = v.a_qend - v.b_qstart
  */
-          __pyx_t_4 = __Pyx_PyInt_From_int((__pyx_v_v->b_qend - __pyx_v_v->a_qstart)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 279, __pyx_L1_error)
+          __pyx_t_4 = __Pyx_PyInt_From_int((__pyx_v_v->b_qend - __pyx_v_v->a_qstart)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 280, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_4);
           __pyx_v_align_overlap = __pyx_t_4;
           __pyx_t_4 = 0;
 
-          /* "dysgu/sv_category.pyx":278
+          /* "dysgu/sv_category.pyx":279
  *                 ref_gap = abs(v.breakB - v.breakA)
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq             # <<<<<<<<<<<<<<
@@ -7912,7 +7924,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L11;
         }
 
-        /* "dysgu/sv_category.pyx":281
+        /* "dysgu/sv_category.pyx":282
  *                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
  *                 else:
  *                     align_overlap = v.a_qend - v.b_qstart             # <<<<<<<<<<<<<<
@@ -7920,52 +7932,52 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  *                 v.inferred_sv_len = ref_gap - align_overlap
  */
         /*else*/ {
-          __pyx_t_4 = __Pyx_PyInt_From_int((__pyx_v_v->a_qend - __pyx_v_v->b_qstart)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 281, __pyx_L1_error)
+          __pyx_t_4 = __Pyx_PyInt_From_int((__pyx_v_v->a_qend - __pyx_v_v->b_qstart)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 282, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_4);
           __pyx_v_align_overlap = __pyx_t_4;
           __pyx_t_4 = 0;
         }
         __pyx_L11:;
 
-        /* "dysgu/sv_category.pyx":283
+        /* "dysgu/sv_category.pyx":284
  *                     align_overlap = v.a_qend - v.b_qstart
  * 
  *                 v.inferred_sv_len = ref_gap - align_overlap             # <<<<<<<<<<<<<<
  *                 if align_overlap < 0:
  *                     v.query_gap = align_overlap
  */
-        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_ref_gap); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 283, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_ref_gap); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 284, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
-        __pyx_t_5 = PyNumber_Subtract(__pyx_t_4, __pyx_v_align_overlap); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 283, __pyx_L1_error)
+        __pyx_t_5 = PyNumber_Subtract(__pyx_t_4, __pyx_v_align_overlap); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 284, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-        __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 283, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 284, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
         __pyx_v_v->inferred_sv_len = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":284
+        /* "dysgu/sv_category.pyx":285
  * 
  *                 v.inferred_sv_len = ref_gap - align_overlap
  *                 if align_overlap < 0:             # <<<<<<<<<<<<<<
  *                     v.query_gap = align_overlap
  *                 else:
  */
-        __pyx_t_5 = PyObject_RichCompare(__pyx_v_align_overlap, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 284, __pyx_L1_error)
-        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(1, 284, __pyx_L1_error)
+        __pyx_t_5 = PyObject_RichCompare(__pyx_v_align_overlap, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_5); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 285, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_5); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(1, 285, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":285
+          /* "dysgu/sv_category.pyx":286
  *                 v.inferred_sv_len = ref_gap - align_overlap
  *                 if align_overlap < 0:
  *                     v.query_gap = align_overlap             # <<<<<<<<<<<<<<
  *                 else:
  *                     v.query_overlap = align_overlap
  */
-          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 285, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 286, __pyx_L1_error)
           __pyx_v_v->query_gap = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":284
+          /* "dysgu/sv_category.pyx":285
  * 
  *                 v.inferred_sv_len = ref_gap - align_overlap
  *                 if align_overlap < 0:             # <<<<<<<<<<<<<<
@@ -7975,7 +7987,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L12;
         }
 
-        /* "dysgu/sv_category.pyx":287
+        /* "dysgu/sv_category.pyx":288
  *                     v.query_gap = align_overlap
  *                 else:
  *                     v.query_overlap = align_overlap             # <<<<<<<<<<<<<<
@@ -7983,12 +7995,12 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  * 
  */
         /*else*/ {
-          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 287, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 288, __pyx_L1_error)
           __pyx_v_v->query_overlap = __pyx_t_3;
         }
         __pyx_L12:;
 
-        /* "dysgu/sv_category.pyx":288
+        /* "dysgu/sv_category.pyx":289
  *                 else:
  *                     v.query_overlap = align_overlap
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -8001,7 +8013,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":254
+        /* "dysgu/sv_category.pyx":255
  *         if v.strandA == v.strandB:  # Same for 3 and 5 strand reads
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -8011,7 +8023,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L8;
       }
 
-      /* "dysgu/sv_category.pyx":290
+      /* "dysgu/sv_category.pyx":291
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8029,7 +8041,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L13_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":291
+        /* "dysgu/sv_category.pyx":292
  * 
  *             elif not v.left_clipA and not v.right_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -8039,7 +8051,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":292
+        /* "dysgu/sv_category.pyx":293
  *             elif not v.left_clipA and not v.right_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8049,7 +8061,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":293
+          /* "dysgu/sv_category.pyx":294
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8058,7 +8070,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":292
+          /* "dysgu/sv_category.pyx":293
  *             elif not v.left_clipA and not v.right_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8067,7 +8079,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":294
+        /* "dysgu/sv_category.pyx":295
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -8077,7 +8089,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":295
+        /* "dysgu/sv_category.pyx":296
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8087,7 +8099,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":296
+          /* "dysgu/sv_category.pyx":297
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8096,7 +8108,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":295
+          /* "dysgu/sv_category.pyx":296
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8105,7 +8117,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":299
+        /* "dysgu/sv_category.pyx":300
  * 
  *                 # Check if gap on query is bigger than gap on reference; call insertion if it is
  *                 query_gap = v.b_qstart - v.a_qend  # as A is first             # <<<<<<<<<<<<<<
@@ -8114,17 +8126,17 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_query_gap = (__pyx_v_v->b_qstart - __pyx_v_v->a_qend);
 
-        /* "dysgu/sv_category.pyx":300
+        /* "dysgu/sv_category.pyx":301
  *                 # Check if gap on query is bigger than gap on reference; call insertion if it is
  *                 query_gap = v.b_qstart - v.a_qend  # as A is first
  *                 ref_gap = abs(v.breakB - v.breakA)             # <<<<<<<<<<<<<<
  *                 if query_gap < 0:
  *                     ref_gap += abs(query_gap)
  */
-        __pyx_t_3 = abs((__pyx_v_v->breakB - __pyx_v_v->breakA)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 300, __pyx_L1_error)
+        __pyx_t_3 = abs((__pyx_v_v->breakB - __pyx_v_v->breakA)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 301, __pyx_L1_error)
         __pyx_v_ref_gap = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":301
+        /* "dysgu/sv_category.pyx":302
  *                 query_gap = v.b_qstart - v.a_qend  # as A is first
  *                 ref_gap = abs(v.breakB - v.breakA)
  *                 if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -8134,27 +8146,27 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_query_gap < 0) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":302
+          /* "dysgu/sv_category.pyx":303
  *                 ref_gap = abs(v.breakB - v.breakA)
  *                 if query_gap < 0:
  *                     ref_gap += abs(query_gap)             # <<<<<<<<<<<<<<
  *                     v.query_overlap = abs(query_gap)
  *                     v.query_gap = 0
  */
-          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 302, __pyx_L1_error)
+          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 303, __pyx_L1_error)
           __pyx_v_ref_gap = (__pyx_v_ref_gap + __pyx_t_3);
 
-          /* "dysgu/sv_category.pyx":303
+          /* "dysgu/sv_category.pyx":304
  *                 if query_gap < 0:
  *                     ref_gap += abs(query_gap)
  *                     v.query_overlap = abs(query_gap)             # <<<<<<<<<<<<<<
  *                     v.query_gap = 0
  * 
  */
-          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 303, __pyx_L1_error)
+          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 304, __pyx_L1_error)
           __pyx_v_v->query_overlap = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":304
+          /* "dysgu/sv_category.pyx":305
  *                     ref_gap += abs(query_gap)
  *                     v.query_overlap = abs(query_gap)
  *                     v.query_gap = 0             # <<<<<<<<<<<<<<
@@ -8163,7 +8175,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->query_gap = 0;
 
-          /* "dysgu/sv_category.pyx":301
+          /* "dysgu/sv_category.pyx":302
  *                 query_gap = v.b_qstart - v.a_qend  # as A is first
  *                 ref_gap = abs(v.breakB - v.breakA)
  *                 if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -8173,7 +8185,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L17;
         }
 
-        /* "dysgu/sv_category.pyx":307
+        /* "dysgu/sv_category.pyx":308
  * 
  *                 else:
  *                     v.query_overlap = 0             # <<<<<<<<<<<<<<
@@ -8183,7 +8195,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         /*else*/ {
           __pyx_v_v->query_overlap = 0;
 
-          /* "dysgu/sv_category.pyx":308
+          /* "dysgu/sv_category.pyx":309
  *                 else:
  *                     v.query_overlap = 0
  *                     v.query_gap = query_gap             # <<<<<<<<<<<<<<
@@ -8194,7 +8206,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L17:;
 
-        /* "dysgu/sv_category.pyx":310
+        /* "dysgu/sv_category.pyx":311
  *                     v.query_gap = query_gap
  * 
  *                 if ref_gap < query_gap:             # <<<<<<<<<<<<<<
@@ -8204,7 +8216,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_ref_gap < __pyx_v_query_gap) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":311
+          /* "dysgu/sv_category.pyx":312
  * 
  *                 if ref_gap < query_gap:
  *                     v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -8217,7 +8229,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INS;
 
-          /* "dysgu/sv_category.pyx":312
+          /* "dysgu/sv_category.pyx":313
  *                 if ref_gap < query_gap:
  *                     v.svtype = "INS"
  *                     v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -8230,7 +8242,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-          /* "dysgu/sv_category.pyx":313
+          /* "dysgu/sv_category.pyx":314
  *                     v.svtype = "INS"
  *                     v.join_type = "3to5"
  *                     v.inferred_sv_len = query_gap             # <<<<<<<<<<<<<<
@@ -8239,7 +8251,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->inferred_sv_len = __pyx_v_query_gap;
 
-          /* "dysgu/sv_category.pyx":310
+          /* "dysgu/sv_category.pyx":311
  *                     v.query_gap = query_gap
  * 
  *                 if ref_gap < query_gap:             # <<<<<<<<<<<<<<
@@ -8249,7 +8261,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L18;
         }
 
-        /* "dysgu/sv_category.pyx":315
+        /* "dysgu/sv_category.pyx":316
  *                     v.inferred_sv_len = query_gap
  * 
  *                 elif v.read_overlaps_mate:             # <<<<<<<<<<<<<<
@@ -8259,7 +8271,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->read_overlaps_mate != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":316
+          /* "dysgu/sv_category.pyx":317
  * 
  *                 elif v.read_overlaps_mate:
  *                     v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -8272,7 +8284,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-          /* "dysgu/sv_category.pyx":317
+          /* "dysgu/sv_category.pyx":318
  *                 elif v.read_overlaps_mate:
  *                     v.svtype = "DUP"
  *                     v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -8285,7 +8297,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-          /* "dysgu/sv_category.pyx":315
+          /* "dysgu/sv_category.pyx":316
  *                     v.inferred_sv_len = query_gap
  * 
  *                 elif v.read_overlaps_mate:             # <<<<<<<<<<<<<<
@@ -8295,7 +8307,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L18;
         }
 
-        /* "dysgu/sv_category.pyx":319
+        /* "dysgu/sv_category.pyx":320
  *                     v.join_type = "5to3"
  *                 else:
  *                     v.svtype = "DEL"             # <<<<<<<<<<<<<<
@@ -8309,7 +8321,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_DEL;
 
-          /* "dysgu/sv_category.pyx":320
+          /* "dysgu/sv_category.pyx":321
  *                 else:
  *                     v.svtype = "DEL"
  *                     v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -8322,7 +8334,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-          /* "dysgu/sv_category.pyx":321
+          /* "dysgu/sv_category.pyx":322
  *                     v.svtype = "DEL"
  *                     v.join_type = "3to5"
  *                     v.inferred_sv_len = ref_gap             # <<<<<<<<<<<<<<
@@ -8333,7 +8345,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L18:;
 
-        /* "dysgu/sv_category.pyx":290
+        /* "dysgu/sv_category.pyx":291
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8343,7 +8355,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L8;
       }
 
-      /* "dysgu/sv_category.pyx":323
+      /* "dysgu/sv_category.pyx":324
  *                     v.inferred_sv_len = ref_gap
  * 
  *             elif not v.right_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8361,7 +8373,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L19_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":324
+        /* "dysgu/sv_category.pyx":325
  * 
  *             elif not v.right_clipA and not v.left_clipB:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -8371,7 +8383,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":325
+        /* "dysgu/sv_category.pyx":326
  *             elif not v.right_clipA and not v.left_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8381,7 +8393,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":326
+          /* "dysgu/sv_category.pyx":327
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8390,7 +8402,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":325
+          /* "dysgu/sv_category.pyx":326
  *             elif not v.right_clipA and not v.left_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8399,7 +8411,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":327
+        /* "dysgu/sv_category.pyx":328
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -8409,7 +8421,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":328
+        /* "dysgu/sv_category.pyx":329
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8419,7 +8431,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":329
+          /* "dysgu/sv_category.pyx":330
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8428,7 +8440,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":328
+          /* "dysgu/sv_category.pyx":329
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8437,7 +8449,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":330
+        /* "dysgu/sv_category.pyx":331
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -8450,7 +8462,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-        /* "dysgu/sv_category.pyx":331
+        /* "dysgu/sv_category.pyx":332
  *                     v.breakB_precise = 1
  *                 v.svtype = "DUP"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -8463,7 +8475,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":323
+        /* "dysgu/sv_category.pyx":324
  *                     v.inferred_sv_len = ref_gap
  * 
  *             elif not v.right_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8473,7 +8485,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L8;
       }
 
-      /* "dysgu/sv_category.pyx":333
+      /* "dysgu/sv_category.pyx":334
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8491,7 +8503,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L23_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":334
+        /* "dysgu/sv_category.pyx":335
  * 
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -8501,7 +8513,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":335
+        /* "dysgu/sv_category.pyx":336
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8511,7 +8523,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":336
+          /* "dysgu/sv_category.pyx":337
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8520,7 +8532,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":335
+          /* "dysgu/sv_category.pyx":336
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8529,7 +8541,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":337
+        /* "dysgu/sv_category.pyx":338
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -8539,7 +8551,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":338
+        /* "dysgu/sv_category.pyx":339
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8549,7 +8561,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":339
+          /* "dysgu/sv_category.pyx":340
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8558,7 +8570,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":338
+          /* "dysgu/sv_category.pyx":339
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8567,7 +8579,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":340
+        /* "dysgu/sv_category.pyx":341
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -8580,7 +8592,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":341
+        /* "dysgu/sv_category.pyx":342
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -8593,7 +8605,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":333
+        /* "dysgu/sv_category.pyx":334
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8603,7 +8615,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L8;
       }
 
-      /* "dysgu/sv_category.pyx":344
+      /* "dysgu/sv_category.pyx":345
  * 
  *             else:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -8614,7 +8626,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":345
+        /* "dysgu/sv_category.pyx":346
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8624,7 +8636,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":346
+          /* "dysgu/sv_category.pyx":347
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8633,7 +8645,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":345
+          /* "dysgu/sv_category.pyx":346
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8642,7 +8654,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":347
+        /* "dysgu/sv_category.pyx":348
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -8652,7 +8664,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":348
+        /* "dysgu/sv_category.pyx":349
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8662,7 +8674,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":349
+          /* "dysgu/sv_category.pyx":350
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8671,7 +8683,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":348
+          /* "dysgu/sv_category.pyx":349
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8680,7 +8692,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":350
+        /* "dysgu/sv_category.pyx":351
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -8693,7 +8705,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":351
+        /* "dysgu/sv_category.pyx":352
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -8708,7 +8720,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       }
       __pyx_L8:;
 
-      /* "dysgu/sv_category.pyx":252
+      /* "dysgu/sv_category.pyx":253
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
  * 
  *         if v.strandA == v.strandB:  # Same for 3 and 5 strand reads             # <<<<<<<<<<<<<<
@@ -8718,7 +8730,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":353
+    /* "dysgu/sv_category.pyx":354
  *                 v.join_type = "5to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:             # <<<<<<<<<<<<<<
@@ -8736,7 +8748,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
     __pyx_L29_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":356
+      /* "dysgu/sv_category.pyx":357
  * 
  *             # Break right
  *             if not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8754,7 +8766,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L32_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":357
+        /* "dysgu/sv_category.pyx":358
  *             # Break right
  *             if not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -8764,7 +8776,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":358
+        /* "dysgu/sv_category.pyx":359
  *             if not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8774,7 +8786,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":359
+          /* "dysgu/sv_category.pyx":360
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8783,7 +8795,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":358
+          /* "dysgu/sv_category.pyx":359
  *             if not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -8792,7 +8804,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":361
+        /* "dysgu/sv_category.pyx":362
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -8802,7 +8814,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":362
+        /* "dysgu/sv_category.pyx":363
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8812,7 +8824,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":363
+          /* "dysgu/sv_category.pyx":364
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8821,7 +8833,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":362
+          /* "dysgu/sv_category.pyx":363
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8830,7 +8842,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":365
+        /* "dysgu/sv_category.pyx":366
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -8843,7 +8855,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":366
+        /* "dysgu/sv_category.pyx":367
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -8856,7 +8868,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":356
+        /* "dysgu/sv_category.pyx":357
  * 
  *             # Break right
  *             if not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8866,7 +8878,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L31;
       }
 
-      /* "dysgu/sv_category.pyx":369
+      /* "dysgu/sv_category.pyx":370
  * 
  *             # Break left
  *             elif not v.right_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8884,7 +8896,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L36_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":370
+        /* "dysgu/sv_category.pyx":371
  *             # Break left
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -8894,7 +8906,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":371
+        /* "dysgu/sv_category.pyx":372
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8904,7 +8916,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":372
+          /* "dysgu/sv_category.pyx":373
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -8913,7 +8925,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":371
+          /* "dysgu/sv_category.pyx":372
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -8922,7 +8934,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":374
+        /* "dysgu/sv_category.pyx":375
  *                     v.breakA_precise = 1
  * 
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -8932,7 +8944,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":375
+        /* "dysgu/sv_category.pyx":376
  * 
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8942,7 +8954,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":376
+          /* "dysgu/sv_category.pyx":377
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -8951,7 +8963,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":375
+          /* "dysgu/sv_category.pyx":376
  * 
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -8960,7 +8972,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":378
+        /* "dysgu/sv_category.pyx":379
  *                     v.breakB_precise = 1
  * 
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -8973,7 +8985,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":379
+        /* "dysgu/sv_category.pyx":380
  * 
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -8986,7 +8998,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":369
+        /* "dysgu/sv_category.pyx":370
  * 
  *             # Break left
  *             elif not v.right_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -8996,7 +9008,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L31;
       }
 
-      /* "dysgu/sv_category.pyx":381
+      /* "dysgu/sv_category.pyx":382
  *                 v.join_type = "5to5"
  * 
  *             elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication             # <<<<<<<<<<<<<<
@@ -9006,7 +9018,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_t_1 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_v_v->posA, __pyx_v_v->endA, __pyx_v_v->posB, __pyx_v_v->endB, 0) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":382
+        /* "dysgu/sv_category.pyx":383
  * 
  *             elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9016,7 +9028,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":383
+        /* "dysgu/sv_category.pyx":384
  *             elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -9026,7 +9038,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":384
+          /* "dysgu/sv_category.pyx":385
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9035,7 +9047,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":383
+          /* "dysgu/sv_category.pyx":384
  *             elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -9044,7 +9056,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":385
+        /* "dysgu/sv_category.pyx":386
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9054,7 +9066,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":386
+        /* "dysgu/sv_category.pyx":387
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9064,7 +9076,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":387
+          /* "dysgu/sv_category.pyx":388
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9073,7 +9085,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":386
+          /* "dysgu/sv_category.pyx":387
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9082,7 +9094,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         }
 
-        /* "dysgu/sv_category.pyx":388
+        /* "dysgu/sv_category.pyx":389
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -9095,7 +9107,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-        /* "dysgu/sv_category.pyx":389
+        /* "dysgu/sv_category.pyx":390
  *                     v.breakB_precise = 1
  *                 v.svtype = "DUP"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -9108,7 +9120,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":381
+        /* "dysgu/sv_category.pyx":382
  *                 v.join_type = "5to5"
  * 
  *             elif is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Inverted duplication             # <<<<<<<<<<<<<<
@@ -9118,7 +9130,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L31;
       }
 
-      /* "dysgu/sv_category.pyx":391
+      /* "dysgu/sv_category.pyx":392
  *                 v.join_type = "5to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9136,7 +9148,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L42_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":392
+        /* "dysgu/sv_category.pyx":393
  * 
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -9146,7 +9158,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":393
+        /* "dysgu/sv_category.pyx":394
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -9156,7 +9168,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":394
+        /* "dysgu/sv_category.pyx":395
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -9169,7 +9181,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":395
+        /* "dysgu/sv_category.pyx":396
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -9182,7 +9194,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-        /* "dysgu/sv_category.pyx":391
+        /* "dysgu/sv_category.pyx":392
  *                 v.join_type = "5to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9192,7 +9204,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L31;
       }
 
-      /* "dysgu/sv_category.pyx":399
+      /* "dysgu/sv_category.pyx":400
  *             else:
  *             # elif v.left_clipA and v.right_clipB:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9203,7 +9215,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":400
+        /* "dysgu/sv_category.pyx":401
  *             # elif v.left_clipA and v.right_clipB:
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9213,7 +9225,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":401
+        /* "dysgu/sv_category.pyx":402
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -9226,7 +9238,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":402
+        /* "dysgu/sv_category.pyx":403
  *                 v.breakB = v.endB
  *                 v.svtype = "INV"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -9241,7 +9253,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       }
       __pyx_L31:;
 
-      /* "dysgu/sv_category.pyx":353
+      /* "dysgu/sv_category.pyx":354
  *                 v.join_type = "5to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:             # <<<<<<<<<<<<<<
@@ -9251,7 +9263,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":406
+    /* "dysgu/sv_category.pyx":407
  *         else:  # INV type
  *             # Break left
  *             if v.left_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9270,7 +9282,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L45_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":407
+        /* "dysgu/sv_category.pyx":408
  *             # Break left
  *             if v.left_clipA and v.left_clipB:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9279,7 +9291,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":408
+        /* "dysgu/sv_category.pyx":409
  *             if v.left_clipA and v.left_clipB:
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9288,7 +9300,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":409
+        /* "dysgu/sv_category.pyx":410
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9298,7 +9310,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":410
+        /* "dysgu/sv_category.pyx":411
  *                 v.breakB_precise = 1
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -9308,7 +9320,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":411
+        /* "dysgu/sv_category.pyx":412
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -9321,7 +9333,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":412
+        /* "dysgu/sv_category.pyx":413
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -9334,7 +9346,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":406
+        /* "dysgu/sv_category.pyx":407
  *         else:  # INV type
  *             # Break left
  *             if v.left_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9344,7 +9356,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L44;
       }
 
-      /* "dysgu/sv_category.pyx":414
+      /* "dysgu/sv_category.pyx":415
  *                 v.join_type = "5to5"
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9362,7 +9374,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L47_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":415
+        /* "dysgu/sv_category.pyx":416
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -9372,7 +9384,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":416
+        /* "dysgu/sv_category.pyx":417
  *             elif v.right_clipA and v.right_clipB:
  *                 v.breakA = v.endA
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9382,7 +9394,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":417
+        /* "dysgu/sv_category.pyx":418
  *                 v.breakA = v.endA
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9391,7 +9403,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":418
+        /* "dysgu/sv_category.pyx":419
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9400,7 +9412,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":419
+        /* "dysgu/sv_category.pyx":420
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -9413,7 +9425,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":420
+        /* "dysgu/sv_category.pyx":421
  *                 v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -9426,7 +9438,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":414
+        /* "dysgu/sv_category.pyx":415
  *                 v.join_type = "5to5"
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9436,7 +9448,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L44;
       }
 
-      /* "dysgu/sv_category.pyx":423
+      /* "dysgu/sv_category.pyx":424
  * 
  *             else:  # Guess using pos only
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9447,7 +9459,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":424
+        /* "dysgu/sv_category.pyx":425
  *             else:  # Guess using pos only
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -9457,7 +9469,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":425
+        /* "dysgu/sv_category.pyx":426
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -9470,7 +9482,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":426
+        /* "dysgu/sv_category.pyx":427
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -9480,7 +9492,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_v->strandA == 5) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":427
+          /* "dysgu/sv_category.pyx":428
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:
  *                     v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -9493,7 +9505,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-          /* "dysgu/sv_category.pyx":426
+          /* "dysgu/sv_category.pyx":427
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -9503,7 +9515,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L49;
         }
 
-        /* "dysgu/sv_category.pyx":429
+        /* "dysgu/sv_category.pyx":430
  *                     v.join_type = "5to5"
  *                 else:
  *                     v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -9523,7 +9535,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
     }
     __pyx_L7:;
 
-    /* "dysgu/sv_category.pyx":250
+    /* "dysgu/sv_category.pyx":251
  *     cdef int inferred_sv_len = -1
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first             # <<<<<<<<<<<<<<
@@ -9533,7 +9545,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":434
+  /* "dysgu/sv_category.pyx":435
  *     else:
  * 
  *         if v.strandA == v.strandB:             # <<<<<<<<<<<<<<
@@ -9544,7 +9556,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
     __pyx_t_1 = ((__pyx_v_v->strandA == __pyx_v_v->strandB) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":436
+      /* "dysgu/sv_category.pyx":437
  *         if v.strandA == v.strandB:
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -9554,7 +9566,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_t_1 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_v_v->posA, __pyx_v_v->endA, __pyx_v_v->posB, __pyx_v_v->endB, 0) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":437
+        /* "dysgu/sv_category.pyx":438
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -9564,7 +9576,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":438
+          /* "dysgu/sv_category.pyx":439
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:
  *                     v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9574,7 +9586,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->posA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":439
+          /* "dysgu/sv_category.pyx":440
  *                 if v.left_clipA:
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9583,7 +9595,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":437
+          /* "dysgu/sv_category.pyx":438
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -9593,7 +9605,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L52;
         }
 
-        /* "dysgu/sv_category.pyx":440
+        /* "dysgu/sv_category.pyx":441
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -9603,7 +9615,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":441
+          /* "dysgu/sv_category.pyx":442
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -9613,7 +9625,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":442
+          /* "dysgu/sv_category.pyx":443
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9622,7 +9634,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":440
+          /* "dysgu/sv_category.pyx":441
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -9632,7 +9644,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L52;
         }
 
-        /* "dysgu/sv_category.pyx":444
+        /* "dysgu/sv_category.pyx":445
  *                     v.breakA_precise = 1
  *                 else:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -9645,7 +9657,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L52:;
 
-        /* "dysgu/sv_category.pyx":446
+        /* "dysgu/sv_category.pyx":447
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9655,7 +9667,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":447
+          /* "dysgu/sv_category.pyx":448
  * 
  *                 if v.left_clipB:
  *                     v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -9665,7 +9677,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->posB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":448
+          /* "dysgu/sv_category.pyx":449
  *                 if v.left_clipB:
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9674,7 +9686,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":446
+          /* "dysgu/sv_category.pyx":447
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -9684,7 +9696,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L53;
         }
 
-        /* "dysgu/sv_category.pyx":449
+        /* "dysgu/sv_category.pyx":450
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9694,7 +9706,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":450
+          /* "dysgu/sv_category.pyx":451
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9704,7 +9716,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":451
+          /* "dysgu/sv_category.pyx":452
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9713,7 +9725,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":449
+          /* "dysgu/sv_category.pyx":450
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -9723,7 +9735,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L53;
         }
 
-        /* "dysgu/sv_category.pyx":453
+        /* "dysgu/sv_category.pyx":454
  *                     v.breakB_precise = 1
  *                 else:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9736,7 +9748,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L53:;
 
-        /* "dysgu/sv_category.pyx":455
+        /* "dysgu/sv_category.pyx":456
  *                     v.breakB = v.endB
  * 
  *                 v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -9749,17 +9761,17 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INS;
 
-        /* "dysgu/sv_category.pyx":457
+        /* "dysgu/sv_category.pyx":458
  *                 v.svtype = "INS"
  *                 # Check if gap on query is bigger than gap on reference
  *                 ref_gap = abs(v.breakA - v.breakB)             # <<<<<<<<<<<<<<
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq
  */
-        __pyx_t_3 = abs((__pyx_v_v->breakA - __pyx_v_v->breakB)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 457, __pyx_L1_error)
+        __pyx_t_3 = abs((__pyx_v_v->breakA - __pyx_v_v->breakB)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 458, __pyx_L1_error)
         __pyx_v_ref_gap = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":459
+        /* "dysgu/sv_category.pyx":460
  *                 ref_gap = abs(v.breakA - v.breakB)
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq             # <<<<<<<<<<<<<<
@@ -9769,19 +9781,19 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_v->a_qstart > __pyx_v_v->b_qstart) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":460
+          /* "dysgu/sv_category.pyx":461
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq
  *                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments             # <<<<<<<<<<<<<<
  *                 else:
  *                     align_overlap = v.a_qend - v.b_qstart
  */
-          __pyx_t_5 = __Pyx_PyInt_From_int((__pyx_v_v->b_qend - __pyx_v_v->a_qstart)); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 460, __pyx_L1_error)
+          __pyx_t_5 = __Pyx_PyInt_From_int((__pyx_v_v->b_qend - __pyx_v_v->a_qstart)); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 461, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_5);
           __pyx_v_align_overlap = __pyx_t_5;
           __pyx_t_5 = 0;
 
-          /* "dysgu/sv_category.pyx":459
+          /* "dysgu/sv_category.pyx":460
  *                 ref_gap = abs(v.breakA - v.breakB)
  * 
  *                 if v.a_qstart > v.b_qstart:  # B is first on query seq             # <<<<<<<<<<<<<<
@@ -9791,7 +9803,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L54;
         }
 
-        /* "dysgu/sv_category.pyx":462
+        /* "dysgu/sv_category.pyx":463
  *                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
  *                 else:
  *                     align_overlap = v.a_qend - v.b_qstart             # <<<<<<<<<<<<<<
@@ -9799,52 +9811,52 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  *                 v.inferred_sv_len = ref_gap - align_overlap
  */
         /*else*/ {
-          __pyx_t_5 = __Pyx_PyInt_From_int((__pyx_v_v->a_qend - __pyx_v_v->b_qstart)); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 462, __pyx_L1_error)
+          __pyx_t_5 = __Pyx_PyInt_From_int((__pyx_v_v->a_qend - __pyx_v_v->b_qstart)); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 463, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_5);
           __pyx_v_align_overlap = __pyx_t_5;
           __pyx_t_5 = 0;
         }
         __pyx_L54:;
 
-        /* "dysgu/sv_category.pyx":464
+        /* "dysgu/sv_category.pyx":465
  *                     align_overlap = v.a_qend - v.b_qstart
  * 
  *                 v.inferred_sv_len = ref_gap - align_overlap             # <<<<<<<<<<<<<<
  * 
  *                 if align_overlap < 0:
  */
-        __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_ref_gap); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 464, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_ref_gap); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 465, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
-        __pyx_t_4 = PyNumber_Subtract(__pyx_t_5, __pyx_v_align_overlap); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 464, __pyx_L1_error)
+        __pyx_t_4 = PyNumber_Subtract(__pyx_t_5, __pyx_v_align_overlap); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 465, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-        __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 464, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 465, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         __pyx_v_v->inferred_sv_len = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":466
+        /* "dysgu/sv_category.pyx":467
  *                 v.inferred_sv_len = ref_gap - align_overlap
  * 
  *                 if align_overlap < 0:             # <<<<<<<<<<<<<<
  *                     v.query_gap = align_overlap
  *                 else:
  */
-        __pyx_t_4 = PyObject_RichCompare(__pyx_v_align_overlap, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 466, __pyx_L1_error)
-        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(1, 466, __pyx_L1_error)
+        __pyx_t_4 = PyObject_RichCompare(__pyx_v_align_overlap, __pyx_int_0, Py_LT); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 467, __pyx_L1_error)
+        __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_4); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(1, 467, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":467
+          /* "dysgu/sv_category.pyx":468
  * 
  *                 if align_overlap < 0:
  *                     v.query_gap = align_overlap             # <<<<<<<<<<<<<<
  *                 else:
  *                     v.query_overlap = align_overlap
  */
-          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 467, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 468, __pyx_L1_error)
           __pyx_v_v->query_gap = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":466
+          /* "dysgu/sv_category.pyx":467
  *                 v.inferred_sv_len = ref_gap - align_overlap
  * 
  *                 if align_overlap < 0:             # <<<<<<<<<<<<<<
@@ -9854,7 +9866,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L55;
         }
 
-        /* "dysgu/sv_category.pyx":469
+        /* "dysgu/sv_category.pyx":470
  *                     v.query_gap = align_overlap
  *                 else:
  *                     v.query_overlap = align_overlap             # <<<<<<<<<<<<<<
@@ -9862,12 +9874,12 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  *                 v.join_type = "5to3"
  */
         /*else*/ {
-          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 469, __pyx_L1_error)
+          __pyx_t_3 = __Pyx_PyInt_As_int(__pyx_v_align_overlap); if (unlikely((__pyx_t_3 == (int)-1) && PyErr_Occurred())) __PYX_ERR(1, 470, __pyx_L1_error)
           __pyx_v_v->query_overlap = __pyx_t_3;
         }
         __pyx_L55:;
 
-        /* "dysgu/sv_category.pyx":471
+        /* "dysgu/sv_category.pyx":472
  *                     v.query_overlap = align_overlap
  * 
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -9880,7 +9892,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":436
+        /* "dysgu/sv_category.pyx":437
  *         if v.strandA == v.strandB:
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -9890,7 +9902,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L51;
       }
 
-      /* "dysgu/sv_category.pyx":473
+      /* "dysgu/sv_category.pyx":474
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipB and not v.right_clipA:             # <<<<<<<<<<<<<<
@@ -9908,7 +9920,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L56_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":474
+        /* "dysgu/sv_category.pyx":475
  * 
  *             elif not v.left_clipB and not v.right_clipA:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -9918,7 +9930,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":475
+        /* "dysgu/sv_category.pyx":476
  *             elif not v.left_clipB and not v.right_clipA:
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -9928,7 +9940,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":476
+        /* "dysgu/sv_category.pyx":477
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -9937,7 +9949,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":477
+        /* "dysgu/sv_category.pyx":478
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -9946,7 +9958,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":480
+        /* "dysgu/sv_category.pyx":481
  * 
  *                 # Check if gap on query is bigger than gap on reference; call insertion if it is
  *                 query_gap = v.b_qend - v.a_qstart  # as B is first             # <<<<<<<<<<<<<<
@@ -9955,17 +9967,17 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_query_gap = (__pyx_v_v->b_qend - __pyx_v_v->a_qstart);
 
-        /* "dysgu/sv_category.pyx":481
+        /* "dysgu/sv_category.pyx":482
  *                 # Check if gap on query is bigger than gap on reference; call insertion if it is
  *                 query_gap = v.b_qend - v.a_qstart  # as B is first
  *                 ref_gap = abs(v.breakA - v.breakB)             # <<<<<<<<<<<<<<
  * 
  *                 if query_gap < 0:
  */
-        __pyx_t_3 = abs((__pyx_v_v->breakA - __pyx_v_v->breakB)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 481, __pyx_L1_error)
+        __pyx_t_3 = abs((__pyx_v_v->breakA - __pyx_v_v->breakB)); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 482, __pyx_L1_error)
         __pyx_v_ref_gap = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":483
+        /* "dysgu/sv_category.pyx":484
  *                 ref_gap = abs(v.breakA - v.breakB)
  * 
  *                 if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -9975,27 +9987,27 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_query_gap < 0) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":484
+          /* "dysgu/sv_category.pyx":485
  * 
  *                 if query_gap < 0:
  *                     ref_gap += abs(query_gap)             # <<<<<<<<<<<<<<
  *                     v.query_overlap = abs(query_gap)
  *                     v.query_gap = 0
  */
-          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 484, __pyx_L1_error)
+          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 485, __pyx_L1_error)
           __pyx_v_ref_gap = (__pyx_v_ref_gap + __pyx_t_3);
 
-          /* "dysgu/sv_category.pyx":485
+          /* "dysgu/sv_category.pyx":486
  *                 if query_gap < 0:
  *                     ref_gap += abs(query_gap)
  *                     v.query_overlap = abs(query_gap)             # <<<<<<<<<<<<<<
  *                     v.query_gap = 0
  * 
  */
-          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 485, __pyx_L1_error)
+          __pyx_t_3 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_3 == ((int)-1))) __PYX_ERR(1, 486, __pyx_L1_error)
           __pyx_v_v->query_overlap = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":486
+          /* "dysgu/sv_category.pyx":487
  *                     ref_gap += abs(query_gap)
  *                     v.query_overlap = abs(query_gap)
  *                     v.query_gap = 0             # <<<<<<<<<<<<<<
@@ -10004,7 +10016,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->query_gap = 0;
 
-          /* "dysgu/sv_category.pyx":483
+          /* "dysgu/sv_category.pyx":484
  *                 ref_gap = abs(v.breakA - v.breakB)
  * 
  *                 if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -10014,7 +10026,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L58;
         }
 
-        /* "dysgu/sv_category.pyx":489
+        /* "dysgu/sv_category.pyx":490
  * 
  *                 else:
  *                     v.query_overlap = 0             # <<<<<<<<<<<<<<
@@ -10024,7 +10036,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         /*else*/ {
           __pyx_v_v->query_overlap = 0;
 
-          /* "dysgu/sv_category.pyx":490
+          /* "dysgu/sv_category.pyx":491
  *                 else:
  *                     v.query_overlap = 0
  *                     v.query_gap = query_gap             # <<<<<<<<<<<<<<
@@ -10035,7 +10047,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L58:;
 
-        /* "dysgu/sv_category.pyx":492
+        /* "dysgu/sv_category.pyx":493
  *                     v.query_gap = query_gap
  * 
  *                 if ref_gap < query_gap:             # <<<<<<<<<<<<<<
@@ -10045,7 +10057,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_ref_gap < __pyx_v_query_gap) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":493
+          /* "dysgu/sv_category.pyx":494
  * 
  *                 if ref_gap < query_gap:
  *                     v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -10058,7 +10070,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INS;
 
-          /* "dysgu/sv_category.pyx":494
+          /* "dysgu/sv_category.pyx":495
  *                 if ref_gap < query_gap:
  *                     v.svtype = "INS"
  *                     v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -10071,7 +10083,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-          /* "dysgu/sv_category.pyx":495
+          /* "dysgu/sv_category.pyx":496
  *                     v.svtype = "INS"
  *                     v.join_type = "3to5"
  *                     v.inferred_sv_len = query_gap             # <<<<<<<<<<<<<<
@@ -10080,7 +10092,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
           __pyx_v_v->inferred_sv_len = __pyx_v_query_gap;
 
-          /* "dysgu/sv_category.pyx":492
+          /* "dysgu/sv_category.pyx":493
  *                     v.query_gap = query_gap
  * 
  *                 if ref_gap < query_gap:             # <<<<<<<<<<<<<<
@@ -10090,7 +10102,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L59;
         }
 
-        /* "dysgu/sv_category.pyx":497
+        /* "dysgu/sv_category.pyx":498
  *                     v.inferred_sv_len = query_gap
  * 
  *                 elif v.read_overlaps_mate:             # <<<<<<<<<<<<<<
@@ -10100,7 +10112,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = (__pyx_v_v->read_overlaps_mate != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":498
+          /* "dysgu/sv_category.pyx":499
  * 
  *                 elif v.read_overlaps_mate:
  *                     v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -10113,7 +10125,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-          /* "dysgu/sv_category.pyx":499
+          /* "dysgu/sv_category.pyx":500
  *                 elif v.read_overlaps_mate:
  *                     v.svtype = "DUP"
  *                     v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -10126,7 +10138,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-          /* "dysgu/sv_category.pyx":497
+          /* "dysgu/sv_category.pyx":498
  *                     v.inferred_sv_len = query_gap
  * 
  *                 elif v.read_overlaps_mate:             # <<<<<<<<<<<<<<
@@ -10136,7 +10148,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L59;
         }
 
-        /* "dysgu/sv_category.pyx":501
+        /* "dysgu/sv_category.pyx":502
  *                     v.join_type = "5to3"
  *                 else:
  *                     v.svtype = "DEL"             # <<<<<<<<<<<<<<
@@ -10150,7 +10162,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_DEL;
 
-          /* "dysgu/sv_category.pyx":502
+          /* "dysgu/sv_category.pyx":503
  *                 else:
  *                     v.svtype = "DEL"
  *                     v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -10163,7 +10175,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-          /* "dysgu/sv_category.pyx":503
+          /* "dysgu/sv_category.pyx":504
  *                     v.svtype = "DEL"
  *                     v.join_type = "3to5"
  *                     v.inferred_sv_len = ref_gap             # <<<<<<<<<<<<<<
@@ -10174,7 +10186,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         }
         __pyx_L59:;
 
-        /* "dysgu/sv_category.pyx":473
+        /* "dysgu/sv_category.pyx":474
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipB and not v.right_clipA:             # <<<<<<<<<<<<<<
@@ -10184,7 +10196,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L51;
       }
 
-      /* "dysgu/sv_category.pyx":505
+      /* "dysgu/sv_category.pyx":506
  *                     v.inferred_sv_len = ref_gap
  * 
  *             elif not v.right_clipB and not v.left_clipA:             # <<<<<<<<<<<<<<
@@ -10202,7 +10214,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L60_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":506
+        /* "dysgu/sv_category.pyx":507
  * 
  *             elif not v.right_clipB and not v.left_clipA:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -10212,7 +10224,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":507
+        /* "dysgu/sv_category.pyx":508
  *             elif not v.right_clipB and not v.left_clipA:
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -10222,7 +10234,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":508
+        /* "dysgu/sv_category.pyx":509
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -10231,7 +10243,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":509
+        /* "dysgu/sv_category.pyx":510
  *                 v.breakB = v.posB
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -10240,7 +10252,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":510
+        /* "dysgu/sv_category.pyx":511
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -10253,7 +10265,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-        /* "dysgu/sv_category.pyx":511
+        /* "dysgu/sv_category.pyx":512
  *                 v.breakB_precise = 1
  *                 v.svtype = "DUP"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -10266,7 +10278,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":505
+        /* "dysgu/sv_category.pyx":506
  *                     v.inferred_sv_len = ref_gap
  * 
  *             elif not v.right_clipB and not v.left_clipA:             # <<<<<<<<<<<<<<
@@ -10276,7 +10288,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L51;
       }
 
-      /* "dysgu/sv_category.pyx":514
+      /* "dysgu/sv_category.pyx":515
  * 
  *             else:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -10287,7 +10299,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":515
+        /* "dysgu/sv_category.pyx":516
  *             else:
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -10297,7 +10309,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":516
+        /* "dysgu/sv_category.pyx":517
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB
  *                 v.svtype = "BND"             # <<<<<<<<<<<<<<
@@ -10310,18 +10322,18 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_BND;
 
-        /* "dysgu/sv_category.pyx":517
+        /* "dysgu/sv_category.pyx":518
  *                 v.breakB = v.posB
  *                 v.svtype = "BND"
  *                 v.join_type = f"{v.strandA}to{v.strandB}"             # <<<<<<<<<<<<<<
  * 
  *         else:  # INV type
  */
-        __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 517, __pyx_L1_error)
+        __pyx_t_4 = PyTuple_New(3); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 518, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __pyx_t_6 = 0;
         __pyx_t_7 = 127;
-        __pyx_t_5 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandA, 0, ' ', 'd'); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 517, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandA, 0, ' ', 'd'); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 518, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         __pyx_t_6 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_5);
         __Pyx_GIVEREF(__pyx_t_5);
@@ -10331,13 +10343,13 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_6 += 2;
         __Pyx_GIVEREF(__pyx_n_u_to);
         PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_n_u_to);
-        __pyx_t_5 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandB, 0, ' ', 'd'); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 517, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandB, 0, ' ', 'd'); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 518, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         __pyx_t_6 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_5);
         __Pyx_GIVEREF(__pyx_t_5);
         PyTuple_SET_ITEM(__pyx_t_4, 2, __pyx_t_5);
         __pyx_t_5 = 0;
-        __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_4, 3, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 517, __pyx_L1_error)
+        __pyx_t_5 = __Pyx_PyUnicode_Join(__pyx_t_4, 3, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_5)) __PYX_ERR(1, 518, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_5);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         __Pyx_GIVEREF(__pyx_t_5);
@@ -10348,7 +10360,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       }
       __pyx_L51:;
 
-      /* "dysgu/sv_category.pyx":434
+      /* "dysgu/sv_category.pyx":435
  *     else:
  * 
  *         if v.strandA == v.strandB:             # <<<<<<<<<<<<<<
@@ -10358,7 +10370,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       goto __pyx_L50;
     }
 
-    /* "dysgu/sv_category.pyx":521
+    /* "dysgu/sv_category.pyx":522
  *         else:  # INV type
  *             # Break left
  *             if v.left_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -10377,7 +10389,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L63_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":522
+        /* "dysgu/sv_category.pyx":523
  *             # Break left
  *             if v.left_clipA and v.left_clipB:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -10386,7 +10398,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":523
+        /* "dysgu/sv_category.pyx":524
  *             if v.left_clipA and v.left_clipB:
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -10395,7 +10407,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":524
+        /* "dysgu/sv_category.pyx":525
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -10405,7 +10417,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":525
+        /* "dysgu/sv_category.pyx":526
  *                 v.breakB_precise = 1
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -10415,7 +10427,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":526
+        /* "dysgu/sv_category.pyx":527
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -10428,7 +10440,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":527
+        /* "dysgu/sv_category.pyx":528
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -10441,7 +10453,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":521
+        /* "dysgu/sv_category.pyx":522
  *         else:  # INV type
  *             # Break left
  *             if v.left_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -10451,7 +10463,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L62;
       }
 
-      /* "dysgu/sv_category.pyx":530
+      /* "dysgu/sv_category.pyx":531
  * 
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -10469,7 +10481,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
       __pyx_L65_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":531
+        /* "dysgu/sv_category.pyx":532
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -10478,7 +10490,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":532
+        /* "dysgu/sv_category.pyx":533
  *             elif v.right_clipA and v.right_clipB:
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -10487,7 +10499,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":533
+        /* "dysgu/sv_category.pyx":534
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -10497,7 +10509,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":534
+        /* "dysgu/sv_category.pyx":535
  *                 v.breakB_precise = 1
  *                 v.breakA = v.endA
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -10507,7 +10519,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":535
+        /* "dysgu/sv_category.pyx":536
  *                 v.breakA = v.endA
  *                 v.breakB = v.endB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -10520,7 +10532,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":536
+        /* "dysgu/sv_category.pyx":537
  *                 v.breakB = v.endB
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -10533,7 +10545,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":530
+        /* "dysgu/sv_category.pyx":531
  * 
  *             # Break right
  *             elif v.right_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -10543,7 +10555,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         goto __pyx_L62;
       }
 
-      /* "dysgu/sv_category.pyx":539
+      /* "dysgu/sv_category.pyx":540
  * 
  *             else:  # Guess using pos only
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -10554,7 +10566,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":540
+        /* "dysgu/sv_category.pyx":541
  *             else:  # Guess using pos only
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -10564,7 +10576,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":541
+        /* "dysgu/sv_category.pyx":542
  *                 v.breakA = v.posA
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -10577,7 +10589,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":542
+        /* "dysgu/sv_category.pyx":543
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -10587,7 +10599,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
         __pyx_t_1 = ((__pyx_v_v->strandA == 5) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":543
+          /* "dysgu/sv_category.pyx":544
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:
  *                     v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -10600,7 +10612,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-          /* "dysgu/sv_category.pyx":542
+          /* "dysgu/sv_category.pyx":543
  *                 v.breakB = v.posB
  *                 v.svtype = "INV"
  *                 if v.strandA == 5:             # <<<<<<<<<<<<<<
@@ -10610,7 +10622,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
           goto __pyx_L67;
         }
 
-        /* "dysgu/sv_category.pyx":545
+        /* "dysgu/sv_category.pyx":546
  *                     v.join_type = "5to5"
  *                 else:
  *                     v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -10632,7 +10644,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
   }
   __pyx_L3:;
 
-  /* "dysgu/sv_category.pyx":243
+  /* "dysgu/sv_category.pyx":244
  * 
  * 
  * cdef void same_read(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -10651,7 +10663,7 @@ static void __pyx_f_5dysgu_11sv_category_same_read(struct __pyx_obj_5dysgu_11sv_
   __Pyx_RefNannyFinishContext();
 }
 
-/* "dysgu/sv_category.pyx":548
+/* "dysgu/sv_category.pyx":549
  * 
  * 
  * cdef void different_read(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -10666,7 +10678,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
   int __pyx_t_3;
   __Pyx_RefNannySetupContext("different_read", 0);
 
-  /* "dysgu/sv_category.pyx":550
+  /* "dysgu/sv_category.pyx":551
  * cdef void different_read(AlignmentItem v):
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first             # <<<<<<<<<<<<<<
@@ -10690,7 +10702,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":552
+    /* "dysgu/sv_category.pyx":553
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type             # <<<<<<<<<<<<<<
@@ -10708,7 +10720,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_L8_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":553
+      /* "dysgu/sv_category.pyx":554
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -10718,7 +10730,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->endA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":554
+      /* "dysgu/sv_category.pyx":555
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -10728,7 +10740,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":555
+        /* "dysgu/sv_category.pyx":556
  *             v.breakA = v.endA
  *             if v.right_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -10737,7 +10749,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":554
+        /* "dysgu/sv_category.pyx":555
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -10746,7 +10758,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":557
+      /* "dysgu/sv_category.pyx":558
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -10756,7 +10768,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->posB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":558
+      /* "dysgu/sv_category.pyx":559
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -10766,7 +10778,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":559
+        /* "dysgu/sv_category.pyx":560
  *             v.breakB = v.posB
  *             if v.left_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -10775,7 +10787,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":558
+        /* "dysgu/sv_category.pyx":559
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -10784,7 +10796,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":561
+      /* "dysgu/sv_category.pyx":562
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -10797,7 +10809,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_INS;
 
-      /* "dysgu/sv_category.pyx":562
+      /* "dysgu/sv_category.pyx":563
  * 
  *             v.svtype = "INS"
  *             v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -10810,7 +10822,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-      /* "dysgu/sv_category.pyx":552
+      /* "dysgu/sv_category.pyx":553
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
  * 
  *         if v.strandA == 3 and v.strandB == 5:  # DEL type             # <<<<<<<<<<<<<<
@@ -10820,7 +10832,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":564
+    /* "dysgu/sv_category.pyx":565
  *             v.join_type = "3to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -10838,7 +10850,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_L12_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":565
+      /* "dysgu/sv_category.pyx":566
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -10848,7 +10860,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->posA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":566
+      /* "dysgu/sv_category.pyx":567
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -10858,7 +10870,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":567
+        /* "dysgu/sv_category.pyx":568
  *             v.breakA = v.posA
  *             if v.left_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -10867,7 +10879,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":566
+        /* "dysgu/sv_category.pyx":567
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -10876,7 +10888,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":569
+      /* "dysgu/sv_category.pyx":570
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -10886,7 +10898,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->endB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":570
+      /* "dysgu/sv_category.pyx":571
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -10896,7 +10908,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":571
+        /* "dysgu/sv_category.pyx":572
  *             v.breakB = v.endB
  *             if v.right_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -10905,7 +10917,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":570
+        /* "dysgu/sv_category.pyx":571
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -10914,7 +10926,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":573
+      /* "dysgu/sv_category.pyx":574
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -10927,7 +10939,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-      /* "dysgu/sv_category.pyx":574
+      /* "dysgu/sv_category.pyx":575
  * 
  *             v.svtype = "DUP"
  *             v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -10940,7 +10952,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-      /* "dysgu/sv_category.pyx":564
+      /* "dysgu/sv_category.pyx":565
  *             v.join_type = "3to5"
  * 
  *         elif v.strandA == 5 and v.strandB == 3:  # DUP type             # <<<<<<<<<<<<<<
@@ -10950,7 +10962,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       goto __pyx_L7;
     }
 
-    /* "dysgu/sv_category.pyx":576
+    /* "dysgu/sv_category.pyx":577
  *             v.join_type = "5to3"
  * 
  *         elif v.strandA == v.strandB:             # <<<<<<<<<<<<<<
@@ -10960,7 +10972,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_t_1 = ((__pyx_v_v->strandA == __pyx_v_v->strandB) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":577
+      /* "dysgu/sv_category.pyx":578
  * 
  *         elif v.strandA == v.strandB:
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested             # <<<<<<<<<<<<<<
@@ -10970,7 +10982,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_v_v->posA, __pyx_v_v->endA, __pyx_v_v->posB, __pyx_v_v->endB, 0) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":579
+        /* "dysgu/sv_category.pyx":580
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested
  * 
  *                 if v.strandA == 3:  # Both forward strand             # <<<<<<<<<<<<<<
@@ -10980,7 +10992,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = ((__pyx_v_v->strandA == 3) != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":580
+          /* "dysgu/sv_category.pyx":581
  * 
  *                 if v.strandA == 3:  # Both forward strand
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -10990,7 +11002,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":581
+          /* "dysgu/sv_category.pyx":582
  *                 if v.strandA == 3:  # Both forward strand
  *                     v.breakA = v.endA
  *                     if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11000,7 +11012,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":582
+            /* "dysgu/sv_category.pyx":583
  *                     v.breakA = v.endA
  *                     if v.right_clipA:
  *                         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11009,7 +11021,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
             __pyx_v_v->breakA_precise = 1;
 
-            /* "dysgu/sv_category.pyx":581
+            /* "dysgu/sv_category.pyx":582
  *                 if v.strandA == 3:  # Both forward strand
  *                     v.breakA = v.endA
  *                     if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11018,7 +11030,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           }
 
-          /* "dysgu/sv_category.pyx":584
+          /* "dysgu/sv_category.pyx":585
  *                         v.breakA_precise = 1
  * 
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -11028,7 +11040,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":585
+          /* "dysgu/sv_category.pyx":586
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11038,7 +11050,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":586
+            /* "dysgu/sv_category.pyx":587
  *                     v.breakB = v.endB
  *                     if v.right_clipB:
  *                         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11047,7 +11059,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
             __pyx_v_v->breakB_precise = 1;
 
-            /* "dysgu/sv_category.pyx":585
+            /* "dysgu/sv_category.pyx":586
  * 
  *                     v.breakB = v.endB
  *                     if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11056,7 +11068,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           }
 
-          /* "dysgu/sv_category.pyx":587
+          /* "dysgu/sv_category.pyx":588
  *                     if v.right_clipB:
  *                         v.breakB_precise = 1
  *                     v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11069,7 +11081,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INV;
 
-          /* "dysgu/sv_category.pyx":588
+          /* "dysgu/sv_category.pyx":589
  *                         v.breakB_precise = 1
  *                     v.svtype = "INV"
  *                     v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -11082,7 +11094,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __Pyx_DECREF(__pyx_v_v->join_type);
           __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-          /* "dysgu/sv_category.pyx":579
+          /* "dysgu/sv_category.pyx":580
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested
  * 
  *                 if v.strandA == 3:  # Both forward strand             # <<<<<<<<<<<<<<
@@ -11092,7 +11104,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           goto __pyx_L17;
         }
 
-        /* "dysgu/sv_category.pyx":591
+        /* "dysgu/sv_category.pyx":592
  * 
  *                 else:  # Both forward strand
  *                     v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -11103,7 +11115,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->posA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":592
+          /* "dysgu/sv_category.pyx":593
  *                 else:  # Both forward strand
  *                     v.breakA = v.posA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11113,7 +11125,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":593
+            /* "dysgu/sv_category.pyx":594
  *                     v.breakA = v.posA
  *                     if v.left_clipA:
  *                         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11122,7 +11134,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
             __pyx_v_v->breakA_precise = 1;
 
-            /* "dysgu/sv_category.pyx":592
+            /* "dysgu/sv_category.pyx":593
  *                 else:  # Both forward strand
  *                     v.breakA = v.posA
  *                     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11131,7 +11143,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           }
 
-          /* "dysgu/sv_category.pyx":595
+          /* "dysgu/sv_category.pyx":596
  *                         v.breakA_precise = 1
  * 
  *                     v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -11141,7 +11153,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->posB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":596
+          /* "dysgu/sv_category.pyx":597
  * 
  *                     v.breakB = v.posB
  *                     if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11151,7 +11163,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
           if (__pyx_t_1) {
 
-            /* "dysgu/sv_category.pyx":597
+            /* "dysgu/sv_category.pyx":598
  *                     v.breakB = v.posB
  *                     if v.left_clipB:
  *                         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11160,7 +11172,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
             __pyx_v_v->breakB_precise = 1;
 
-            /* "dysgu/sv_category.pyx":596
+            /* "dysgu/sv_category.pyx":597
  * 
  *                     v.breakB = v.posB
  *                     if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11169,7 +11181,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           }
 
-          /* "dysgu/sv_category.pyx":598
+          /* "dysgu/sv_category.pyx":599
  *                     if v.left_clipB:
  *                         v.breakB_precise = 1
  *                     v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11182,7 +11194,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __Pyx_DECREF(__pyx_v_v->svtype);
           __pyx_v_v->svtype = __pyx_n_u_INV;
 
-          /* "dysgu/sv_category.pyx":599
+          /* "dysgu/sv_category.pyx":600
  *                         v.breakB_precise = 1
  *                     v.svtype = "INV"
  *                     v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -11197,7 +11209,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         }
         __pyx_L17:;
 
-        /* "dysgu/sv_category.pyx":577
+        /* "dysgu/sv_category.pyx":578
  * 
  *         elif v.strandA == v.strandB:
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested             # <<<<<<<<<<<<<<
@@ -11207,7 +11219,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L16;
       }
 
-      /* "dysgu/sv_category.pyx":601
+      /* "dysgu/sv_category.pyx":602
  *                     v.join_type = "5to5"
  * 
  *             elif not v.right_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11225,7 +11237,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L22_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":602
+        /* "dysgu/sv_category.pyx":603
  * 
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -11235,7 +11247,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":603
+        /* "dysgu/sv_category.pyx":604
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11245,7 +11257,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":604
+          /* "dysgu/sv_category.pyx":605
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11254,7 +11266,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":603
+          /* "dysgu/sv_category.pyx":604
  *             elif not v.right_clipA and not v.right_clipB:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11263,7 +11275,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":605
+        /* "dysgu/sv_category.pyx":606
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -11273,7 +11285,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":606
+        /* "dysgu/sv_category.pyx":607
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11283,7 +11295,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":607
+          /* "dysgu/sv_category.pyx":608
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11292,7 +11304,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":606
+          /* "dysgu/sv_category.pyx":607
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11301,7 +11313,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":608
+        /* "dysgu/sv_category.pyx":609
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11314,7 +11326,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":609
+        /* "dysgu/sv_category.pyx":610
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -11327,7 +11339,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":601
+        /* "dysgu/sv_category.pyx":602
  *                     v.join_type = "5to5"
  * 
  *             elif not v.right_clipA and not v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11337,7 +11349,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L16;
       }
 
-      /* "dysgu/sv_category.pyx":611
+      /* "dysgu/sv_category.pyx":612
  *                 v.join_type = "5to5"
  * 
  *             elif not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11355,7 +11367,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L26_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":612
+        /* "dysgu/sv_category.pyx":613
  * 
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -11365,7 +11377,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":613
+        /* "dysgu/sv_category.pyx":614
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11375,7 +11387,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":614
+          /* "dysgu/sv_category.pyx":615
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11384,7 +11396,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":613
+          /* "dysgu/sv_category.pyx":614
  *             elif not v.left_clipA and not v.left_clipB:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11393,7 +11405,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":615
+        /* "dysgu/sv_category.pyx":616
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -11403,7 +11415,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":616
+        /* "dysgu/sv_category.pyx":617
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11413,7 +11425,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":617
+          /* "dysgu/sv_category.pyx":618
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11422,7 +11434,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":616
+          /* "dysgu/sv_category.pyx":617
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11431,7 +11443,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":618
+        /* "dysgu/sv_category.pyx":619
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11444,7 +11456,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":619
+        /* "dysgu/sv_category.pyx":620
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -11457,7 +11469,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":611
+        /* "dysgu/sv_category.pyx":612
  *                 v.join_type = "5to5"
  * 
  *             elif not v.left_clipA and not v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11467,7 +11479,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L16;
       }
 
-      /* "dysgu/sv_category.pyx":621
+      /* "dysgu/sv_category.pyx":622
  *                 v.join_type = "3to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11485,7 +11497,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L30_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":622
+        /* "dysgu/sv_category.pyx":623
  * 
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -11495,7 +11507,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":623
+        /* "dysgu/sv_category.pyx":624
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11504,7 +11516,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":624
+        /* "dysgu/sv_category.pyx":625
  *                 v.breakA = v.endA
  *                 v.breakA_precise = 1
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -11514,7 +11526,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":625
+        /* "dysgu/sv_category.pyx":626
  *                 v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11523,7 +11535,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":627
+        /* "dysgu/sv_category.pyx":628
  *                 v.breakB_precise = 1
  *                 # v.svtype = "INV:DUP"
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11536,7 +11548,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":628
+        /* "dysgu/sv_category.pyx":629
  *                 # v.svtype = "INV:DUP"
  *                 v.svtype = "INV"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -11549,7 +11561,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":621
+        /* "dysgu/sv_category.pyx":622
  *                 v.join_type = "3to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11559,7 +11571,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L16;
       }
 
-      /* "dysgu/sv_category.pyx":631
+      /* "dysgu/sv_category.pyx":632
  * 
  *             else:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -11570,7 +11582,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":632
+        /* "dysgu/sv_category.pyx":633
  *             else:
  *                 v.breakA = v.posA
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11579,7 +11591,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":633
+        /* "dysgu/sv_category.pyx":634
  *                 v.breakA = v.posA
  *                 v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -11589,7 +11601,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":634
+        /* "dysgu/sv_category.pyx":635
  *                 v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11598,7 +11610,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":635
+        /* "dysgu/sv_category.pyx":636
  *                 v.breakB = v.endB
  *                 v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -11611,7 +11623,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":637
+        /* "dysgu/sv_category.pyx":638
  *                 v.svtype = "INV"
  *                 # v.svtype = "INV:DUP"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -11626,7 +11638,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       }
       __pyx_L16:;
 
-      /* "dysgu/sv_category.pyx":576
+      /* "dysgu/sv_category.pyx":577
  *             v.join_type = "5to3"
  * 
  *         elif v.strandA == v.strandB:             # <<<<<<<<<<<<<<
@@ -11636,7 +11648,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     }
     __pyx_L7:;
 
-    /* "dysgu/sv_category.pyx":550
+    /* "dysgu/sv_category.pyx":551
  * cdef void different_read(AlignmentItem v):
  * 
  *     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first             # <<<<<<<<<<<<<<
@@ -11646,7 +11658,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":641
+  /* "dysgu/sv_category.pyx":642
  *     else:  # B is first; B <= A
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type             # <<<<<<<<<<<<<<
@@ -11665,7 +11677,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_L33_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":642
+      /* "dysgu/sv_category.pyx":643
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -11675,7 +11687,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->posA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":643
+      /* "dysgu/sv_category.pyx":644
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11685,7 +11697,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":644
+        /* "dysgu/sv_category.pyx":645
  *             v.breakA = v.posA
  *             if v.left_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11694,7 +11706,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":643
+        /* "dysgu/sv_category.pyx":644
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type
  *             v.breakA = v.posA
  *             if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11703,7 +11715,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":646
+      /* "dysgu/sv_category.pyx":647
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -11713,7 +11725,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->endB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":647
+      /* "dysgu/sv_category.pyx":648
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11723,7 +11735,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":648
+        /* "dysgu/sv_category.pyx":649
  *             v.breakB = v.endB
  *             if v.right_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11732,7 +11744,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":647
+        /* "dysgu/sv_category.pyx":648
  * 
  *             v.breakB = v.endB
  *             if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -11741,7 +11753,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":650
+      /* "dysgu/sv_category.pyx":651
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "INS"             # <<<<<<<<<<<<<<
@@ -11754,7 +11766,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_INS;
 
-      /* "dysgu/sv_category.pyx":651
+      /* "dysgu/sv_category.pyx":652
  * 
  *             v.svtype = "INS"
  *             v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -11767,7 +11779,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-      /* "dysgu/sv_category.pyx":641
+      /* "dysgu/sv_category.pyx":642
  *     else:  # B is first; B <= A
  * 
  *         if v.strandA == 5 and v.strandB == 3:  # DEL type             # <<<<<<<<<<<<<<
@@ -11777,7 +11789,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       goto __pyx_L32;
     }
 
-    /* "dysgu/sv_category.pyx":653
+    /* "dysgu/sv_category.pyx":654
  *             v.join_type = "3to5"
  * 
  *         elif v.strandA == 3 and v.strandB == 5:  # DUP type             # <<<<<<<<<<<<<<
@@ -11795,7 +11807,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_L37_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":654
+      /* "dysgu/sv_category.pyx":655
  * 
  *         elif v.strandA == 3 and v.strandB == 5:  # DUP type
  *             v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -11805,7 +11817,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->endA;
       __pyx_v_v->breakA = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":655
+      /* "dysgu/sv_category.pyx":656
  *         elif v.strandA == 3 and v.strandB == 5:  # DUP type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11815,7 +11827,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":656
+        /* "dysgu/sv_category.pyx":657
  *             v.breakA = v.endA
  *             if v.right_clipA:
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11824,7 +11836,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":655
+        /* "dysgu/sv_category.pyx":656
  *         elif v.strandA == 3 and v.strandB == 5:  # DUP type
  *             v.breakA = v.endA
  *             if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11833,7 +11845,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":658
+      /* "dysgu/sv_category.pyx":659
  *                 v.breakA_precise = 1
  * 
  *             v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -11843,7 +11855,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_3 = __pyx_v_v->posB;
       __pyx_v_v->breakB = __pyx_t_3;
 
-      /* "dysgu/sv_category.pyx":659
+      /* "dysgu/sv_category.pyx":660
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11853,7 +11865,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":660
+        /* "dysgu/sv_category.pyx":661
  *             v.breakB = v.posB
  *             if v.left_clipB:
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -11862,7 +11874,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":659
+        /* "dysgu/sv_category.pyx":660
  * 
  *             v.breakB = v.posB
  *             if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -11871,7 +11883,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
       }
 
-      /* "dysgu/sv_category.pyx":662
+      /* "dysgu/sv_category.pyx":663
  *                 v.breakB_precise = 1
  * 
  *             v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -11884,7 +11896,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->svtype);
       __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-      /* "dysgu/sv_category.pyx":663
+      /* "dysgu/sv_category.pyx":664
  * 
  *             v.svtype = "DUP"
  *             v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -11897,7 +11909,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __Pyx_DECREF(__pyx_v_v->join_type);
       __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-      /* "dysgu/sv_category.pyx":653
+      /* "dysgu/sv_category.pyx":654
  *             v.join_type = "3to5"
  * 
  *         elif v.strandA == 3 and v.strandB == 5:  # DUP type             # <<<<<<<<<<<<<<
@@ -11907,7 +11919,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       goto __pyx_L32;
     }
 
-    /* "dysgu/sv_category.pyx":665
+    /* "dysgu/sv_category.pyx":666
  *             v.join_type = "5to3"
  * 
  *         elif v.strandA == v.strandB:  # INV type             # <<<<<<<<<<<<<<
@@ -11917,7 +11929,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
     __pyx_t_1 = ((__pyx_v_v->strandA == __pyx_v_v->strandB) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":667
+      /* "dysgu/sv_category.pyx":668
  *         elif v.strandA == v.strandB:  # INV type
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -11927,7 +11939,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = (__pyx_f_5dysgu_13map_set_utils_is_overlapping(__pyx_v_v->posA, __pyx_v_v->endA, __pyx_v_v->posB, __pyx_v_v->endB, 0) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":668
+        /* "dysgu/sv_category.pyx":669
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11937,7 +11949,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":669
+          /* "dysgu/sv_category.pyx":670
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:
  *                     v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -11947,7 +11959,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->posA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":670
+          /* "dysgu/sv_category.pyx":671
  *                 if v.left_clipA:
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11956,7 +11968,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":668
+          /* "dysgu/sv_category.pyx":669
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -11966,7 +11978,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           goto __pyx_L42;
         }
 
-        /* "dysgu/sv_category.pyx":671
+        /* "dysgu/sv_category.pyx":672
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -11976,7 +11988,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":672
+          /* "dysgu/sv_category.pyx":673
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -11986,7 +11998,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->endA;
           __pyx_v_v->breakA = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":673
+          /* "dysgu/sv_category.pyx":674
  *                 elif v.right_clipA:
  *                     v.breakA = v.endA
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -11995,7 +12007,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":671
+          /* "dysgu/sv_category.pyx":672
  *                     v.breakA = v.posA
  *                     v.breakA_precise = 1
  *                 elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12005,7 +12017,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           goto __pyx_L42;
         }
 
-        /* "dysgu/sv_category.pyx":675
+        /* "dysgu/sv_category.pyx":676
  *                     v.breakA_precise = 1
  *                 else:
  *                     v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -12018,7 +12030,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         }
         __pyx_L42:;
 
-        /* "dysgu/sv_category.pyx":677
+        /* "dysgu/sv_category.pyx":678
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12028,7 +12040,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":678
+          /* "dysgu/sv_category.pyx":679
  * 
  *                 if v.left_clipB:
  *                     v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -12038,7 +12050,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->posB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":679
+          /* "dysgu/sv_category.pyx":680
  *                 if v.left_clipB:
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12047,7 +12059,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":677
+          /* "dysgu/sv_category.pyx":678
  *                     v.breakA = v.endA
  * 
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12057,7 +12069,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           goto __pyx_L43;
         }
 
-        /* "dysgu/sv_category.pyx":680
+        /* "dysgu/sv_category.pyx":681
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12067,7 +12079,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":681
+          /* "dysgu/sv_category.pyx":682
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -12077,7 +12089,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           __pyx_t_3 = __pyx_v_v->endB;
           __pyx_v_v->breakB = __pyx_t_3;
 
-          /* "dysgu/sv_category.pyx":682
+          /* "dysgu/sv_category.pyx":683
  *                 elif v.right_clipB:
  *                     v.breakB = v.endB
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12086,7 +12098,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":680
+          /* "dysgu/sv_category.pyx":681
  *                     v.breakB = v.posB
  *                     v.breakB_precise = 1
  *                 elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12096,7 +12108,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
           goto __pyx_L43;
         }
 
-        /* "dysgu/sv_category.pyx":684
+        /* "dysgu/sv_category.pyx":685
  *                     v.breakB_precise = 1
  *                 else:
  *                     v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -12109,7 +12121,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         }
         __pyx_L43:;
 
-        /* "dysgu/sv_category.pyx":685
+        /* "dysgu/sv_category.pyx":686
  *                 else:
  *                     v.breakB = v.endB
  *                 v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -12122,7 +12134,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-        /* "dysgu/sv_category.pyx":686
+        /* "dysgu/sv_category.pyx":687
  *                     v.breakB = v.endB
  *                 v.svtype = "DUP"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -12135,7 +12147,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":667
+        /* "dysgu/sv_category.pyx":668
  *         elif v.strandA == v.strandB:  # INV type
  * 
  *             if is_overlapping(v.posA, v.endA, v.posB, v.endB):  # Nested DUP             # <<<<<<<<<<<<<<
@@ -12145,7 +12157,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":688
+      /* "dysgu/sv_category.pyx":689
  *                 v.join_type = "5to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12163,7 +12175,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L44_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":689
+        /* "dysgu/sv_category.pyx":690
  * 
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -12173,7 +12185,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":690
+        /* "dysgu/sv_category.pyx":691
  *             elif v.right_clipA and v.left_clipB:
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -12183,7 +12195,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":691
+        /* "dysgu/sv_category.pyx":692
  *                 v.breakA = v.endA
  *                 v.breakB = v.posB
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12192,7 +12204,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":692
+        /* "dysgu/sv_category.pyx":693
  *                 v.breakB = v.posB
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12201,7 +12213,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":693
+        /* "dysgu/sv_category.pyx":694
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.svtype = "DEL"             # <<<<<<<<<<<<<<
@@ -12214,7 +12226,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DEL;
 
-        /* "dysgu/sv_category.pyx":694
+        /* "dysgu/sv_category.pyx":695
  *                 v.breakB_precise = 1
  *                 v.svtype = "DEL"
  *                 v.join_type = "3to5"             # <<<<<<<<<<<<<<
@@ -12227,7 +12239,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to5;
 
-        /* "dysgu/sv_category.pyx":688
+        /* "dysgu/sv_category.pyx":689
  *                 v.join_type = "5to3"
  * 
  *             elif v.right_clipA and v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12237,7 +12249,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":696
+      /* "dysgu/sv_category.pyx":697
  *                 v.join_type = "3to5"
  * 
  *             elif v.left_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12255,7 +12267,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L46_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":697
+        /* "dysgu/sv_category.pyx":698
  * 
  *             elif v.left_clipA and v.right_clipB:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -12265,7 +12277,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":698
+        /* "dysgu/sv_category.pyx":699
  *             elif v.left_clipA and v.right_clipB:
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -12275,7 +12287,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":699
+        /* "dysgu/sv_category.pyx":700
  *                 v.breakA = v.posA
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12284,7 +12296,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakA_precise = 1;
 
-        /* "dysgu/sv_category.pyx":700
+        /* "dysgu/sv_category.pyx":701
  *                 v.breakB = v.endB
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12293,7 +12305,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         __pyx_v_v->breakB_precise = 1;
 
-        /* "dysgu/sv_category.pyx":701
+        /* "dysgu/sv_category.pyx":702
  *                 v.breakA_precise = 1
  *                 v.breakB_precise = 1
  *                 v.svtype = "DUP"             # <<<<<<<<<<<<<<
@@ -12306,7 +12318,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_DUP;
 
-        /* "dysgu/sv_category.pyx":702
+        /* "dysgu/sv_category.pyx":703
  *                 v.breakB_precise = 1
  *                 v.svtype = "DUP"
  *                 v.join_type = "5to3"             # <<<<<<<<<<<<<<
@@ -12319,7 +12331,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to3;
 
-        /* "dysgu/sv_category.pyx":696
+        /* "dysgu/sv_category.pyx":697
  *                 v.join_type = "3to5"
  * 
  *             elif v.left_clipA and v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12329,7 +12341,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":704
+      /* "dysgu/sv_category.pyx":705
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipB and not v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12347,7 +12359,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L48_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":706
+        /* "dysgu/sv_category.pyx":707
  *             elif not v.left_clipB and not v.left_clipA:
  * 
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -12357,7 +12369,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":707
+        /* "dysgu/sv_category.pyx":708
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12367,7 +12379,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":708
+          /* "dysgu/sv_category.pyx":709
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12376,7 +12388,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":707
+          /* "dysgu/sv_category.pyx":708
  * 
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12385,7 +12397,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":710
+        /* "dysgu/sv_category.pyx":711
  *                     v.breakB_precise = 1
  * 
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -12395,7 +12407,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":711
+        /* "dysgu/sv_category.pyx":712
  * 
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12405,7 +12417,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":712
+          /* "dysgu/sv_category.pyx":713
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12414,7 +12426,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":711
+          /* "dysgu/sv_category.pyx":712
  * 
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12423,7 +12435,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":713
+        /* "dysgu/sv_category.pyx":714
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -12436,7 +12448,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":714
+        /* "dysgu/sv_category.pyx":715
  *                     v.breakA_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -12449,7 +12461,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":704
+        /* "dysgu/sv_category.pyx":705
  *                 v.join_type = "5to3"
  * 
  *             elif not v.left_clipB and not v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12459,7 +12471,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":716
+      /* "dysgu/sv_category.pyx":717
  *                 v.join_type = "3to3"
  * 
  *             elif not v.right_clipB and not v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12477,7 +12489,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_L52_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":718
+        /* "dysgu/sv_category.pyx":719
  *             elif not v.right_clipB and not v.right_clipA:
  * 
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -12487,7 +12499,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":719
+        /* "dysgu/sv_category.pyx":720
  * 
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12497,7 +12509,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":720
+          /* "dysgu/sv_category.pyx":721
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12506,7 +12518,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":719
+          /* "dysgu/sv_category.pyx":720
  * 
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12515,7 +12527,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":722
+        /* "dysgu/sv_category.pyx":723
  *                     v.breakB_precise = 1
  * 
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -12525,7 +12537,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":723
+        /* "dysgu/sv_category.pyx":724
  * 
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12535,7 +12547,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":724
+          /* "dysgu/sv_category.pyx":725
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12544,7 +12556,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":723
+          /* "dysgu/sv_category.pyx":724
  * 
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12553,7 +12565,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":725
+        /* "dysgu/sv_category.pyx":726
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -12566,7 +12578,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":726
+        /* "dysgu/sv_category.pyx":727
  *                     v.breakA_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -12579,7 +12591,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_5to5;
 
-        /* "dysgu/sv_category.pyx":716
+        /* "dysgu/sv_category.pyx":717
  *                 v.join_type = "3to3"
  * 
  *             elif not v.right_clipB and not v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12589,7 +12601,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":728
+      /* "dysgu/sv_category.pyx":729
  *                 v.join_type = "5to5"
  * 
  *             elif v.strandA == 3:             # <<<<<<<<<<<<<<
@@ -12599,7 +12611,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       __pyx_t_1 = ((__pyx_v_v->strandA == 3) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":729
+        /* "dysgu/sv_category.pyx":730
  * 
  *             elif v.strandA == 3:
  *                 v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -12609,7 +12621,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":730
+        /* "dysgu/sv_category.pyx":731
  *             elif v.strandA == 3:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12619,7 +12631,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":731
+          /* "dysgu/sv_category.pyx":732
  *                 v.breakA = v.endA
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12628,7 +12640,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":730
+          /* "dysgu/sv_category.pyx":731
  *             elif v.strandA == 3:
  *                 v.breakA = v.endA
  *                 if v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12637,7 +12649,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":732
+        /* "dysgu/sv_category.pyx":733
  *                 if v.right_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -12647,7 +12659,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->endB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":733
+        /* "dysgu/sv_category.pyx":734
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12657,7 +12669,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":734
+          /* "dysgu/sv_category.pyx":735
  *                 v.breakB = v.endB
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12666,7 +12678,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":733
+          /* "dysgu/sv_category.pyx":734
  *                     v.breakA_precise = 1
  *                 v.breakB = v.endB
  *                 if v.right_clipB:             # <<<<<<<<<<<<<<
@@ -12675,7 +12687,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":735
+        /* "dysgu/sv_category.pyx":736
  *                 if v.right_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -12688,7 +12700,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":736
+        /* "dysgu/sv_category.pyx":737
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "3to3"             # <<<<<<<<<<<<<<
@@ -12701,7 +12713,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->join_type);
         __pyx_v_v->join_type = __pyx_kp_u_3to3;
 
-        /* "dysgu/sv_category.pyx":728
+        /* "dysgu/sv_category.pyx":729
  *                 v.join_type = "5to5"
  * 
  *             elif v.strandA == 3:             # <<<<<<<<<<<<<<
@@ -12711,7 +12723,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         goto __pyx_L41;
       }
 
-      /* "dysgu/sv_category.pyx":739
+      /* "dysgu/sv_category.pyx":740
  * 
  *             else:
  *                 v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -12722,7 +12734,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posA;
         __pyx_v_v->breakA = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":740
+        /* "dysgu/sv_category.pyx":741
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12732,7 +12744,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":741
+          /* "dysgu/sv_category.pyx":742
  *                 v.breakA = v.posA
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12741,7 +12753,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakA_precise = 1;
 
-          /* "dysgu/sv_category.pyx":740
+          /* "dysgu/sv_category.pyx":741
  *             else:
  *                 v.breakA = v.posA
  *                 if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12750,7 +12762,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":742
+        /* "dysgu/sv_category.pyx":743
  *                 if v.left_clipA:
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -12760,7 +12772,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_3 = __pyx_v_v->posB;
         __pyx_v_v->breakB = __pyx_t_3;
 
-        /* "dysgu/sv_category.pyx":743
+        /* "dysgu/sv_category.pyx":744
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12770,7 +12782,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
         if (__pyx_t_1) {
 
-          /* "dysgu/sv_category.pyx":744
+          /* "dysgu/sv_category.pyx":745
  *                 v.breakB = v.posB
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -12779,7 +12791,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
           __pyx_v_v->breakB_precise = 1;
 
-          /* "dysgu/sv_category.pyx":743
+          /* "dysgu/sv_category.pyx":744
  *                     v.breakA_precise = 1
  *                 v.breakB = v.posB
  *                 if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12788,7 +12800,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
  */
         }
 
-        /* "dysgu/sv_category.pyx":745
+        /* "dysgu/sv_category.pyx":746
  *                 if v.left_clipB:
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"             # <<<<<<<<<<<<<<
@@ -12801,7 +12813,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
         __Pyx_DECREF(__pyx_v_v->svtype);
         __pyx_v_v->svtype = __pyx_n_u_INV;
 
-        /* "dysgu/sv_category.pyx":746
+        /* "dysgu/sv_category.pyx":747
  *                     v.breakB_precise = 1
  *                 v.svtype = "INV"
  *                 v.join_type = "5to5"             # <<<<<<<<<<<<<<
@@ -12816,7 +12828,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
       }
       __pyx_L41:;
 
-      /* "dysgu/sv_category.pyx":665
+      /* "dysgu/sv_category.pyx":666
  *             v.join_type = "5to3"
  * 
  *         elif v.strandA == v.strandB:  # INV type             # <<<<<<<<<<<<<<
@@ -12828,7 +12840,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
   }
   __pyx_L3:;
 
-  /* "dysgu/sv_category.pyx":548
+  /* "dysgu/sv_category.pyx":549
  * 
  * 
  * cdef void different_read(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -12840,7 +12852,7 @@ static void __pyx_f_5dysgu_11sv_category_different_read(struct __pyx_obj_5dysgu_
   __Pyx_RefNannyFinishContext();
 }
 
-/* "dysgu/sv_category.pyx":749
+/* "dysgu/sv_category.pyx":750
  * 
  * 
  * cdef void translocation(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -12863,7 +12875,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("translocation", 0);
 
-  /* "dysgu/sv_category.pyx":751
+  /* "dysgu/sv_category.pyx":752
  * cdef void translocation(AlignmentItem v):
  * 
  *     v.svtype = "TRA"             # <<<<<<<<<<<<<<
@@ -12876,7 +12888,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __Pyx_DECREF(__pyx_v_v->svtype);
   __pyx_v_v->svtype = __pyx_n_u_TRA;
 
-  /* "dysgu/sv_category.pyx":753
+  /* "dysgu/sv_category.pyx":754
  *     v.svtype = "TRA"
  * 
  *     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12886,7 +12898,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_1 = (__pyx_v_v->left_clipA != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":754
+    /* "dysgu/sv_category.pyx":755
  * 
  *     if v.left_clipA:
  *         v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -12896,7 +12908,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->posA;
     __pyx_v_v->breakA = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":755
+    /* "dysgu/sv_category.pyx":756
  *     if v.left_clipA:
  *         v.breakA = v.posA
  *         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12905,7 +12917,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
     __pyx_v_v->breakA_precise = 1;
 
-    /* "dysgu/sv_category.pyx":753
+    /* "dysgu/sv_category.pyx":754
  *     v.svtype = "TRA"
  * 
  *     if v.left_clipA:             # <<<<<<<<<<<<<<
@@ -12915,7 +12927,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":756
+  /* "dysgu/sv_category.pyx":757
  *         v.breakA = v.posA
  *         v.breakA_precise = 1
  *     elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12925,7 +12937,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_1 = (__pyx_v_v->right_clipA != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":757
+    /* "dysgu/sv_category.pyx":758
  *         v.breakA_precise = 1
  *     elif v.right_clipA:
  *         v.breakA = v.endA             # <<<<<<<<<<<<<<
@@ -12935,7 +12947,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->endA;
     __pyx_v_v->breakA = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":758
+    /* "dysgu/sv_category.pyx":759
  *     elif v.right_clipA:
  *         v.breakA = v.endA
  *         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12944,7 +12956,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
     __pyx_v_v->breakA_precise = 1;
 
-    /* "dysgu/sv_category.pyx":756
+    /* "dysgu/sv_category.pyx":757
  *         v.breakA = v.posA
  *         v.breakA_precise = 1
  *     elif v.right_clipA:             # <<<<<<<<<<<<<<
@@ -12954,7 +12966,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":760
+  /* "dysgu/sv_category.pyx":761
  *         v.breakA_precise = 1
  *     else:
  *         v.breakA = v.posA             # <<<<<<<<<<<<<<
@@ -12965,7 +12977,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->posA;
     __pyx_v_v->breakA = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":761
+    /* "dysgu/sv_category.pyx":762
  *     else:
  *         v.breakA = v.posA
  *         v.breakA_precise = 1             # <<<<<<<<<<<<<<
@@ -12976,7 +12988,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   }
   __pyx_L3:;
 
-  /* "dysgu/sv_category.pyx":763
+  /* "dysgu/sv_category.pyx":764
  *         v.breakA_precise = 1
  * 
  *     if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -12986,7 +12998,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_1 = (__pyx_v_v->left_clipB != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":764
+    /* "dysgu/sv_category.pyx":765
  * 
  *     if v.left_clipB:
  *         v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -12996,7 +13008,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->posB;
     __pyx_v_v->breakB = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":765
+    /* "dysgu/sv_category.pyx":766
  *     if v.left_clipB:
  *         v.breakB = v.posB
  *         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -13005,7 +13017,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
     __pyx_v_v->breakB_precise = 1;
 
-    /* "dysgu/sv_category.pyx":763
+    /* "dysgu/sv_category.pyx":764
  *         v.breakA_precise = 1
  * 
  *     if v.left_clipB:             # <<<<<<<<<<<<<<
@@ -13015,7 +13027,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     goto __pyx_L4;
   }
 
-  /* "dysgu/sv_category.pyx":766
+  /* "dysgu/sv_category.pyx":767
  *         v.breakB = v.posB
  *         v.breakB_precise = 1
  *     elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -13025,7 +13037,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_1 = (__pyx_v_v->right_clipB != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":767
+    /* "dysgu/sv_category.pyx":768
  *         v.breakB_precise = 1
  *     elif v.right_clipB:
  *         v.breakB = v.endB             # <<<<<<<<<<<<<<
@@ -13035,7 +13047,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->endB;
     __pyx_v_v->breakB = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":768
+    /* "dysgu/sv_category.pyx":769
  *     elif v.right_clipB:
  *         v.breakB = v.endB
  *         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -13044,7 +13056,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
     __pyx_v_v->breakB_precise = 1;
 
-    /* "dysgu/sv_category.pyx":766
+    /* "dysgu/sv_category.pyx":767
  *         v.breakB = v.posB
  *         v.breakB_precise = 1
  *     elif v.right_clipB:             # <<<<<<<<<<<<<<
@@ -13054,7 +13066,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     goto __pyx_L4;
   }
 
-  /* "dysgu/sv_category.pyx":770
+  /* "dysgu/sv_category.pyx":771
  *         v.breakB_precise = 1
  *     else:
  *         v.breakB = v.posB             # <<<<<<<<<<<<<<
@@ -13065,7 +13077,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_2 = __pyx_v_v->posB;
     __pyx_v_v->breakB = __pyx_t_2;
 
-    /* "dysgu/sv_category.pyx":771
+    /* "dysgu/sv_category.pyx":772
  *     else:
  *         v.breakB = v.posB
  *         v.breakB_precise = 1             # <<<<<<<<<<<<<<
@@ -13076,18 +13088,18 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   }
   __pyx_L4:;
 
-  /* "dysgu/sv_category.pyx":772
+  /* "dysgu/sv_category.pyx":773
  *         v.breakB = v.posB
  *         v.breakB_precise = 1
  *     v.join_type = f"{v.strandA}to{v.strandB}"             # <<<<<<<<<<<<<<
  * 
  *     cdef int query_gap = 0
  */
-  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 772, __pyx_L1_error)
+  __pyx_t_3 = PyTuple_New(3); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 773, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_t_4 = 0;
   __pyx_t_5 = 127;
-  __pyx_t_6 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandA, 0, ' ', 'd'); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 772, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandA, 0, ' ', 'd'); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 773, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_4 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_6);
   __Pyx_GIVEREF(__pyx_t_6);
@@ -13097,13 +13109,13 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_4 += 2;
   __Pyx_GIVEREF(__pyx_n_u_to);
   PyTuple_SET_ITEM(__pyx_t_3, 1, __pyx_n_u_to);
-  __pyx_t_6 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandB, 0, ' ', 'd'); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 772, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyUnicode_From_int(__pyx_v_v->strandB, 0, ' ', 'd'); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 773, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __pyx_t_4 += __Pyx_PyUnicode_GET_LENGTH(__pyx_t_6);
   __Pyx_GIVEREF(__pyx_t_6);
   PyTuple_SET_ITEM(__pyx_t_3, 2, __pyx_t_6);
   __pyx_t_6 = 0;
-  __pyx_t_6 = __Pyx_PyUnicode_Join(__pyx_t_3, 3, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 772, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyUnicode_Join(__pyx_t_3, 3, __pyx_t_4, __pyx_t_5); if (unlikely(!__pyx_t_6)) __PYX_ERR(1, 773, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __Pyx_GIVEREF(__pyx_t_6);
@@ -13112,7 +13124,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_v_v->join_type = ((PyObject*)__pyx_t_6);
   __pyx_t_6 = 0;
 
-  /* "dysgu/sv_category.pyx":774
+  /* "dysgu/sv_category.pyx":775
  *     v.join_type = f"{v.strandA}to{v.strandB}"
  * 
  *     cdef int query_gap = 0             # <<<<<<<<<<<<<<
@@ -13121,7 +13133,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
   __pyx_v_query_gap = 0;
 
-  /* "dysgu/sv_category.pyx":775
+  /* "dysgu/sv_category.pyx":776
  * 
  *     cdef int query_gap = 0
  *     cdef int query_overlap = 0             # <<<<<<<<<<<<<<
@@ -13130,7 +13142,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
   __pyx_v_query_overlap = 0;
 
-  /* "dysgu/sv_category.pyx":776
+  /* "dysgu/sv_category.pyx":777
  *     cdef int query_gap = 0
  *     cdef int query_overlap = 0
  *     if v.rA == v.rB:  # same read             # <<<<<<<<<<<<<<
@@ -13140,7 +13152,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __pyx_t_1 = ((__pyx_v_v->rA == __pyx_v_v->rB) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":777
+    /* "dysgu/sv_category.pyx":778
  *     cdef int query_overlap = 0
  *     if v.rA == v.rB:  # same read
  *         if v.b_qstart < v.a_qstart:  # B is first on query             # <<<<<<<<<<<<<<
@@ -13150,7 +13162,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_1 = ((__pyx_v_v->b_qstart < __pyx_v_v->a_qstart) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":778
+      /* "dysgu/sv_category.pyx":779
  *     if v.rA == v.rB:  # same read
  *         if v.b_qstart < v.a_qstart:  # B is first on query
  *             query_gap = v.a_qstart - v.b_qend             # <<<<<<<<<<<<<<
@@ -13159,7 +13171,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
       __pyx_v_query_gap = (__pyx_v_v->a_qstart - __pyx_v_v->b_qend);
 
-      /* "dysgu/sv_category.pyx":777
+      /* "dysgu/sv_category.pyx":778
  *     cdef int query_overlap = 0
  *     if v.rA == v.rB:  # same read
  *         if v.b_qstart < v.a_qstart:  # B is first on query             # <<<<<<<<<<<<<<
@@ -13169,7 +13181,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
       goto __pyx_L6;
     }
 
-    /* "dysgu/sv_category.pyx":780
+    /* "dysgu/sv_category.pyx":781
  *             query_gap = v.a_qstart - v.b_qend
  *         else:
  *             query_gap = v.b_qstart - v.a_qend             # <<<<<<<<<<<<<<
@@ -13181,7 +13193,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     }
     __pyx_L6:;
 
-    /* "dysgu/sv_category.pyx":781
+    /* "dysgu/sv_category.pyx":782
  *         else:
  *             query_gap = v.b_qstart - v.a_qend
  *         if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -13191,17 +13203,17 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
     __pyx_t_1 = ((__pyx_v_query_gap < 0) != 0);
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":782
+      /* "dysgu/sv_category.pyx":783
  *             query_gap = v.b_qstart - v.a_qend
  *         if query_gap < 0:
  *             query_overlap = abs(query_gap)             # <<<<<<<<<<<<<<
  *             query_gap = 0
  * 
  */
-      __pyx_t_2 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(1, 782, __pyx_L1_error)
+      __pyx_t_2 = abs(__pyx_v_query_gap); if (unlikely(__pyx_t_2 == ((int)-1))) __PYX_ERR(1, 783, __pyx_L1_error)
       __pyx_v_query_overlap = __pyx_t_2;
 
-      /* "dysgu/sv_category.pyx":783
+      /* "dysgu/sv_category.pyx":784
  *         if query_gap < 0:
  *             query_overlap = abs(query_gap)
  *             query_gap = 0             # <<<<<<<<<<<<<<
@@ -13210,7 +13222,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
       __pyx_v_query_gap = 0;
 
-      /* "dysgu/sv_category.pyx":781
+      /* "dysgu/sv_category.pyx":782
  *         else:
  *             query_gap = v.b_qstart - v.a_qend
  *         if query_gap < 0:             # <<<<<<<<<<<<<<
@@ -13219,7 +13231,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
     }
 
-    /* "dysgu/sv_category.pyx":776
+    /* "dysgu/sv_category.pyx":777
  *     cdef int query_gap = 0
  *     cdef int query_overlap = 0
  *     if v.rA == v.rB:  # same read             # <<<<<<<<<<<<<<
@@ -13228,7 +13240,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
   }
 
-  /* "dysgu/sv_category.pyx":785
+  /* "dysgu/sv_category.pyx":786
  *             query_gap = 0
  * 
  *     v.query_gap = query_gap             # <<<<<<<<<<<<<<
@@ -13237,7 +13249,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
   __pyx_v_v->query_gap = __pyx_v_query_gap;
 
-  /* "dysgu/sv_category.pyx":786
+  /* "dysgu/sv_category.pyx":787
  * 
  *     v.query_gap = query_gap
  *     v.query_overlap = query_overlap             # <<<<<<<<<<<<<<
@@ -13246,7 +13258,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
  */
   __pyx_v_v->query_overlap = __pyx_v_query_overlap;
 
-  /* "dysgu/sv_category.pyx":749
+  /* "dysgu/sv_category.pyx":750
  * 
  * 
  * cdef void translocation(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -13264,7 +13276,7 @@ static void __pyx_f_5dysgu_11sv_category_translocation(struct __pyx_obj_5dysgu_1
   __Pyx_RefNannyFinishContext();
 }
 
-/* "dysgu/sv_category.pyx":789
+/* "dysgu/sv_category.pyx":790
  * 
  * 
  * cdef void classify_d(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -13278,7 +13290,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
   int __pyx_t_2;
   __Pyx_RefNannySetupContext("classify_d", 0);
 
-  /* "dysgu/sv_category.pyx":791
+  /* "dysgu/sv_category.pyx":792
  * cdef void classify_d(AlignmentItem v):
  * 
  *     v.breakA_precise = 0             # <<<<<<<<<<<<<<
@@ -13287,7 +13299,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
  */
   __pyx_v_v->breakA_precise = 0;
 
-  /* "dysgu/sv_category.pyx":792
+  /* "dysgu/sv_category.pyx":793
  * 
  *     v.breakA_precise = 0
  *     v.breakB_precise = 0             # <<<<<<<<<<<<<<
@@ -13296,7 +13308,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
  */
   __pyx_v_v->breakB_precise = 0;
 
-  /* "dysgu/sv_category.pyx":793
+  /* "dysgu/sv_category.pyx":794
  *     v.breakA_precise = 0
  *     v.breakB_precise = 0
  *     if v.chrA != v.chrB:             # <<<<<<<<<<<<<<
@@ -13306,7 +13318,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
   __pyx_t_1 = ((__pyx_v_v->chrA != __pyx_v_v->chrB) != 0);
   if (__pyx_t_1) {
 
-    /* "dysgu/sv_category.pyx":794
+    /* "dysgu/sv_category.pyx":795
  *     v.breakB_precise = 0
  *     if v.chrA != v.chrB:
  *         translocation(v)             # <<<<<<<<<<<<<<
@@ -13315,7 +13327,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
  */
     __pyx_f_5dysgu_11sv_category_translocation(__pyx_v_v);
 
-    /* "dysgu/sv_category.pyx":793
+    /* "dysgu/sv_category.pyx":794
  *     v.breakA_precise = 0
  *     v.breakB_precise = 0
  *     if v.chrA != v.chrB:             # <<<<<<<<<<<<<<
@@ -13325,7 +13337,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
     goto __pyx_L3;
   }
 
-  /* "dysgu/sv_category.pyx":796
+  /* "dysgu/sv_category.pyx":797
  *         translocation(v)
  *     else:  # Intra-chromosomal. Find join type first, different for pri-sup, pri-pri
  *         if v.priA and v.priB:  # Both primary             # <<<<<<<<<<<<<<
@@ -13344,7 +13356,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
     __pyx_L5_bool_binop_done:;
     if (__pyx_t_1) {
 
-      /* "dysgu/sv_category.pyx":797
+      /* "dysgu/sv_category.pyx":798
  *     else:  # Intra-chromosomal. Find join type first, different for pri-sup, pri-pri
  *         if v.priA and v.priB:  # Both primary
  *             two_primary(v)             # <<<<<<<<<<<<<<
@@ -13353,7 +13365,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
  */
       __pyx_f_5dysgu_11sv_category_two_primary(__pyx_v_v);
 
-      /* "dysgu/sv_category.pyx":796
+      /* "dysgu/sv_category.pyx":797
  *         translocation(v)
  *     else:  # Intra-chromosomal. Find join type first, different for pri-sup, pri-pri
  *         if v.priA and v.priB:  # Both primary             # <<<<<<<<<<<<<<
@@ -13363,7 +13375,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
       goto __pyx_L4;
     }
 
-    /* "dysgu/sv_category.pyx":799
+    /* "dysgu/sv_category.pyx":800
  *             two_primary(v)
  *         else:  # One is a supplementary
  *             if v.rA == v.rB:             # <<<<<<<<<<<<<<
@@ -13374,7 +13386,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
       __pyx_t_1 = ((__pyx_v_v->rA == __pyx_v_v->rB) != 0);
       if (__pyx_t_1) {
 
-        /* "dysgu/sv_category.pyx":800
+        /* "dysgu/sv_category.pyx":801
  *         else:  # One is a supplementary
  *             if v.rA == v.rB:
  *                 same_read(v)             # <<<<<<<<<<<<<<
@@ -13383,7 +13395,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
  */
         __pyx_f_5dysgu_11sv_category_same_read(__pyx_v_v);
 
-        /* "dysgu/sv_category.pyx":799
+        /* "dysgu/sv_category.pyx":800
  *             two_primary(v)
  *         else:  # One is a supplementary
  *             if v.rA == v.rB:             # <<<<<<<<<<<<<<
@@ -13393,12 +13405,12 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
         goto __pyx_L7;
       }
 
-      /* "dysgu/sv_category.pyx":802
+      /* "dysgu/sv_category.pyx":803
  *                 same_read(v)
  *             else:
  *                 different_read(v)             # <<<<<<<<<<<<<<
- *     # Debug
- *     # echo(v.read_a.qname, v.rA == v.rB, v.priA and v.priB, v.inferred_sv_len, "strands", v.strandA == v.strandB, "pos", v.posA, v.posB, "breaks", v.breakA, v.breakB, "a_q > b_q", v.a_qstart > v.b_qstart)
+ * 
+ * 
  */
       /*else*/ {
         __pyx_f_5dysgu_11sv_category_different_read(__pyx_v_v);
@@ -13409,7 +13421,7 @@ static void __pyx_f_5dysgu_11sv_category_classify_d(struct __pyx_obj_5dysgu_11sv
   }
   __pyx_L3:;
 
-  /* "dysgu/sv_category.pyx":789
+  /* "dysgu/sv_category.pyx":790
  * 
  * 
  * cdef void classify_d(AlignmentItem v):             # <<<<<<<<<<<<<<
@@ -14993,9 +15005,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_chrA, __pyx_k_chrA, sizeof(__pyx_k_chrA), 0, 0, 1, 1},
   {&__pyx_n_s_chrB, __pyx_k_chrB, sizeof(__pyx_k_chrB), 0, 0, 1, 1},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
+  {&__pyx_n_s_dysgu_map_set_utils, __pyx_k_dysgu_map_set_utils, sizeof(__pyx_k_dysgu_map_set_utils), 0, 0, 1, 1},
+  {&__pyx_n_s_echo, __pyx_k_echo, sizeof(__pyx_k_echo), 0, 0, 1, 1},
   {&__pyx_n_s_endA, __pyx_k_endA, sizeof(__pyx_k_endA), 0, 0, 1, 1},
   {&__pyx_n_s_endB, __pyx_k_endB, sizeof(__pyx_k_endB), 0, 0, 1, 1},
   {&__pyx_n_s_getstate, __pyx_k_getstate, sizeof(__pyx_k_getstate), 0, 0, 1, 1},
+  {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_left_clipA, __pyx_k_left_clipA, sizeof(__pyx_k_left_clipA), 0, 0, 1, 1},
   {&__pyx_n_s_left_clipB, __pyx_k_left_clipB, sizeof(__pyx_k_left_clipB), 0, 0, 1, 1},
   {&__pyx_n_s_main, __pyx_k_main, sizeof(__pyx_k_main), 0, 0, 1, 1},
@@ -15139,15 +15154,15 @@ static int __Pyx_modinit_type_init_code(void) {
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("__Pyx_modinit_type_init_code", 0);
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 6, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 7, __pyx_L1_error)
   #if PY_VERSION_HEX < 0x030800B1
   __pyx_type_5dysgu_11sv_category_AlignmentItem.tp_print = 0;
   #endif
   if ((CYTHON_USE_TYPE_SLOTS && CYTHON_USE_PYTYPE_LOOKUP) && likely(!__pyx_type_5dysgu_11sv_category_AlignmentItem.tp_dictoffset && __pyx_type_5dysgu_11sv_category_AlignmentItem.tp_getattro == PyObject_GenericGetAttr)) {
     __pyx_type_5dysgu_11sv_category_AlignmentItem.tp_getattro = __Pyx_PyObject_GenericGetAttr;
   }
-  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_AlignmentItem, (PyObject *)&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 6, __pyx_L1_error)
-  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 6, __pyx_L1_error)
+  if (PyObject_SetAttr(__pyx_m, __pyx_n_s_AlignmentItem, (PyObject *)&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 7, __pyx_L1_error)
+  if (__Pyx_setup_reduce((PyObject*)&__pyx_type_5dysgu_11sv_category_AlignmentItem) < 0) __PYX_ERR(1, 7, __pyx_L1_error)
   __pyx_ptype_5dysgu_11sv_category_AlignmentItem = &__pyx_type_5dysgu_11sv_category_AlignmentItem;
   __Pyx_RefNannyFinishContext();
   return 0;
@@ -15336,6 +15351,7 @@ static CYTHON_SMALL_CODE int __pyx_pymod_exec_sv_category(PyObject *__pyx_pyinit
 #endif
 {
   PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -15443,15 +15459,36 @@ if (!__Pyx_RefNanny) {
   if (__Pyx_patch_abc() < 0) __PYX_ERR(1, 1, __pyx_L1_error)
   #endif
 
+  /* "dysgu/sv_category.pyx":4
+ * 
+ * from dysgu.map_set_utils cimport is_overlapping
+ * from dysgu.map_set_utils import echo             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_t_1 = PyList_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_INCREF(__pyx_n_s_echo);
+  __Pyx_GIVEREF(__pyx_n_s_echo);
+  PyList_SET_ITEM(__pyx_t_1, 0, __pyx_n_s_echo);
+  __pyx_t_2 = __Pyx_Import(__pyx_n_s_dysgu_map_set_utils, __pyx_t_1, 0); if (unlikely(!__pyx_t_2)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = __Pyx_ImportFrom(__pyx_t_2, __pyx_n_s_echo); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_echo, __pyx_t_1) < 0) __PYX_ERR(1, 4, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
   /* "dysgu/sv_category.pyx":1
  * #cython: language_level=3             # <<<<<<<<<<<<<<
  * 
  * from dysgu.map_set_utils cimport is_overlapping
  */
-  __pyx_t_1 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 1, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(1, 1, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_2 = __Pyx_PyDict_NewPresized(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(1, 1, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_2) < 0) __PYX_ERR(1, 1, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
   /* "../../../../../../opt/anaconda3/lib/python3.8/site-packages/numpy/__init__.pxd":892
  *         raise ImportError("numpy.core.umath failed to import")
@@ -15466,6 +15503,7 @@ if (!__Pyx_RefNanny) {
   goto __pyx_L0;
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
   if (__pyx_m) {
     if (__pyx_d) {
       __Pyx_AddTraceback("init dysgu.sv_category", __pyx_clineno, __pyx_lineno, __pyx_filename);
@@ -16561,6 +16599,85 @@ static void* __Pyx_GetVtable(PyObject *dict) {
 bad:
     Py_XDECREF(ob);
     return NULL;
+}
+
+/* Import */
+static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level) {
+    PyObject *empty_list = 0;
+    PyObject *module = 0;
+    PyObject *global_dict = 0;
+    PyObject *empty_dict = 0;
+    PyObject *list;
+    #if PY_MAJOR_VERSION < 3
+    PyObject *py_import;
+    py_import = __Pyx_PyObject_GetAttrStr(__pyx_b, __pyx_n_s_import);
+    if (!py_import)
+        goto bad;
+    #endif
+    if (from_list)
+        list = from_list;
+    else {
+        empty_list = PyList_New(0);
+        if (!empty_list)
+            goto bad;
+        list = empty_list;
+    }
+    global_dict = PyModule_GetDict(__pyx_m);
+    if (!global_dict)
+        goto bad;
+    empty_dict = PyDict_New();
+    if (!empty_dict)
+        goto bad;
+    {
+        #if PY_MAJOR_VERSION >= 3
+        if (level == -1) {
+            if ((1) && (strchr(__Pyx_MODULE_NAME, '.'))) {
+                module = PyImport_ImportModuleLevelObject(
+                    name, global_dict, empty_dict, list, 1);
+                if (!module) {
+                    if (!PyErr_ExceptionMatches(PyExc_ImportError))
+                        goto bad;
+                    PyErr_Clear();
+                }
+            }
+            level = 0;
+        }
+        #endif
+        if (!module) {
+            #if PY_MAJOR_VERSION < 3
+            PyObject *py_level = PyInt_FromLong(level);
+            if (!py_level)
+                goto bad;
+            module = PyObject_CallFunctionObjArgs(py_import,
+                name, global_dict, empty_dict, list, py_level, (PyObject *)NULL);
+            Py_DECREF(py_level);
+            #else
+            module = PyImport_ImportModuleLevelObject(
+                name, global_dict, empty_dict, list, level);
+            #endif
+        }
+    }
+bad:
+    #if PY_MAJOR_VERSION < 3
+    Py_XDECREF(py_import);
+    #endif
+    Py_XDECREF(empty_list);
+    Py_XDECREF(empty_dict);
+    return module;
+}
+
+/* ImportFrom */
+static PyObject* __Pyx_ImportFrom(PyObject* module, PyObject* name) {
+    PyObject* value = __Pyx_PyObject_GetAttrStr(module, name);
+    if (unlikely(!value) && PyErr_ExceptionMatches(PyExc_AttributeError)) {
+        PyErr_Format(PyExc_ImportError,
+        #if PY_MAJOR_VERSION < 3
+            "cannot import name %.230s", PyString_AS_STRING(name));
+        #else
+            "cannot import name %S", name);
+        #endif
+    }
+    return value;
 }
 
 /* PyDictVersioning */

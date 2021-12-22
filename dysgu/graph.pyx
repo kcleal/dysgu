@@ -529,11 +529,14 @@ cdef class PairedEndScoper:
             return found2
 
     cdef void add_item(self, int node_name, int current_chrom, int current_pos, int chrom2, int pos2,
-                       ReadEnum_t read_enum, int length_from_cigar) nogil:
+                       ReadEnum_t read_enum, int length_from_cigar): # nogil:
 
         # Add to scopes, if event is within read, add two references to forward scope. Otherwise when the
         # first break point drops from the local scope, the forward scope break will not connect with other
         # events that are added later. This is a fix for long read deletions mainly
+        if chrom2 == -1:
+            return  # No chrom2 was set, single-end?
+
         cdef cpp_map[int, LocalVal]* forward_scope
         if chrom2 == 10000000:
             forward_scope = &self.chrom_scope.back()
@@ -831,7 +834,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
     both_overlap = p1_overlaps and p2_overlaps
 
-    if read_enum != BREAKEND and not mm_only: #(not mm_only or not both_overlap):
+    if read_enum != BREAKEND and not mm_only and not chrom2 == -1: #(not mm_only or not both_overlap):
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar, trust_ins_len)
 
         for other_node in other_nodes:
@@ -872,6 +875,9 @@ cdef int good_quality_clip(AlignedSegment r, int clip_length):
 
     # Use sliding window to check that soft-clip has at least n good bases over qual 20
     cdef const unsigned char[:] quals = r.query_qualities
+    if len(quals) == 0:
+        return 1
+
     cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)
     cdef int i, length, w_sum
     cdef int window_length = 10
