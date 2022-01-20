@@ -51,6 +51,8 @@ def merge_simple(intervals):
 
 def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
 
+    is_chr = False
+    chr_in_rname = any('chr' in i for i in bam.references)
     if search is not None and exclude is None:
         s = ""
         with open(search, "r") as bed:
@@ -58,6 +60,8 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 s += f"{chrom}{first_delim}{start}-{end}{sep}"
         if len(s) == 0:
             raise ValueError("Search regions not understood")
@@ -70,6 +74,8 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 start = int(start)
                 end = int(end)
                 assert end > start
@@ -86,19 +92,23 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                     continue
 
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 start = int(start)
                 end = int(end)
                 assert end > start
                 excl[chrom].append((start, end))
 
+    if chr_in_rname != is_chr:
+        logging.warning('"chr" name conflict, please check --search/--exclude and bam chromosome names match')
     targets = {k: merge_simple(v) for k, v in targets.items()}
     excl = {k: merge_simple(v) for k, v in excl.items()}
-
     s = ""
     for chrom in targets:
         v = targets[chrom]
         if chrom in excl:
             v = multirange_diff(v, excl[chrom])
+
         for start, end in v:
             s += f"{chrom}{first_delim}{start}-{end}{sep}"
     if len(s) == 0:
