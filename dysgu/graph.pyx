@@ -1429,9 +1429,9 @@ cpdef dict get_reads(infile, sub_graph_reads):
     return rd
 
 
-cdef set BFS_local(G, int source, unordered_set[int]& visited ):
+cdef BFS_local(G, int source, unordered_set[int]& visited ):
     # Create a queue for BFS
-    queue = array.array("L", [source])
+    cdef array.array queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
     while queue:
@@ -1445,11 +1445,10 @@ cdef set BFS_local(G, int source, unordered_set[int]& visited ):
                         nodes_found.add(v)
                         queue.append(v)
         visited.insert(u)
+    return array.array("L", nodes_found)
 
-    return nodes_found
 
-
-cdef dict get_partitions(G, nodes):
+cdef get_partitions(G, nodes):
 
     cdef unordered_set[int] seen
     cdef int u, v, i
@@ -1464,11 +1463,11 @@ cdef dict get_partitions(G, nodes):
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
                 found = BFS_local(G, u, seen)
-                if found:
-                    parts.append(array.array("L", found))
+                if len(found):
+                    parts.append(found)
 
         seen.insert(u)
-    return {i: p for i, p in enumerate(parts)}
+    return parts
 
 
 cdef tuple count_support_between(G, parts, int min_support):
@@ -1479,11 +1478,13 @@ cdef tuple count_support_between(G, parts, int min_support):
     if len(parts) == 0:
         return {}, {}
     elif len(parts) == 1:
-        return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
+        return {}, {0: parts[0]}
+        # return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
 
     # Make a table to count from, int-int
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
-    for i, p in parts.items():
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
         for node in p:
             p2i.insert(node, i)
 
@@ -1494,8 +1495,8 @@ cdef tuple count_support_between(G, parts, int min_support):
     self_counts = {}
 
     seen_t = set([])
-    for i, p in parts.items():
-
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
         current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
@@ -1540,10 +1541,81 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         # save memory by converting support_between to 2d array
         for t in current_t:
-            # counts[t] = [array.array("L", m) for m in counts[t]]
             counts[t] = [np.fromiter(m, dtype="uint32", count=len(m)) for m in counts[t]]
 
     return counts, self_counts
+
+
+cpdef break_large_component(G, component, int min_support):
+
+    parts = get_partitions(G, component)  # list of arrays
+
+    # similar to count_support_between except only counts are returned without the node labels partitioned
+    cdef int i, j, node, child
+    cdef tuple t
+
+    if len(parts) == 0:
+        return {}, {}
+    elif len(parts) == 1:
+        return {}, {0: parts[0]}
+
+    # Make a table to count from, int-int
+    cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
+        for node in p:
+            p2i.insert(node, i)
+
+    # Count the links between partitions. Split reads into sets ready for calling
+    # No counting of read-pairs templates or 'support', just a count of linking alignments
+    # counts (part_a, part_b): number-of-links
+    counts = defaultdict(int)
+    self_counts = defaultdict(int)
+
+    seen_t = set([])
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
+        current_t = set([])
+        for node in p:
+            any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
+
+            for child in G.neighbors(node):
+
+                if not p2i.has_key(child):
+                    continue  # Exterior child, not in any partition
+
+                # Partition of neighbor node
+                j = p2i.get(child)
+                if j != i:
+                    if j < i:
+                        t = (j, i)
+                    else:
+                        t = (i, j)
+
+                    if t in seen_t:
+                        continue
+
+                    counts[t] += 1
+                    current_t.add(t)
+                else:
+                    self_counts[i] += 1
+
+        seen_t.update(current_t)  # Only count edge once
+
+    f = set([])
+    jobs = []
+    for (u, v), sup in counts.items():
+        if sup >= min_support:
+            f.add(u)
+            f.add(v)
+            b = parts[u]
+            b.extend(parts[v])
+            jobs.append(b)
+
+    for k, v in self_counts.items():
+        if v >= min_support and k not in f:
+            jobs.append(parts[k])
+    return jobs
 
 
 cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_support, int procs, int paired_end,
@@ -1585,13 +1657,15 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
+    # partitions = {i: p for i, p in enumerate(partitions)}
+
     support_between, support_within = count_support_between(G, partitions, min_support)
     # echo("support between", len(support_between), len(support_within), info, partitions, len(n2n), info)
     if len(support_between) == 0 and len(support_within) == 0:
         if not paired_end:
 
             if len(n2n) >= min_support or len(reads) >= min_support or info:
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d
@@ -1601,13 +1675,13 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d
 
             elif len(reads) >= min_support or info:
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d

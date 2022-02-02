@@ -43,8 +43,8 @@
         ],
         "include_dirs": [
             "dysgu",
-            "./dysgu",
             "/home/kez/myvenv/lib/python3.9/site-packages/pysam",
+            "./dysgu",
             "/home/kez/myvenv/lib/python3.9/site-packages/numpy/core/include",
             "/home/kez/Documents/code/dysgu_dev/dysgu",
             "/home/kez/Documents/code/dysgu_dev/dysgu/dysgu/htslib/htslib",
@@ -1721,12 +1721,12 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t n_expansion;
   int32_t stride;
   int32_t ref_poly_bases;
-  float contig_left_weight;
-  float contig_right_weight;
-  float contig2_left_weight;
-  float contig2_right_weight;
-  float ref_rep;
-  float compress;
+  __pyx_t_5numpy_float32_t contig_left_weight;
+  __pyx_t_5numpy_float32_t contig_right_weight;
+  __pyx_t_5numpy_float32_t contig2_left_weight;
+  __pyx_t_5numpy_float32_t contig2_right_weight;
+  __pyx_t_5numpy_float32_t ref_rep;
+  __pyx_t_5numpy_float32_t compress;
   int32_t su;
   int32_t pe;
   int32_t supp;
@@ -1744,18 +1744,18 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t fas;
   int32_t cipos95A;
   int32_t cipos95B;
-  float DP;
-  float DApri;
-  float DN;
-  float NMpri;
-  float DAsupp;
-  float NMsupp;
-  float MAPQpri;
-  float MAPQsupp;
-  float NMbase;
-  float n_sa;
-  float n_xa;
-  float n_gaps;
+  __pyx_t_5numpy_float32_t DP;
+  __pyx_t_5numpy_float32_t DApri;
+  __pyx_t_5numpy_float32_t DN;
+  __pyx_t_5numpy_float32_t NMpri;
+  __pyx_t_5numpy_float32_t DAsupp;
+  __pyx_t_5numpy_float32_t NMsupp;
+  __pyx_t_5numpy_float32_t MAPQpri;
+  __pyx_t_5numpy_float32_t MAPQsupp;
+  __pyx_t_5numpy_float32_t NMbase;
+  __pyx_t_5numpy_float32_t n_sa;
+  __pyx_t_5numpy_float32_t n_xa;
+  __pyx_t_5numpy_float32_t n_gaps;
   int32_t posA;
   int32_t posB;
   int32_t svlen;
@@ -1767,21 +1767,21 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t bad_clip_count;
   int32_t remap_ed;
   int32_t n_in_grp;
-  float jitter;
-  float sqc;
-  float scw;
-  float clip_qual_ratio;
-  float outer_cn;
-  float inner_cn;
-  float fcc;
-  float rep;
-  float rep_sc;
-  float gc;
-  float neigh;
-  float neigh10kb;
-  float raw_reads_10kb;
-  float mcov;
-  float strand_binom_t;
+  __pyx_t_5numpy_float32_t jitter;
+  __pyx_t_5numpy_float32_t sqc;
+  __pyx_t_5numpy_float32_t scw;
+  __pyx_t_5numpy_float32_t clip_qual_ratio;
+  __pyx_t_5numpy_float32_t outer_cn;
+  __pyx_t_5numpy_float32_t inner_cn;
+  __pyx_t_5numpy_float32_t fcc;
+  __pyx_t_5numpy_float32_t rep;
+  __pyx_t_5numpy_float32_t rep_sc;
+  __pyx_t_5numpy_float32_t gc;
+  __pyx_t_5numpy_float32_t neigh;
+  __pyx_t_5numpy_float32_t neigh10kb;
+  __pyx_t_5numpy_float32_t raw_reads_10kb;
+  __pyx_t_5numpy_float32_t mcov;
+  __pyx_t_5numpy_float32_t strand_binom_t;
   int preciseA;
   int preciseB;
   int linked;
@@ -11631,7 +11631,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
   Py_ssize_t __pyx_t_8;
   PyObject *(*__pyx_t_9)(PyObject *);
   int __pyx_t_10;
-  float __pyx_t_11;
+  __pyx_t_5numpy_float32_t __pyx_t_11;
   PyObject *__pyx_t_12 = NULL;
   int32_t __pyx_t_13;
   int __pyx_lineno = 0;
@@ -12018,7 +12018,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
       __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_6, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 778, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 778, __pyx_L1_error)
+      __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 778, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->gc = __pyx_t_11;
 
@@ -12370,7 +12370,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_12, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 804, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 804, __pyx_L1_error)
+    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_11 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 804, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_v_e->rep = __pyx_t_11;
 
@@ -12392,7 +12392,7 @@ static PyObject *__pyx_pf_5dysgu_9assembler_4contig_info(CYTHON_UNUSED PyObject 
     __pyx_t_12 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_4, NULL); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 805, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_12);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_12); if (unlikely((__pyx_t_11 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 805, __pyx_L1_error)
+    __pyx_t_11 = __pyx_PyFloat_AsFloat(__pyx_t_12); if (unlikely((__pyx_t_11 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 805, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
     __pyx_v_e->rep_sc = __pyx_t_11;
 

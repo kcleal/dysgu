@@ -810,7 +810,7 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 
     # Group by template name to check for split reads
     informative = []  # make call from these
-    spanning_alignments = []  # make call from these if available (and count attributes)
+    spanning_alignments = []  # make call from these, if available (and count attributes)
     generic_insertions = []
     tmp = defaultdict(list)  # group by template name
     small_tlen_outliers = 0  # for paired reads note any smaller than expected TLENs
@@ -1171,7 +1171,7 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
     cdef int svlen = 0
     cdef int mid
     if not preciseA and not preciseB:
-        # Make break at mid point
+        # Make break at mid-point
         sep = abs(main_B_break - main_A_break)
         svlen = max(sep, max(cipos95A, cipos95B))
         mid = int(sep / 2) + min(main_A_break, main_B_break)
@@ -1844,7 +1844,8 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     # Then need to decide whether to call from a single partition
 
     n2n = data["n2n"]
-    seen = set(data["parts"].keys())
+    seen = set(range(len(data['parts'])))
+    # seen = set(data['parts'].keys())
 
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     cdef int buffered_reads = 0  # Only buffer reads for smallish components, otherwise memory issues
@@ -1973,6 +1974,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events.append(ev)
 
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
+
     for e in events:
         if e.svlen_precise:
             set_ins_seq(e)

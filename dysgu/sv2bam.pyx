@@ -49,6 +49,7 @@ def merge_simple(intervals):
                 merged.append(higher)
     return merged
 
+
 def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
 
     is_chr = False
@@ -144,7 +145,7 @@ def process(args):
     assert os.path.exists(temp_dir)
 
     if args["search"]:
-        logging.info("Searching regions from {}".format(args["exclude"]))
+        logging.info("Searching regions from {}".format(args["search"]))
 
     if args["exclude"]:
         logging.info("Excluding {} from search".format(args["exclude"]))

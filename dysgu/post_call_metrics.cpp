@@ -1519,12 +1519,12 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t n_expansion;
   int32_t stride;
   int32_t ref_poly_bases;
-  float contig_left_weight;
-  float contig_right_weight;
-  float contig2_left_weight;
-  float contig2_right_weight;
-  float ref_rep;
-  float compress;
+  __pyx_t_5numpy_float32_t contig_left_weight;
+  __pyx_t_5numpy_float32_t contig_right_weight;
+  __pyx_t_5numpy_float32_t contig2_left_weight;
+  __pyx_t_5numpy_float32_t contig2_right_weight;
+  __pyx_t_5numpy_float32_t ref_rep;
+  __pyx_t_5numpy_float32_t compress;
   int32_t su;
   int32_t pe;
   int32_t supp;
@@ -1542,18 +1542,18 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t fas;
   int32_t cipos95A;
   int32_t cipos95B;
-  float DP;
-  float DApri;
-  float DN;
-  float NMpri;
-  float DAsupp;
-  float NMsupp;
-  float MAPQpri;
-  float MAPQsupp;
-  float NMbase;
-  float n_sa;
-  float n_xa;
-  float n_gaps;
+  __pyx_t_5numpy_float32_t DP;
+  __pyx_t_5numpy_float32_t DApri;
+  __pyx_t_5numpy_float32_t DN;
+  __pyx_t_5numpy_float32_t NMpri;
+  __pyx_t_5numpy_float32_t DAsupp;
+  __pyx_t_5numpy_float32_t NMsupp;
+  __pyx_t_5numpy_float32_t MAPQpri;
+  __pyx_t_5numpy_float32_t MAPQsupp;
+  __pyx_t_5numpy_float32_t NMbase;
+  __pyx_t_5numpy_float32_t n_sa;
+  __pyx_t_5numpy_float32_t n_xa;
+  __pyx_t_5numpy_float32_t n_gaps;
   int32_t posA;
   int32_t posB;
   int32_t svlen;
@@ -1565,21 +1565,21 @@ struct __pyx_obj_5dysgu_13map_set_utils_EventResult {
   int32_t bad_clip_count;
   int32_t remap_ed;
   int32_t n_in_grp;
-  float jitter;
-  float sqc;
-  float scw;
-  float clip_qual_ratio;
-  float outer_cn;
-  float inner_cn;
-  float fcc;
-  float rep;
-  float rep_sc;
-  float gc;
-  float neigh;
-  float neigh10kb;
-  float raw_reads_10kb;
-  float mcov;
-  float strand_binom_t;
+  __pyx_t_5numpy_float32_t jitter;
+  __pyx_t_5numpy_float32_t sqc;
+  __pyx_t_5numpy_float32_t scw;
+  __pyx_t_5numpy_float32_t clip_qual_ratio;
+  __pyx_t_5numpy_float32_t outer_cn;
+  __pyx_t_5numpy_float32_t inner_cn;
+  __pyx_t_5numpy_float32_t fcc;
+  __pyx_t_5numpy_float32_t rep;
+  __pyx_t_5numpy_float32_t rep_sc;
+  __pyx_t_5numpy_float32_t gc;
+  __pyx_t_5numpy_float32_t neigh;
+  __pyx_t_5numpy_float32_t neigh10kb;
+  __pyx_t_5numpy_float32_t raw_reads_10kb;
+  __pyx_t_5numpy_float32_t mcov;
+  __pyx_t_5numpy_float32_t strand_binom_t;
   int preciseA;
   int preciseB;
   int linked;
@@ -11591,7 +11591,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
   PyObject *__pyx_t_11 = NULL;
   PyObject *__pyx_t_12 = NULL;
   PyObject *(*__pyx_t_13)(PyObject *);
-  float __pyx_t_14;
+  __pyx_t_5numpy_float32_t __pyx_t_14;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -11830,7 +11830,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
         __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
       }
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 447, __pyx_L1_error)
+      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 447, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->outer_cn = __pyx_t_14;
 
@@ -11917,7 +11917,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16CoverageAnalyser_12normal
         __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
       }
       __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 449, __pyx_L1_error)
+      __pyx_t_14 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_14 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 449, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->inner_cn = __pyx_t_14;
 
@@ -12085,7 +12085,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
   PyObject *__pyx_t_14 = NULL;
   int __pyx_t_15;
   PyObject *__pyx_t_16 = NULL;
-  float __pyx_t_17;
+  __pyx_t_5numpy_float32_t __pyx_t_17;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -12368,7 +12368,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_2ref_repetitiveness(CYTHON_
       if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 463, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_10);
       __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-      __pyx_t_17 = __pyx_PyFloat_AsFloat(__pyx_t_10); if (unlikely((__pyx_t_17 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 463, __pyx_L1_error)
+      __pyx_t_17 = __pyx_PyFloat_AsFloat(__pyx_t_10); if (unlikely((__pyx_t_17 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 463, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
       __pyx_v_e->ref_rep = __pyx_t_17;
 
@@ -13454,7 +13454,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8strand_binom_t(CYTHON_UNUS
   PyObject *__pyx_t_12 = NULL;
   int __pyx_t_13;
   PyObject *__pyx_t_14 = NULL;
-  float __pyx_t_15;
+  __pyx_t_5numpy_float32_t __pyx_t_15;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -13610,7 +13610,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_8strand_binom_t(CYTHON_UNUS
         __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
       }
       __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-      __pyx_t_15 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_15 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 512, __pyx_L1_error)
+      __pyx_t_15 = __pyx_PyFloat_AsFloat(__pyx_t_4); if (unlikely((__pyx_t_15 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 512, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __pyx_v_e->strand_binom_t = __pyx_t_15;
 
@@ -15325,10 +15325,10 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16get_gt_metric(CYTHON_UNUS
   CYTHON_UNUSED PyObject *__pyx_v_new_events = NULL;
   CYTHON_UNUSED long __pyx_v_pad;
   int32_t __pyx_v_sup;
-  float __pyx_v_ocn;
-  float __pyx_v_icn;
-  float __pyx_v_higher_cn;
-  float __pyx_v_lower_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_ocn;
+  __pyx_t_5numpy_float32_t __pyx_v_icn;
+  __pyx_t_5numpy_float32_t __pyx_v_higher_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_lower_cn;
   PyObject *__pyx_v_support_reads = NULL;
   PyObject *__pyx_v_ref = NULL;
   PyObject *__pyx_v_gt_lplist = NULL;
@@ -15350,11 +15350,11 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16get_gt_metric(CYTHON_UNUS
   PyObject *__pyx_t_4 = NULL;
   Py_ssize_t __pyx_t_5;
   PyObject *(*__pyx_t_6)(PyObject *);
-  float __pyx_t_7;
+  __pyx_t_5numpy_float32_t __pyx_t_7;
   PyObject *__pyx_t_8 = NULL;
   PyObject *__pyx_t_9 = NULL;
-  float __pyx_t_10;
-  float __pyx_t_11;
+  __pyx_t_5numpy_float32_t __pyx_t_10;
+  __pyx_t_5numpy_float32_t __pyx_t_11;
   int32_t __pyx_t_12;
   int __pyx_t_13;
   PyObject *__pyx_t_14 = NULL;
@@ -16651,9 +16651,9 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_16get_gt_metric(CYTHON_UNUS
  */
 
 static PyObject *__pyx_f_5dysgu_17post_call_metrics_del_like(__pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_r) {
-  float __pyx_v_ocn;
-  float __pyx_v_icn;
-  float __pyx_v_lower_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_ocn;
+  __pyx_t_5numpy_float32_t __pyx_v_icn;
+  __pyx_t_5numpy_float32_t __pyx_v_lower_cn;
   PyObject *__pyx_v_t = NULL;
   double __pyx_v_m;
   double __pyx_v_mr;
@@ -16661,9 +16661,9 @@ static PyObject *__pyx_f_5dysgu_17post_call_metrics_del_like(__pyx_t_5dysgu_17po
   PyObject *__pyx_v_ref_supp = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  float __pyx_t_1;
-  float __pyx_t_2;
-  float __pyx_t_3;
+  __pyx_t_5numpy_float32_t __pyx_t_1;
+  __pyx_t_5numpy_float32_t __pyx_t_2;
+  __pyx_t_5numpy_float32_t __pyx_t_3;
   int __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
   PyObject *__pyx_t_6 = NULL;
@@ -17414,11 +17414,11 @@ static PyObject *__pyx_f_5dysgu_17post_call_metrics_del_like(__pyx_t_5dysgu_17po
  */
 
 static PyObject *__pyx_f_5dysgu_17post_call_metrics_ins_like(__pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_r) {
-  float __pyx_v_ocn;
-  float __pyx_v_icn;
-  float __pyx_v_lower_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_ocn;
+  __pyx_t_5numpy_float32_t __pyx_v_icn;
+  __pyx_t_5numpy_float32_t __pyx_v_lower_cn;
   PyObject *__pyx_v_t = NULL;
-  double __pyx_v_cn_ratio;
+  __pyx_t_5numpy_float32_t __pyx_v_cn_ratio;
   double __pyx_v_m;
   double __pyx_v_mr;
   double __pyx_v_variant_support;
@@ -17426,9 +17426,9 @@ static PyObject *__pyx_f_5dysgu_17post_call_metrics_ins_like(__pyx_t_5dysgu_17po
   CYTHON_UNUSED double __pyx_v_variant_supp;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  float __pyx_t_1;
-  float __pyx_t_2;
-  float __pyx_t_3;
+  __pyx_t_5numpy_float32_t __pyx_t_1;
+  __pyx_t_5numpy_float32_t __pyx_t_2;
+  __pyx_t_5numpy_float32_t __pyx_t_3;
   int __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
   PyObject *__pyx_t_6 = NULL;
@@ -18124,18 +18124,18 @@ static PyObject *__pyx_f_5dysgu_17post_call_metrics_ins_like(__pyx_t_5dysgu_17po
  */
 
 static PyObject *__pyx_f_5dysgu_17post_call_metrics_ins_like_non_pe(__pyx_t_5dysgu_17post_call_metrics_EventResult_t __pyx_v_r) {
-  float __pyx_v_ocn;
-  float __pyx_v_icn;
-  float __pyx_v_lower_cn;
-  float __pyx_v_higher_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_ocn;
+  __pyx_t_5numpy_float32_t __pyx_v_icn;
+  __pyx_t_5numpy_float32_t __pyx_v_lower_cn;
+  __pyx_t_5numpy_float32_t __pyx_v_higher_cn;
   int32_t __pyx_v_sup;
   PyObject *__pyx_v_support_reads = NULL;
   PyObject *__pyx_v_ref = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  float __pyx_t_1;
-  float __pyx_t_2;
-  float __pyx_t_3;
+  __pyx_t_5numpy_float32_t __pyx_t_1;
+  __pyx_t_5numpy_float32_t __pyx_t_2;
+  __pyx_t_5numpy_float32_t __pyx_t_3;
   int32_t __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
   PyObject *__pyx_t_6 = NULL;
@@ -20581,7 +20581,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_22compressability(CYTHON_UN
   Py_ssize_t __pyx_t_9;
   Py_ssize_t __pyx_t_10;
   int __pyx_t_11;
-  float __pyx_t_12;
+  __pyx_t_5numpy_float32_t __pyx_t_12;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
@@ -20919,7 +20919,7 @@ static PyObject *__pyx_pf_5dysgu_17post_call_metrics_22compressability(CYTHON_UN
       __pyx_t_6 = __Pyx_PyObject_Call(__pyx_builtin_round, __pyx_t_7, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 857, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      __pyx_t_12 = __pyx_PyFloat_AsFloat(__pyx_t_6); if (unlikely((__pyx_t_12 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 857, __pyx_L1_error)
+      __pyx_t_12 = __pyx_PyFloat_AsFloat(__pyx_t_6); if (unlikely((__pyx_t_12 == ((npy_float32)-1)) && PyErr_Occurred())) __PYX_ERR(0, 857, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
       __pyx_v_e->compress = __pyx_t_12;
 

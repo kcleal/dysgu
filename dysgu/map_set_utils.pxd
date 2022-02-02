@@ -290,13 +290,13 @@ cdef class EventResult:
     """Data holder for classifying alignments into SV types"""
     cdef public int32_t contig_ref_start, contig_ref_end, contig2_ref_start, contig2_ref_end, contig_lc, contig_rc, contig2_lc, contig2_rc, \
         grp_id, event_id, n_expansion, stride, ref_poly_bases
-    cdef public float contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress
+    cdef public np.float32_t contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress
 
     cdef public int32_t su, pe, supp, sc, NP, maxASsupp, plus, minus, spanning, double_clips, n_unmapped_mates, n_small_tlen, bnd, ras, fas, cipos95A, cipos95B
-    cdef public float DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
+    cdef public np.float32_t DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
 
     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
-    cdef public float jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
+    cdef public np.float32_t jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
