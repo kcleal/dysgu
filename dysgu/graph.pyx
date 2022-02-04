@@ -954,7 +954,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
-    cdef int current_overlaps_roi, next_overlaps_roi
+    cdef bint current_overlaps_roi, next_overlaps_roi
     cdef bint add_primark_link, add_insertion_link
     cdef int chrom = r.rname
     cdef int chrom2 = r.rnext
@@ -1007,7 +1007,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
                 event = all_aligns[index]
                 if len(all_aligns) == 1:
-                    return  # should'nt happen
+                    return
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
@@ -1029,9 +1029,10 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 # Probably too many reads in ROI to reliably separate out break end reads
                 return
             if good_clip and cigar_clip(r, clip_l):
-                read_enum = BREAKEND
                 chrom2 = 10000000
                 pos2 = event_pos
+            else:
+                return
 
         if read_enum == DELETION or read_enum == INSERTION:  # DELETION or INSERTION within read
             chrom2 = chrom
@@ -1073,9 +1074,6 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
                                            mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
-
-                # if r.qname == "m66002/15000/CCS":
-                #     echo("EVENT POS", event_pos, pos2, all_aligns, index)
 
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname

@@ -18,6 +18,7 @@ from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import to_dict, timeit, echo
 from dysgu import sites_utils
 import pickle
+import gc
 
 import itertools
 import multiprocessing
@@ -1023,6 +1024,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     del G
     del read_buffer
     cmp.clear()
+
+    gc.collect()
 
     # #
     if procs > 1 or low_mem:

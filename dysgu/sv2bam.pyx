@@ -165,8 +165,8 @@ def process(args):
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
-
     cdef bytes fasta_b
+
     if "reference" in args:
         fasta_b = args["reference"].encode("ascii")
     else:
@@ -176,7 +176,6 @@ def process(args):
     cdef bytes out_write_mode_b = args["compression"].encode("ascii")
     cdef bytes temp_f = temp_dir.encode("ascii")
     cdef bint write_all = args["write_all"]
-
     cdef bytes regionbytes
 
     region = ".,"
@@ -193,8 +192,19 @@ def process(args):
     #     max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
     max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
 
-    count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
-                                  args["procs"], pe, temp_f, int(args["max_cov"]), regionbytes, max_cov_ignore_bytes, fasta_b, write_all,
+    count = search_hts_alignments(infile_string_b,
+                                  outfile_string_b,
+                                  args["min_size"],
+                                  args["clip_length"],
+                                  args["mq"],
+                                  args["procs"],
+                                  pe,
+                                  temp_f,
+                                  int(args["max_cov"]),
+                                  regionbytes,
+                                  max_cov_ignore_bytes,
+                                  fasta_b,
+                                  write_all,
                                   out_write_mode_b)
 
     if count < 0:
