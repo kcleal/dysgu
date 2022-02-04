@@ -1238,7 +1238,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None, bint trust_ins_len=True):
+                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir="."):
 
     t0 = time.time()
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
@@ -1256,7 +1256,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end)
 
-    bad_clip_counter = BadClipCounter(infile.header.nreferences)
+    bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
 
     G = map_set_utils.Py_SimpleGraph()
 

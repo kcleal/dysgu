@@ -744,10 +744,12 @@ def process_job(msg_queue, args):
 def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     procs = args['procs']
+    low_mem = args['low_mem']
+    tdir = args["working_directory"]
+
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
-    temp_dir = args["working_directory"]
 
     if args["max_cov"] == "auto":
         if args["ibam"] is not None:
@@ -761,7 +763,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     if not args["ibam"]:
         # Make a new coverage track if one hasn't been created yet
-        cov_track_path = temp_dir
+        cov_track_path = tdir
     else:
         cov_track_path = None
 
@@ -843,7 +845,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             spd_thresh=args["spd"],
                                             mm_only=args["regions_mm_only"] == "True",
                                             sites=sites_info,
-                                            trust_ins_len=args["trust_ins_len"] == "True")
+                                            trust_ins_len=args["trust_ins_len"] == "True",
+                                            low_mem=low_mem,
+                                            temp_dir=tdir)
 
     sites_index = None
     if sites_adder:
@@ -851,8 +855,19 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     logging.info("Graph constructed")
 
-    t0 = time.time()
-    cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
+    # Flat vector, components are separated by -1
+
+    component_path = f"{tdir}/components.bin"
+    cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
+    cdef vector[int] cmp = G.connectedComponents(cmp_file, low_mem)
+
+    cdef int length_components = cmp.size()
+
+    if low_mem:
+        cmp_mmap = np.memmap(component_path, dtype=np.int32, mode='r')
+        length_components = len(cmp_mmap)
+
+    #cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
 
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
@@ -870,8 +885,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         diffs = 0.15
 
     write_index = None
-
-    tdir = args["working_directory"]
     minhq = None
 
     consumers = []
@@ -908,7 +921,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     num_jobs = 0
     completed = 0
     components_seen = 0
-    low_mem = args['low_mem']
 
     if procs == 1 and low_mem:
         completed_file = open(f"{tdir}/job_0.done.pkl", "wb")
@@ -919,7 +931,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     cdef int ci, cmp_idx, item_index
     # cmp is a flat array of indexes. item == -1 signifies end of component
 
-    for item_idx, item in enumerate(cmp):
+    # for item_idx, item in enumerate(cmp):
+    for item_idx in range(length_components):
+
+        if low_mem:
+            item = cmp_mmap[item_idx]
+        else:
+            item = cmp[item_idx]
+
         if item == -1:
             components_seen += 1
             start_i = last_i
@@ -929,7 +948,11 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
             component = np.zeros(end_i - start_i)
             ci = 0
             for cmp_idx in range(start_i, end_i):
-                component[ci] = cmp[cmp_idx]
+
+                if low_mem:
+                    component[ci] = cmp_mmap[cmp_idx]
+                else:
+                    component[ci] = cmp[cmp_idx]
                 ci += 1
 
             if len(component) > 100_000:
@@ -1024,7 +1047,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     del G
     del read_buffer
     cmp.clear()
-
+    os.remove(component_path)
     gc.collect()
 
     # #
@@ -1100,7 +1123,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
-    coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
+    coverage_analyser = post_call_metrics.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
 
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
@@ -1117,7 +1140,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     # This has to be called after the genotype step, raw coverage values are needed
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-
     preliminaries = post_call_metrics.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
@@ -1127,6 +1149,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     if len(preliminaries) == 0:
         logging.critical("No events found")
         quit()
+
+    bad_clip_counter.tidy()
 
     return preliminaries, extended_tags, sites_adder
 

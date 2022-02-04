@@ -30,21 +30,41 @@ pd.options.mode.chained_assignment = None
 from skbio.alignment import StripedSmithWaterman
 import time
 from libc.stdint cimport int16_t
-
+import sys
+import os
 
 ctypedef EventResult EventResult_t
 
 
 class BadClipCounter:
 
-    def __init__(self, n_references):
-        self.clip_pos_arr = [array.array("L", []) for i in range(n_references)]  # 32 bit unsigned int
+    def __init__(self, n_references, low_mem, temp_dir):
+        self.low_mem = low_mem
+        self.temp_dir = temp_dir
+        self.n_refs = n_references
+        if not self.low_mem:
+            self.clip_pos_arr = [array.array("L", []) for i in range(n_references)]  # 32 bit unsigned int
+        else:
+            self.clip_pos_arr = [open(f"{self.temp_dir}/{i}.badclip.bin", "wb") for i in range(n_references)]
+
+    def tidy(self):
+        if self.low_mem:
+            [os.remove(f"{self.temp_dir}/{i}.badclip.bin") for i in range(self.n_refs)]
 
     def add(self, chrom, position):
-        self.clip_pos_arr[chrom].append(position)
+        if not self.low_mem:
+            self.clip_pos_arr[chrom].append(position)
+        else:
+            self.clip_pos_arr[chrom].write(position.to_bytes(4, sys.byteorder))
 
     def sort_arrays(self):
-        self.clip_pos_arr = [np.array(i, dtype=np.dtype("i"))for i in self.clip_pos_arr]
+
+        if not self.low_mem:
+            self.clip_pos_arr = [np.array(i, dtype=np.dtype("i")) for i in self.clip_pos_arr]
+        else:
+            [i.close() for i in self.clip_pos_arr]
+            self.clip_pos_arr = [np.fromfile(f"{self.temp_dir}/{i}.badclip.bin", np.int32) for i in range(self.n_refs)]
+
         [i.sort() for i in self.clip_pos_arr]
 
     def count_near(self, int chrom, int start, int end):

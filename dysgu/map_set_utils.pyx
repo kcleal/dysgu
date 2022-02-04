@@ -3,6 +3,7 @@
 import click
 import numpy as np
 cimport numpy as np
+import cython
 import time
 import logging
 from libcpp.vector cimport vector as cpp_vector
@@ -80,8 +81,8 @@ cdef class Py_SimpleGraph:
         return self.thisptr.neighbors(u)
     cpdef void removeNode(self, int u):
         self.thisptr.removeNode(u)
-    cpdef cpp_vector[int] connectedComponents(self):
-        return self.thisptr.connectedComponents()
+    cpdef cpp_vector[int] connectedComponents(self, char* pth, bint low_mem):
+        return self.thisptr.connectedComponents(pth, low_mem)
     cpdef int showSize(self):
         return self.thisptr.showSize()
 
@@ -286,6 +287,7 @@ cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
 def to_dict(self):
     return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}
 
+
 def from_dict(self, d):
     allowed = set(dir(self))
     for k, v in d.items():
@@ -294,9 +296,10 @@ def from_dict(self, d):
     return self
 
 
+@cython.auto_pickle(True)
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""
-    def __cinit__(self):
+    def __init__(self):
         # set a few variables
         self.svlen_precise = 1
         self.rep = 0
@@ -314,10 +317,10 @@ cdef class EventResult:
         return str(to_dict(self))
         # return str(self.to_dict())
 
-    def __getstate__(self):  # for pickling
-        return to_dict(self)
-        # return self.to_dict()
-
-    def __setstate__(self, d):
-        for k, v in d.items():
-            self.__setattr__(k, v)
+    # def __getstate__(self):  # for pickling
+    #     return to_dict(self)
+    #     # return self.to_dict()
+    #
+    # def __setstate__(self, d):
+    #     for k, v in d.items():
+    #         self.__setattr__(k, v)

@@ -135,7 +135,7 @@ cdef extern from "wrap_map_set2.h":
         int weight(int, int)
         cpp_vector[int] neighbors(int)
         void removeNode(int)
-        cpp_vector[int] connectedComponents()
+        cpp_vector[int] connectedComponents(char*, bint)
         int showSize()
 
 
@@ -150,7 +150,7 @@ cdef class Py_SimpleGraph:
     cpdef int weight(self, int u, int v)
     cpdef cpp_vector[int] neighbors(self, int u)
     cpdef void removeNode(self, int u)
-    cpdef cpp_vector[int] connectedComponents(self)
+    cpdef cpp_vector[int] connectedComponents(self, char* pth, bint low_mem)
     cpdef int showSize(self)
 
 

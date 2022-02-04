@@ -1847,7 +1847,7 @@ struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph {
   int (*weight)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, int, int, int __pyx_skip_dispatch);
   std::vector<int>  (*neighbors)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, int, int __pyx_skip_dispatch);
   void (*removeNode)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, int, int __pyx_skip_dispatch);
-  std::vector<int>  (*connectedComponents)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, int __pyx_skip_dispatch);
+  std::vector<int>  (*connectedComponents)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, char *, int, int __pyx_skip_dispatch);
   int (*showSize)(struct __pyx_obj_5dysgu_13map_set_utils_Py_SimpleGraph *, int __pyx_skip_dispatch);
 };
 static struct __pyx_vtabstruct_5dysgu_13map_set_utils_Py_SimpleGraph *__pyx_vtabptr_5dysgu_13map_set_utils_Py_SimpleGraph;
