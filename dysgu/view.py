@@ -213,6 +213,7 @@ def vcf_to_df(path):
                "GRP": ("grp_id", int),
                "NGRP": ("n_in_grp", int),
                "END": ("posB", int),
+               "CHR2_POS": ("posB_tra", int),
                "sample": ("sample", str),
                "id": ("id", str),
                "KIND": ("kind", str),
@@ -303,6 +304,9 @@ def vcf_to_df(path):
     if "contigB" not in df:
         df["contigB"] = [""] * len(df)
 
+    if 'posB_tra' in df:
+        df["posB"] = [i if svt != 'TRA' else j for i, j, svt in zip(df['posB'], df['posB_tra'], df['svtype'])]
+        del df['posB_tra']
     df["posA"] = df["posA"].astype(int)
     df["posB"] = df["posB"].astype(int)
 

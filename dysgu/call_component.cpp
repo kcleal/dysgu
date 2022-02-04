@@ -42,8 +42,8 @@
             "-Wno-volatile"
         ],
         "include_dirs": [
-            "/home/kez/myvenv/lib/python3.9/site-packages/pysam",
             "./dysgu",
+            "/home/kez/myvenv/lib/python3.9/site-packages/pysam",
             "/home/kez/myvenv/lib/python3.9/site-packages/numpy/core/include",
             "/home/kez/Documents/code/dysgu_dev/dysgu",
             "/home/kez/Documents/code/dysgu_dev/dysgu/dysgu/htslib/htslib",

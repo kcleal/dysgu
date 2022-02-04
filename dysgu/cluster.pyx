@@ -167,8 +167,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         fail = False
         if ei.svtype != ej.svtype:
-            fail = True
-        if fail:
             continue
 
         # Check if events point to the same loci
@@ -219,6 +217,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if same_sample and not loci_same and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0:
             continue
 
+        if ei.svtype == 'TRA':
+            echo(ei.posA, ei.posB, ej.posA, ej.posB)
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
@@ -229,14 +229,18 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         m = False
         ml = max(ei.svlen, ej.svlen)
-        if ml == 0:
+        if ml == 0 and ei.svtype != 'TRA':
             continue
-        l_ratio = min(ei.svlen, ej.svlen) / ml
 
-        # if ei["posA"] == 829172 or ej["posA"] == 829172:
-        #     echo(ei)
-        #     echo(ej)
-        #     echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
+        if ei.svtype == 'TRA':
+            l_ratio = 1  # not applicable for translocations
+        else:
+            l_ratio = min(ei.svlen, ej.svlen) / ml
+
+        # if ei["posA"] == 172626210:
+            # echo(ei)
+            # echo(ej)
+            # echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -266,7 +270,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
-
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
 
