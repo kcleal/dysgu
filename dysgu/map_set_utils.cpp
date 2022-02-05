@@ -15063,7 +15063,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_8remapped_2__set__(stru
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise             # <<<<<<<<<<<<<<
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
- *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info #, qnames
  */
 
 /* Python wrapper */
@@ -15144,7 +15144,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_13svlen_precise_2__set_
  *     cdef public bint preciseA, preciseB, linked, modified, remapped
  *     cdef public int8_t svlen_precise
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \             # <<<<<<<<<<<<<<
- *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info #, qnames
  */
 
 /* Python wrapper */
@@ -15933,7 +15933,7 @@ static int __pyx_pf_5dysgu_13map_set_utils_11EventResult_4type_4__del__(struct _
 /* "dysgu/map_set_utils.pxd":303
  *     cdef public int8_t svlen_precise
  *     cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
- *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info             # <<<<<<<<<<<<<<
+ *         partners, GQ, SQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info #, qnames             # <<<<<<<<<<<<<<
  */
 
 /* Python wrapper */

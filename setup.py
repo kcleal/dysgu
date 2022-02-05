@@ -137,7 +137,8 @@ setup(
     install_requires=[  # runtime requires
             'cython',
             'click',
-            'numpy',
+            'numpy>=1.16.5',
+            'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',
@@ -152,7 +153,8 @@ setup(
     setup_requires=[
             'cython',
             'click',
-            'numpy',
+            'numpy>=1.16.5',
+            'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',

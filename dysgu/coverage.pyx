@@ -304,7 +304,8 @@ cdef class GenomeScanner:
                     if not a.flag & 1800:
                         p1 = a.pnext - pad
                         c2 = self.input_bam.get_reference_name(a.rnext)
-                        intervals_to_check.append((c2, 0 if p1 < 0 else p1, a.pnext + pad))
+                        if c2:
+                            intervals_to_check.append((c2, 0 if p1 < 0 else p1, a.pnext + pad))
                         if a.has_tag("SA"):
                             sa = a.get_tag("SA").split(";")
                             for v in sa:
