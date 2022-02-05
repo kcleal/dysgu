@@ -232,6 +232,7 @@ def cli():
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
@@ -354,9 +355,6 @@ def get_reads(ctx, **kwargs):
               show_default=True)
 @click.option("--all-sites", help="Output a genotype for all variants in --sites (including homozygous reference 0/0)",
               required=False, default="False", type=click.Choice(["True", "False"]))
-# @click.option("--hom-ref-sites", help="If set to 'True' dysgu will output all variants in --sites including homozygous reference sites with"
-#                                   " genotype 0/0",
-#               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
@@ -412,6 +410,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
@@ -419,6 +418,7 @@ def get_reads(ctx, **kwargs):
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural variants from alignment file/stdin"""
+
     logging.info("[dysgu-call] Version: {}".format(version))
     make_wd(kwargs, call_func=True)
     if kwargs["sv_aligns"] is None:

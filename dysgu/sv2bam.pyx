@@ -49,8 +49,11 @@ def merge_simple(intervals):
                 merged.append(higher)
     return merged
 
+
 def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
 
+    is_chr = False
+    chr_in_rname = any('chr' in i for i in bam.references)
     if search is not None and exclude is None:
         s = ""
         with open(search, "r") as bed:
@@ -58,6 +61,8 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 s += f"{chrom}{first_delim}{start}-{end}{sep}"
         if len(s) == 0:
             raise ValueError("Search regions not understood")
@@ -70,6 +75,8 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                 if line[0] == "#":
                     continue
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 start = int(start)
                 end = int(end)
                 assert end > start
@@ -86,19 +93,23 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
                     continue
 
                 chrom, start, end = line.strip().split("\t", 4)[:3]
+                if 'chr' in chrom:
+                    is_chr = True
                 start = int(start)
                 end = int(end)
                 assert end > start
                 excl[chrom].append((start, end))
 
+    if chr_in_rname != is_chr:
+        logging.warning('"chr" name conflict, please check --search/--exclude and bam chromosome names match')
     targets = {k: merge_simple(v) for k, v in targets.items()}
     excl = {k: merge_simple(v) for k, v in excl.items()}
-
     s = ""
     for chrom in targets:
         v = targets[chrom]
         if chrom in excl:
             v = multirange_diff(v, excl[chrom])
+
         for start, end in v:
             s += f"{chrom}{first_delim}{start}-{end}{sep}"
     if len(s) == 0:
@@ -134,7 +145,7 @@ def process(args):
     assert os.path.exists(temp_dir)
 
     if args["search"]:
-        logging.info("Searching regions from {}".format(args["exclude"]))
+        logging.info("Searching regions from {}".format(args["search"]))
 
     if args["exclude"]:
         logging.info("Excluding {} from search".format(args["exclude"]))
@@ -154,8 +165,8 @@ def process(args):
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
-
     cdef bytes fasta_b
+
     if "reference" in args:
         fasta_b = args["reference"].encode("ascii")
     else:
@@ -165,7 +176,6 @@ def process(args):
     cdef bytes out_write_mode_b = args["compression"].encode("ascii")
     cdef bytes temp_f = temp_dir.encode("ascii")
     cdef bint write_all = args["write_all"]
-
     cdef bytes regionbytes
 
     region = ".,"
@@ -182,8 +192,19 @@ def process(args):
     #     max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
     max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
 
-    count = search_hts_alignments(infile_string_b, outfile_string_b, args["min_size"], args["clip_length"], args["mq"],
-                                  args["procs"], pe, temp_f, int(args["max_cov"]), regionbytes, max_cov_ignore_bytes, fasta_b, write_all,
+    count = search_hts_alignments(infile_string_b,
+                                  outfile_string_b,
+                                  args["min_size"],
+                                  args["clip_length"],
+                                  args["mq"],
+                                  args["procs"],
+                                  pe,
+                                  temp_f,
+                                  int(args["max_cov"]),
+                                  regionbytes,
+                                  max_cov_ignore_bytes,
+                                  fasta_b,
+                                  write_all,
                                   out_write_mode_b)
 
     if count < 0:

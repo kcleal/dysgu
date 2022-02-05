@@ -7,7 +7,7 @@ import numpy as np
 cimport numpy as np
 import logging
 import pysam
-DTYPE = np.float
+DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
 from dysgu.map_set_utils cimport CoverageTrack
@@ -503,7 +503,7 @@ cdef class GenomeScanner:
                 self.input_bam.get_reference_name(rname)) / 100)
 
             # Define a big numpy array to hold count information
-            self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float)
+            self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float64)
 
         if self.current_chrom != rname:
             self.current_chrom = rname

@@ -284,11 +284,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         except ValueError:
             info_extras.append("REPSC=0")
 
-        # info_extras += [
-        #             f"REP={'%.3f' % float(rep)}",
-        #             f"REPSC={'%.3f' % float(repsc)}",
-        #             ]
-
     info_extras += [
                     f"GC={gc}",
                     f"NEXP={n_expansion}",
@@ -304,6 +299,11 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
                     f"BND={bnd}",
                     f"LPREC={lenprec}",
                     f"RT={read_kind}"]
+
+    if r['chrA'] != r['chrB']:
+        chr2_pos = f";CHR2_POS={r['posB']}"
+    else:
+        chr2_pos = ""
 
     if mean_prob is not None:
         info_extras += [f"MeanPROB={round(mean_prob, 3)}", f"MaxPROB={round(max_prob, 3)}"]
@@ -337,7 +337,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
            ";".join([f"SVMETHOD=DYSGUv{version}",
                    f"SVTYPE={r['svtype']}",
                    f"END={r['posB']}" if r['chrA'] == r['chrB'] else f"END={r['posA'] + 1}",
-                   f"CHR2={r['chrB']}",
+                   f"CHR2={r['chrB']}" + chr2_pos,
                    f"GRP={r['grp_id']}",
                    f"NGRP={r['n_in_grp']}",
                    f"CT={r['join_type']}",
@@ -433,6 +433,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=CHR2_POS,Number=1,Type=Integer,Description="Chromosome position for END coordinate in case of a translocation">
 ##INFO=<ID=GRP,Number=1,Type=Integer,Description="Group id for complex SVs">
 ##INFO=<ID=NGRP,Number=1,Type=Integer,Description="Number of SVs in group">
 ##INFO=<ID=RT,Number=1,Type=String,Description="Type of input reads, 1=paired-end, 2=pacbio, 3=nanopore">
@@ -527,6 +528,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
 ##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
 ##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
+##INFO=<ID=CHR2_POS,Number=1,Type=Integer,Description="Chromosome position for END coordinate in case of a translocation">
 ##INFO=<ID=GRP,Number=1,Type=Integer,Description="Group id for complex SVs">
 ##INFO=<ID=NGRP,Number=1,Type=Integer,Description="Number of SVs in group">
 ##INFO=<ID=RT,Number=1,Type=String,Description="Type of input reads, 1=paired-end, 2=pacbio, 3=nanopore">

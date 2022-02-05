@@ -960,7 +960,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
     # Determines where the break point on the alignment is before adding to the graph
     cdef int other_node, clip_left, clip_right
-    cdef int current_overlaps_roi, next_overlaps_roi
+    cdef bint current_overlaps_roi, next_overlaps_roi
     cdef bint add_primark_link, add_insertion_link
     cdef int chrom = r.rname
     cdef int chrom2 = r.rnext
@@ -1013,7 +1013,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
                 event = all_aligns[index]
                 if len(all_aligns) == 1:
-                    return  # should'nt happen
+                    return
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
@@ -1035,9 +1035,10 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 # Probably too many reads in ROI to reliably separate out break end reads
                 return
             if good_clip and cigar_clip(r, clip_l):
-                read_enum = BREAKEND
                 chrom2 = 10000000
                 pos2 = event_pos
+            else:
+                return
 
         if read_enum == DELETION or read_enum == INSERTION:  # DELETION or INSERTION within read
             chrom2 = chrom
@@ -1079,9 +1080,6 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                            current_overlaps_roi, next_overlaps_roi,
                                            mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
-
-                # if r.qname == "m66002/15000/CCS":
-                #     echo("EVENT POS", event_pos, pos2, all_aligns, index)
 
         elif read_enum >= 2:  # Sv within read
             chrom2 = r.rname
@@ -1246,7 +1244,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None, bint trust_ins_len=True):
+                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir="."):
 
     t0 = time.time()
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
@@ -1264,7 +1262,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end)
 
-    bad_clip_counter = BadClipCounter(infile.header.nreferences)
+    bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
 
     G = map_set_utils.Py_SimpleGraph()
 
@@ -1435,9 +1433,9 @@ cpdef dict get_reads(infile, sub_graph_reads):
     return rd
 
 
-cdef set BFS_local(G, int source, unordered_set[int]& visited ):
+cdef BFS_local(G, int source, unordered_set[int]& visited ):
     # Create a queue for BFS
-    queue = array.array("L", [source])
+    cdef array.array queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
     while queue:
@@ -1451,11 +1449,10 @@ cdef set BFS_local(G, int source, unordered_set[int]& visited ):
                         nodes_found.add(v)
                         queue.append(v)
         visited.insert(u)
+    return array.array("L", nodes_found)
 
-    return nodes_found
 
-
-cdef dict get_partitions(G, nodes):
+cdef get_partitions(G, nodes):
 
     cdef unordered_set[int] seen
     cdef int u, v, i
@@ -1470,11 +1467,11 @@ cdef dict get_partitions(G, nodes):
 
             if G.weight(u, v) > 1:  # weight is 2 or 3, for normal or black edges
                 found = BFS_local(G, u, seen)
-                if found:
-                    parts.append(array.array("L", found))
+                if len(found):
+                    parts.append(found)
 
         seen.insert(u)
-    return {i: p for i, p in enumerate(parts)}
+    return parts
 
 
 cdef tuple count_support_between(G, parts, int min_support):
@@ -1485,11 +1482,13 @@ cdef tuple count_support_between(G, parts, int min_support):
     if len(parts) == 0:
         return {}, {}
     elif len(parts) == 1:
-        return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
+        return {}, {0: parts[0]}
+        # return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
 
     # Make a table to count from, int-int
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
-    for i, p in parts.items():
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
         for node in p:
             p2i.insert(node, i)
 
@@ -1500,8 +1499,8 @@ cdef tuple count_support_between(G, parts, int min_support):
     self_counts = {}
 
     seen_t = set([])
-    for i, p in parts.items():
-
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
         current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
@@ -1546,10 +1545,81 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         # save memory by converting support_between to 2d array
         for t in current_t:
-            # counts[t] = [array.array("L", m) for m in counts[t]]
             counts[t] = [np.fromiter(m, dtype="uint32", count=len(m)) for m in counts[t]]
 
     return counts, self_counts
+
+
+cpdef break_large_component(G, component, int min_support):
+
+    parts = get_partitions(G, component)  # list of arrays
+
+    # similar to count_support_between except only counts are returned without the node labels partitioned
+    cdef int i, j, node, child
+    cdef tuple t
+
+    if len(parts) == 0:
+        return {}, {}
+    elif len(parts) == 1:
+        return {}, {0: parts[0]}
+
+    # Make a table to count from, int-int
+    cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
+        for node in p:
+            p2i.insert(node, i)
+
+    # Count the links between partitions. Split reads into sets ready for calling
+    # No counting of read-pairs templates or 'support', just a count of linking alignments
+    # counts (part_a, part_b): number-of-links
+    counts = defaultdict(int)
+    self_counts = defaultdict(int)
+
+    seen_t = set([])
+    for i, p in enumerate(parts):
+    # for i, p in parts.items():
+        current_t = set([])
+        for node in p:
+            any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
+
+            for child in G.neighbors(node):
+
+                if not p2i.has_key(child):
+                    continue  # Exterior child, not in any partition
+
+                # Partition of neighbor node
+                j = p2i.get(child)
+                if j != i:
+                    if j < i:
+                        t = (j, i)
+                    else:
+                        t = (i, j)
+
+                    if t in seen_t:
+                        continue
+
+                    counts[t] += 1
+                    current_t.add(t)
+                else:
+                    self_counts[i] += 1
+
+        seen_t.update(current_t)  # Only count edge once
+
+    f = set([])
+    jobs = []
+    for (u, v), sup in counts.items():
+        if sup >= min_support:
+            f.add(u)
+            f.add(v)
+            b = parts[u]
+            b.extend(parts[v])
+            jobs.append(b)
+
+    for k, v in self_counts.items():
+        if v >= min_support and k not in f:
+            jobs.append(parts[k])
+    return jobs
 
 
 cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_support, int procs, int paired_end,
@@ -1591,13 +1661,15 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
+    # partitions = {i: p for i, p in enumerate(partitions)}
+
     support_between, support_within = count_support_between(G, partitions, min_support)
     # echo("support between", len(support_between), len(support_within), info, partitions, len(n2n), info)
     if len(support_between) == 0 and len(support_within) == 0:
         if not paired_end:
 
             if len(n2n) >= min_support or len(reads) >= min_support or info:
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d
@@ -1607,13 +1679,13 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d
 
             elif len(reads) >= min_support or info:
-                d = {"parts": {}, "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
+                d = {"parts": [], "s_between": {}, "reads": reads, "s_within": {}, "n2n": n2n}
                 if info:
                     d["info"] = info
                 return d

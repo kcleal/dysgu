@@ -41,7 +41,7 @@ def has_flag(compiler, flagname):
 
 
 def cpp_flag(compiler, flags):
-    """Return the -std=c++[11/14/17] compiler flag.
+    """Return the -std=c++[11/14/17,20] compiler flag.
     The newer version is prefered over c++11 (when it is available).
     """
     for flag in flags:
@@ -52,12 +52,12 @@ def cpp_flag(compiler, flags):
 def get_extra_args():
     compiler = ccompiler.new_compiler()
     extra_compile_args = []
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
+    flags = ['-std=c++20', '-std=c++17', '-std=c++14', '-std=c++11']
     f = cpp_flag(compiler, flags)
     if not f:
         return ['-std=c++11']  # raise RuntimeError("Invalid compiler")
     extra_compile_args.append(f)
-    flags = ['--stdlib=libc++']
+    flags = ['-stdlib=libc++']
     f = cpp_flag(compiler, flags)
     if f:
         extra_compile_args.append(f)
@@ -67,7 +67,7 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
-                             "-Wno-deprecated-declarations"
+                             "-Wno-deprecated-declarations", '-Wno-volatile'
                              ]
 
 ext_modules = list()
@@ -132,7 +132,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.3.4',
+    version='1.3.5',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',

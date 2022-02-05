@@ -15,9 +15,10 @@ import sys
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
-from dysgu.map_set_utils import timeit, echo
+from dysgu.map_set_utils import to_dict, timeit, echo
 from dysgu import sites_utils
 import pickle
+import gc
 
 import itertools
 import multiprocessing
@@ -166,8 +167,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         fail = False
         if ei.svtype != ej.svtype:
-            fail = True
-        if fail:
             continue
 
         # Check if events point to the same loci
@@ -218,6 +217,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if same_sample and not loci_same and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0:
             continue
 
+        if ei.svtype == 'TRA':
+            echo(ei.posA, ei.posB, ej.posA, ej.posB)
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
@@ -228,14 +229,18 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         m = False
         ml = max(ei.svlen, ej.svlen)
-        if ml == 0:
+        if ml == 0 and ei.svtype != 'TRA':
             continue
-        l_ratio = min(ei.svlen, ej.svlen) / ml
 
-        # if ei["posA"] == 829172 or ej["posA"] == 829172:
-        #     echo(ei)
-        #     echo(ej)
-        #     echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
+        if ei.svtype == 'TRA':
+            l_ratio = 1  # not applicable for translocations
+        else:
+            l_ratio = min(ei.svlen, ej.svlen) / ml
+
+        # if ei["posA"] == 172626210:
+            # echo(ei)
+            # echo(ej)
+            # echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -265,7 +270,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
-
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
 
@@ -742,10 +746,13 @@ def process_job(msg_queue, args):
 
 def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
+    procs = args['procs']
+    low_mem = args['low_mem']
+    tdir = args["working_directory"]
+
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
-    temp_dir = args["working_directory"]
 
     if args["max_cov"] == "auto":
         if args["ibam"] is not None:
@@ -759,11 +766,11 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     if not args["ibam"]:
         # Make a new coverage track if one hasn't been created yet
-        cov_track_path = temp_dir
+        cov_track_path = tdir
     else:
         cov_track_path = None
 
-    genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], args["procs"],
+    genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], procs,
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
                                             clip_length=args["clip_length"],
@@ -841,7 +848,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             spd_thresh=args["spd"],
                                             mm_only=args["regions_mm_only"] == "True",
                                             sites=sites_info,
-                                            trust_ins_len=args["trust_ins_len"] == "True")
+                                            trust_ins_len=args["trust_ins_len"] == "True",
+                                            low_mem=low_mem,
+                                            temp_dir=tdir)
 
     sites_index = None
     if sites_adder:
@@ -849,8 +858,19 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     logging.info("Graph constructed")
 
-    t0 = time.time()
-    cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
+    # Flat vector, components are separated by -1
+
+    component_path = f"{tdir}/components.bin"
+    cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
+    cdef vector[int] cmp = G.connectedComponents(cmp_file, low_mem)
+
+    cdef int length_components = cmp.size()
+
+    if low_mem:
+        cmp_mmap = np.memmap(component_path, dtype=np.int32, mode='r')
+        length_components = len(cmp_mmap)
+
+    #cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
 
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
@@ -868,26 +888,24 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         diffs = 0.15
 
     write_index = None
-
-    tdir = args["working_directory"]
     minhq = None
 
     consumers = []
-    msg_queues = None
+    msg_queues = []
 
-    if args["procs"] > 1:
+    if procs > 1:
 
         # Tried using a joinable queue, but it turned out to be very slow and buggy;
 
-        write_index = itertools.cycle(range(args["procs"]))
+        write_index = itertools.cycle(range(procs))
 
         # use load balancing, but doesnt make much difference
-        minhq = [(0, i) for i in range(args["procs"])]
+        minhq = [(0, i) for i in range(procs)]
         # [(conn1, conn2)...]
         # using multiple pipes seemed to be a bit quicker than one queue
-        msg_queues = [multiprocessing.Pipe(duplex=False) for _ in range(args["procs"])]
+        msg_queues = [multiprocessing.Pipe(duplex=False) for _ in range(procs)]
 
-        for n in range(args["procs"]):
+        for n in range(procs):
 
             job_path = f"{tdir}/job_{n}.pkl"
 
@@ -902,68 +920,141 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
             consumers.append(p)
 
+
     num_jobs = 0
     completed = 0
     components_seen = 0
+
+    if procs == 1 and low_mem:
+        completed_file = open(f"{tdir}/job_0.done.pkl", "wb")
+    else:
+        completed_file = None  # handled within worker function
+
     cdef int last_i = 0
-    cdef int ci, cmp_idx
+    cdef int ci, cmp_idx, item_index
     # cmp is a flat array of indexes. item == -1 signifies end of component
-    for item_idx, item in enumerate(cmp):
+
+    # for item_idx, item in enumerate(cmp):
+    for item_idx in range(length_components):
+
+        if low_mem:
+            item = cmp_mmap[item_idx]
+        else:
+            item = cmp[item_idx]
+
         if item == -1:
             components_seen += 1
             start_i = last_i
             end_i = item_idx
             last_i = item_idx + 1
-            # if end_i - start_i > longest:
-            #     longest = end_i - start_i
 
-            # todo dont copy this. use memory view slice? sending vector[int]& seems to result in copying (really slow)
             component = np.zeros(end_i - start_i)
             ci = 0
             for cmp_idx in range(start_i, end_i):
-                component[ci] = cmp[cmp_idx]
+
+                if low_mem:
+                    component[ci] = cmp_mmap[cmp_idx]
+                else:
+                    component[ci] = cmp[cmp_idx]
                 ci += 1
 
-            res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
-                                       args["procs"], paired_end, sites_index)
+            if len(component) > 100_000:
 
-            if res:
+                reduced = graph.break_large_component(G, component, min_support)
 
-                event_id += 1
-                # Res is a dict
-                # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
-                if args["procs"] == 1:
+                for cmp in reduced:
 
-                    potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
-                                                               insert_median,
-                                                               insert_stdev,
-                                                               insert_ppf,
-                                                               min_support,
-                                                               lower_bound_support,
-                                                               merge_dist,
-                                                               regions_only,
-                                                               extended_tags,
-                                                               assemble_contigs,
-                                                               rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
-                                                               max_single_size=max_single_size,
-                                                               sites_index=sites_index)
+                    res = graph.proc_component(node_to_name, cmp, read_buffer, infile, G, lower_bound_support,
+                                               procs, paired_end, sites_index)
+                    if not res:
+                        continue
 
-                    if potential_events:
-                        block_edge_events += potential_events
+                    event_id += 1
+                    if procs == 1:
 
-                else:
+                        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                                                                   insert_median,
+                                                                   insert_stdev,
+                                                                   insert_ppf,
+                                                                   min_support,
+                                                                   lower_bound_support,
+                                                                   merge_dist,
+                                                                   regions_only,
+                                                                   extended_tags,
+                                                                   assemble_contigs,
+                                                                   rel_diffs=rel_diffs, diffs=diffs,
+                                                                   min_size=min_size,
+                                                                   max_single_size=max_single_size,
+                                                                   sites_index=sites_index)
 
-                    j_submitted, w_idx = heapq.heappop(minhq)
-                    heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
-                    msg_queues[w_idx][1].send(res)
+                        if potential_events:
 
+                            if not low_mem:
+                                block_edge_events += potential_events
+                            else:
+                                for res in potential_events:
+                                    pickle.dump(res, completed_file)
+
+
+
+                    else:
+
+                        j_submitted, w_idx = heapq.heappop(minhq)
+                        heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
+                        msg_queues[w_idx][1].send(res)
+
+
+            else:
+                # most partitions processed here:
+                # dict returned, or None
+                res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
+                                           procs, paired_end, sites_index)
+
+                if res:
+
+                    event_id += 1
+                    # Res is a dict
+                    # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+                    if procs == 1:
+
+                        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                                                                   insert_median,
+                                                                   insert_stdev,
+                                                                   insert_ppf,
+                                                                   min_support,
+                                                                   lower_bound_support,
+                                                                   merge_dist,
+                                                                   regions_only,
+                                                                   extended_tags,
+                                                                   assemble_contigs,
+                                                                   rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
+                                                                   max_single_size=max_single_size,
+                                                                   sites_index=sites_index)
+
+                        if potential_events:
+                            if not low_mem:
+                                block_edge_events += potential_events
+                            else:
+                                for res in potential_events:
+                                    pickle.dump(res, completed_file)
+                    else:
+
+                        j_submitted, w_idx = heapq.heappop(minhq)
+                        heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
+                        msg_queues[w_idx][1].send(res)
+
+
+    if completed_file is not None:
+        completed_file.close()
 
     del G
     del read_buffer
     cmp.clear()
+    os.remove(component_path)
+    gc.collect()
 
     # #
-    if args["procs"] > 1:
+    if procs > 1 or low_mem:
         for w in msg_queues:
             w[1].send(0)  # kill workers
         for n in consumers:
@@ -973,7 +1064,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         event_id = 0
         last_seen_grp_id = None
         new_grp = None
-        for p in range(args["procs"]):
+        for p in range(procs):
             jf = open(f"{tdir}/job_{p}.done.pkl", "rb")
             while 1:
                 try:
@@ -994,7 +1085,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                 except EOFError:
                     break
             last_grp_id = event_id
-
             os.remove(f"{tdir}/job_{p}.done.pkl")
 
     logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
@@ -1023,9 +1113,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     before = len(merged)
 
     if not args["keep_small"]:
-        # todo decide on this
         merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
-        # merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and event.su >= args["min_support"]]
         logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
     else:
         merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
@@ -1038,7 +1126,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
-    coverage_analyser = post_call_metrics.CoverageAnalyser(temp_dir)
+    coverage_analyser = post_call_metrics.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
 
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
@@ -1055,7 +1143,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
     # This has to be called after the genotype step, raw coverage values are needed
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-
     preliminaries = post_call_metrics.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
@@ -1065,6 +1152,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     if len(preliminaries) == 0:
         logging.critical("No events found")
         quit()
+
+    bad_clip_counter.tidy()
 
     return preliminaries, extended_tags, sites_adder
 
@@ -1153,7 +1242,7 @@ def cluster_reads(args):
     # Run dysgu here:
     events, extended_tags, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome)
 
-    df = pd.DataFrame.from_records([e.to_dict() for e in events])
+    df = pd.DataFrame.from_records([to_dict(e) for e in events])
     if not extended_tags:
         for cl in ("DN", "DP", "DApri", "DAsupp"):
             del df[cl]

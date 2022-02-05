@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include <functional>
 #include <string>
 #include <utility>
@@ -294,7 +295,11 @@ class SimpleGraph {
             adjList[u] = node;
         }
 
-        std::vector<int> connectedComponents() {
+        std::vector<int> connectedComponents(const char* outpath, bool low_mem) {
+
+            std::string outpath_string = outpath;
+
+            std::ofstream outf(outpath);
 
             std::vector<bool> visited(adjList.size(), false);
 
@@ -304,8 +309,11 @@ class SimpleGraph {
 
                 if (visited[u] == false) {
 
-
-                    components.push_back(u);
+                    if (!low_mem) {
+                        components.push_back(u);
+                    } else {
+                        outf.write((char*)&u, sizeof(int32_t));
+                    }
                     visited[u] = true;
 
 
@@ -327,7 +335,14 @@ class SimpleGraph {
                         queue.pop_back();
 
                         if (visited[v] == false) {
-                            components.push_back(v);
+//                            components.push_back(v);
+
+                            if (!low_mem) {
+                                components.push_back(v);
+                            } else {
+                                outf.write((char*)&v, sizeof(int32_t));
+                            }
+
                             visited[v] = true;
 
                             for (const auto& val2: adjList[v]) {
@@ -339,9 +354,18 @@ class SimpleGraph {
                         }
                     }
 
-                    components.push_back(-1);  // -1 is end of component
+                    // -1 is end of component
+                    if (!low_mem) {
+                        components.push_back(-1);
+                    } else {
+                        int v = -1;
+                        outf.write((char*)&v, sizeof(int32_t));
+                    }
+//                    components.push_back(-1);
                 }
             }
+
+            outf.close();
 
             return components;
 
