@@ -8,7 +8,7 @@ dysgu (pronounced *duss-key*) is a set of tools for calling structural variants 
 
 Installation
 ------------
-Dysgu requires Python>=3.7 and has been tested on linux and MacOS.
+Dysgu requires Python >=3.7 <=3.9 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
 
@@ -44,6 +44,12 @@ Available commands::
     dysgu merge   # Merge calls from multiple samples
     dysgu test    # Run basic tests
 
+For help use::
+
+    dysgu --help
+    dysgu command --help
+
+
 Calling SVs
 ~~~~~~~~~~~
 
@@ -59,6 +65,10 @@ This will first run the `fetch` command that will create a temporary bam file pl
 To make use of multiprocessing, set the "-p" parameter::
 
     dysgu run -p4 reference.fa temp_dir input.bam > svs.vcf
+
+Dysgu also accepts reads from stdin. In this example, the --clean flag will remove temp files on completion::
+
+    samtools view -bh samp.bam chr1:0-1000000 | dysgu run --clean reference.fa temp_dir - > svs.vcf
 
 Long reads
 **********
@@ -102,11 +112,6 @@ a single round of merging for each input file before merging across input files.
 problem of duplication::
 
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
-
-For help use::
-
-    dysgu --help
-    dysgu command --help
 
 
 Models available
@@ -222,21 +227,17 @@ uses < 6 GB memory. Also note that when `fetch` is utilized (or using run comman
 
 Issues
 ------
-Currently cram files are only supported when using the "run" command. This is because pysam cannot use seek on
-a cram file.
+- Currently cram files are only supported when using the "run" command. This is because pysam cannot use seek on a cram file.
 
-If the temp file created during the fetch stage of the pipeline is too big, the --compression level can be
-set to reduce space.
+- If the temp file created during the fetch stage of the pipeline is too big, the --compression level can be set to reduce space.
 
-If dysgu is taking a long time to run, this could be due to the complexity of the sample.
-Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome.
-In this case consider increasing the `clip-length` or setting `--contigs False`, or `--remap False`.
-Alternatively you might need to check your sample for anomalous sequences and adapter content.
+- If dysgu is taking a long time to run, this could be due to the complexity of the sample. Dysgu will try and generate contigs from clusters of soft-clipped reads and remap these to the reference genome. In this case consider increasing the `clip-length` or setting `--contigs False`, or `--remap False`. Alternatively you might need to check your sample for anomalous sequences and adapter content.
 
-If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and
-provide manually using the `-I` option otherwise.
+- If dysgu is consuming a large amount of memory, you can try the --low-mem flag.
 
-If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
+- If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and provide manually using the `-I` option otherwise.
+
+- If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
 
 
 Citation
