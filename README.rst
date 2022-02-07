@@ -12,7 +12,7 @@ Dysgu requires Python >=3.7 <=3.9 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
 
-    pip install dysgu
+    pip install numpy dysgu
 
 To build from source, a >=c++11 compiler is needed. For convenience use the install script::
 
