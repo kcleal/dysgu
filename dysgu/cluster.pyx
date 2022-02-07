@@ -196,7 +196,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
 
 
-
         ci = ei.contig
         ci2 = ei.contig2
         ci_alt = ei.variant_seq
@@ -217,8 +216,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if same_sample and not loci_same and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0:
             continue
 
-        if ei.svtype == 'TRA':
-            echo(ei.posA, ei.posB, ej.posA, ej.posB)
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
@@ -236,11 +233,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             l_ratio = 1  # not applicable for translocations
         else:
             l_ratio = min(ei.svlen, ej.svlen) / ml
-
-        # if ei["posA"] == 172626210:
-            # echo(ei)
-            # echo(ej)
-            # echo(loci_similar, loci_same, paired_end, any_contigs_to_check, recpi_overlap, spd, l_ratio, ci_alt, cj_alt)
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
