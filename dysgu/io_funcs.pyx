@@ -14,6 +14,7 @@ import pandas as pd
 import os
 import pysam
 
+from interval_tree import Py_SimpleIntervalTree
 
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
@@ -67,16 +68,39 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
     regions = get_bed_regions(bed)
     chrom_interval_start = defaultdict(list)
     chrom_interval_end = defaultdict(list)
+
+    r2 = {}
     for c, s, e in regions:
         if int_chroms:
             c = infile.gettid(c)
         chrom_interval_start[c].append(int(s))
         chrom_interval_end[c].append(int(e))
 
+        if c not in r2:
+            r2[c] = Py_SimpleIntervalTree()
+        r2[c].insert(int(s), int(e))
+
     regions = {k: ncls.NCLS(np.array(chrom_interval_start[k]),
                             np.array(chrom_interval_end[k]),
                             np.array(chrom_interval_start[k])) for k in chrom_interval_start}
 
+    echo('1', r2['chr1'].count_pos_overlaps(934001))
+    cn = 0
+    import time
+    t0 = time.time()
+    for i in range(0, 1934010):
+        cn += r2['chr1'].count_pos_overlaps(i)
+    echo(time.time() - t0)
+
+    echo('2', cn)
+
+    cn2 = 0
+    t0 = time.time()
+    for i in range(0, 10_000_000):
+        cn2 += int(len(list(regions['chr1'].find_overlap(i, i + 1))) > 0)
+    echo(time.time() - t0)
+    echo(cn2)
+    quit()
     return regions
 
 

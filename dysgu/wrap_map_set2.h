@@ -12,6 +12,7 @@
 //#include "robin_set.h"
 //#include "robin_hash.h"
 #include "robin_hood.h"
+#include "IntervalTree.h"
 
 typedef std::pair<int, uint8_t> PairW;  // v, weight
 typedef std::pair<int, int> PairW2;  // v, weight
