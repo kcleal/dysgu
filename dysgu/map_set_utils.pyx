@@ -37,6 +37,77 @@ def timeit(method):
     return timed
 
 
+def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
+    """
+    >>> merge_intervals( [('chr1', 1, 4), ('chr1', 2, 5), ('chr2', 3, 5)] )
+    >>> [['chr1', 1, 5], ['chr2', 3, 5]]
+    """
+    if srt:
+        sorted_by_lower_bound = sorted(intervals, key=lambda tup: (tup[0], tup[1]))  # by chrom, start, end (index)
+    else:
+        sorted_by_lower_bound = intervals
+
+    if pad:
+        if not add_indexes:
+            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad] for c, i, j in sorted_by_lower_bound]
+        else:
+            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad, k] for c, i, j, k in sorted_by_lower_bound]
+
+    merged = []
+    for higher in sorted_by_lower_bound:
+        if not merged:
+            if not add_indexes:
+                merged.append(higher)
+            else:
+                merged.append(list(higher)[:3] + [[higher[3]]])
+            continue
+        elif higher[0] != merged[-1][0]:  # Dont merge intervals on different chroms
+            if not add_indexes:
+                merged.append(higher)
+            else:
+                merged.append(list(higher)[:3] + [[higher[3]]])
+        else:
+            lower = merged[-1]  # Last item on merged (end of interval)
+            # test for intersection between lower and higher:
+            # we know via sorting that lower[0] <= higher[0]
+            if higher[1] <= lower[2]:
+                if not add_indexes:
+                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]))
+                else:
+                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]), lower[3] + [higher[3]])
+            else:
+                if not add_indexes:
+                    merged.append(higher)
+                else:
+                    merged.append(list(higher)[:3] + [[higher[3]]])
+    return merged
+
+
+cdef class Py_BasicIntervalTree:
+    def __cinit__(self):
+        self.thisptr = new BasicIntervalTree()
+    def __dealloc__(self):
+        del self.thisptr
+    cpdef void add(self, int start, int end, int index):
+        self.thisptr.add(start, end, index)
+    cpdef bint searchInterval(self, int pos, int pos2):
+        return self.thisptr.searchInterval(pos, pos2)
+    cpdef overlappingInterval(self, int pos, int pos2):
+        cdef Interval* res = self.thisptr.overlappingInterval(pos, pos2)
+        if res[0] is None:  # [0] dereferences pointer
+            return None
+        else:
+            return res[0].low, res[0].high
+    cpdef void index(self):
+        self.thisptr.index()
+    cpdef allOverlappingIntervals(self, int start, int end):
+        cdef cpp_vector[int] res
+        self.thisptr.allOverlappingIntervals(start, end, res)
+        return list(res)
+    cpdef int countOverlappingIntervals(self, int pos, int pos2):
+        return self.thisptr.countOverlappingIntervals(pos, pos2)
+
+
 cdef class Py_DiGraph:
     """DiGraph, weighted"""
     def __cinit__(self):

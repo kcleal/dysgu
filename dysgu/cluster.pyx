@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 import datetime
 import os
-import time
 import heapq
 import logging
 import numpy as np
@@ -15,8 +14,9 @@ import sys
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
-from dysgu.map_set_utils import to_dict, timeit, echo
+from dysgu.map_set_utils import to_dict, merge_intervals, echo, timeit
 from dysgu import sites_utils
+from dysgu.io_funcs import intersecter
 import pickle
 import gc
 
@@ -25,6 +25,7 @@ import multiprocessing
 from scipy import stats
 from libcpp.vector cimport vector
 
+import time
 
 ctypedef EventResult EventResult_t
 
@@ -43,8 +44,8 @@ def filter_potential(input_events, tree, regions_only):
             continue
 
         # Remove events for which both ends are in --regions but no contig was found
-        posA_intersects = io_funcs.intersecter_str_chrom(tree, i.chrA, i.posA, i.posA + 1)
-        posB_intersects = io_funcs.intersecter_str_chrom(tree, i.chrB, i.posB, i.posB + 1)
+        posA_intersects = intersecter(tree, i.chrA, i.posA, i.posA + 1)
+        posB_intersects = intersecter(tree, i.chrB, i.posB, i.posB + 1)
 
         # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
@@ -54,32 +55,29 @@ def filter_potential(input_events, tree, regions_only):
     return potential
 
 
-def compare_subset(potential, max_dist):
-
-    interval_table = defaultdict(lambda: graph.Table())
-
-    # Make a nested containment list for interval intersection
+def compare_subset(potential, int max_dist):
+    tmp_list = defaultdict(list)
+    cdef int idx, jdx, dist1, ci_a
     for idx in range(len(potential)):
         ei = potential[idx]
-        interval_table[ei.chrA].add(ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx)
+        tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
+
         # Add another interval for large events, or translocations
         if ei.chrA != ei.chrB or abs(ei.posB - ei.posA) > 5:
             if ei.chrA != ei.chrB:
-                interval_table[ei.chrB].add(ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx)
+                tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
             else:
                 dist1 = abs(ei.posB - ei.posA)
                 ci_a = max(ei.cipos95A, ei.cipos95A)
                 if dist1 + ci_a > max_dist:
-                    interval_table[ei.chrB].add(ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx)
+                    tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
 
-    nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
+    nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
 
     for idx in range(len(potential)):
         ei = potential[idx]
-        # Overlap right hand side
-        ols = list(nc[ei.chrB].find_overlap(ei.posB, ei.posB + 1))
-        for target in ols:
-            jdx = target[2]
+        ols = nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1)
+        for jdx in ols:
             ej = potential[jdx]
             yield ei, ej, idx, jdx
 
@@ -101,8 +99,11 @@ cdef span_similarity(EventResult_t ei, EventResult_t ej):
     return False
 
 
-cdef break_distances(i_a, i_b, j_a, j_b, i_a_precise, i_b_precise, j_a_precise, j_b_precise, intra=True):
+cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_precise, bint j_a_precise,
+                     bint j_b_precise, bint intra=True):
 
+    cdef int temp, dist_a, dist_b, precise_thresh, mprecise_thresh, same_thresh
+    cdef bint dist_a_same, dist_a_close, dist_b_same, dist_b_close
     if intra:
         if i_b < i_a:
             temp = i_a
@@ -146,7 +147,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
     else:
-        event_iter = compare_subset(potential, max_dist)  # Use NCLS, generate overlap tree and perform intersections
+        event_iter = compare_subset(potential, max_dist)  # Use iitree, generate overlap tree and perform intersections
 
     seen = set([])
     pad = 100
@@ -155,7 +156,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         i_id = ei.event_id
         j_id = ej.event_id
-
         if not same_sample:
             if ei.sample == ej.sample:
                 continue
@@ -170,8 +170,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
 
         # Check if events point to the same loci
-        both_in_include = io_funcs.intersecter_str_chrom(tree, ei.chrA, ei.posA, ei.posA + 1) and \
-                      io_funcs.intersecter_str_chrom(tree, ei.chrB, ei.posB, ei.posB + 1)
+        both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and \
+                          intersecter(tree, ei.chrB, ei.posB, ei.posB + 1)
+
         loci_similar = False
         loci_same = False
         intra = ei.chrA == ei.chrB == ej.chrA == ej.chrB
@@ -194,7 +195,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         if paired_end and ei.su == ej.su == 1 and not ej.preciseA and not ej.preciseB:
             continue
-
 
         ci = ei.contig
         ci2 = ei.contig2
@@ -253,12 +253,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 elif ei.remap_score == 0 or ej.remap_score == 0:  # merge if one break was not remapped
                     m = True
 
-        elif ei.svtype != "INS" and (recpi_overlap or spd) and not both_in_include:
+        elif ei.svtype != "INS" and (recpi_overlap or spd or (loci_similar and any_contigs_to_check)) and not both_in_include:
             m = True
 
         if not m:
             continue
-
+        # if ei.posA == 66323 and ej.posA == 66323:
+        #     echo("HII", ml, l_ratio, one_is_imprecise, any_contigs_to_check, ei.remap_score, ej.remap_score)
+        #     quit()
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
@@ -270,12 +272,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             elif ci and cj2: v = ci, cj2
             elif ci2 and cj2: v = ci2, cj2
             elif ci2 and cj: v = ci2, cj
-
-            # elif ci and cj_alt: v = ci, cj_alt
-            # elif ci2 and cj_alt: v = ci2, cj_alt
-            # elif ci_alt and cj: v = ci_alt, cj
-            # elif ci_alt and cj2: v = ci_alt, cj2
-
             elif ci_alt and cj_alt: v = ci_alt, cj_alt
 
             else: continue
@@ -472,7 +468,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
 def sample_level_density(potential, regions, max_dist=50):
 
-    interval_table = defaultdict(lambda: graph.Table())
+    tmp_list = defaultdict(list)
 
     # Make a nested containment list for faster lookups
     cdef EventResult_t ei
@@ -480,41 +476,44 @@ def sample_level_density(potential, regions, max_dist=50):
         ei = potential[idx]
 
         # Only find density for non-region calls, otherwise too dense to be meaningful
-        if not io_funcs.intersecter_str_chrom(regions, ei.chrA, ei.posA, ei.posA + 1):
-            interval_table[ei.chrA].add(ei.posA - max_dist, ei.posA + max_dist, idx)
+        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+            tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
 
-        if not io_funcs.intersecter_str_chrom(regions, ei.chrB, ei.posB, ei.posB + 1):
-            interval_table[ei.chrB].add(ei.posB - max_dist, ei.posB + max_dist, idx)
+        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+            tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
 
-    nc = {rnext: val.containment_list() for rnext, val in interval_table.items()}
+    nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
+
+    cdef int vv
 
     for idx in range(len(potential)):
         ei = potential[idx]
 
-        # Overlap right hand side # list(tree[chrom].find_overlap(start, end))
+        # Overlap right hand side
         neighbors = 0.
         count = 0.
         if ei.chrA == ei.chrB and abs(ei.posB - ei.posA) < 2:
             expected = 2
         else:
             expected = 1
-        if not io_funcs.intersecter_str_chrom(regions, ei.chrA, ei.posA, ei.posA + 1):
-            neighbors += len(list(nc[ei.chrA].find_overlap(ei.posA, ei.posA + 1))) - expected
+        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+            vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
+            neighbors += vv - expected
             count += 1
 
-        if not io_funcs.intersecter_str_chrom(regions, ei.chrB, ei.posB, ei.posB + 1):
-            neighbors += len(list(nc[ei.chrB].find_overlap(ei.posB, ei.posB + 1))) - expected
+        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+            vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
+            neighbors += vv - expected
             count += 1
 
         # Merge overlapping intervals
         neighbors_10kb = 0.
         count_10kb = 0
-        large_itv = coverage.merge_intervals(((ei.chrA, ei.posA, ei.posA + 1),
-                                              (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
-
+        large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
         for c, s, e in large_itv:
-            if not io_funcs.intersecter_str_chrom(regions, c, s, e):
-                neighbors_10kb += len(list(nc[c].find_overlap(s, e))) - len(large_itv)
+            if not intersecter(regions, c, s, e):
+                vv = nc2[c].countOverlappingIntervals(s, e)
+                neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1
 
         if neighbors < 0:
@@ -818,7 +817,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
                                         default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
 
-    t5 = time.time()
     G, node_to_name, bad_clip_counter, sites_adder = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
@@ -1122,6 +1120,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     preliminaries = coverage_analyser.process_events(merged)
 
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
+
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
 
@@ -1268,6 +1267,7 @@ def cluster_reads(args):
                 contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
             args["add_kind"] = "True"
             args["sample_name"] = sample_name
+
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
                             extended_tags=extended_tags)
 

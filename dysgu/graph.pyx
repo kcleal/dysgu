@@ -31,11 +31,10 @@ from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq
 
 from dysgu cimport map_set_utils
-from dysgu import io_funcs
+from dysgu.io_funcs import intersecter
 from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance, position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
-from dysgu.map_set_utils import echo
 from dysgu.post_call_metrics import BadClipCounter
 
 from dysgu.map_set_utils import echo  # for debugging
@@ -394,7 +393,7 @@ cdef class PairedEndScoper:
         else:
             forward_scope = &self.chrom_scope[chrom2]
 
-        cdef cpp_map[int, LocalVal].iterator itr
+        cdef cpp_map[int, LocalVal].iterator local_it  #itr
         cdef cpp_pair[int, LocalVal] vitem
 
         cdef float max_span, span_distance
@@ -991,10 +990,10 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         chrom2 = rnext
         pos2 = pnext
 
-        current_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, r.rname, event_pos, event_pos+1)
+        current_overlaps_roi = intersecter(overlap_regions, r.rname, event_pos, event_pos+1)
         next_overlaps_roi = False
         if current_overlaps_roi:  # check if both sides of SV are in overlaps regions
-            next_overlaps_roi = io_funcs.intersecter_int_chrom(overlap_regions, chrom2, pos2, pnext+1)
+            next_overlaps_roi = intersecter(overlap_regions, chrom2, pos2, pnext+1)
 
         # Special treatment of supplementary and local reads; need to decide where the partner is
         # Either use the rnext:pnext or a site(s) listed in the SA tag: The rnext:pext can often be at the

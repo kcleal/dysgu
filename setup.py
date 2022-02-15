@@ -52,10 +52,10 @@ def cpp_flag(compiler, flags):
 def get_extra_args():
     compiler = ccompiler.new_compiler()
     extra_compile_args = []
-    flags = ['-std=c++20', '-std=c++17', '-std=c++14', '-std=c++11']
+    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
     f = cpp_flag(compiler, flags)
     if not f:
-        return ['-std=c++11']  # raise RuntimeError("Invalid compiler")
+        return ['-std=c++11']
     extra_compile_args.append(f)
     flags = ['-stdlib=libc++']
     f = cpp_flag(compiler, flags)
@@ -110,7 +110,7 @@ print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "post_call_metrics", "sv_category", "interval_tree"]:
+             "map_set_utils", "cluster", "post_call_metrics", "sv_category"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -136,34 +136,32 @@ setup(
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',
-            'click',
+            'click>=8.0',
             'numpy>=1.16.5',
             'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',
-            'scikit-learn',
-            'ncls',
+            'scikit-learn>=0.22',
             'scikit-bio',
             'sortedcontainers',
             'lightgbm',
             'edlib',
-
         ],
     setup_requires=[
             'cython',
-            'click',
+            'click>=8.0',
             'numpy>=1.16.5',
             'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',
-            'scikit-learn',
-            'ncls',
+            'scikit-learn>=0.22',
             'scikit-bio',
             'sortedcontainers',
             'lightgbm',
-            'edlib'],  # setup.py requires at compile time
+            'edlib'
+        ],  # setup.py requires at compile time
     packages=["dysgu", "dysgu.tests"],
     ext_modules=cythonize(ext_modules),
 

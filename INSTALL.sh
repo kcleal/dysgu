@@ -30,7 +30,6 @@ if [[ $htslib_folder == "./dysgu/htslib" ]]
 then
   echo "Building htslib"
   cd ./dysgu/htslib
-  ls
   autoreconf -i
   ./configure
 #  autoheader

@@ -79,6 +79,34 @@ cdef extern from "find_reads.h" nogil:
         void set_max_cov(int)
 
 
+cdef extern from "wrap_map_set2.h":
+    ctypedef struct Interval:
+        int low
+        int high
+
+
+cdef extern from "wrap_map_set2.h":
+    cdef cppclass BasicIntervalTree:
+        BasicIntervalTree()
+        void add(int, int, int)
+        bint searchInterval(int, int)
+        Interval* overlappingInterval(int, int)
+        void index()
+        void allOverlappingIntervals(int, int, cpp_vector[int])
+        int countOverlappingIntervals(int, int)
+
+
+cdef class Py_BasicIntervalTree:
+    cdef BasicIntervalTree *thisptr
+
+    cpdef void add(self, int start, int end, int index)
+    cpdef bint searchInterval(self, int pos, int pos2)
+    cpdef overlappingInterval(self, int pos, int pos2)
+    cpdef void index(self)
+    cpdef allOverlappingIntervals(self, int pos, int pos2)
+    cpdef int countOverlappingIntervals(self, int pos, int pos2)
+
+
 cdef extern from "wrap_map_set2.h" nogil:
     cdef cppclass DiGraph:
         DiGraph() nogil
@@ -92,6 +120,20 @@ cdef extern from "wrap_map_set2.h" nogil:
         cpp_vector[cpp_pair[int, int]] forInEdgesOf(int) nogil
         cpp_vector[int] neighbors(int) nogil
         float node_path_quality(int, int, int) nogil
+
+
+cdef class Py_DiGraph:
+    """DiGraph, no weight"""
+    cdef DiGraph *thisptr
+
+    cdef int addNode(self)
+    cdef int hasEdge(self, int u, int v)
+    cdef void addEdge(self, int u, int v, int w)
+    cdef void updateEdge(self, int u, int v, int w)
+    cdef int numberOfNodes(self) nogil
+    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
+    cdef cpp_vector[int] neighbors(self, int u) nogil
+    cdef float node_path_quality(self, int u, int v, int w) nogil
 
 
 cdef extern from "wrap_map_set2.h" nogil:
@@ -108,20 +150,6 @@ cdef extern from "wrap_map_set2.h" nogil:
         unordered_set[long].iterator get_iterator()
         unordered_set[long].iterator get_iterator_begin()
         unordered_set[long].iterator get_iterator_end()
-
-
-cdef class Py_DiGraph:
-    """DiGraph, no weight"""
-    cdef DiGraph *thisptr
-
-    cdef int addNode(self)
-    cdef int hasEdge(self, int u, int v)
-    cdef void addEdge(self, int u, int v, int w)
-    cdef void updateEdge(self, int u, int v, int w)
-    cdef int numberOfNodes(self) nogil
-    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
-    cdef cpp_vector[int] neighbors(self, int u) nogil
-    cdef float node_path_quality(self, int u, int v, int w) nogil
 
 
 cdef extern from "wrap_map_set2.h":

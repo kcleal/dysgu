@@ -11,53 +11,8 @@ DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
 from dysgu.map_set_utils cimport CoverageTrack
-from dysgu.map_set_utils import echo
-
-
-def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
-    """
-    >>> merge_intervals( [('chr1', 1, 4), ('chr1', 2, 5), ('chr2', 3, 5)] )
-    >>> [['chr1', 1, 5], ['chr2', 3, 5]]
-    """
-    if srt:
-        sorted_by_lower_bound = sorted(intervals, key=lambda tup: (tup[0], tup[1]))  # by chrom, start, end (index)
-    else:
-        sorted_by_lower_bound = intervals
-
-    if pad:
-        if not add_indexes:
-            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad] for c, i, j in sorted_by_lower_bound]
-        else:
-            sorted_by_lower_bound = [[c, 0 if i - pad < 0 else i - pad, j + pad, k] for c, i, j, k in sorted_by_lower_bound]
-
-    merged = []
-    for higher in sorted_by_lower_bound:
-        if not merged:
-            if not add_indexes:
-                merged.append(higher)
-            else:
-                merged.append(list(higher)[:3] + [[higher[3]]])
-            continue
-        elif higher[0] != merged[-1][0]:  # Dont merge intervals on different chroms
-            if not add_indexes:
-                merged.append(higher)
-            else:
-                merged.append(list(higher)[:3] + [[higher[3]]])
-        else:
-            lower = merged[-1]  # Last item on merged (end of interval)
-            # test for intersection between lower and higher:
-            # we know via sorting that lower[0] <= higher[0]
-            if higher[1] <= lower[2]:
-                if not add_indexes:
-                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]))
-                else:
-                    merged[-1] = (lower[0], lower[1], max(higher[2], lower[2]), lower[3] + [higher[3]])
-            else:
-                if not add_indexes:
-                    merged.append(higher)
-                else:
-                    merged.append(list(higher)[:3] + [[higher[3]]])
-    return merged
+from dysgu.map_set_utils import merge_intervals, echo
+from dysgu.io_funcs import intersecter
 
 
 def index_stats(f, rl=None):
@@ -516,7 +471,7 @@ cdef class GenomeScanner:
 
         in_roi = False
         if self.overlap_regions:
-            in_roi = io_funcs.intersecter_int_chrom(self.overlap_regions, a.rname, apos, apos+1)
+            in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
 
         if rname == self.current_chrom and bin_pos == self.current_pos:
             if current_cov >= self.max_cov and not in_roi:
@@ -607,20 +562,16 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
 
         # Check if side A in regions
         ar = False
-        if io_funcs.intersecterpy(regions, r.chrA, r.posA, r.posA + 1):
+        if intersecter(regions, r.chrA, r.posA, r.posA + 1):
             ar = True
         br = False
-        if io_funcs.intersecterpy(regions, r.chrB, r.posB, r.posB + 1):
+        if intersecter(regions, r.chrB, r.posB, r.posB + 1):
             br = True
 
         kind = "extra-regional"
         if not ar and not br:
             if r.chrA == r.chrB and r.posA > r.posB:  # Put non-region first
                 switch = True
-
-            # Skip if regions have been provided; almost always false positives?
-            # if regions is not None:
-            #     return None
 
         switch = False
         if (br and not ar) or (not br and ar):
@@ -630,9 +581,9 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
 
         if ar and br:
             if r.chrA == r.chrB:
-                rA = list(regions[r.chrA].find_overlap(r.posA, r.posA + 1))[0]
-                rB = list(regions[r.chrB].find_overlap(r.posB, r.posB + 1))[0]
-                if rA[0] == rB[0] and rA[1] == rB[1]:
+                rA = regions[r.chrA].overlappingInterval(r.posA, r.posA + 1)
+                rB = regions[r.chrB].overlappingInterval(r.posB, r.posB + 1)
+                if rA and rB and rA[0] == rB[0] and rA[1] == rB[1]:
                     kind = "intra_regional"
                     # Put posA first
                     if r.posA > r.posB:

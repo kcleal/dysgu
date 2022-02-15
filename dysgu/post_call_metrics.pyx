@@ -12,7 +12,7 @@ from libcpp.vector cimport vector as cpp_vector
 
 from dysgu.map_set_utils import echo, timeit
 from dysgu import re_map
-from dysgu.io_funcs import reverse_complement, intersecter_str_chrom
+from dysgu.io_funcs import reverse_complement, intersecter
 from dysgu.assembler import compute_rep
 
 import zlib
@@ -113,14 +113,15 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
             start = min(int(e.posA), int(e.posB)) - 500
             end = max(int(e.posA), int(e.posB)) + 500
-            if not intersecter_str_chrom(regions, e.chrA, e.posA, e.posA + 1) and \
-                not intersecter_str_chrom(regions, e.chrB, e.posB, e.posB + 1):
+            if not intersecter(regions, e.chrA, e.posA, e.posA + 1) and \
+                not intersecter(regions, e.chrB, e.posB, e.posB + 1):
+
                 count = bad_clip_counter.count_near(bam.gettid(e.chrA), start, end)
         else:
             c1, c2 = 0, 0
-            if not intersecter_str_chrom(regions, e.chrA, e.posA, e.posA + 1):
+            if not intersecter(regions, e.chrA, e.posA, e.posA + 1):
                 c1 = bad_clip_counter.count_near(bam.gettid(e.chrA), e.posA - 500, e.posA + 500)
-            if not intersecter_str_chrom(regions, e.chrB, e.posB, e.posB + 1):
+            if not intersecter(regions, e.chrB, e.posB, e.posB + 1):
                 c2 = bad_clip_counter.count_near(bam.gettid(e.chrB), e.posB - 500, e.posB + 500)
             count = c1 + c2
 
@@ -536,15 +537,17 @@ def strand_binom_t(events):
 
 
 def get_ref_base(events, ref_genome):
+    cdef EventResult_t e
     for e in events:
         if not e.ref_seq:
             if e.posA == 0:
                 e.posA = 1
             try:
-                base = ref_genome.fetch(e.chrA, e.posA, e.posA+1).upper()
+                base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
                 e.ref_seq = base
             except:
                 pass
+
     return events
 
 

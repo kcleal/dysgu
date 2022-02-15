@@ -29,6 +29,10 @@ Or manually::
     pip install -r requirements.txt
     pip install .
 
+Pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
+
+    docker pull kcleal/dysgu
+
 Run tests::
 
     $ dysgu test

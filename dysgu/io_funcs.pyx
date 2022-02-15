@@ -1,27 +1,27 @@
-#!python
 #cython: language_level=2, boundscheck=True, wraparound=True
 #distutils: language=c++
 
 import numpy as np
 cimport numpy as np
 import logging
-from map_set_utils import echo
-from collections import defaultdict, deque, namedtuple
-import ncls
+from map_set_utils import merge_intervals, echo
+from collections import deque, defaultdict
 import pkg_resources
 import sortedcontainers
 import pandas as pd
 import os
-import pysam
+from cpython cimport array
+import array
 
-from interval_tree import Py_SimpleIntervalTree
+from dysgu.map_set_utils import Py_BasicIntervalTree
+
 
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
 
 from libc.stdlib cimport malloc
-import re
+
 
 cdef char *basemap = [ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
                        '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
@@ -62,70 +62,41 @@ cdef list get_bed_regions(str bed):
     return b
 
 
+def iitree(a, add_value=False):
+    # sorted input list a will not lead to a balanced binary-search-tree if added in sequential order
+    # This function reorders the list to ensure a balanced BST when added using Py_BasicIntervalTree
+    tree = Py_BasicIntervalTree()
+    index = 0
+    for h in a:
+        if add_value:
+            tree.add(h[0], h[1], h[2])
+        else:
+            tree.add(h[0], h[1], index)
+        index += 1
+    tree.index()
+    return tree
+
+
 cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
     if not bed:
         return {}
-    regions = get_bed_regions(bed)
-    chrom_interval_start = defaultdict(list)
-    chrom_interval_end = defaultdict(list)
-
-    r2 = {}
+    regions = merge_intervals(get_bed_regions(bed))
+    chrom_intervals = defaultdict(list)
     for c, s, e in regions:
         if int_chroms:
             c = infile.gettid(c)
-        chrom_interval_start[c].append(int(s))
-        chrom_interval_end[c].append(int(e))
+        chrom_intervals[c].append((s, e))
 
-        if c not in r2:
-            r2[c] = Py_SimpleIntervalTree()
-        r2[c].insert(int(s), int(e))
-
-    regions = {k: ncls.NCLS(np.array(chrom_interval_start[k]),
-                            np.array(chrom_interval_end[k]),
-                            np.array(chrom_interval_start[k])) for k in chrom_interval_start}
-
-    echo('1', r2['chr1'].count_pos_overlaps(934001))
-    cn = 0
-    import time
-    t0 = time.time()
-    for i in range(0, 1934010):
-        cn += r2['chr1'].count_pos_overlaps(i)
-    echo(time.time() - t0)
-
-    echo('2', cn)
-
-    cn2 = 0
-    t0 = time.time()
-    for i in range(0, 10_000_000):
-        cn2 += int(len(list(regions['chr1'].find_overlap(i, i + 1))) > 0)
-    echo(time.time() - t0)
-    echo(cn2)
-    quit()
-    return regions
+    # create balanced ordering
+    chrom_intervals = {k: iitree(v) for k, v in chrom_intervals.items()}
+    return chrom_intervals
 
 
-cpdef int intersecter_int_chrom(dict tree, int chrom, int start, int end):
-    if not tree:
-        return 0
-    elif chrom in tree:
-        if len(list(tree[chrom].find_overlap(start, end))) > 0:
-            return 1
-        else:
-            return 0
-    else:
-        return 0
-
-
-cpdef int intersecter_str_chrom(dict tree, str chrom, int start, int end):
-    if not tree:
-        return 0
-    elif chrom in tree:
-        if len(list(tree[chrom].find_overlap(start, end))) > 0:
-            return 1
-        else:
-            return 0
-    else:
-        return 0
+cpdef int intersecter(tree, chrom, int start, int end):
+    cdef bint found = 0
+    if tree and chrom in tree:
+        found = tree[chrom].searchInterval(start, end)
+    return found
 
 
 def mk_dest(d):
@@ -134,35 +105,6 @@ def mk_dest(d):
             os.mkdir(d)
         except:
             raise OSError("Couldn't create directory {}".format(d))
-
-
-def overlap_regionspy(bed):
-    if not bed:
-        return None
-    regions = get_bed_regions(bed)
-    chrom_interval_start = defaultdict(list)
-    chrom_interval_end = defaultdict(list)
-    for c, s, e in regions:
-        chrom_interval_start[c].append(int(s))
-        chrom_interval_end[c].append(int(e))
-
-    regions = {k: ncls.NCLS(np.array(chrom_interval_start[k]),
-                            np.array(chrom_interval_end[k]),
-                            np.array(chrom_interval_start[k])) for k in chrom_interval_start}
-
-    return regions
-
-
-def intersecterpy(tree, chrom, start, end):
-    if tree is None:
-        return 0
-    elif chrom in tree:
-        if len(list(tree[chrom].find_overlap(start, end))) > 0:
-            return 1
-        else:
-            return 0
-    else:
-        return 0
 
 
 def get_include_reads(include_regions, bam):
@@ -380,36 +322,32 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
 def get_fmt(r, extended, small_output):
     if small_output:
-        v = [r["GT"], r["GQ"], r['MAPQpri'],
-                                  r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['bnd'], r['raw_reads_10kb'], r['neigh10kb'],
-                                  r["plus"], r["minus"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3),
-                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), r['prob']
+        v = [r["GT"], r["GQ"], r['MAPQpri'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'],
+             r['raw_reads_10kb'], r['neigh10kb'], r["plus"], r["minus"], r["remap_score"], r["remap_ed"],
+             r["bad_clip_count"], round(r["fcc"], 3), round(r["inner_cn"], 3), round(r["outer_cn"], 3), r['prob']
              ]
         return v
 
     elif extended:
-
         v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
-                                      r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                      r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'],
+             r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+             r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'],
              r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
-                                      r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
+             r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
              round(r["n_xa"], 2),
-                                      round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"],
+             round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"],
              round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                    round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
-
+             round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
              ]
         return v
 
     else:
         v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
-                                  r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-                                  r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
-                                  r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
-                                  round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-                                round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
+             r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
+             r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
+             r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
+             round(r["n_xa"], 2), round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"], round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
+             round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
              ]
         return v
 
@@ -684,7 +622,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
             continue
 
         format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields, small_output_f)
-        if "partners" in r and r["partners"] is not None and r["partners"] != ".": #not np.isnan(r["partners"]):
+        if "partners" in r and r["partners"] is not None and r["partners"] != ".":
             seen_idx |= set(r["partners"])
 
         r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output_f)
@@ -694,7 +632,5 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 
     for rec in sorted(recs, key=lambda x: (x[0], x[1])):
         outfile.write("\t".join(list(map(str, rec))) + "\n")
+
     return count
-
-
-

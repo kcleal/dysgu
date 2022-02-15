@@ -9,12 +9,11 @@ import time
 import datetime
 from collections import defaultdict
 from dysgu import io_funcs, cluster
-from dysgu import coverage
-from dysgu import call_component
-from dysgu.map_set_utils import echo, EventResult
+from dysgu.map_set_utils import echo, merge_intervals
 import subprocess
 import io
 import pysam
+import numpy as np
 
 
 def open_outfile(args, names_dict):
@@ -208,74 +207,74 @@ def vcf_to_df(path):
     df = pd.concat([parsed, info_df], axis=1)
 
     col_map = {"chrA": ("chrA", str),
-               "posA": ("posA", int),
+               "posA": ("posA", np.int64),
                "CHR2": ("chrB", str),
-               "GRP": ("grp_id", int),
-               "NGRP": ("n_in_grp", int),
-               "END": ("posB", int),
-               "CHR2_POS": ("posB_tra", int),
+               "GRP": ("grp_id", np.int64),
+               "NGRP": ("n_in_grp", np.int64),
+               "END": ("posB", np.int64),
+               "CHR2_POS": ("posB_tra", np.int64),
                "sample": ("sample", str),
                "id": ("id", str),
                "KIND": ("kind", str),
                "SVTYPE": ("svtype", str),
                "CT": ("join_type", str),
-               "CIPOS95": ("cipos95A", int),
-               "CIEND95": ("cipos95B", int),
+               "CIPOS95": ("cipos95A", np.int64),
+               "CIEND95": ("cipos95B", np.int64),
                "NMP": ("NMpri", float),
                "NMB": ("NMbase", float),
                "NMS": ("NMsupp", float),
                "MAPQP": ("MAPQpri", float),
                "MAPQS": ("MAPQsupp", float),
-               "NP": ("NP", int),
-               "OL": ("query_overlap", int),
-               "MAS": ("maxASsupp", int),
-               "SU": ("su", int),
-               "WR": ("spanning", int),
-               "PE": ("pe", int),
-               "SR": ("supp", int),
-               "SC": ("sc", int),
-               "BND": ("bnd", int),
+               "NP": ("NP", np.int64),
+               "OL": ("query_overlap", np.int64),
+               "MAS": ("maxASsupp", np.int64),
+               "SU": ("su", np.int64),
+               "WR": ("spanning", np.int64),
+               "PE": ("pe", np.int64),
+               "SR": ("supp", np.int64),
+               "SC": ("sc", np.int64),
+               "BND": ("bnd", np.int64),
                "SQC": ("sqc", float),
                "SCW": ("scw", float),
                "SQR": ("clip_qual_ratio", float),
                "RT": ("type", str),
-               "BE": ("block_edge", int),
+               "BE": ("block_edge", np.int64),
                "COV": ("raw_reads_10kb", float),
                "MCOV": ("mcov", float),
-               "LNK": ("linked", int),
+               "LNK": ("linked", np.int64),
                "CONTIGA": ("contigA", str),
                "CONTIGB": ("contigB", str),
                "ref_seq": ("ref_seq", str),
                "variant_seq": ("variant_seq", str),
                "GC": ("gc", float),
-               "NEIGH": ("neigh", int),
-               "NEIGH10": ("neigh10kb", int),
+               "NEIGH": ("neigh", np.int64),
+               "NEIGH10": ("neigh10kb", np.int64),
                "REP": ("rep", float),
                "REPSC": ("rep_sc", float),
-               "LPREC": ("svlen_precise", int),
-               "NEXP": ("n_expansion", int),
-               "STRIDE": ("stride", int),
+               "LPREC": ("svlen_precise", np.int64),
+               "NEXP": ("n_expansion", np.int64),
+               "STRIDE": ("stride", np.int64),
                "EXPSEQ": ("exp_seq", str),
-               "RPOLY": ("ref_poly_bases", int),
+               "RPOLY": ("ref_poly_bases", np.int64),
                "GT": ("GT", str),
                "GQ": ("GQ", object),
-               "RB": ("ref_bases", int),
-               "SVLEN": ("svlen", int),
-               "PS": ("plus", int),
-               "MS": ("minus", int),
+               "RB": ("ref_bases", np.int64),
+               "SVLEN": ("svlen", np.int64),
+               "PS": ("plus", np.int64),
+               "MS": ("minus", np.int64),
                "SBT": ("strand_binom_t", float),
                "PROB": ("prob", float),
                "NG": ("n_gaps", float),
                "NSA": ("n_sa", float),
                "NXA": ("n_xa", float),
-               "NMU": ("n_unmapped_mates", int),
-               "NDC": ("double_clips", int),
-               "RMS": ("remap_score", int),
-               "RED": ("remap_ed", int),
-               "BCC": ("bad_clip_count", int),
-               "STL": ("n_small_tlen", int),
-               "RAS": ("ras", int),
-               "FAS": ("fas", int),
+               "NMU": ("n_unmapped_mates", np.int64),
+               "NDC": ("double_clips", np.int64),
+               "RMS": ("remap_score", np.int64),
+               "RED": ("remap_ed", np.int64),
+               "BCC": ("bad_clip_count", np.int64),
+               "STL": ("n_small_tlen", np.int64),
+               "RAS": ("ras", np.int64),
+               "FAS": ("fas", np.int64),
                "ICN": ("inner_cn", float),
                "OCN": ("outer_cn", float),
                "CMP": ("compress", float),
@@ -294,8 +293,9 @@ def vcf_to_df(path):
                 else:
                     df[k] = df[k].fillna(0)
                 try:
+                    echo(k)
                     df[k] = df[k].astype(dtype)
-                except ValueError:
+                except ValueError or OverflowError:
                     logging.info("Problem for feature {}, could not intepret as {}".format(k, dtype))
                     echo(list(df[k]))
                     quit()
@@ -323,7 +323,7 @@ def call_pons(samps, df, args):
         intervals.append(r1)
         intervals.append(r2)
 
-    merged_intervals = coverage.merge_intervals(intervals)
+    merged_intervals = merge_intervals(intervals)
 
     wd = args["wd"]
     with open(f"{wd}/pon.search.bed", "w") as b:
