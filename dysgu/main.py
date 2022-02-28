@@ -290,10 +290,10 @@ def run_pipeline(ctx, **kwargs):
 @cli.command("fetch")
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
-@click.option("-f", "--out-format", help="Output format. 'bam' output maintains sort order, "
-                                         "'fq' output is collated by name",
-              default="bam", type=click.Choice(["bam", "fq", "fasta"]),
-              show_default=True)
+# @click.option("-f", "--out-format", help="Output format. 'bam' output maintains sort order, "
+#                                          "'fq' output is collated by name",
+#               default="bam", type=click.Choice(["bam", "fq", "fasta"]),
+#               show_default=True)
 @click.option("--reference", help="Reference file for opening cram files",
               show_default=False, default="", required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",

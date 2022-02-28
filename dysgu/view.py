@@ -144,6 +144,7 @@ def to_csv(df, args, names, outfile, extended, small_output):
                 key = "|".join([f"{df.loc[idx]['table_name']},{idx}" for idx in r["partners"]])
                 p2.append(key)
         df["partners"] = p2
+        df[keytable].to_csv(outfile, index=False)
 
     elif args["separate"] == "True":
         for k, df2 in df.groupby("table_name"):
@@ -293,7 +294,6 @@ def vcf_to_df(path):
                 else:
                     df[k] = df[k].fillna(0)
                 try:
-                    echo(k)
                     df[k] = df[k].astype(dtype)
                 except ValueError or OverflowError:
                     logging.info("Problem for feature {}, could not intepret as {}".format(k, dtype))

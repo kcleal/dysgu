@@ -393,7 +393,7 @@ cdef class PairedEndScoper:
         else:
             forward_scope = &self.chrom_scope[chrom2]
 
-        cdef cpp_map[int, LocalVal].iterator local_it  #itr
+        cdef cpp_map[int, LocalVal].iterator local_it, local_it2  #itr
         cdef cpp_pair[int, LocalVal] vitem
 
         cdef float max_span, span_distance
@@ -409,9 +409,17 @@ cdef class PairedEndScoper:
             self.local_chrom = current_chrom
             self.empty_scopes()
 
-        if not self.loci.empty():  # Erase items out of range in local scope
+        if not self.loci.empty():
 
+            # Erase items out of range in forward scope
             local_it = self.loci.lower_bound(current_pos - self.clst_dist)
+            local_it2 = self.loci.begin()
+            while local_it2 != local_it:
+                vitem = dereference(local_it2)
+                self.chrom_scope[vitem.second.chrom2].erase(vitem.second.pos2)
+                preincrement(local_it2)
+
+            # Erase items out of range in local scope
             if local_it != self.loci.begin():
                 self.loci.erase(self.loci.begin(), local_it)
 
@@ -432,7 +440,7 @@ cdef class PairedEndScoper:
 
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # if node_name2 == 0:
+                        # if node_name == 155:
                         #     echo("-->", node_name, node_name2, current_chrom == chrom2, current_pos, pos2, pos2 - current_pos, vitem.second.pos2 - vitem.first,
                         #          is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2),
                         #          )
@@ -487,7 +495,8 @@ cdef class PairedEndScoper:
                         node_name2 = vitem.second.node_name
 
                         if node_name2 != node_name:
-                            # echo("2", node_name, node_name2, read_enum, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar))
+                            # if node_name == 155:
+                            #     echo("2", node_name, node_name2, read_enum) #, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar))
                             # if node_name == 0:
                             #     echo(current_pos, pos2, vitem.first, vitem.second.pos2)
                             if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
@@ -847,7 +856,6 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
         # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
         #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
 
-    # if not mm_only: # or not both_overlap: todo check this
     if not mm_only and read_enum != BREAKEND:
         pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar)
 
@@ -862,12 +870,16 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     # Debug:
     # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
     # look = {'V100003378L3C001R005710380'}
-    # node_look = {28, 93}
-    # if r.qname in look:
+    # node_look = {155, 156, 158, 38, 184, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 223, 224, 228}
+    # # if r.qname in look:
     # if node_name in node_look:
-    # if r.qname == "m694824/15000/CCS":
+    #     echo(r.qname, r.pos)
+    # # if r.qname == "D00360:18:H8VC6ADXX:2:2205:11334:28965":
     #     echo("@", r.flag, node_name, chrom, event_pos, chrom2, pos2, list(other_nodes),
     #          count_sc_edges, cigar_index, length_from_cigar)
+    #     echo()
+    #     if node_name == 155:
+    #         quit()
 
 
 cdef int good_quality_clip(AlignedSegment r, int clip_length):

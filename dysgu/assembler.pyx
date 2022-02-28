@@ -101,9 +101,6 @@ cdef trim_cigar(c, int pos, int approx_pos):
                     pos += length
                 seq_index += length
 
-            # elif started and abs(pos + length - approx_pos) > 500:
-            #     end_index = index + 1
-            #     break
             else:
                 if abs(pos + length - approx_pos) > 500:
                     end_index = index + 1
@@ -121,7 +118,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                        int32_t approx_position, int32_t max_distance):
 
     cdef int i = 0
-    # todo should this be uint8_t ?
+
     cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
     cdef char base
 
@@ -144,12 +141,15 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
     cdef bint done = 0
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
+    cdef int r_end = r.reference_end
+    if r.reference_end + 100 < approx_position or approx_position < current_pos - 100:
+        return  # shouldn't happen
+
     if approx_position - pos > 500:
         cigar, current_pos, i = trim_cigar(cigar, pos, approx_position)
 
     for opp, length in cigar:
         with nogil:
-
             if done:
                 break
 
@@ -275,12 +275,12 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
             start = False
 
 
-cdef cpp_deque[int] topo_sort2(DiGraph& G):
+cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order):  # except -1:
 
     cdef unordered_set[int] seen
     cdef unordered_set[int] explored
 
-    cdef cpp_deque[int] order
+    # cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
     cdef cpp_vector[int] new_nodes
     cdef cpp_vector[int] neighbors
@@ -333,8 +333,6 @@ cdef cpp_deque[int] topo_sort2(DiGraph& G):
 
                     order.push_front(w)
                     fringe.pop_back()  # done considering this node
-
-    return order
 
 
 cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
@@ -417,12 +415,10 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef int ref_end = -1
     cdef int longest_left_sc, longest_right_sc
     cdef int begin = 0
+    cdef int return_code
 
     cdef DiGraph G = DiGraph()
-    # node_dict_r = {}
-
     cdef TwoWayMap ndict_r2
-
     cdef cpp_vector[int] node_weights
 
     for r in rd:
@@ -433,7 +429,10 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
         add_to_graph(G, r, node_weights, ndict_r2, position, max_distance)
 
-    cdef cpp_deque[int] nodes_to_visit2 = topo_sort2(G)
+    cdef cpp_deque[int] nodes_to_visit2
+    return_code = topo_sort2(G, nodes_to_visit2)
+    if return_code == -1 or nodes_to_visit2.size() < 50:
+        return {}
 
     cdef cpp_deque[int] path2
 
@@ -823,7 +822,7 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
     total_overhangs = extent_left + extent_right
     aln_s = alignment.optimal_alignment_score
     expected = (qe - qs) * 2  # +2 is the score for a match
-    # echo('expected', expected, total_overhangs, aln_s)
+
     if expected < 2 * ol_length:  # Match score * Minimum clip length
         return 0
 

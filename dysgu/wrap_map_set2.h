@@ -508,7 +508,6 @@ class TwoWayMap
         uint64_t last_key = 0;  // Set this on call to has_tuple_key to prevent calculating twice
         int last_index = 0;
         robin_hood::unordered_flat_map<uint64_t, int> string_key;
-//        tsl::robin_map<uint64_t, int> string_key;
         std::vector<uint64_t> index_key_map;
 
 };
