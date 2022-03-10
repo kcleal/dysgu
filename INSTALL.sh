@@ -28,6 +28,10 @@ echo "Extra configure args:" $@
 
 if [[ $htslib_folder == "./dysgu/htslib" ]]
 then
+  if [ -x "$(command -v apt-get)" ]; 
+  then 
+    sudo apt-get install gcc make autoconf libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev; 
+  fi
   echo "Building htslib"
   cd ./dysgu/htslib
   autoreconf -i
