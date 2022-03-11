@@ -10,4 +10,3 @@ scikit-bio
 edlib
 sortedcontainers
 lightgbm
-ncls
