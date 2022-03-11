@@ -5,6 +5,7 @@ include *.md
 include *.yml
 graft dysgu/htslib
 include ci/*
+include scripts/*
 #include htslib/*.o
 #include htslib/*.c
 #include htslib/*.h
