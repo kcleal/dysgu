@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import
 import time
-import ncls
 from collections import defaultdict, deque, namedtuple
 import numpy as np
 cimport numpy as np
@@ -67,31 +66,6 @@ ctypedef enum ReadEnum_t:
     DELETION = 2
     INSERTION = 3
     BREAKEND = 4
-
-
-cdef class Table:
-    # overlap table for ncls
-    cdef vector[np.int64_t] starts
-    cdef vector[np.int64_t] ends
-    cdef vector[np.int64_t] values
-
-    cpdef void add(self, int s, int e, int v):
-        self.starts.push_back(s)
-        self.ends.push_back(e)
-        self.values.push_back(v)
-
-    def get_val(self, v):
-        cdef vector[np.int64_t] values = v
-        cdef np.ndarray[np.int64_t] a = np.empty(values.size(), dtype=np.int)
-        cdef int len_a = len(a)
-        cdef int i
-        with nogil:
-            for i in range(len_a):
-                a[i] = values[i]
-        return a
-
-    def containment_list(self):
-        return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
 cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
@@ -874,7 +848,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     # # if r.qname in look:
     # if node_name in node_look:
     #     echo(r.qname, r.pos)
-    # # if r.qname == "D00360:18:H8VC6ADXX:2:2205:11334:28965":
+    # if r.qname == "m64004_190803_004451/154077992/ccs":
     #     echo("@", r.flag, node_name, chrom, event_pos, chrom2, pos2, list(other_nodes),
     #          count_sc_edges, cigar_index, length_from_cigar)
     #     echo()
@@ -1408,8 +1382,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
                     preincrement(itr_events)
 
-    if paired_end:
-        add_template_edges(G, template_edges)
+    add_template_edges(G, template_edges)
 
     if site_adder:
         logging.info(f"Added {site_adder.count} variants from input sites")
@@ -1705,7 +1678,6 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
 
     # Debug:
     # echo("parts", partitions)
-    # echo(info)
     # echo("s_between", support_between)
     # echo("s_within", support_within)
     # quit()

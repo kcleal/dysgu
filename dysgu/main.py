@@ -263,8 +263,7 @@ def run_pipeline(ctx, **kwargs):
     # Get SV reads
     if kwargs["regions"] is not None and kwargs["regions_only"] == "True":
         ctx.obj["search"] = kwargs["regions"]
-    else:
-        ctx.obj["search"] = None
+
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
 
