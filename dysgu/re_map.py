@@ -499,7 +499,7 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
                 bad_i |= s_gi
         except IndexError:
             e = events[grp_idxs[0]]
-            logging.warning(f'Index error for event region {chrom}:{gstart}-{gend}, {e.chrA} {e.posA} {e.chrB} {e.posB}')
+            logging.warning(f'Index error for event region {chrom}:{gstart}-{gend}, event loci: {e.chrA} {e.posA} {e.chrB} {e.posB}')
 
     new_events = [events[i] for i in range(len(events)) if i not in bad_i]
     logging.info("Number or SVs near gaps dropped {}".format(len(bad_i)))
