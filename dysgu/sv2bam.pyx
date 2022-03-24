@@ -112,6 +112,7 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
 
         for start, end in v:
             s += f"{chrom}{first_delim}{start}-{end}{sep}"
+
     if len(s) == 0:
         raise ValueError("Search/exclude regions not understood")
     return s
@@ -186,10 +187,6 @@ def process(args):
     regionbytes = region.encode("ascii")
 
     max_cov_ignore = ".,"
-    # under development:
-    # if args["regions"]:
-    #     bam = assert_indexed_input(args["bam"], args["reference"])
-    #     max_cov_ignore = parse_search_regions(args["regions"], None, bam, first_delim="-", sep="-")  # {chrom}-{start}-{end}-  blocks of 3
     max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
 
     count = search_hts_alignments(infile_string_b,

@@ -2,11 +2,29 @@
 
 echo "STARTING LINUX-DEPS"
 
-ls
+if [ -x "$(command -v apt-get)" ]; #debian
+then 
+  sudo apt-get install -y gcc make autoconf 
+  sudo apt-get install -y libcurl4-openssl-dev libffi-dev
+  sudo apt-get install -y libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev; 
+elif [ -x "$(command -v yum)" ]; # red-hat
+then
+  sudo yum install -y gcc make autoconf
+  sudo yum install -y openssl11-devel
+  sudo yum install -y libffi libffi-devel zlib-devel
+  sudo yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
+elif [ -x "$(command -v pacman)" ]; # arch
+then
+  sudo pacman -Syu gcc make autoconf2.71
+  sudo pacman -Syu openssl libffi
+  sudo pacman -Syu libbz2-devel zlib ncurses-devel xz
+elif [ -x "$(command -v dnf)" ]; # fedora
+then
+   sudo dnf install -y gcc make autoconf
+   sudo dnf install -y openssl1.1-devel libffi libffi-devel
+   sudo dnf install -y bzip2-libs ncurses-devel xz-devel xz-libs
+fi
 
-yum install -y openssl11-devel
-yum install -y libffi libffi-devel zlib-devel
-yum install -y bzip2-devel bzip2-libs xz-devel xz-libs
 
 which python3
 python3 --version

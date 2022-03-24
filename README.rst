@@ -16,12 +16,14 @@ To install::
 
 To build from source, a >=c++11 compiler is needed. For convenience use the install script::
 
+    pip install numpy
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu
     bash INSTALL.sh
 
 Or manually::
 
+    pip install numpy
     git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu/dysgu/htslib
     make

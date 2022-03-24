@@ -42,11 +42,9 @@ def auto_max_cov(mc, bname):
     elif mc == "auto":
         if bname == "-":
             raise NotImplementedError("Not possible to use max-cov == 'auto' with stdin")
-
         aln_f = pysam.AlignmentFile(bname)
-        if aln_f.is_cram():
+        if aln_f.is_cram:
             raise NotImplementedError("Not possible to use index_stats on a cram file")
-
         mc, rl = index_stats(aln_f)
         mc = round(mc) * 6
         if mc < 5:
