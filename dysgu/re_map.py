@@ -494,8 +494,12 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
             logging.warning("Error fetching reference chromosome: {}".format(chrom), errors)
             continue
 
-        if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":
-            bad_i |= s_gi
+        try:
+            if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":
+                bad_i |= s_gi
+        except IndexError:
+            e = events[grp_idxs[0]]
+            logging.warning(f'Index error for event region {chrom}:{gstart}-{gend}, {e.chrA} {e.posA} {e.chrB} {e.posB}')
 
     new_events = [events[i] for i in range(len(events)) if i not in bad_i]
     logging.info("Number or SVs near gaps dropped {}".format(len(bad_i)))
