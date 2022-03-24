@@ -4583,7 +4583,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_2auto_max_cov(CYTHON_UNUSED PyObject 
  *             raise NotImplementedError("Not possible to use max-cov == 'auto' with stdin")
  * 
  *         aln_f = pysam.AlignmentFile(bname)             # <<<<<<<<<<<<<<
- *         if aln_f.is_cram():
+ *         if aln_f.is_cram:
  *             raise NotImplementedError("Not possible to use index_stats on a cram file")
  */
     __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_pysam); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 46, __pyx_L1_error)
@@ -4612,34 +4612,19 @@ static PyObject *__pyx_pf_5dysgu_8coverage_2auto_max_cov(CYTHON_UNUSED PyObject 
     /* "dysgu/coverage.pyx":47
  * 
  *         aln_f = pysam.AlignmentFile(bname)
- *         if aln_f.is_cram():             # <<<<<<<<<<<<<<
+ *         if aln_f.is_cram:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError("Not possible to use index_stats on a cram file")
  * 
  */
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_v_aln_f, __pyx_n_s_is_cram); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 47, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_3 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_4))) {
-      __pyx_t_3 = PyMethod_GET_SELF(__pyx_t_4);
-      if (likely(__pyx_t_3)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_4);
-        __Pyx_INCREF(__pyx_t_3);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_4, function);
-      }
-    }
-    __pyx_t_2 = (__pyx_t_3) ? __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_3) : __Pyx_PyObject_CallNoArg(__pyx_t_4);
-    __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_v_aln_f, __pyx_n_s_is_cram); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 47, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 47, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     if (unlikely(__pyx_t_1)) {
 
       /* "dysgu/coverage.pyx":48
  *         aln_f = pysam.AlignmentFile(bname)
- *         if aln_f.is_cram():
+ *         if aln_f.is_cram:
  *             raise NotImplementedError("Not possible to use index_stats on a cram file")             # <<<<<<<<<<<<<<
  * 
  *         mc, rl = index_stats(aln_f)
@@ -4653,7 +4638,7 @@ static PyObject *__pyx_pf_5dysgu_8coverage_2auto_max_cov(CYTHON_UNUSED PyObject 
       /* "dysgu/coverage.pyx":47
  * 
  *         aln_f = pysam.AlignmentFile(bname)
- *         if aln_f.is_cram():             # <<<<<<<<<<<<<<
+ *         if aln_f.is_cram:             # <<<<<<<<<<<<<<
  *             raise NotImplementedError("Not possible to use index_stats on a cram file")
  * 
  */
@@ -34780,7 +34765,7 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
 
   /* "dysgu/coverage.pyx":48
  *         aln_f = pysam.AlignmentFile(bname)
- *         if aln_f.is_cram():
+ *         if aln_f.is_cram:
  *             raise NotImplementedError("Not possible to use index_stats on a cram file")             # <<<<<<<<<<<<<<
  * 
  *         mc, rl = index_stats(aln_f)
