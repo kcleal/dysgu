@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 import time
-import ncls
+# import ncls
 from collections import defaultdict, deque, namedtuple
 import numpy as np
 cimport numpy as np
@@ -69,29 +69,29 @@ ctypedef enum ReadEnum_t:
     BREAKEND = 4
 
 
-cdef class Table:
-    # overlap table for ncls
-    cdef vector[np.int64_t] starts
-    cdef vector[np.int64_t] ends
-    cdef vector[np.int64_t] values
-
-    cpdef void add(self, int s, int e, int v):
-        self.starts.push_back(s)
-        self.ends.push_back(e)
-        self.values.push_back(v)
-
-    def get_val(self, v):
-        cdef vector[np.int64_t] values = v
-        cdef np.ndarray[np.int64_t] a = np.empty(values.size(), dtype=np.int)
-        cdef int len_a = len(a)
-        cdef int i
-        with nogil:
-            for i in range(len_a):
-                a[i] = values[i]
-        return a
-
-    def containment_list(self):
-        return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
+# cdef class Table:
+#     # overlap table for ncls
+#     cdef vector[np.int64_t] starts
+#     cdef vector[np.int64_t] ends
+#     cdef vector[np.int64_t] values
+#
+#     cpdef void add(self, int s, int e, int v):
+#         self.starts.push_back(s)
+#         self.ends.push_back(e)
+#         self.values.push_back(v)
+#
+#     def get_val(self, v):
+#         cdef vector[np.int64_t] values = v
+#         cdef np.ndarray[np.int64_t] a = np.empty(values.size(), dtype=np.int)
+#         cdef int len_a = len(a)
+#         cdef int i
+#         with nogil:
+#             for i in range(len_a):
+#                 a[i] = values[i]
+#         return a
+#
+#     def containment_list(self):
+#         return ncls.NCLS(self.get_val(self.starts), self.get_val(self.ends), self.get_val(self.values))
 
 
 cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
@@ -705,11 +705,9 @@ cdef get_query_pos_from_cigarstring(cigar, pos):
 
 cdef get_query_pos_from_cigartuples(r):
     # Infer the position on the query sequence of the alignment using cigar string
-    cdef int end = 0
     cdef int start = 0
     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
-
-    end = query_length
+    cdef int end = query_length
     if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
         start += r.cigartuples[0][1]
     if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
