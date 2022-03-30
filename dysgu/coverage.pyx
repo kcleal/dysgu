@@ -7,6 +7,7 @@ import numpy as np
 cimport numpy as np
 import logging
 import pysam
+
 DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
 
@@ -49,7 +50,7 @@ def auto_max_cov(mc, bname):
         mc = round(mc) * 6
         if mc < 5:
             logging.critical("Max-cov estimated as < 5? Set manually to proceed")
-            quit()
+
         logging.info("Auto max-cov estimated {}x".format(mc))
     else:
         try:
@@ -105,7 +106,7 @@ def get_insert_params(L, mads=8):  # default for lumpy is 10
 cdef class GenomeScanner:
 
     def __init__(self, inputbam, int mapq_threshold, int max_cov, include_regions, read_threads, buffer_size, regions_only, stdin,
-                 clip_length=30, min_within_size=30, cov_track_path=None, paired_end=True):
+                 clip_length=30, min_within_size=30, cov_track_path=None, paired_end=True, bam_iter=None):
 
         self.input_bam = inputbam
         self.mapq_threshold = mapq_threshold
@@ -138,6 +139,7 @@ cdef class GenomeScanner:
         self.no_tell = True if stdin else False
         self.extended_tags = False
         self.paired_end = paired_end
+        self.bam_iter = bam_iter
 
         self.cpp_cov_track = CoverageTrack()
         self.current_tid = -1
@@ -159,7 +161,7 @@ cdef class GenomeScanner:
             tell = 0 if self.no_tell else self.input_bam.tell()
 
             # when 'run' command is invoked, run this block. cov track already exists from find-reads
-            if self.cov_track_path is None:
+            if self.cov_track_path is None and self.bam_iter is None:
                 for aln in self.input_bam:
 
                     if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:  # not primary, duplicate or unmapped?
@@ -180,7 +182,12 @@ cdef class GenomeScanner:
                 else:
                     q_size = 500
 
-                for aln in self.input_bam:
+                if self.bam_iter is not None:
+                    f_iter = self.bam_iter
+                else:
+                    f_iter = self.input_bam
+
+                for aln in f_iter:
 
                     if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
                         continue
@@ -376,12 +383,12 @@ cdef class GenomeScanner:
 
             if c > 20000000:
                 logging.critical("Cant infer read length after 10 million reads, is max-tlen < 8000?")
-                quit()
+                return -1, -1
             c += 1
 
         if len(approx_read_length_l) == 0:
             logging.critical("Cant infer read length, no reads?")
-            quit()
+            return -1, -1
 
         approx_read_length = int(np.median(approx_read_length_l))
         self.approx_read_length = approx_read_length
@@ -417,7 +424,7 @@ cdef class GenomeScanner:
         # Add last seen coverage bin
         if total_reads == 0:
             logging.critical("No reads found, finishing")
-            quit()
+            return
         logging.info(f"Total input reads {total_reads}")
 
     def add_to_buffer(self, r, n1, tell):
@@ -431,7 +438,7 @@ cdef class GenomeScanner:
             self.read_buffer[n1] = r
 
         elif self.no_tell:
-            exit(BufferError("Read buffer has overflowed, increase --buffer-size"))
+            raise BufferError("Read buffer has overflowed, increase --buffer-size")
 
 
     def _add_to_bin_buffer(self, a, tell):
@@ -567,11 +574,11 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
             br = True
 
         kind = "extra-regional"
+        switch = False
         if not ar and not br:
             if r.chrA == r.chrB and r.posA > r.posB:  # Put non-region first
                 switch = True
 
-        switch = False
         if (br and not ar) or (not br and ar):
             kind = "hemi-regional"
             if not br and ar:

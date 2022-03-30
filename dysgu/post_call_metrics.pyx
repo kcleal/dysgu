@@ -27,10 +27,11 @@ import warnings
 
 pd.options.mode.chained_assignment = None
 
-from skbio.alignment import StripedSmithWaterman
+from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
+# from skbio.alignment import StripedSmithWaterman
 import time
 from libc.stdint cimport int16_t
-import sys
+from sys import byteorder
 import os
 
 ctypedef EventResult EventResult_t
@@ -55,7 +56,7 @@ class BadClipCounter:
         if not self.low_mem:
             self.clip_pos_arr[chrom].append(position)
         else:
-            self.clip_pos_arr[chrom].write(position.to_bytes(4, sys.byteorder))
+            self.clip_pos_arr[chrom].write(position.to_bytes(4, byteorder))
 
     def sort_arrays(self):
 
@@ -590,7 +591,7 @@ def get_gt_metric(events, add_gt=False):
     else:
         for e in events:
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
         return events
 
@@ -605,7 +606,7 @@ def get_gt_metric(events, add_gt=False):
 
         if any((ocn < 0, icn < 0, sup < 0)):
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
             continue
 
@@ -635,7 +636,7 @@ def get_gt_metric(events, add_gt=False):
             sample_qual = abs(-10 * (gt_lplist[0] - gt_sum_log)) # phred-scaled probability site is non-reference in this sample
             phred_gq = min(-10 * (second_best[1] - best[1]), 200)
             e.GQ = int(phred_gq)
-            e.SQ = sample_qual
+            # e.SQ = sample_qual
             if gt_idx == 1:
                 e.GT = '0/1'
             elif gt_idx == 2:
@@ -644,7 +645,7 @@ def get_gt_metric(events, add_gt=False):
                 e.GT = '0/0'
         else:
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
 
     return events
@@ -813,7 +814,7 @@ def get_gt_metric2(events, mode, add_gt=True):
     else:
         for e in events:
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
         return events
 
@@ -831,7 +832,7 @@ def get_gt_metric2(events, mode, add_gt=True):
 
         if ref + support_reads <= 0:
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
             continue
 
@@ -851,14 +852,14 @@ def get_gt_metric2(events, mode, add_gt=True):
             sample_qual = abs(-10 * (gt_lplist[0] - gt_sum_log))  # phred-scaled probability site is non-reference in this sample
             phred_gq = min(-10 * (second_best[1] - best[1]), 200)
             e.GQ = int(phred_gq)
-            e.SQ = sample_qual
+            # e.SQ = sample_qual
             if gt_idx == 0:
                 e.GT = '0/1'
             elif gt_idx == 1:
                 e.GT = '1/1'
         else:
             e.GQ = '.'
-            e.SQ = '.'
+            # e.SQ = '.'
             e.GT = './.'
 
     return events
@@ -889,7 +890,8 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
     pth = f"{pth}/dysgu_model.1.pkl.gz"
     models = pickle.load(gzip.open(pth, "rb"))
 
-    assert not (diploid == 'False' and contigs == 'False')
+    if diploid == 'False' and contigs == 'False':
+        raise NotImplemented("Choose either diploid == False or contigs == False, not both")
 
     # i.e. key is "nanopore_classifier_no_contigs"
     col_key = f"{mode}_cols{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"
@@ -929,7 +931,8 @@ def bayes_multiple_observations(obs, prior=0.5):
     # prior probability value of 0.5 as the classifier is assumed to be unbiased
     p_A_given_B = 0
     if len(obs) == 0:
-        raise ValueError("len(obs) == 0")
+        raise ValueError("post_call_metrics.pyx: len(obs) == 0")
+
     for p in obs:
         p_B = (p * prior) + ((1 - p) * (1-prior))
         p_A_given_B = (p * prior) / p_B
@@ -953,7 +956,8 @@ def update_prob_at_sites(df, events, thresholds, parse_probs, default_prob):
 
             if e.site_info.svtype == e.svtype:
                 other_p = e.site_info.prob if parse_probs else default_prob
-                p2 = bayes_multiple_observations([p, other_p])
+                obs = (p, other_p)
+                p2 = bayes_multiple_observations(obs)
                 new_probs.append(p2)
             else:
                 new_probs.append(p)
@@ -961,7 +965,12 @@ def update_prob_at_sites(df, events, thresholds, parse_probs, default_prob):
             new_probs.append(p)
 
     df.prob = new_probs
-    df["PASS"] = ["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], new_probs)]
+    PASS = ['lowProb'] * len(df)
+    for idx, (svt, i) in enumerate(zip(df["svtype"], new_probs)):
+        if (svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5):
+            PASS.append('PASS')
+
+    # df["PASS"] = ["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], new_probs)]
 
     keep = [True] * len(df)
     for i, e in enumerate(events):

@@ -853,7 +853,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     #          count_sc_edges, cigar_index, length_from_cigar)
     #     echo()
     #     if node_name == 155:
-    #         quit()
+
 
 
 cdef int good_quality_clip(AlignedSegment r, int clip_length):
@@ -1278,7 +1278,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef CigarEvent v
 
     for chunk in genome_scanner.iter_genome():
+
         for r, tell in chunk:
+
             if r.mapq < mapq_thresh:
                 continue
 
@@ -1680,7 +1682,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
     # echo("parts", partitions)
     # echo("s_between", support_between)
     # echo("s_within", support_within)
-    # quit()
+
     # echo("n2n", n2n.keys())
     # node_look = set(range(653526, 653532))
     # node_look = set(range(8))

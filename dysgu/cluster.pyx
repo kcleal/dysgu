@@ -10,11 +10,11 @@ import random
 from collections import defaultdict, Counter
 import networkx as nx
 import pysam
-import sys
+from sys import stdout
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
-from dysgu.map_set_utils import to_dict, merge_intervals, echo, timeit
+from dysgu.map_set_utils import to_dict, merge_intervals, echo
 from dysgu import sites_utils
 from dysgu.io_funcs import intersecter
 import pickle
@@ -187,8 +187,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, intra=False)
 
         one_is_imprecise = False
-        if ((not ei.preciseA or not ei.preciseB) and ei.svlen_precise) or ((not ej.preciseA or not ej.preciseB) and ej.svlen_precise):
+        both_imprecise = False
+        if (not ei.preciseA or not ei.preciseB) and ei.svlen_precise:
             one_is_imprecise = True  # also not remapped
+        if (not ej.preciseA or not ej.preciseB) and ej.svlen_precise:
+            if one_is_imprecise:
+                both_imprecise = True
+            else:
+                one_is_imprecise = True
 
         if not loci_similar:
             continue
@@ -217,6 +223,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
 
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
+        overlap = max(ei.posA, ej.posA) - min(ei.posB, ej.posB)
 
         # If long reads only rely on reciprocal overlap, seems to work better
         if paired_end:
@@ -233,6 +240,21 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             l_ratio = 1  # not applicable for translocations
         else:
             l_ratio = min(ei.svlen, ej.svlen) / ml
+
+        # this didnt work
+        # merge events that might be deletion of tandem duplication
+        # if paired_end and ei.svtype == "DEL":
+        #     if l_ratio < 0.9:
+        #         if both_imprecise and min(ei.remap_score, ej.remap_score) > 50:
+        #             continue
+        #     elif overlap < -15:
+        #         continue
+
+        # this worked ok
+        # echo(ei.remap_score, ej.remap_score, recpi_overlap, l_ratio)
+        # if max(ei.remap_score, ej.remap_score) > 50 and not recpi_overlap:
+        # # if max(ei.remap_score, ej.remap_score) > 50 and max(ei.spanning, ej.spanning) > 0:
+        #     continue
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -259,8 +281,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not m:
             continue
         # if ei.posA == 66323 and ej.posA == 66323:
-        #     echo("HII", ml, l_ratio, one_is_imprecise, any_contigs_to_check, ei.remap_score, ej.remap_score)
-        #     quit()
+        # echo(ml, l_ratio, one_is_imprecise, any_contigs_to_check, (ei.remap_score, ej.remap_score),
+        #      (ei.svlen, ej.svlen), (ei.event_id, ej.event_id), recpi_overlap, spd, loci_similar, loci_same, "overlap", overlap)
+
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
@@ -735,7 +758,7 @@ def process_job(msg_queue, args):
     completed_file.close()
 
 
-def pipe1(args, infile, kind, regions, ibam, ref_genome):
+def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
 
     procs = args['procs']
     low_mem = args['low_mem']
@@ -767,7 +790,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                                             clip_length=args["clip_length"],
                                             min_within_size=args["min_size"],
                                             cov_track_path=cov_track_path,
-                                            paired_end=paired_end)
+                                            paired_end=paired_end,
+                                            bam_iter=bam_iter)
 
     insert_median, insert_stdev, read_len = -1, -1, -1
     if args["template_size"] != "":
@@ -780,6 +804,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
 
         insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
                                                                      read_len, ibam)
+
+        if insert_median == -1:
+            return [], 0, None
+
         read_len = genome_scanner.approx_read_length
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
@@ -1040,7 +1068,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
     del G
     del read_buffer
     cmp.clear()
-    os.remove(component_path)
+    if low_mem:
+        os.remove(component_path)
     gc.collect()
 
     # #
@@ -1076,6 +1105,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
                     break
             last_grp_id = event_id
             os.remove(f"{tdir}/job_{p}.done.pkl")
+
+    if len(block_edge_events) == 0:
+        return [], 0, None
 
     logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
 
@@ -1141,8 +1173,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome):
         d.n_in_grp = n_in_grp[d.grp_id]
 
     if len(preliminaries) == 0:
-        logging.critical("No events found")
-        quit()
+        return [], 0, None
 
     bad_clip_counter.tidy()
 
@@ -1222,7 +1253,7 @@ def cluster_reads(args):
 
     if args["svs_out"] == "-" or args["svs_out"] is None:
         logging.info("Writing vcf to stdout")
-        outfile = sys.stdout
+        outfile = stdout
     else:
         logging.info("Writing SVs to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
@@ -1232,6 +1263,10 @@ def cluster_reads(args):
 
     # Run dysgu here:
     events, extended_tags, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome)
+
+    if not events:
+        logging.critical("No events found")
+        return
 
     df = pd.DataFrame.from_records([to_dict(e) for e in events])
     if not extended_tags:
@@ -1248,9 +1283,8 @@ def cluster_reads(args):
             df = sites_utils.append_uncalled(df, site_adder, infile, parse_probs=args["parse_probs"] == "True")
 
     if len(df) > 0:
-        df = df.sort_values(["kind", "chrA", "posA"])
+        df = df.sort_values(["chrA", "posA", "event_id"])
         df["sample"] = [sample_name] * len(df)
-        df["id"] = range(len(df))
 
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
@@ -1269,7 +1303,7 @@ def cluster_reads(args):
             args["sample_name"] = sample_name
 
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
-                            extended_tags=extended_tags)
+                            extended_tags=extended_tags, sort_output=False)
 
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],

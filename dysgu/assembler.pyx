@@ -4,14 +4,15 @@
 A basic assembler/consensus sequence generator. Takes an overlap graph and merges reads in-place in a POA style.
 """
 
-import click
 import warnings
 import array
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
-from skbio.alignment import StripedSmithWaterman
 
+from dysgu.map_set_utils import timeit, echo
+# from skbio.alignment import StripedSmithWaterman
+from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.pair cimport pair as cpp_pair
@@ -23,7 +24,7 @@ from libc.stdint cimport int32_t, uint64_t
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map, EventResult
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils import timeit, echo
+
 from dysgu.io_funcs import reverse_complement
 
 from pysam.libcalignedsegment cimport AlignedSegment
@@ -31,9 +32,6 @@ from pysam.libchtslib cimport bam_seqi, bam_get_seq
 
 import numpy as np
 
-
-# DTYPE = np.int64
-# ctypedef np.int64_t DTYPE_t
 ctypedef cpp_vector[int] int_vec_t
 
 ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap

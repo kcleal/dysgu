@@ -1,12 +1,11 @@
 cython
 click>=8.0
-numpy>=1.16.5
+numpy
 scipy
 pandas
 pysam
 networkx>=2.4
 scikit-learn>=0.22
-scikit-bio
 edlib
 sortedcontainers
 lightgbm

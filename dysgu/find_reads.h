@@ -25,13 +25,6 @@ class CoverageTrack
         int max_coverage;
         int index = 0;
 
-
-//        bool region_intervals = false;
-//        std::map<std::string, Intervals::IntervalTree<int> > all_intervals_tree;
-//
-//        void add_interval(std::string chrom, int r_start, int r_end) {
-//            all_intervals_tree[chrom].insert({r_start, r_end});
-//        }
         void set_max_cov(int m) {
             max_coverage = m;
         }

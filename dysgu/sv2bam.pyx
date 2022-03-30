@@ -8,7 +8,6 @@ from collections import defaultdict
 import os
 import itertools
 import logging
-
 from libc.stdint cimport uint32_t
 
 from dysgu.map_set_utils import echo
@@ -206,10 +205,10 @@ def process(args):
 
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))
-        quit()
+        return -1
     elif count == 0:
         logging.critical("No reads found")
-        quit()
+        return -1
     logging.info("dysgu fetch {} written to {}, n={}, time={} h:m:s".format(args["bam"], out_name,
                                                             count,
                                                             str(datetime.timedelta(seconds=int(time.time() - t0)))))

@@ -2,7 +2,6 @@
 
 import os
 import pandas as pd
-import sys
 import sortedcontainers
 import logging
 import time
@@ -14,6 +13,7 @@ import subprocess
 import io
 import pysam
 import numpy as np
+from sys import stdin, stdout
 
 
 def open_outfile(args, names_dict):
@@ -26,7 +26,7 @@ def open_outfile(args, names_dict):
         return outfiles
     if args["svs_out"] == "-" or args["svs_out"] is None:
         logging.info("SVs output to stdout")
-        outfile = sys.stdout
+        outfile = stdout
     else:
         logging.info("SVs output to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
@@ -188,10 +188,10 @@ def vcf_to_df(path):
     parsed = pd.DataFrame()
     parsed["chrA"] = df[0]
     parsed["posA"] = df[1]
-    parsed["id"] = df[2]
+    parsed["event_id"] = df[2]
     parsed["ref_seq"] = df[3]
     parsed["variant_seq"] = df[4]
-
+    parsed["filter"] = df[6]
     parsed["sample"] = [sample] * len(df)
     info = []
     for k in list(df[7]):
@@ -215,7 +215,7 @@ def vcf_to_df(path):
                "END": ("posB", np.int64),
                "CHR2_POS": ("posB_tra", np.int64),
                "sample": ("sample", str),
-               "id": ("id", str),
+               "event_id": ("event_id", np.int64),
                "KIND": ("kind", str),
                "SVTYPE": ("svtype", str),
                "CT": ("join_type", str),
@@ -280,11 +280,15 @@ def vcf_to_df(path):
                "OCN": ("outer_cn", float),
                "CMP": ("compress", float),
                "FCC": ("fcc", float),
-               "RR": ("rep_ref", float),
-               "JIT": ("jitter", float)
+               "RR": ("ref_rep", float),
+               "JIT": ("jitter", float),
+               "LEFT_SVINSSEQ": ("left_ins_seq", str),
+               "RIGHT_SVINSSEQ": ("right_ins_seq", str),
                }
 
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
+
+    df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
 
     for k, dtype in col_map.values():
         if k in df:
@@ -296,9 +300,8 @@ def vcf_to_df(path):
                 try:
                     df[k] = df[k].astype(dtype)
                 except ValueError or OverflowError:
-                    logging.info("Problem for feature {}, could not intepret as {}".format(k, dtype))
                     echo(list(df[k]))
-                    quit()
+                    raise ValueError("Problem for feature {}, could not intepret as {}".format(k, dtype))
     if "contigA" not in df:
         df["contigA"] = [""] * len(df)
     if "contigB" not in df:
@@ -307,8 +310,8 @@ def vcf_to_df(path):
     if 'posB_tra' in df:
         df["posB"] = [i if svt != 'TRA' else j for i, j, svt in zip(df['posB'], df['posB_tra'], df['svtype'])]
         del df['posB_tra']
-    df["posA"] = df["posA"].astype(int)
-    df["posB"] = df["posB"].astype(int)
+    df["posA"] = df["posA"].astype(int) - 1  # convert to 0-indexing
+    df["posB"] = df["posB"].astype(int) - 1
 
     return df, header, n_fields
 
@@ -339,13 +342,13 @@ def call_pons(samps, df, args):
             shell=True, stdout=subprocess.PIPE)
 
         if result.returncode != 0:
-            exit(RuntimeError(f"dysgu run failed on {af}"))
+            raise RuntimeError(f"dysgu run failed on {af}")
 
         result = subprocess.run(
             f"dysgu call --mq 0 --ibam {af} -f csv --min-support 1 -x --mode {read_type} {ref} {wd} {wd}/pon.dysgu_reads.bam",
             shell=True, stdout=subprocess.PIPE)
         if result.returncode != 0:
-            exit(RuntimeError("dysgu run failed on pon"))
+            raise RuntimeError("dysgu run failed on pon")
 
         output = io.StringIO()
         output.write(result.stdout.decode("utf-8"))
@@ -465,7 +468,7 @@ def process_pon(df, args):
         pon.append((item, read_type))
 
     if len(pon) == 0:
-        exit(IOError("--pon parse failed"))
+        raise IOError("--pon parse failed")
 
     if "partners" in df.columns:
         # check one representative from each group
@@ -523,7 +526,7 @@ def view_file(args):
     for item in args["input_files"]:
 
         if item == "-":
-            df = pd.read_csv(sys.stdin)
+            df = pd.read_csv(stdin)
             name = list(set(df["sample"]))
             if len(name) > 1:
                 raise ValueError("More than one sample in stdin")

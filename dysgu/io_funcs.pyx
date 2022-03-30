@@ -50,7 +50,7 @@ cpdef str reverse_complement(str seq, int seq_len):
     return seq_dest[:seq_len].decode('UTF-8')
 
 
-cdef list get_bed_regions(str bed):
+cpdef list get_bed_regions(str bed):
     b = []
     with open(bed, "r") as inf:
         for line in inf:
@@ -121,13 +121,13 @@ def get_include_reads(include_regions, bam):
 cpdef list col_names(extended, small_output):  # todo fix for no-contigs view command
 
     if small_output:
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
+        return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
           ["GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc", "bnd",
          "raw_reads_10kb", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed", "bad_clip_count", "fcc", "inner_cn", "outer_cn", "prob"]
             ]
     if extended:  # to do fix this
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp",  "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
+        return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp",  "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
          ["GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
          "raw_reads_10kb", "mcov",
@@ -136,7 +136,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
                 "inner_cn", "outer_cn", "compress", "ref_rep", "prob"]
             ]
     else:
-        return ["chrA", "posA", "chrB", "posB", "sample", "id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
+        return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
           ["GT", "GQ", "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
          "raw_reads_10kb", "mcov",
@@ -206,16 +206,16 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     r["posA"] = max(1, r["posA"] + 1)  # convert to 1 based indexing
     r["posB"] = max(1, r["posB"] + 1)
 
-    if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
-        chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
-        r["chrA"] = r["chrB"]
-        r["posA"] = r["posB"]
-        r["cipos95A"] = r["cipos95B"]
-        r["chrB"] = chrA
-        r["posB"] = posA
-        r["cipos95B"] = cipos95A
-        r["contigB"] = r["contigA"]
-        r["contigA"] = contig2
+    # swap a and b
+    # if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
+    #     chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
+    #     r["posA"] = r["posB"]
+    #     r["cipos95A"] = r["cipos95B"]
+    #     r["chrB"] = chrA
+    #     r["posB"] = posA
+    #     r["cipos95B"] = cipos95A
+    #     r["contigB"] = r["contigA"]
+    #     r["contigA"] = contig2
 
     info_extras = []
     if r["chrA"] == r["chrB"]:
@@ -229,10 +229,10 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     if r["contigB"]:
         info_extras.append(f"CONTIGB={r['contigB']}")
 
-    if not r["variant_seq"]:
-        if r["left_ins_seq"]:
+    if not r["variant_seq"] or r["variant_seq"][0] == "<":
+        if "left_ins_seq" in r and r["left_ins_seq"]:
             info_extras.append(f"LEFT_SVINSSEQ={r['left_ins_seq']}")
-        if r["right_ins_seq"]:
+        if "right_ins_seq" in r and r["right_ins_seq"]:
             info_extras.append(f"RIGHT_SVINSSEQ={r['right_ins_seq']}")
 
     if add_kind:
@@ -295,7 +295,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     else:
         ref_field = "."
 
-    rec = [r["chrA"], r["posA"], index,
+    rec = [r["chrA"], r["posA"], r["event_id"],
            ref_field,
            alt_field,
            ".", "." if "filter" not in r else r['filter'],
@@ -316,6 +316,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
+
 
     return rec
 
@@ -385,7 +386,7 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
 
 
 def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None,
-           small_output_f=True):
+           small_output_f=True, sort_output=True):
     if header is None:
         if extended_tags:
             HEADER = """##fileformat=VCFv4.2
@@ -617,7 +618,6 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 
     n_fields = len(col_names(extended_tags, small_output_f)[-1])
     for idx, r in df.iterrows():
-
         if idx in seen_idx:
             continue
 
@@ -630,7 +630,11 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
         recs.append(r_main)
         count += 1
 
-    for rec in sorted(recs, key=lambda x: (x[0], x[1])):
-        outfile.write("\t".join(list(map(str, rec))) + "\n")
+    if sort_output:
+        for rec in sorted(recs, key=lambda x: (x[0], x[1])):
+            outfile.write("\t".join(list(map(str, rec))) + "\n")
+    else:
+        for rec in recs:
+            outfile.write("\t".join(list(map(str, rec))) + "\n")
 
     return count

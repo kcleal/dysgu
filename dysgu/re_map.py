@@ -1,8 +1,8 @@
-from skbio.alignment import StripedSmithWaterman
+from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
+# from skbio.alignment import StripedSmithWaterman
 from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
 from dysgu.assembler import compute_rep
-
 import math
 import edlib
 import logging
@@ -272,7 +272,6 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     overlap_left = pos - q_begin
                     svlen = overlap_left + aln_t_begin
 
-                    # dangling_bases = len(clip_seq) - target_end_optimal
                     if svlen <= len(clip_seq):
                         var_seq = clip_seq[:svlen]
                     else:
@@ -303,7 +302,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 if span < len(clip_seq) * 0.4 and span < 50:
                     return to_add, skip_event, high_quality_clip, clip_length
 
-            if abs(svlen - e.svlen) > 20:
+            if not e.svlen_precise or abs(svlen - e.svlen) > 20:  # todo use True?
                 e.remap_ed = edit_dist
                 e.remapped = 1
                 e.remap_score = score
@@ -332,8 +331,8 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     start_idx = 0 if start_idx < 0 else start_idx
                     end_idx = ref_end - gstart
 
-                    ref_seq_clipped = ref_seq_big[start_idx:end_idx]
-                    e.ref_rep = compute_rep(ref_seq_clipped)
+                    ref_seq_clipped2 = ref_seq_big[start_idx:end_idx]
+                    e.ref_rep = compute_rep(ref_seq_clipped2)
 
                 else:
                     if var_seq: e.variant_seq = var_seq
@@ -359,7 +358,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
         e.remap_ed = 0
         e.scw = 0
 
-        if e.chrA != e.chrB:
+        if e.chrA != e.chrB or e.spanning > 0:
             new_events.append(e)
             continue
 
@@ -422,7 +421,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
             clip_res = None
             for idx, clip_res in cr:
 
-                to_add, skip_event, hq, clip_length = process_contig(e, #e.contig,
+                to_add, skip_event, hq, clip_length = process_contig(e,
                                                                      e.contig if idx == "A" else e.contig2,
                                                                      e.posA if idx == "A" else e.posB, clip_res,
                                                                      gstart, ref_seq_big, idx)
@@ -493,9 +492,14 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
             # Might be different reference genome version, compared to bam genome
             logging.warning("Error fetching reference chromosome: {}".format(chrom), errors)
             continue
+        try:
+            if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":
+                bad_i |= s_gi
 
-        if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":
-            bad_i |= s_gi
+        except IndexError:
+            e = events[grp_idxs[0]]
+            logging.warning(
+                f'Index error for event region {chrom}:{gstart}-{gend}, event loci: {e.chrA} {e.posA} {e.chrB} {e.posB}')
 
     new_events = [events[i] for i in range(len(events)) if i not in bad_i]
     logging.info("Number or SVs near gaps dropped {}".format(len(bad_i)))

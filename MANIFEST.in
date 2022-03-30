@@ -1,14 +1,24 @@
-include dysgu/*
 include dysgu/tests/*
 include *.rst
 include *.md
-include *.yml
-graft dysgu/htslib
+include dysgu/*
+# graft dysgu/htslib
+# graft dysgu/scikitbio
 include ci/*
 include scripts/*
-#include htslib/*.o
-#include htslib/*.c
-#include htslib/*.h
-#include htslib/htslib/*.h
-#include htslib/cram/*.c
-#include htslib/cram/*.h
+
+include dysgu/htslib/*.o
+include dysgu/htslib/*.c
+include dysgu/htslib/*.h
+include dysgu/htslib/htslib/*.h
+include dysgu/htslib/cram/*.c
+include dysgu/htslib/cram/*.h
+graft dysgu/htslib/os
+graft dysgu/htslib/m4
+graft dysgu/htslib/htscodecs/htscodecs
+graft dysgu/htslib/htscodecs/m4
+
+prune dysgu/htslib/test
+prune dysgu/htslib/htscodecs/test
+exclude dysgu/htslib/.*
+exclude dysgu/scikitbio/.*

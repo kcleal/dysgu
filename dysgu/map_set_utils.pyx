@@ -39,8 +39,26 @@ def timeit(method):
 
 def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
     """
+    Merge a list of intervals, the expected format is a 3-tuple e.g. (chromosome, start, end). If add_indexes is
+    set to True, merge_intervals expects a 4-tuple with the last item corresponding to an index variable
+
+    :param intervals: The list of intervals to merge
+    :type intervals: iterable
+    :param srt: Sort the intervals by chromosome and start position
+    :type srt: bool
+    :param pad: Add a padding to intervals before merging. E.g. pad=10 subtracts 10 from start and adds 10 to end of interval
+    :type pad: int
+    :param add_indexes: Add the indexes of merged intervals to the output
+    :type add_indexes: bool
+    :return: list of merged intervals
+    :rtype: list
+
     >>> merge_intervals( [('chr1', 1, 4), ('chr1', 2, 5), ('chr2', 3, 5)] )
     >>> [['chr1', 1, 5], ['chr2', 3, 5]]
+
+    >>> a = [("chr1", 1, 10, 0), ("chr1", 9, 11, 1), ("chr1", 20, 30, 2)]
+    >>> merge_intervals(a, add_indexes=True)
+    >>> [('chr1', 1, 11, [0, 1]), ['chr1', 20, 30, [2]]]
     """
     if srt:
         sorted_by_lower_bound = sorted(intervals, key=lambda tup: (tup[0], tup[1]))  # by chrom, start, end (index)

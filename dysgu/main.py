@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import click
 import os
-import sys
+from sys import argv
 import shutil
 import time
 from multiprocessing import cpu_count
@@ -79,7 +79,7 @@ def add_option_set(ctx, param, value):
 
 
 def show_params():
-    logging.info(" ".join(sys.argv[1:]))
+    logging.info(" ".join(argv[1:]))
 
 
 def apply_preset(kwargs):

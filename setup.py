@@ -7,7 +7,9 @@ from distutils import ccompiler
 import os
 import pysam
 import glob
-import sys
+from sys import argv
+import subprocess
+import sysconfig
 
 
 # Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
@@ -65,6 +67,29 @@ def get_extra_args():
     return extra_compile_args
 
 
+# clang = False
+# icc = False
+# try:
+#     if os.environ['CC'] == "clang":
+#         clang = True
+# except KeyError:
+#     pass
+#
+# if not clang:
+#     try:
+#         if subprocess.check_output(
+#                 ["gcc", "--version"],
+#                 universal_newlines=True).find("clang") != -1:
+#             clang = True
+#     except (subprocess.CalledProcessError, FileNotFoundError):
+#         pass
+#
+# try:
+#     if os.environ['CC'] == "icc":
+#         icc = True
+# except KeyError:
+#     pass
+
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
                              "-Wno-deprecated-declarations", '-Wno-volatile'
@@ -75,17 +100,17 @@ ext_modules = list()
 root = os.path.abspath(os.path.dirname(__file__))
 # Try and link dynamically to htslib
 htslib = None
-if "--htslib" in sys.argv:
-    idx = sys.argv.index("--htslib")
-    h = sys.argv[idx + 1]
+if "--htslib" in argv:
+    idx = argv.index("--htslib")
+    h = argv[idx + 1]
     if h and os.path.exists(h):
         if any("libhts" in i for i in glob.glob(h + "/*")):
             print("Using --htslib at {}".format(h))
             htslib = h
             if htslib[-1] == "/":
                 htslib = htslib[:-1]
-            sys.argv.remove("--htslib")
-            sys.argv.remove(h)
+            argv.remove("--htslib")
+            argv.remove(h)
     else:
         raise ValueError("--htslib path does not exists")
 
@@ -101,14 +126,31 @@ include_dirs = [numpy.get_include(), root,
                 f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
 runtime_dirs = [htslib]
 
-# extra_link_args = ["-L ./dysgu/htslib", "-L ./dysgu/htslib/htslib"]
-
+# Dysgu
 print("Libs", libraries)
 print("Library dirs", library_dirs)
 print("Include dirs", include_dirs)
 print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
+
+# Scikit-bio module
+ssw_extra_compile_args = ["-Wno-deprecated-declarations", '-std=c99', '-I.']
+# if icc or sysconfig.get_config_vars()['CC'] == 'icc':
+#     ssw_extra_compile_args.extend(['-qopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
+# elif not (clang or sysconfig.get_config_vars()['CC'] == 'clang'):
+#     ssw_extra_compile_args.extend(['-fopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
+
+
+ext_modules.append(Extension(f"dysgu.scikitbio._ssw_wrapper",
+                             [f"dysgu/scikitbio/_ssw_wrapper.pyx", f"dysgu/scikitbio/ssw.c"],
+                             include_dirs=[f"{root}/dysgu/scikitbio", numpy.get_include()],
+                             extra_compile_args=ssw_extra_compile_args,
+                             # define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                             language="c"))
+
+
+# Dysgu modules
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
              "map_set_utils", "cluster", "post_call_metrics", "sv_category"]:
 
@@ -119,7 +161,7 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  include_dirs=include_dirs,
                                  runtime_library_dirs=runtime_dirs,
                                  extra_compile_args=extras,
-                                 # extra_link_args=extra_link_args,
+
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
@@ -132,18 +174,17 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.3.7',
+    version='1.3.9',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',
             'click>=8.0',
-            'numpy>=1.16.5',
+            'numpy>=1.18',
             'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',
             'scikit-learn>=0.22',
-            'scikit-bio',
             'sortedcontainers',
             'lightgbm',
             'edlib',
@@ -151,18 +192,17 @@ setup(
     setup_requires=[
             'cython',
             'click>=8.0',
-            'numpy>=1.16.5',
+            'numpy>=1.18',
             'scipy',
             'pandas',
             'pysam',
             'networkx>=2.4',
             'scikit-learn>=0.22',
-            'scikit-bio',
             'sortedcontainers',
             'lightgbm',
             'edlib'
         ],  # setup.py requires at compile time
-    packages=["dysgu", "dysgu.tests"],
+    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
     ext_modules=cythonize(ext_modules),
 
     include_package_data=True,

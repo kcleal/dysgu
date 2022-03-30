@@ -1,6 +1,8 @@
 ./*.so
 build
 ./*.c
+dysgu/*.cpp
+dysgu/scikitbio/_ssw_wrapper.c
 var
 *.pyc
 dysgu.egg-info/
@@ -18,10 +20,12 @@ htslib/.gitignore
 *.pico
 libhts.a
 _build
-_static
+_staticcd dy
 _templates
 setup-requires/*
 .cache/v/cache/lastfailed
 .idea
 .DS_Store
 dysgu/.DS_Store
+docs/build/
+docs/source/_templates/

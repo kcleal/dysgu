@@ -3,12 +3,13 @@
 dysgu-SV
 ========
 
-dysgu (pronounced *duss-key*) is a set of tools for calling structural variants using paired-end or long read sequencing data.
+dysgu (pronounced *duss-key*) is a set of command line tools, and API,
+for calling structural variants using paired-end or long read sequencing data.
 
 
 Installation
 ------------
-Dysgu requires Python >=3.7 <=3.9 and has been tested on linux and MacOS.
+Dysgu requires Python >=3.7 <=3.10 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
 
