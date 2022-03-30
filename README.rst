@@ -3,7 +3,7 @@
 dysgu-SV
 ========
 
-dysgu (pronounced *duss-key*) is a set of command line tools, and API,
+dysgu (pronounced *duss-key*) is a set of command line tools and python-API,
 for calling structural variants using paired-end or long read sequencing data.
 
 
