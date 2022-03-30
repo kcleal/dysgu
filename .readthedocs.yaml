@@ -25,6 +25,6 @@ submodules:
 # Optionally declare the Python requirements required to build your docs
 python:
    install:
-     - method: setuptools
-       path: dysgu
-       requirements: requirements.txt
+     - requirements: requirements.txt
+     - method: pip
+       path: .
