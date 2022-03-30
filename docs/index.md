@@ -1,10 +1,7 @@
-
-title: Documentation for Dysgu
----
-
 # Documentation for Dysgu
 
-# Contents:
+## Contents:
 
-* [API]()
- 
+
+* [API](API.md)
+
