@@ -209,8 +209,15 @@ with open(path, "w") as out:
 
 ### dysgu.dysgu_default_args()
 Returns the default arguments used by dysgu
-:return: A dict of available arguments
-:rtype: dict
+
+* **Parameters**
+    * None
+
+* **Returns**
+    A dict of available arguments
+
+* **Return type**
+    dict
 
 
 ### dysgu.load_dysgu_vcf(path, drop_na_columns=True)
