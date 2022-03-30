@@ -133,14 +133,12 @@ print("Include dirs", include_dirs)
 print("Runtime dirs", runtime_dirs)
 print("Extras compiler args", extras)
 
-
 # Scikit-bio module
 ssw_extra_compile_args = ["-Wno-deprecated-declarations", '-std=c99', '-I.']
 # if icc or sysconfig.get_config_vars()['CC'] == 'icc':
 #     ssw_extra_compile_args.extend(['-qopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
 # elif not (clang or sysconfig.get_config_vars()['CC'] == 'clang'):
 #     ssw_extra_compile_args.extend(['-fopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
-
 
 ext_modules.append(Extension(f"dysgu.scikitbio._ssw_wrapper",
                              [f"dysgu/scikitbio/_ssw_wrapper.pyx", f"dysgu/scikitbio/ssw.c"],
