@@ -1,4 +1,3 @@
-
 ========
 dysgu-SV
 ========
@@ -133,6 +132,10 @@ will then be utilized.
 Finally, if the diploid/non-diploid models are not picking up your SV of interest, a simpler model can be used with the
 `--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
 retained. In general the performance of models follows diploid > non-diploid > no-contigs.
+
+It is also possible to switch models post-calling using the python-API. For an example of how to do this,
+see the dysgu_api_demon.ipynb
+
 
 Specifying regions of interest / excluding regions
 --------------------------------------------------
