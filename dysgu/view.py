@@ -588,7 +588,8 @@ def view_file(args):
         count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, extended_tags=False, small_output_f=True)
         logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
     else:
-        to_csv(df, args, seen_names, outfile, True, False)
+        extended_tags = 'DN' in df.columns or 'ZN' in df.columns
+        to_csv(df, args, seen_names, outfile, extended=extended_tags, small_output=False)
 
     logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
                                                     time.time() - t0))
