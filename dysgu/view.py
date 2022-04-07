@@ -1,6 +1,8 @@
 #cython: language_level = 3
 
 import os
+import sys
+
 import pandas as pd
 import sortedcontainers
 import logging
@@ -11,6 +13,7 @@ from dysgu import io_funcs, cluster
 from dysgu.map_set_utils import echo, merge_intervals
 import subprocess
 import io
+import gzip
 import pysam
 import numpy as np
 from sys import stdin, stdout
@@ -167,22 +170,47 @@ def to_csv(df, args, names, outfile, extended, small_output):
         df[keytable].to_csv(outfile, index=False)
 
 
+def read_from_inputfile(path):
+    if path != '-' and isinstance(path, str):
+        try:
+            with open(path, "r") as fin:
+                for line in fin:
+                    yield line
+        except UnicodeDecodeError:
+            with gzip.open(path, 'r') as fin:
+                for line in fin:
+                    yield line.decode('ascii')
+
+    elif path == '-':
+        for line in sys.stdin:
+            yield line
+    else:
+        for line in path:
+            yield line
+
+
 def vcf_to_df(path):
+
+    fin = read_from_inputfile(path)
     # Parse sample
     header = ""
-    with open(path, "r") as fin:
-        last = ""
-        for line in fin:
-            if line[0] == "#":
-                if last:
-                    header += last
-                last = line
-            else:
-                header += "\t".join(last.split("\t")[:9])
-                break
-        sample = last.strip().split("\t")[9]
+    last = ""
+    for line in fin:
+        if line[:2] == "##":
+            header += line
+        else:
+            header += "\t".join(last.split("\t")[:9])
+            last = line
+            break
 
-    df = pd.read_csv(path, index_col=None, comment="#", sep="\t", header=None)
+    sample = last.strip().split("\t")[9]
+
+    if path == '-':
+        path_h = sys.stdin
+    else:
+        path_h = path
+
+    df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None)
     if len(df.columns) > 10:
         raise ValueError(f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}")
     parsed = pd.DataFrame()
