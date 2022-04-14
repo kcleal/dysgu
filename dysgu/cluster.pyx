@@ -186,6 +186,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         elif ei.chrA == ej.chrB and ei.chrB == ej.chrA:
             loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, intra=False)
 
+        if not loci_similar:
+            continue
+
+        # Force merging of translocations that have similar loci
+        if not intra:
+            G.add_edge(i_id, j_id, loci_same=loci_same)
+            continue
+
         one_is_imprecise = False
         both_imprecise = False
         if (not ei.preciseA or not ei.preciseB) and ei.svlen_precise:
@@ -195,9 +203,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 both_imprecise = True
             else:
                 one_is_imprecise = True
-
-        if not loci_similar:
-            continue
 
         if paired_end and ei.su == ej.su == 1 and not ej.preciseA and not ej.preciseB:
             continue
@@ -232,6 +237,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             spd = False
 
         m = False
+
         ml = max(ei.svlen, ej.svlen)
         if ml == 0 and ei.svtype != 'TRA':
             continue

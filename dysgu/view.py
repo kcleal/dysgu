@@ -180,9 +180,11 @@ def vcf_to_df(path):
             else:
                 header += "\t".join(last.split("\t")[:9])
                 break
+
         sample = last.strip().split("\t")[9]
 
     df = pd.read_csv(path, index_col=None, comment="#", sep="\t", header=None)
+
     if len(df.columns) > 10:
         raise ValueError(f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}")
     parsed = pd.DataFrame()
@@ -199,6 +201,7 @@ def vcf_to_df(path):
             info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
 
     n_fields = None
+
     for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
         if n_fields is None:
             n_fields = len(k1.split(":"))

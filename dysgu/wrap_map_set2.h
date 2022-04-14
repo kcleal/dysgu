@@ -514,6 +514,7 @@ class TwoWayMap
 
 
 void graph_node_2_vec(uint64_t packed_data, std::vector<int>& v) {  // used for debugging
+    // base, current_pos, offset, soft-clip-side
     v.push_back(packed_data & 15);
     v.push_back((packed_data >> 4) & 4294967295);
     v.push_back((packed_data >> 36) & 8388607);
