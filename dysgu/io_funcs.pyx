@@ -148,7 +148,6 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
 
 def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, small_output):
 
-    # Pick best row (best support, or highest prob if available
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
     if len(format_f) > 1:
@@ -205,17 +204,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
     r["posA"] = max(1, r["posA"] + 1)  # convert to 1 based indexing
     r["posB"] = max(1, r["posB"] + 1)
-
-    # swap a and b
-    # if r["chrA"] == r["chrB"] and int(r["posA"]) > int(r["posB"]):
-    #     chrA, posA, cipos95A, contig2 = r["chrA"], r["posA"], r["cipos95A"], r["contigB"]
-    #     r["posA"] = r["posB"]
-    #     r["cipos95A"] = r["cipos95B"]
-    #     r["chrB"] = chrA
-    #     r["posB"] = posA
-    #     r["cipos95B"] = cipos95A
-    #     r["contigB"] = r["contigA"]
-    #     r["contigA"] = contig2
 
     info_extras = []
     if r["chrA"] == r["chrB"]:
@@ -317,7 +305,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
 
-
     return rec
 
 
@@ -384,12 +371,9 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
     return format_fields, cols
 
 
-
-def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None,
-           small_output_f=True, sort_output=True):
-    if header is None:
-        if extended_tags:
-            HEADER = """##fileformat=VCFv4.2
+def get_headers(extended_tags):
+    if extended_tags:
+        HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
 ##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
@@ -483,8 +467,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-        else:
-            HEADER = """##fileformat=VCFv4.2
+    else:
+        HEADER = """##fileformat=VCFv4.2
 ##source=DYSGU
 ##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
@@ -574,8 +558,13 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-# ##INFO=<ID=MPROB,Number=1,Type=Float,Description="Median probability of event across samples">
-# ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event">
+    return HEADER
+
+
+def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None,
+           small_output_f=True, sort_output=True, n_fields=None):
+    if header is None:
+        HEADER = get_headers(extended_tags)
 
     else:
         HEADER = header
@@ -602,21 +591,25 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 
     count = 0
     recs = []
-    jobs = []
 
-    add_kind = args["add_kind"] == "True"
-    if args["metrics"]:
+    if args is not None:
+        add_kind = args["add_kind"] == "True"
+        if args["metrics"]:
+            small_output_f = False
+
+        if args["verbosity"] == '0':
+            df["contigA"] = [''] * len(df)
+            df["contigB"] = [''] * len(df)
+        elif args["verbosity"] == '1':
+            has_alt = [bool(i) for i in df["variant_seq"]]
+            df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
+            df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
+
+        n_fields = len(col_names(extended_tags, small_output_f)[-1])
+
+    else:
         small_output_f = False
 
-    if args["verbosity"] == '0':
-        df["contigA"] = [''] * len(df)
-        df["contigB"] = [''] * len(df)
-    elif args["verbosity"] == '1':
-        has_alt = [bool(i) for i in df["variant_seq"]]
-        df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
-        df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
-
-    n_fields = len(col_names(extended_tags, small_output_f)[-1])
     for idx, r in df.iterrows():
         if idx in seen_idx:
             continue
