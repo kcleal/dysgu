@@ -190,7 +190,6 @@ def read_from_inputfile(path):
 
 
 def vcf_to_df(path):
-
     fin = read_from_inputfile(path)
     # Parse sample
     header = ""
