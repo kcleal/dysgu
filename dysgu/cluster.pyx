@@ -151,6 +151,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
     seen = set([])
     pad = 100
+    disjoint_nodes = set([])  # if a component has more than one disjoint nodes it needs to be broken apart
 
     for ei, ej, idx, jdx in event_iter:
 
@@ -228,8 +229,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
 
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
-        overlap = max(ei.posA, ej.posA) - min(ei.posB, ej.posB)
+        overlap = max(0, min(ei.posA, ej.posA) - max(ei.posB, ej.posB))
 
+        if paired_end:
+            if ei.spanning > 0 and ej.spanning > 0 and overlap == 0:
+                disjoint_nodes.add(i_id)
+                disjoint_nodes.add(j_id)
+                continue
         # If long reads only rely on reciprocal overlap, seems to work better
         if paired_end:
             spd = span_similarity(ei, ej)
@@ -246,21 +252,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             l_ratio = 1  # not applicable for translocations
         else:
             l_ratio = min(ei.svlen, ej.svlen) / ml
-
-        # this didnt work
-        # merge events that might be deletion of tandem duplication
-        # if paired_end and ei.svtype == "DEL":
-        #     if l_ratio < 0.9:
-        #         if both_imprecise and min(ei.remap_score, ej.remap_score) > 50:
-        #             continue
-        #     elif overlap < -15:
-        #         continue
-
-        # this worked ok
-        # echo(ei.remap_score, ej.remap_score, recpi_overlap, l_ratio)
-        # if max(ei.remap_score, ej.remap_score) > 50 and not recpi_overlap:
-        # # if max(ei.remap_score, ej.remap_score) > 50 and max(ei.spanning, ej.spanning) > 0:
-        #     continue
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -287,8 +278,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not m:
             continue
         # if ei.posA == 66323 and ej.posA == 66323:
-        # echo(ml, l_ratio, one_is_imprecise, any_contigs_to_check, (ei.remap_score, ej.remap_score),
-        #      (ei.svlen, ej.svlen), (ei.event_id, ej.event_id), recpi_overlap, spd, loci_similar, loci_same, "overlap", overlap)
+        # echo((ei.event_id, ej.event_id), ml, l_ratio, one_is_imprecise, any_contigs_to_check, (ei.remap_score, ej.remap_score),
+        #      (ei.svlen, ej.svlen), recpi_overlap, spd, loci_similar, loci_same, "overlap", overlap)
 
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
@@ -335,24 +326,48 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                         G.add_edge(i_id, j_id, loci_same=True)
                         continue
 
-    return G
+    return G, disjoint_nodes
 
 
-def cut_components(G):
+def cut_components(G, disjoint_nodes):
     e = G.edges(data=True)
     G2 = nx.Graph([i for i in e if i[2]["loci_same"] == True])
     for u in G.nodes():
         if u not in G2:
             e0 = next(G.edges(u).__iter__())  # Use first edge out of u to connect
             G2.add_edge(*e0)
-    return nx.algorithms.components.connected_components(G2)
+    components = nx.algorithms.components.connected_components(G2)
+    if len(disjoint_nodes) > 0:
+        # try split this component into disjoint sets. This method works for small cluster sizes (most of the time)
+        # but can fail when there are many disjoint nodes. Label propagation might be needed for these
+        components2 = []
+        for c in components:
+            n_disjoin = set([])
+            for node in c:
+                if node in disjoint_nodes:
+                    n_disjoin.add(node)
+            if len(n_disjoin) <= 1:
+                components2.append(c)
+                continue
+
+            out_e = defaultdict(list)
+            for node in n_disjoin:
+                for neigh in G.neighbors(node):
+                    out_e[neigh].append(node)
+
+            G3 = nx.Graph()
+            for k, v in out_e.items():
+                G3.add_edge(k, random.choice(v))  # randomly assign to one of the sets
+
+            components2 += list(nx.algorithms.components.connected_components(G3))
+        return components2
+    return components
 
 
 cpdef srt_func(c):
-    # keeper_bias = 0 if not c.site_info else 10000
     if c.type != "pe" and c.type != "":
-        return 100 + c.su # + keeper_bias
-    return c.su + (3 * c.spanning) # + keeper_bias
+        return 100 + c.su
+    return c.su + (3 * c.spanning)
 
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
@@ -367,9 +382,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
     # Cluster events on graph
     G = nx.Graph()
-    G = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
-                         aggressive_ins_merge=aggressive_ins_merge,
-                         debug=debug)
+    G, disjoint_nodes = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
+                        aggressive_ins_merge=aggressive_ins_merge,
+                        debug=debug)
 
     found = []
     for item in potential:  # Add singletons, non-merged
@@ -378,8 +393,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
-    components = cut_components(G)
+    components = cut_components(G, disjoint_nodes)
     node_to_event = {i.event_id: i for i in potential}
+
     cdef int k
     # Only keep edges with loci_same==False if removing the edge leads to an isolated node
     for grp in components:

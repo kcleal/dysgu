@@ -6,6 +6,7 @@ from collections import defaultdict, deque, namedtuple
 import numpy as np
 cimport numpy as np
 import sortedcontainers
+import cython
 from cpython cimport array
 import array
 import re
@@ -542,7 +543,7 @@ cdef class PairedEndScoper:
 
 
 cdef class TemplateEdges:
-    cdef unordered_map[string, vector[int]] templates_s  # robin map was buggy for iterating
+    cdef public unordered_map[string, vector[int]] templates_s  # robin map was buggy for iterating
     def __init__(self):
         pass
 
@@ -555,27 +556,29 @@ cdef class TemplateEdges:
         val.push_back(flag)
         self.templates_s[key].insert(self.templates_s[key].end(), val.begin(), val.end())
 
-    def iterate_map(self):
-
-        cdef unordered_map[string, vector[int]].iterator it = self.templates_s.begin()
-        cdef string first
-        cdef vector[int] second
-        while it != self.templates_s.end():
-            first = dereference(it).first
-            second = dereference(it).second
-            yield str(dereference(it).first), list(dereference(it).second)  # Array values are flag, node name, query start
-            postincrement(it)
-
 
 cdef void add_template_edges(G, TemplateEdges template_edges):
     # this function joins up template reads (read 1, read 2, plus any supplementary)
     cdef int ii, u_start, v_start, u, v, uflag, vflag
+
     # normally 2 reads for paired end, or >2 if supplementary reads
-    for qname, arr in template_edges.iterate_map():
+    cdef unordered_map[string, vector[int]].iterator it = template_edges.templates_s.begin()
+    # cdef string qname
+    cdef vector[int] arr
+    while it != template_edges.templates_s.end():
+
+        # qname = str(dereference(it).first)
+
+        arr = dereference(it).second
+        # Array values are query start, node-name, flag
+        # if qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
+        #     echo(arr)
+        postincrement(it)
+
         read1_aligns = []
         read2_aligns = []
-        for ii in range(0, len(arr), 3):
-            if arr[ii + 2] & 64:
+        for ii in range(0, arr.size(), 3):
+            if arr[ii + 2] & 64:  # first in pair
                 read1_aligns.append(arr[ii:ii + 3])
             else:
                 read2_aligns.append(arr[ii:ii + 3])
@@ -607,7 +610,7 @@ cdef void add_template_edges(G, TemplateEdges template_edges):
                     primary2 = read2_aligns[0][1]
             else:
                 if len(read2_aligns) > 2:
-                    read2_aligns = sorted(read2_aligns)
+                    read2_aligns = sorted(read2_aligns)  # sorted by query pos
                 for ii in range(len(read2_aligns) - 1):
                     u_start, u, uflag = read2_aligns[ii]
                     if not uflag & 2304:  # Is primary
@@ -623,6 +626,27 @@ cdef void add_template_edges(G, TemplateEdges template_edges):
             if not G.hasEdge(primary1, primary2):
                 G.addEdge(primary1, primary2, w=1)
 
+
+@cython.auto_pickle(True)
+cdef class NodeName:
+    cdef public uint64_t hash_name
+    cdef public uint64_t tell
+    cdef public uint32_t pos
+    cdef public int32_t cigar_index
+    cdef public uint32_t event_pos
+    cdef public uint16_t flag
+    cdef public uint16_t chrom
+    def __init__(self, h, f, p, c, t, cigar_index, event_pos):
+        self.hash_name = h
+        self.flag = f
+        self.pos = p
+        self.chrom = c
+        self.tell = t
+        self.cigar_index = cigar_index
+        self.event_pos = event_pos
+
+    # def as_tuple(self):
+    #     return self.h, self.f, self.p, self.c, self.t, self.cigar_index, self.event_pos
 
 cdef class NodeToName:
     # Index these vectors to get the unique 'template_name'
@@ -650,7 +674,7 @@ cdef class NodeToName:
         self.event_pos.push_back(g)
 
     def __getitem__(self, idx):
-        return self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx], self.cigar_index[idx], self.event_pos[idx]
+        return NodeName(self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx], self.cigar_index[idx], self.event_pos[idx])
 
 
 cdef get_query_pos_from_cigarstring(cigar, pos):
@@ -660,19 +684,18 @@ cdef get_query_pos_from_cigarstring(cigar, pos):
     cdef bint i = 0
     cdef int ref_end = pos
     cdef int slen
-
     for slen, opp in cigar:
         if not i and opp in "SH":
             start += slen
             end += slen
             i = 1
-        elif opp == "M":
-            end += slen
-            ref_end += slen
         elif opp == "D":
             ref_end += slen
         elif opp == "I":
             end += slen
+        elif opp in "M=X":
+            end += slen
+            ref_end += slen
         i = 1
     return start, end, pos, ref_end
 
@@ -714,7 +737,7 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
         cigar = sa[3]
         matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
 
-        query_start, query_end, ref_start, ref_end = get_query_pos_from_cigarstring(matches, start_pos2)
+        query_start, query_end, ref_start, ref_end = get_query_pos_from_cigarstring(matches, start_pos2) #, strand == current_strand)
 
         if current_strand != strand:  # count from end
             start_temp = query_length - query_end
@@ -722,9 +745,9 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
             query_start = start_temp
 
         # If another local alignment is found use only this, usually corresponds to the other side of an insertion/dup
-        if aln_chrom == chrom2 and position_distance(aln_start, aln_end, ref_start, ref_end) < thresh:
-            query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand)]
-            break
+        # if aln_chrom == chrom2 and position_distance(aln_start, aln_end, ref_start, ref_end) < thresh:
+        #     query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand)]
+            # break
 
         query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand))
 
@@ -848,7 +871,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     # # if r.qname in look:
     # if node_name in node_look:
     #     echo(r.qname, r.pos)
-    # if r.qname == "m64004_190803_004451/154077992/ccs":
+    # if r.qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
     #     echo("@", r.flag, node_name, chrom, event_pos, chrom2, pos2, list(other_nodes),
     #          count_sc_edges, cigar_index, length_from_cigar)
     #     echo()
@@ -994,7 +1017,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
         if read_enum == SPLIT:
             # Parse SA tag. For paired reads
-            if r.has_tag("SA") and good_clip:  # Parse SA, first alignment is the other read primary line
+            if r.has_tag("SA") and good_clip:  # Parse SA, first alignment is the other read primary alignment
                 all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
                 event = all_aligns[index]
                 if len(all_aligns) == 1:
@@ -1392,41 +1415,16 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     return G, node_to_name, bad_clip_counter, site_adder
 
 
-cpdef dict get_reads(infile, sub_graph_reads):
-
-    rd = dict()
-    cdef int j, int_node
-    cdef long int p
-    cdef uint64_t v
-    cdef AlignedSegment a
-    for int_node, node in sub_graph_reads.items():
-        node = tuple(node[:-2])  # drop cigar index and event pos
-        p = node[4]
-        infile.seek(p)
-        a = next(infile)
-        v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
-        n1 = (v, a.flag, a.pos, a.rname, p)
-        # Try next few reads, sometimes they are on top of one another
-        if n1 != node:
-            for j in range(5):
-                a = next(infile)
-                n2 = (xxhasher(bam_get_qname(a._delegate), len(a.qname), 42), a.flag, a.pos, a.rname, p)
-                if n2 == node:
-                    rd[int_node] = a
-                    break
-        else:
-            rd[int_node] = a
-    return rd
-
-
 cdef BFS_local(G, int source, unordered_set[int]& visited ):
     # Create a queue for BFS
     cdef array.array queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
+    cdef vector[int] neighbors
     while queue:
         u = queue.pop(0)
-        for v in G.neighbors(u):
+        neighbors = G.neighbors(u)
+        for v in neighbors:
             if visited.find(v) == visited.end():
                 if G.weight(u, v) > 1:
                     if u not in nodes_found:
@@ -1442,12 +1440,13 @@ cdef get_partitions(G, nodes):
 
     cdef unordered_set[int] seen
     cdef int u, v, i
+    cdef vector[int] neighbors
     parts = []
     for u in nodes:
         if seen.find(u) != seen.end():
             continue
-
-        for v in G.neighbors(u):
+        neighbors = G.neighbors(u)
+        for v in neighbors:
             if seen.find(v) != seen.end():
                 continue
 
@@ -1464,17 +1463,16 @@ cdef tuple count_support_between(G, parts, int min_support):
 
     cdef int i, j, node, child, any_out_edges
     cdef tuple t
+    cdef unsigned long[:] p
 
     if len(parts) == 0:
         return {}, {}
     elif len(parts) == 1:
         return {}, {0: parts[0]}
-        # return {}, {list(parts.keys())[0]: array.array("L", list(parts.values())[0])}
 
     # Make a table to count from, int-int
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
     for i, p in enumerate(parts):
-    # for i, p in parts.items():
         for node in p:
             p2i.insert(node, i)
 
@@ -1485,13 +1483,14 @@ cdef tuple count_support_between(G, parts, int min_support):
     self_counts = {}
 
     seen_t = set([])
+    cdef vector[int] neighbors
     for i, p in enumerate(parts):
-    # for i, p in parts.items():
         current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
 
-            for child in G.neighbors(node):
+            neighbors = G.neighbors(node)
+            for child in neighbors:
 
                 if not p2i.has_key(child):
                     continue  # Exterior child, not in any partition
@@ -1529,7 +1528,7 @@ cdef tuple count_support_between(G, parts, int min_support):
 
         seen_t.update(current_t)  # Only count edge once
 
-        # save memory by converting support_between to 2d array
+        # save memory by converting support_between to array
         for t in current_t:
             counts[t] = [np.fromiter(m, dtype="uint32", count=len(m)) for m in counts[t]]
 
@@ -1552,7 +1551,6 @@ cpdef break_large_component(G, component, int min_support):
     # Make a table to count from, int-int
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
     for i, p in enumerate(parts):
-    # for i, p in parts.items():
         for node in p:
             p2i.insert(node, i)
 
@@ -1563,13 +1561,14 @@ cpdef break_large_component(G, component, int min_support):
     self_counts = defaultdict(int)
 
     seen_t = set([])
+    cdef vector[int] neighbors
     for i, p in enumerate(parts):
-    # for i, p in parts.items():
         current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
 
-            for child in G.neighbors(node):
+            neighbors = G.neighbors(node)
+            for child in neighbors:
 
                 if not p2i.has_key(child):
                     continue  # Exterior child, not in any partition
@@ -1636,7 +1635,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
         # Need to keep a record of all node info, and cigar indexes
         key = node_to_name[v]
 
-        if key[5] != -1:
+        if key.cigar_index != -1:
             support_estimate += 2
         else:
             support_estimate += 1
@@ -1647,10 +1646,8 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_su
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
-    # partitions = {i: p for i, p in enumerate(partitions)}
-
     support_between, support_within = count_support_between(G, partitions, min_support)
-    # echo("support between", len(support_between), len(support_within), info, partitions, len(n2n), info)
+
     if len(support_between) == 0 and len(support_within) == 0:
         if not paired_end:
 

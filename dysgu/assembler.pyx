@@ -147,7 +147,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
         cigar, current_pos, i = trim_cigar(cigar, pos, approx_position)
 
     for opp, length in cigar:
-        with nogil:
+        # with nogil:
             if done:
                 break
 
@@ -225,10 +225,10 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
 
-                current_pos += 1  # <-- Reference pos increases 1
+                # current_pos += 1  # <-- Reference pos increases 1
 
             elif opp == 2: # deletion
-                current_pos += length + 1
+                current_pos += length # + 1
 
             elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
 
@@ -270,10 +270,12 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                         G.updateEdge(prev_node, n, qual)
                     prev_node = n
 
+                current_pos += 1
+
             start = False
 
 
-cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order):  # except -1:
+cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order, r): #  except -1:
 
     cdef unordered_set[int] seen
     cdef unordered_set[int] explored
@@ -286,51 +288,53 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order):  # except -1:
 
     cdef cpp_vector[int] debug_res
 
-    with nogil:
+    # with nogil:
 
-        for v in range(G.numberOfNodes()):  # process all vertices in G
-            if explored.find(v) != explored.end():
+    for v in range(G.numberOfNodes()):  # process all vertices in G
+        if explored.find(v) != explored.end():
+            continue
+
+        fringe.clear()
+        fringe.push_back(v)  # nodes yet to look at
+
+        while fringe.size() != 0:
+
+            w = fringe.back() # depth first search
+            if explored.find(w) != explored.end():  # already looked down this branch
+                fringe.pop_back()
                 continue
 
-            fringe.clear()
-            fringe.push_back(v)  # nodes yet to look at
+            seen.insert(w)
 
-            while fringe.size() != 0:
+            # Check successors for cycles and for new nodes
+            if new_nodes.size() > 0:
+                new_nodes.clear()
 
-                w = fringe.back() # depth first search
-                if explored.find(w) != explored.end():  # already looked down this branch
-                    fringe.pop_back()
-                    continue
+            neighbors = G.neighbors(w)
+            for n in neighbors:
+                if explored.find(n) == explored.end():
 
-                seen.insert(w)
+                    if seen.find(n) != seen.end(): #CYCLE !!
+                        order.clear()
+                        order.push_back(-1)
+                        order.push_back(n)
+                        order.push_back(w)
+                        # return order
+                        graph_node_2_vec(n, debug_res)
+                        # echo("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
 
-                # Check successors for cycles and for new nodes
-                if new_nodes.size() > 0:
-                    new_nodes.clear()
+                        raise ValueError("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
 
-                neighbors = G.neighbors(w)
-                for n in neighbors:
-                    if explored.find(n) == explored.end():
+                    new_nodes.push_back(n)
 
-                        if seen.find(n) != seen.end(): #CYCLE !!
-                            order.clear()
-                            order.push_back(-1)
-                            order.push_back(n)
-                            order.push_back(w)
-                            # return order
-                            graph_node_2_vec(n, debug_res)
-                            raise ValueError("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
+            if new_nodes.size() > 0:  # Add new_nodes to fringe
+                fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
 
-                        new_nodes.push_back(n)
+            else:  # No new nodes so w is fully explored
+                explored.insert(w)
 
-                if new_nodes.size() > 0:  # Add new_nodes to fringe
-                    fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
-
-                else:  # No new nodes so w is fully explored
-                    explored.insert(w)
-
-                    order.push_front(w)
-                    fringe.pop_back()  # done considering this node
+                order.push_front(w)
+                fringe.pop_back()  # done considering this node
 
 
 cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
@@ -418,7 +422,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef DiGraph G = DiGraph()
     cdef TwoWayMap ndict_r2
     cdef cpp_vector[int] node_weights
-
+    r = None
     for r in rd:
         if r.seq is None:
             continue
@@ -428,7 +432,15 @@ cdef dict get_consensus(rd, int position, int max_distance):
         add_to_graph(G, r, node_weights, ndict_r2, position, max_distance)
 
     cdef cpp_deque[int] nodes_to_visit2
-    return_code = topo_sort2(G, nodes_to_visit2)
+
+    # try:
+    return_code = topo_sort2(G, nodes_to_visit2, r)
+
+    # except ValueError:
+    #     echo("was -1")
+    #     for r in rd:
+    #         echo(r.qname, r.pos)
+
     if return_code == -1 or nodes_to_visit2.size() < 50:
         return {}
 

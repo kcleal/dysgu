@@ -304,7 +304,7 @@ cdef guess_informative_pair(aligns):
         b_cigar_info, b = aligns[1]
 
         # check for paired-end read through with no SA tag
-        if a.flag & 1 and a_cigar_info[5] == -1 and b_cigar_info[5] == -1:
+        if a.flag & 1 and a_cigar_info.cigar_index == -1 and b_cigar_info.cigar_index == -1:
             if a.pos == b.pos and a.reference_end == b.reference_end:
                 extent_left_same = True
                 extent_right_same = True
@@ -316,9 +316,9 @@ cdef guess_informative_pair(aligns):
                     return None
 
         # within read sv
-        if 0 < a_cigar_info[5] < len(a.cigartuples) - 1:
-            cigar_index = a_cigar_info[5]
-            event_pos = a_cigar_info[6]
+        if 0 < a_cigar_info.cigar_index < len(a.cigartuples) - 1:
+            cigar_index = a_cigar_info.cigar_index
+            event_pos = a_cigar_info.event_pos
             ci = a.cigartuples[cigar_index]
             return (ci[0],
                     a.rname,
@@ -328,9 +328,9 @@ cdef guess_informative_pair(aligns):
                     a,
                     cigar_index)
 
-        elif 0 < b_cigar_info[5] < len(b.cigartuples) - 1:
-            cigar_index = b_cigar_info[5]
-            event_pos = b_cigar_info[6]
+        elif 0 < b_cigar_info.cigar_index < len(b.cigartuples) - 1:
+            cigar_index = b_cigar_info.cigar_index
+            event_pos = b_cigar_info.event_pos
             ci = b.cigartuples[cigar_index]
             return (ci[0],
                     b.rname,
@@ -340,8 +340,8 @@ cdef guess_informative_pair(aligns):
                     b,
                     cigar_index)
 
-        a_pos = a_cigar_info[6]  # Position may have been inferred from SA tag, use this if available
-        b_pos = b_cigar_info[6]
+        a_pos = a_cigar_info.event_pos  # Position may have been inferred from SA tag, use this if available
+        b_pos = b_cigar_info.event_pos
         if a_pos == b_pos:
             # make sure different breaks are mapped
             if (a.cigartuples[0][0] == 4 and b.cigartuples[0][0] == 4) or (a.cigartuples[-1][0] == 4 and b.cigartuples[-1][0] == 4):
@@ -802,7 +802,7 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 
     if n_templates == 1:
         # Filter uninteresting reads
-        if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info[5] != 2 or
+        if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info.cigar_index != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
 
@@ -842,10 +842,10 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 
         else:  # Single alignment, check spanning
             cigar_info, a = alignments[0]
-            cigar_index = cigar_info[5]
+            cigar_index = cigar_info.cigar_index #[5]
 
             if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
-                event_pos = cigar_info[6]
+                event_pos = cigar_info.event_pos #[6]
                 ci = a.cigartuples[cigar_index]
                 spanning_alignments.append((ci[0],
                                             a.rname,
@@ -1261,14 +1261,14 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         else:
                             lens.append(i.inferred_sv_len)
                 if len(lens) > 0:
-                    svlen = value_closest_to_mean(lens) #int(np.mean(lens))
+                    svlen = value_closest_to_mean(lens)
                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
                         svlen_precise = 1
                     else:
                         svlen = main_svlen
                 else:
                     if len(inferred_lens) > 0:
-                        svlen = value_closest_to_mean(inferred_lens) #int(np.mean(inferred_lens))
+                        svlen = value_closest_to_mean(inferred_lens)
                     else:
                         svlen = main_svlen
 
@@ -1581,7 +1581,9 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
                 v_reads.append(v_item.read_b)
 
             er = EventResult()
-
+            # for item in sub_informative:
+            #     if item.read_a.qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
+            #         echo("here")
             make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
 
             count_attributes2(u_reads, v_reads, [], extended_tags, insert_ppf, [], er)
@@ -1612,9 +1614,43 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
     return results
 
 
+cdef filter_single_partitions(u_reads, v_reads):
+    # rare, but single reads with >2 alignments can have multiple alignments end up in one block. These should be
+    # processed as singles
+    u_counts = defaultdict(list)
+    v_counts = defaultdict(list)
+    any_u_grouped = False
+    any_v_grouped = False
+
+    for cigar_info, a in u_reads:
+        u_counts[(a.is_read1, a.qname)].append((cigar_info, a))
+        if len(u_counts[(a.is_read1, a.qname)]) > 1:
+            any_u_grouped = True
+    for cigar_info, a in v_reads:
+        v_counts[(a.is_read1, a.qname)].append((cigar_info, a))
+        if len(v_counts[(a.is_read1, a.qname)]) > 1:
+            any_v_grouped = True
+    if not any_u_grouped and not any_v_grouped:
+        return u_reads, v_reads, None, None
+
+    single_u, single_v, actual_u, actual_v = [], [], [], []
+    for k, v in u_counts.items():
+        if len(v) == 1:
+            actual_u += v
+        else:
+            single_u += v
+    for k, v in v_counts.items():
+        if len(v) == 1:
+            actual_v += v
+        else:
+            single_v += v
+
+    return actual_u, actual_v, single_u, single_v
+
+
 cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
                    int min_support, int block_edge, int assemble, int extended_tags, info):
-    #print("starting one edge")
+
     spanning_alignments = []
     u_reads = []
     v_reads = []
@@ -1624,9 +1660,9 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         if not a.cigartuples:
             continue
         u_reads.append(a)
-        cigar_index = cigar_info[5]
+        cigar_index = cigar_info.cigar_index
         if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
-            event_pos = cigar_info[6]
+            event_pos = cigar_info.event_pos
             ci = a.cigartuples[cigar_index]
             spanning_alignments.append((ci[0],
                                         a.rname,
@@ -1640,9 +1676,9 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         if not a.cigartuples:
             continue
         v_reads.append(a)
-        cigar_index = cigar_info[5]
+        cigar_index = cigar_info.cigar_index
         if 0 < cigar_index < len(a.cigartuples) - 1:  # Alignment spans SV
-            event_pos = cigar_info[6]
+            event_pos = cigar_info.event_pos
             ci = a.cigartuples[cigar_index]
             spanning_alignments.append((ci[0],
                                         a.rname,
@@ -1748,7 +1784,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
 
 
 def fpos_srt(x):
-    return x[0][4]
+    return x[0].tell
 
 
 cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, sites_index):
@@ -1770,28 +1806,27 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
         if int_node in buffered_reads:
             aligns.append((n, buffered_reads[int_node]))
             continue
+        # # def as_tuple(self):
+        #     #     return self.h, self.f, self.p, self.c, self.t, self.cigar_index, self.event_pos
+        # p = n[4]
+        # node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
 
-        p = n[4]
-        node = (n[0], n[1], n[2], n[3], p)  # drop cigar index and event pos
+        fpos.append((n, int_node))
 
-        fpos.append((node, int_node, n))
+    for node, int_node in sorted(fpos, key=fpos_srt):
 
-    # improve chances of reading nearby locations sequentially
-    fpos = sorted(fpos, key=fpos_srt)
+        # p = node[4]
 
-    for node, int_node, save_node in fpos:
-
-        p = node[4]
-
-        infile.seek(p)
+        infile.seek(node.tell)
         try:
             a = next(infile)
         except StopIteration:
             return aligns
         v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
 
-        if (v, a.flag, a.pos, a.rname, p) == node:
-            aligns.append((save_node, a))
+        # if (v, a.flag, a.pos, a.rname, p) == node:
+        if v == node.hash_name and a.flag == node.flag and a.pos == node.pos and a.rname == node.chrom:
+            aligns.append((node, a))
 
             if add_to_buffer:
                 buffered_reads[int_node] = a  # Add to buffer, then block nodes with multi-edges dont need collecting twice
@@ -1806,8 +1841,9 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
                 steps += 1
                 v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
 
-                if (v, a.flag, a.pos, a.rname, p) == node:
-                    aligns.append((save_node, a))
+                # if (v, a.flag, a.pos, a.rname, p) == node:
+                if v == node.hash_name and a.flag == node.flag and a.pos == node.pos and a.rname == node.chrom:
+                    aligns.append((node, a))
 
                     if add_to_buffer:
                         buffered_reads[int_node] = a
@@ -1841,6 +1877,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         sites_info = []
 
     # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
+
     for (u, v), d in data["s_between"].items():
 
         rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer, info)   # [(Nodeinfo, alignment)..]
@@ -1862,8 +1899,28 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         if v in seen:
             seen.remove(v)
 
-        events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
-                            extended_tags, sites_info)
+        # finds reads that should be a single partition
+        u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
+
+        if len(u_reads) > 0 and len(v_reads) > 0:
+            events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
+                               extended_tags, sites_info)
+        if u_single:
+            res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                         extended_tags, sites_info)
+            if res:
+                if isinstance(res, EventResult):
+                    events.append(res)
+                else:
+                    events += res
+        if v_single:
+            res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                         extended_tags, sites_info)
+            if res:
+                if isinstance(res, EventResult):
+                    events.append(res)
+                else:
+                    events += res
 
     # Process any singles / unconnected blocks
     if seen:
