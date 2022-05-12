@@ -78,6 +78,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
     # Assume:
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
+
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
 
     bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
@@ -119,7 +120,8 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
         return df
     else:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
-                                     same_sample=True, aggressive_ins_merge=True,)
+                                     same_sample=True, aggressive_ins_merge=True)
+
         return pd.DataFrame.from_records(found)
 
 
@@ -198,7 +200,7 @@ def vcf_to_df(path):
         if line[:2] == "##":
             header += line
         else:
-            header += "\t".join(last.split("\t")[:9])
+            header += "\t".join(line.split("\t")[:9])
             last = line
             break
 

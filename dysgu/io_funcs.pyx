@@ -5,14 +5,12 @@ import numpy as np
 cimport numpy as np
 import logging
 from map_set_utils import merge_intervals, echo
-from collections import deque, defaultdict
+from collections import defaultdict
 import pkg_resources
 import sortedcontainers
 import pandas as pd
 import os
-from cpython cimport array
-import array
-
+import gzip
 from dysgu.map_set_utils import Py_BasicIntervalTree
 
 
@@ -50,13 +48,25 @@ cpdef str reverse_complement(str seq, int seq_len):
     return seq_dest[:seq_len].decode('UTF-8')
 
 
-cpdef list get_bed_regions(str bed):
+def bed_iter(path):
+    if path[-4:] == ".bed":
+        with open(path, "r") as bed:
+            for line in bed:
+                yield line
+    elif path[-3:] == ".gz":
+        with gzip.open(path, "r") as bed:
+            for line in bed:
+                yield line.decode('utf-8')
+    else:
+        raise ValueError("File extension not understood. Input bed file must have extension .gz or .bed")
+
+
+cpdef list get_bed_regions(bed):
     b = []
-    with open(bed, "r") as inf:
-        for line in inf:
-            if line[0] != "#":
-                r = line.strip().split("\t")
-                b.append((r[0], int(r[1]), int(r[2])))
+    for line in bed_iter(bed):
+        if line[0] != "#":
+            r = line.strip().split("\t")
+            b.append((r[0], int(r[1]), int(r[2])))
     if len(b) == 0:
         raise ValueError("Bed regions empty")
     return b
@@ -563,9 +573,9 @@ def get_headers(extended_tags):
 
 def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None,
            small_output_f=True, sort_output=True, n_fields=None):
+
     if header is None:
         HEADER = get_headers(extended_tags)
-
     else:
         HEADER = header
 

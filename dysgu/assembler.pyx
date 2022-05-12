@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from dysgu.map_set_utils import timeit, echo
-# from skbio.alignment import StripedSmithWaterman
+
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 from libcpp.vector cimport vector as cpp_vector
 from libcpp.deque cimport deque as cpp_deque
@@ -275,7 +275,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
             start = False
 
 
-cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order, r): #  except -1:
+cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
     cdef unordered_set[int] seen
     cdef unordered_set[int] explored
@@ -321,8 +321,6 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order, r): #  except -1:
                         order.push_back(w)
                         # return order
                         graph_node_2_vec(n, debug_res)
-                        # echo("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
-
                         raise ValueError("Graph contains a cycle. Please report this. n={}, w={}, v={}. Node info n was: {}, {}, {}, {}".format(n, w, v, debug_res[0], debug_res[1], debug_res[2], debug_res[4]))
 
                     new_nodes.push_back(n)
@@ -422,7 +420,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef DiGraph G = DiGraph()
     cdef TwoWayMap ndict_r2
     cdef cpp_vector[int] node_weights
-    r = None
+
     for r in rd:
         if r.seq is None:
             continue
@@ -433,13 +431,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
     cdef cpp_deque[int] nodes_to_visit2
 
-    # try:
-    return_code = topo_sort2(G, nodes_to_visit2, r)
-
-    # except ValueError:
-    #     echo("was -1")
-    #     for r in rd:
-    #         echo(r.qname, r.pos)
+    return_code = topo_sort2(G, nodes_to_visit2)
 
     if return_code == -1 or nodes_to_visit2.size() < 50:
         return {}

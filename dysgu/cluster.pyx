@@ -141,6 +141,53 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
     return dist_a_close and dist_b_close, dist_a_same and dist_b_same
 
 
+# cdef joined_badly_aligned_deletions(ei, ej, paired_end, G, disjoint):
+#
+#     # check for tandem del like events that should really be one long del with a small ins
+#     if not paired_end and isinstance(ei, EventResult) and ei.svtype == "DEL" and ej.svtype == "DEL":
+#
+#         if not ei.contig or not ej.contig:
+#             return
+#
+#         if ei.svlen < 100 or ej.svlen < 100:
+#             return
+#
+#         if not (ei.posB < ej.posA or ej.posB < ei.posA):
+#             return
+#
+#         if ei.posA < ej.posA:
+#             sep = ej.posA - ei.posB
+#             left = ei.posA
+#             right = ej.posB
+#             inferred_size = ej.posB - ei.posA
+#         else:
+#             sep = ei.posA - ej.posB
+#             left = ej.posA
+#             right = ei.posB
+#             inferred_size = ei.posB - ej.posA
+#
+#         # check one of the contigs spans the entire tandem DEL
+#         i_start, i_end, j_start, j_end = ei.contig_ref_start, ei.contig_ref_end, ej.contig_ref_start, ej.contig_ref_end
+#         if (i_start < left and i_end > right) or (j_start < left and j_end > right):
+#             if sep < 0 or sep / (ei.svlen + ej.svlen) > 0.1:
+#                 return
+#             aln = assembler.check_contig_match(ei.contig, ej.contig, return_int=False)
+#             if not aln:
+#                 return
+#
+#             ei.posA = left
+#             ei.posB = right
+#             ei.svlen = inferred_size
+#             ej.posA = left
+#             ej.posB = right
+#             ej.svlen = inferred_size
+#             ej.su = 0  # we are assuming they are from the same read
+#             ej.spanning = 0
+#             echo(f"{ei.chrA}:{ei.posA}-{ei.posB}", ei.svlen)
+#             G.add_edge(ei.event_id, ej.event_id, loci_same=True)
+#             return True
+
+
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False):
 
@@ -169,6 +216,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         fail = False
         if ei.svtype != ej.svtype:
             continue
+
+        # if joined_badly_aligned_deletions(ei, ej, paired_end, G, disjoint_nodes):
+        #     continue
 
         # Check if events point to the same loci
         both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and \

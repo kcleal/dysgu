@@ -12,6 +12,7 @@ from libc.stdint cimport uint32_t
 
 from dysgu.map_set_utils import echo
 from dysgu.coverage import auto_max_cov
+from dysgu.io_funcs import bed_iter
 
 
 # thanks to senderle https://stackoverflow.com/questions/6462272/subtract-overlaps-between-two-ranges-without-sets
@@ -55,49 +56,48 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
     chr_in_rname = any('chr' in i for i in bam.references)
     if search is not None and exclude is None:
         s = ""
-        with open(search, "r") as bed:
-            for line in bed:
-                if line[0] == "#":
-                    continue
-                chrom, start, end = line.strip().split("\t", 4)[:3]
-                if 'chr' in chrom:
-                    is_chr = True
-                s += f"{chrom}{first_delim}{start}-{end}{sep}"
+        for line in bed_iter(search):
+            if line[0] == "#":
+                continue
+            chrom, start, end = line.strip().split("\t", 4)[:3]
+            if 'chr' in chrom:
+                is_chr = True
+            s += f"{chrom}{first_delim}{start}-{end}{sep}"
         if len(s) == 0:
             raise ValueError("Search regions not understood")
         return s
 
     targets = defaultdict(list)  # start end coords for chromosomes
     if search is not None:
-        with open(search, "r") as bed:
-            for line in bed:
-                if line[0] == "#":
-                    continue
-                chrom, start, end = line.strip().split("\t", 4)[:3]
-                if 'chr' in chrom:
-                    is_chr = True
-                start = int(start)
-                end = int(end)
-                assert end > start
-                targets[chrom].append((start, end))
+        for line in bed_iter(search):
+            if line[0] == "#":
+                continue
+            chrom, start, end = line.strip().split("\t", 4)[:3]
+            if 'chr' in chrom:
+                is_chr = True
+            start = int(start)
+            end = int(end)
+            assert end > start
+            targets[chrom].append((start, end))
     else:
         for l, c in zip(bam.lengths, bam.references):
             targets[c].append((0, l + 1))
 
     excl = defaultdict(list)
     if exclude is not None:
-        with open(exclude, "r") as bed:
-            for line in bed:
-                if line[0] == "#":
-                    continue
+        for line in bed_iter(exclude):
+        # with open(exclude, "r") as bed:
+        #     for line in bed:
+            if line[0] == "#":
+                continue
 
-                chrom, start, end = line.strip().split("\t", 4)[:3]
-                if 'chr' in chrom:
-                    is_chr = True
-                start = int(start)
-                end = int(end)
-                assert end > start
-                excl[chrom].append((start, end))
+            chrom, start, end = line.strip().split("\t", 4)[:3]
+            if 'chr' in chrom:
+                is_chr = True
+            start = int(start)
+            end = int(end)
+            assert end > start
+            excl[chrom].append((start, end))
 
     if chr_in_rname != is_chr:
         logging.warning('"chr" name conflict, please check --search/--exclude and bam chromosome names match')
