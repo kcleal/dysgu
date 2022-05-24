@@ -35,6 +35,8 @@ Pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_:
 
     docker pull kcleal/dysgu
 
+Detailed build recipes for linux and osx can also be found in the 'ci' folder.
+
 Run tests::
 
     $ dysgu test
