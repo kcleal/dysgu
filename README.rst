@@ -21,7 +21,7 @@ To build from source, a >=c++11 compiler is needed. For convenience use the inst
     cd dysgu
     bash INSTALL.sh
 
-Or manually::
+To build manually you can try the following, or one of the build recipes (linux or osx) found in the 'ci' folder.::
 
     pip install numpy
     git clone --recursive https://github.com/kcleal/dysgu.git
@@ -31,11 +31,10 @@ Or manually::
     pip install -r requirements.txt
     pip install .
 
-Pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
+Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
     docker pull kcleal/dysgu
 
-Detailed build recipes for linux and osx can also be found in the 'ci' folder.
 
 Run tests::
 
