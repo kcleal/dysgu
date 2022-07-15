@@ -606,17 +606,15 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
         add_kind = args["add_kind"] == "True"
         if args["metrics"]:
             small_output_f = False
-
         if args["verbosity"] == '0':
             df["contigA"] = [''] * len(df)
             df["contigB"] = [''] * len(df)
         elif args["verbosity"] == '1':
-            has_alt = [bool(i) for i in df["variant_seq"]]
+            has_alt = [True if isinstance(i, str) and i[0] != '<' else False for i in df['variant_seq']]
             df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
             df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
 
         n_fields = len(col_names(extended_tags, small_output_f)[-1])
-
     else:
         small_output_f = False
 
