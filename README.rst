@@ -253,6 +253,34 @@ Issues
 - If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
 
 
+Python API
+----------
+
+Dysgu can also be used from a python script. A full demo of the API can be found in the
+`ipython notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,. In this example, dysgu is
+used to call SVs on the first 10 Mb of chr1:
+
+.. code-block:: python
+
+    import pysam
+    from dysgu import DysguSV
+
+    # open input bam and reference file
+    bam = pysam.AlignmentFile('sample.bam', 'rb')
+    genome = pysam.FastaFile('ucsc.hg19.fasta')
+
+    # initiate dysgu
+    dysgu = DysguSV(genome, bam)
+
+    # call SVs (results will be a pandas dataframe)
+    results = dysgu(bam.fetch('chr1', 0, 10_000_000))
+
+    # after analysis, save to a vcf file
+    with open("output.vcf", "w") as out:
+        dysgu.to_vcf(results, out)
+
+The API can also be used to apply different machine-learning models, merge SVs, and call SVs using target bed regions.
+
 Citation
 --------
 To cite dysgu, or to learn more about implementation details please see:
