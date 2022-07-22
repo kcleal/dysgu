@@ -205,9 +205,9 @@ def cli():
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
-@click.option('--regions-only', help="If --regions is provided, call only events within target regions",
-              default="False", type=click.Choice(["True", "False"]),
-              show_default=True)
+# @click.option('--regions-only', help="If --regions is provided, call only events within target regions",
+#               default="False", type=click.Choice(["True", "False"]),
+#               show_default=True)
 @click.option('--regions-mm-only', help="If --regions is provided, only use minimizer clustering within --regions. Useful for high coverage targeted sequencing",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -261,8 +261,8 @@ def run_pipeline(ctx, **kwargs):
     tmp_file_name = f"{dest}/{bname if bname != '-' else dest}.{pfix}.bam"
 
     # Get SV reads
-    if kwargs["regions"] is not None and kwargs["regions_only"] == "True":
-        ctx.obj["search"] = kwargs["regions"]
+    # if kwargs["regions"] is not None:  # and kwargs["regions_only"] == "True":
+    #     ctx.obj["search"] = kwargs["regions"]
 
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
