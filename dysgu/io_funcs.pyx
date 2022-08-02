@@ -426,7 +426,7 @@ def get_headers(extended_tags):
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality phred scaled">
+##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
 ##FORMAT=<ID=DP,Number=1,Type=Float,Description="Mean distance-to-pair metric supporting the variant">
 ##FORMAT=<ID=DN,Number=1,Type=Float,Description="Mean distance-to-normal metric supporting the variant">
 ##FORMAT=<ID=DAP,Number=1,Type=Float,Description="Mean distance-to-alignment metric for primary alignments">
@@ -521,7 +521,7 @@ def get_headers(extended_tags):
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality phred scaled">
+##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
 ##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
 ##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
