@@ -362,6 +362,11 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
             new_events.append(e)
             continue
 
+        if ref_genome.get_reference_length(e.chrA) < 1000 or ref_genome.get_reference_length(e.chrB) < 1000:
+            e.modified = 0
+            new_events.append(e)
+            continue
+
         try_remap = False
         if (e.contig or e.contig2) and (e.svlen < 1000):
             if not e.svlen_precise:
