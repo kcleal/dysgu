@@ -122,19 +122,19 @@ def vcf_reader(pth, infile, ref_genome_pth, paired_end, parse_probs, default_pro
         #     is_dysgu = True
         #     seqs = parse_variant_seqs_dysgu(r, svt, r.chrom, start, chrom2_info, stop, paired_end, ref_genome)
 
-        # if parse_probs == "True":
-        if "MeanPROB" in r.info:
-            pval = r.info["MeanPROB"]
-        elif len(r.samples) == 1:
-            pval = r.samples[0].get("PROB")
-            if pval is None:
-                pval = default_prob
-            if pval == -1:
+        if parse_probs == "True":
+            if "MeanPROB" in r.info:
+                pval = r.info["MeanPROB"]
+            elif len(r.samples) == 1:
+                pval = r.samples[0].get("PROB")
+                if pval is None:
+                    pval = default_prob
+                if pval == -1:
+                    pval = default_prob
+            else:
                 pval = default_prob
         else:
             pval = default_prob
-        # else:
-        #     pval = default_prob
 
         if isinstance(pval, str) or pval < 0 or pval > 1:
             raise ValueError("PROB or MeanPROB must be in a float in range 0-1, error at CHROM {}, POS {}".format(chrom, start))

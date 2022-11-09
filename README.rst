@@ -157,9 +157,10 @@ with either 'intra-regional' - both SV ends within same interval, 'extra-regiona
 'inter-regional' - SV ends in separate intervals, or 'hemi-regional' - one SV end in an interval. These labels may be
 useful for some targeted sequencing experiments.
 
-Additionally, there is also the --regions-only option. If this is set to 'True', then dysgu will search all reads in
+Additionally, there is also the --regions-only option. The option is only available for 'dysgu call'. If this is set to 'True', then dysgu will search all reads in
 --regions and also analyse any mate-pairs that do not overlap those regions of interest. This method can be quicker to
-run when the regions of interest are small relative to the genome.
+run when the regions of interest are small relative to the genome. However, this option can consume a lot of memory if the
+regions are large, so use with caution.
 
 For deep targeted sequencing experiments, the --regions-mm-only option can also be used, which can help prevent over
 clustering of reads. When set to 'True', dysgu will only use minimizer based clustering within the intervals specified

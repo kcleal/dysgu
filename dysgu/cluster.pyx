@@ -1280,7 +1280,7 @@ def cluster_reads(args):
         has_index = False
 
     if not has_index and args["regions"] is not None:
-        logging.info("Input file has no index, but --include was provided, attempting to index")
+        logging.info("Input file has no index, but --regions was provided, attempting to index")
         infile.close()
         pysam.index(args["sv_aligns"])
         infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],

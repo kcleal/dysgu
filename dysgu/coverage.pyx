@@ -162,6 +162,7 @@ cdef class GenomeScanner:
 
             # when 'run' command is invoked, run this block. cov track already exists from find-reads
             if self.cov_track_path is None and self.bam_iter is None:
+
                 for aln in self.input_bam:
 
                     if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:  # not primary, duplicate or unmapped?
@@ -177,10 +178,6 @@ cdef class GenomeScanner:
             else:
 
                 self.cpp_cov_track.set_max_cov(self.max_cov)
-                if self.paired_end:
-                    q_size = 100000
-                else:
-                    q_size = 500
 
                 if self.bam_iter is not None:
                     f_iter = self.bam_iter
@@ -245,9 +242,9 @@ cdef class GenomeScanner:
 
         # Scan input regions
         else:
-
-            if self.cov_track_path is not None:
-                raise Exception("--regions-only is not currently supported via the 'call' command")
+            logging.info("Searching --regions and collecting reads from mate-pair locations")
+            # This block is for when --regions-only is set on the call command
+            self.cpp_cov_track.set_max_cov(self.max_cov)
 
             # Reads must be fed into graph in sorted order, find regions of interest first
             intervals_to_check = []  # Containing include_regions, and also mate pairs
@@ -260,6 +257,7 @@ cdef class GenomeScanner:
             for c, s, e in regions:
 
                 for a in self.input_bam.fetch(c, int(s), int(e)):
+                    print(a.pos)
                     # Mate unmapped, not primary, fails QC, duplicate
                     if not a.flag & 1800:
                         p1 = a.pnext - pad
@@ -282,22 +280,68 @@ cdef class GenomeScanner:
             for c, s, e in itv:
 
                 tell = -1  # buffer first read because tell will likely be wrong
-                for a in self.input_bam.fetch(c, int(s), int(e)):
+                for aln in self.input_bam.fetch(c, int(s), int(e)):
 
-                    name = a.qname.__hash__(), a.flag, a.pos
+                    name = aln.qname.__hash__(), aln.flag, aln.pos
                     if name in seen_reads:
                         continue
 
-                    self._add_to_bin_buffer(a, tell)
-                    tell = 0 if self.no_tell else self.input_bam.tell()
+                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
+                        continue
+
+                    # prepare cov array
+                    if aln.rname != self.current_tid:
+
+                        if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
+                            out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
+                            self.cpp_cov_track.write_track(out_path)
+
+                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(aln.rname))
+                        self.current_tid = aln.rname
+                        self.cpp_cov_track.set_cov_array(chrom_length)
+
+                    # Add to coverage track here
+                    index_start = 0
+                    pos = aln.pos
+                    good_read = False
+                    if aln.flag & 2048:
+                        good_read = True
+                    elif not aln.flag & 2:
+                        good_read = True
+                    for opp, length in aln.cigartuples:
+                        if opp == 4 and length >= self.clip_length:
+                            good_read = True
+                        elif opp == 2:
+                            index_start += length
+                            if length >= self.min_within_size:
+                                good_read = True
+                        elif opp == 1 and length >= self.min_within_size:
+                            good_read = True
+                        elif opp == 0 or opp == 7 or opp == 8:
+                            self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
+                            index_start += length
 
                     seen_reads.add(name)
+
+                    if not good_read:
+                        continue
+
+                    if not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
+                        continue
+
+                    self._add_to_bin_buffer(aln, tell)
+                    tell = 0 if self.no_tell else self.input_bam.tell()
 
                     while len(self.staged_reads) > 0:
                         yield self.staged_reads.popleft()
 
+                if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
+                    out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
+                    self.cpp_cov_track.write_track(out_path)
+
                 if len(self.current_bin) > 0:
                     yield self.current_bin
+
 
     def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len, ibam=None):
         # This is invoked first to scan the first part of the file for the insert size metrics,
