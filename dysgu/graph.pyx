@@ -1210,6 +1210,8 @@ class SiteAdder:
         # p0 behind
         while p.start < pos - cluster_dist and len(s) > 0:
             s.popleft()
+            if len(s) == 0:
+                return
             p = s[0]
 
         # add local events to pos
