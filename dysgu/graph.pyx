@@ -751,7 +751,8 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
 
         query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand))
 
-    query_aligns = sorted(query_aligns)
+    query_aligns = sorted(query_aligns, key=lambda x: x[0])
+
     cdef int index = 0
     for index in range(len(query_aligns)):
         if query_aligns[index][-1] == "input":
