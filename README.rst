@@ -14,22 +14,12 @@ To install::
 
     pip install numpy dysgu
 
-To build from source, a >=c++11 compiler is needed. For convenience use the install script::
+To build from source, a >=c++11 compiler is needed. Grab the latest dysgu.tar.bz2 from `Releases page <https://github.com/kcleal/dysgu/releases>`_  For convenience use the install script::
 
-    pip install numpy
-    git clone --recursive https://github.com/kcleal/dysgu.git
     cd dysgu
     bash INSTALL.sh
 
-To build manually you can try the following, or one of the build recipes (linux or osx) found in the 'ci' folder.::
-
-    pip install numpy
-    git clone --recursive https://github.com/kcleal/dysgu.git
-    cd dysgu/dysgu/htslib
-    make
-    cd ../../
-    pip install -r requirements.txt
-    pip install .
+Additional build recipes (linux or osx) can be found in the 'ci' folder.
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
