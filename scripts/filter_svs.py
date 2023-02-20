@@ -286,7 +286,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
     df = df[df["chrB"].str.contains("hs37d5")==False]
     print("all samples")
     print(df)
-    #print(df["sample"])
     all_samples = set(df["sample"].tolist())
     print(all_samples)
     total = len(df)
@@ -350,8 +349,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
         normal_samples = [i.split(".")[0] for i in normal_samples]
         tumour_samples = [i.split(".")[0] for i in tumour_samples]
 
-    print("sample pools")
-    # print(sample_pools)
     for k, v in sample_pools.items():
         print(k, v)
     
@@ -369,16 +366,11 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
             cram_pool[k] = pysam.AlignmentFile(v, "rb")
         except:
             print(f"{k} {v} failed..")
-    # cram_pool = {k: pysam.AlignmentFile(v, "rb")  #"rc", reference_filename="../hg38.fa")
-    #              for k, v in crams.items()}
-    print("crams", cram_pool.keys())
-    print("cram pool", cram_pool)
     unique = []
     c = 0
     bar = progressbar.ProgressBar(maxval=len(df)).start()
     # df.to_csv("pos_filtered_shortcut.csv")
     for count, (idx, r) in enumerate(df.iterrows()):
-        # print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "left_ins_seq", "right_ins_seq"]].tolist())
         if r["sample"] in normal_samples:
             unique.append(None)
             c += 1
@@ -411,7 +403,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                         cram_f = cram_pool[path_to_sample(b)]  # pysam.AlignmentFile(crams[b], "rc")
                     except:
                         continue
-                    #print(b)
                     # Collect alignments from same site in other samples: (chrom1, position1)
                     for aln in cram_f.fetch(chr1, 0 if pos1 - pad[0] < 0 else pos1 - pad[0], pos1 + pad[1]):
                         if all([cram_f.getrname(aln.rnext) == chr2,  # Same chrom
@@ -427,7 +418,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
 
                     if not uni:
                         break
-                #print(uni)
 
             
             elif chr1 == chr2 and abs(pos2 - pos1) < 2500:  # For smaller intrachromosomal SVs
@@ -457,9 +447,7 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
 
                         if not uni:
                             break
-                    #print(uni)
                 else:
-                    # if var != "<DEL>":
                     uni = True
                     for b in pool:
                         try:
@@ -476,10 +464,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                                 break
                         if not uni:
                             break
-                        # if uni == True:
-                            # print("short", var, chr1, pos1, pos2)
-                    # print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "left_ins_seq", "right_ins_seq"]].tolist())
-                    # print(uni)
 
             elif chr1 != chr2:  # Deal with translocations
                 pad = (2000, 2000)
@@ -499,11 +483,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
 
                         if uni == False:
                             break
-                    # print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "su"]].tolist())
-                    # print(uni)
-                # else:
-                    # print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "su"]].tolist())
-                    # print("no supporting reads")
 
         else: 
             if var == "<INS>":# or var.startswith("<") == False:
@@ -551,7 +530,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                         for cvs in conts:
                             query = StripedSmithWaterman(cvs[0])
                             clip, multiple_clips, clip_len = get_clip_sided(aln, cvs[1])
-                            #print(clip)
                             if multiple_clips == False and clip_len > 0:
                                 if clip_len > 10:
                                     al = query(clip)
@@ -569,8 +547,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                     uni = not_found
                     if not_found == False:
                         break
-                print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "su"]].tolist())
-                print(uni)
 
             else:
                 ins_seq = var
@@ -579,7 +555,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                     c += 1
                     unique.append(False)
                     bar.update(c)
-                    print("ins continue")
                     continue
                 
                 not_found = True
@@ -593,7 +568,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                         clip, multiple_clips, clip_len = get_clip_sided(aln, 0)
                         if multiple_clips == False and clip_len > 10:
                             alignment = query(str(clip))
-                            #print(alignment)
                             if alignment.optimal_alignment_score >= 40:
                                 not_found = False
                                 break
@@ -609,9 +583,6 @@ def filter_parental_bams(norm, tumr, csv, outdir, pool_glob, num_normals, pairs_
                     uni = not_found
                     if not_found == False:
                         break
-                print(r[["sample", "svlen", "chrA", "chrB", "posA", "posB", "variant_seq", "contigA", "contigB", "su"]].tolist())
-                print(uni)
-        
 
         assert c == count  # Check no rows were dropped
         c += 1
