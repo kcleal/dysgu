@@ -10,7 +10,7 @@ from cython.operator import dereference, postincrement, postdecrement, preincrem
 from libc.math cimport fabs as c_fabs
 from libcpp.vector cimport vector as cpp_vector
 
-from dysgu.map_set_utils import echo, timeit
+from dysgu.map_set_utils import echo
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter
 from dysgu.assembler import compute_rep
@@ -19,7 +19,6 @@ import zlib
 import math
 import array
 import pickle
-import os
 import glob
 import gzip
 import pandas as pd
@@ -28,7 +27,6 @@ import warnings
 pd.options.mode.chained_assignment = None
 
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
-# from skbio.alignment import StripedSmithWaterman
 import time
 from libc.stdint cimport int16_t
 from sys import byteorder

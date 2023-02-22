@@ -14,10 +14,6 @@ import gzip
 from dysgu.map_set_utils import Py_BasicIntervalTree
 
 
-DTYPE = np.float
-ctypedef np.float_t DTYPE_t
-
-
 from libc.stdlib cimport malloc
 
 
