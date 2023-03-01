@@ -526,7 +526,7 @@ def strand_binom_t(events):
     cdef EventResult_t e
     cdef int n, k
     for e in events:
-        k = max(e.plus, e.minus)
+        k = max(int(e.plus), int(e.minus))
         if k > 0:
             n = e.plus + e.minus
             e.strand_binom_t = binom_prob(n, k, 0.5)
