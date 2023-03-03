@@ -9,8 +9,8 @@
 #include <sstream>
 
 #include "robin_hood.h"
-#include "htslib/htslib/sam.h"
-#include "htslib/htslib/hfile.h"
+#include "htslib/sam.h"
+#include "htslib/hfile.h"
 #include "xxhash64.h"
 
 

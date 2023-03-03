@@ -1,8 +1,5 @@
-#cython: language_level = 3
-
 import os
 import sys
-
 import pandas as pd
 import sortedcontainers
 import logging
@@ -80,15 +77,11 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
     df["preciseB"] = [1] * len(df)
 
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
-
-    bad_i = set([])  # These could not be merged at sample level, SVs probably too close?
     if not merge_within_sample:
-
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
                                      aggressive_ins_merge=True,
                                      same_sample=False)
         ff = defaultdict(set)
-
         for f in found:
             if f.partners is None:
                 ff[f.event_id] = set([])
@@ -97,13 +90,13 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                 current = f["table_name"]
                 targets = set([])
                 passed = True
+                # if not aggressive:
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
                     if t_name != current and t_name not in targets and len(targets) < n_samples:
                         targets.add(t_name)
-                    elif aggressive:  # used for --pon merging
-                        targets.add(t_name)
-                    else:
+
+                    elif not aggressive:
                         # Merged with self event. Can happen with clusters of SVs with small spacing
                         # e.g. a is merged with b and c, where a is from sample1 and b and c are from sample2
                         # safer not to merge? otherwise variants can be lost
@@ -115,13 +108,11 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                             if t2 != t1:
                                 ff[t1].add(t2)
 
-        df = df.drop(bad_i)
         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
         return df
     else:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
                                      same_sample=True, aggressive_ins_merge=True)
-
         return pd.DataFrame.from_records(found)
 
 
@@ -593,7 +584,8 @@ def view_file(args):
 
         if args["merge_within"] == "True":
             l_before = len(df)
-            df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True)
+            df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
+                          aggressive=args['collapse_nearby'] == "True")
             logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
 
         if "partners" in df:
@@ -603,7 +595,7 @@ def view_file(args):
     df = pd.concat(dfs)
     if args["merge_across"] == "True":
         if len(seen_names) > 1:
-            df = merge_df(df, len(seen_names), args["merge_dist"], {})
+            df = merge_df(df, len(seen_names), args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True")
 
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
 

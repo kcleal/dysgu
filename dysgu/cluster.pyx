@@ -88,15 +88,31 @@ def compare_all(potential):
         yield potential[idx], potential[jdx], idx, jdx
 
 
-cdef span_similarity(EventResult_t ei, EventResult_t ej):
+cdef span_position_distance(ei, ej):
     if ei.svtype != "INS":
         span1 = abs(ei.posB - ei.posA)
         span2 = abs(ej.posB - ej.posA)
         max_span = max(span1, span2)
+        center1 = (ei.posB + ei.posA) / 2
+        center2 = (ej.posB + ej.posA) / 2
         if max_span > 0:
             span_distance = abs(span1 - span2) / max_span
-            return span_distance < 0.1
-    return False
+            position_distance = abs(center1 - center2)
+            spd = (position_distance / 900) + span_distance
+            return spd
+    else:
+        span1 = ei.svlen
+        span2 = ej.svlen
+        max_span = max(span1, span2)
+        center1 = ei.posA
+        center2 = ej.posA
+        if max_span > 0:
+            span_distance = abs(span1 - span2) / max_span
+            position_distance = abs(center1 - center2)
+            spd = (position_distance / 900) + span_distance
+            return spd
+
+    return 0
 
 
 cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_precise, bint j_a_precise,
@@ -141,52 +157,6 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
     return dist_a_close and dist_b_close, dist_a_same and dist_b_same
 
 
-# cdef joined_badly_aligned_deletions(ei, ej, paired_end, G, disjoint):
-#
-#     # check for tandem del like events that should really be one long del with a small ins
-#     if not paired_end and isinstance(ei, EventResult) and ei.svtype == "DEL" and ej.svtype == "DEL":
-#
-#         if not ei.contig or not ej.contig:
-#             return
-#
-#         if ei.svlen < 100 or ej.svlen < 100:
-#             return
-#
-#         if not (ei.posB < ej.posA or ej.posB < ei.posA):
-#             return
-#
-#         if ei.posA < ej.posA:
-#             sep = ej.posA - ei.posB
-#             left = ei.posA
-#             right = ej.posB
-#             inferred_size = ej.posB - ei.posA
-#         else:
-#             sep = ei.posA - ej.posB
-#             left = ej.posA
-#             right = ei.posB
-#             inferred_size = ei.posB - ej.posA
-#
-#         # check one of the contigs spans the entire tandem DEL
-#         i_start, i_end, j_start, j_end = ei.contig_ref_start, ei.contig_ref_end, ej.contig_ref_start, ej.contig_ref_end
-#         if (i_start < left and i_end > right) or (j_start < left and j_end > right):
-#             if sep < 0 or sep / (ei.svlen + ej.svlen) > 0.1:
-#                 return
-#             aln = assembler.check_contig_match(ei.contig, ej.contig, return_int=False)
-#             if not aln:
-#                 return
-#
-#             ei.posA = left
-#             ei.posB = right
-#             ei.svlen = inferred_size
-#             ej.posA = left
-#             ej.posB = right
-#             ej.svlen = inferred_size
-#             ej.su = 0  # we are assuming they are from the same read
-#             ej.spanning = 0
-#             echo(f"{ei.chrA}:{ei.posA}-{ei.posB}", ei.svlen)
-#             G.add_edge(ei.event_id, ej.event_id, loci_same=True)
-#             return True
-
 
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False):
@@ -217,9 +187,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if ei.svtype != ej.svtype:
             continue
 
-        # if joined_badly_aligned_deletions(ei, ej, paired_end, G, disjoint_nodes):
-        #     continue
-
         # Check if events point to the same loci
         both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and \
                           intersecter(tree, ei.chrB, ei.posB, ei.posB + 1)
@@ -242,7 +209,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         # Force merging of translocations that have similar loci
         if not intra:
-            G.add_edge(i_id, j_id, loci_same=loci_same)
+            G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=0)
             continue
 
         one_is_imprecise = False
@@ -286,22 +253,17 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 disjoint_nodes.add(i_id)
                 disjoint_nodes.add(j_id)
                 continue
-        # If long reads only rely on reciprocal overlap, seems to work better
-        if paired_end:
-            spd = span_similarity(ei, ej)
-        else:
-            spd = False
 
         m = False
 
-        ml = max(ei.svlen, ej.svlen)
+        ml = max(int(ei.svlen), int(ej.svlen))
         if ml == 0 and ei.svtype != 'TRA':
             continue
 
         if ei.svtype == 'TRA':
             l_ratio = 1  # not applicable for translocations
         else:
-            l_ratio = min(ei.svlen, ej.svlen) / ml
+            l_ratio = min(int(ei.svlen), int(ej.svlen)) / ml
 
         if ei.svtype == "INS":
             if aggressive_ins_merge:
@@ -322,58 +284,68 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 elif ei.remap_score == 0 or ej.remap_score == 0:  # merge if one break was not remapped
                     m = True
 
-        elif ei.svtype != "INS" and (recpi_overlap or spd or (loci_similar and any_contigs_to_check)) and not both_in_include:
-            m = True
+        elif ei.svtype != "INS":
+            spd = span_position_distance(ei, ej)
+            if paired_end or aggressive_ins_merge:  # when aggresive_ins_merge is True, then this is dysgu merge, not dysgu call
+                if ei.spanning > 0 and ej.spanning > 0:
+                    if recpi_overlap or spd > 0.3:
+                        m = True
+                elif (recpi_overlap or spd > 0.3 or (loci_similar and any_contigs_to_check)) and not both_in_include:
+                    m = True
+            elif (recpi_overlap or spd > 0.3 or (loci_similar and any_contigs_to_check)) and not both_in_include:
+                m = True
 
-        if not m:
+        if not m:  # dont try and merge by alignment
             continue
-        # if ei.posA == 66323 and ej.posA == 66323:
-        # echo((ei.event_id, ej.event_id), ml, l_ratio, one_is_imprecise, any_contigs_to_check, (ei.remap_score, ej.remap_score),
-        #      (ei.svlen, ej.svlen), recpi_overlap, spd, loci_similar, loci_same, "overlap", overlap)
 
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
-                    G.add_edge(i_id, j_id, loci_same=loci_same)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
 
         else:
-            if ci and cj: v = ci, cj
-            elif ci and cj2: v = ci, cj2
-            elif ci2 and cj2: v = ci2, cj2
-            elif ci2 and cj: v = ci2, cj
-            elif ci_alt and cj_alt: v = ci_alt, cj_alt
-
-            else: continue
+            v = None
+            if ci_alt and cj_alt:
+                v = (ci_alt, cj_alt)
+            elif ci and cj:
+                v = (ci, cj)
+            elif ci and cj2:
+                v = (ci, cj2)
+            elif ci2 and cj2:
+                v = (ci2, cj2)
+            elif ci2 and cj:
+                v = (ci2, cj)
+            else:
+                continue
 
             # echo(ei.remap_score == 0 or ej.remap_score == 0, ei.svlen, ej.svlen, v, assembler.check_contig_match(v[0], v[1], return_int=True))
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
             if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
-                    G.add_edge(i_id, j_id, loci_same=loci_same)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
                     continue
 
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
-
             # see if alt sequence can be found in other contig
             else:
                 if ci_alt and cj:
                     if assembler.check_contig_match(ci_alt, cj, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)
+                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
                         continue
                 if ci_alt and cj2:
                     if assembler.check_contig_match(ci_alt, cj2, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)
+                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
                         continue
                 if cj_alt and ci:
                     if assembler.check_contig_match(cj_alt, ci, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)
+                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
                         continue
                 if cj_alt and ci2:
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)
+                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
                         continue
 
     return G, disjoint_nodes
@@ -435,11 +407,25 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     G, disjoint_nodes = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
                         aggressive_ins_merge=aggressive_ins_merge,
                         debug=debug)
-
     found = []
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item.event_id):
             found.append(item)
+
+    # high_qual = []
+    # mad_thresh=0.2
+    # components = nx.algorithms.components.connected_components(G)
+    # for comp in components:
+    #     ws = []
+    #     candidates = nx.edges(G, comp)
+    #     candidates = [(u, v, dict(G[u][v])) for u, v in candidates]
+    #     m = np.median([i[2]['w'] for i in candidates])
+    #     diff = [abs(i[2]['w'] - m) for i in candidates]
+    #     mad = np.mean(diff)
+    #     inliers = [i for i, d in zip(candidates, diff) if d <= mad_thresh]
+    #     high_qual += inliers
+    # G = nx.Graph()
+    # G.add_edges_from(high_qual)
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together

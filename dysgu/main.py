@@ -11,6 +11,7 @@ import warnings
 from dysgu import cluster, view, sv2bam
 import datetime
 import logging
+import shlex
 from dysgu.map_set_utils import echo
 
 
@@ -205,9 +206,6 @@ def cli():
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
-# @click.option('--regions-only', help="If --regions is provided, call only events within target regions",
-#               default="False", type=click.Choice(["True", "False"]),
-#               show_default=True)
 @click.option('--regions-mm-only', help="If --regions is provided, only use minimizer clustering within --regions. Useful for high coverage targeted sequencing",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -260,10 +258,6 @@ def run_pipeline(ctx, **kwargs):
     bname = os.path.splitext(os.path.basename(kwargs["bam"]))[0]
     tmp_file_name = f"{dest}/{bname if bname != '-' else dest}.{pfix}.bam"
 
-    # Get SV reads
-    # if kwargs["regions"] is not None:  # and kwargs["regions_only"] == "True":
-    #     ctx.obj["search"] = kwargs["regions"]
-
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
 
@@ -289,10 +283,6 @@ def run_pipeline(ctx, **kwargs):
 @cli.command("fetch")
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
-# @click.option("-f", "--out-format", help="Output format. 'bam' output maintains sort order, "
-#                                          "'fq' output is collated by name",
-#               default="bam", type=click.Choice(["bam", "fq", "fasta"]),
-#               show_default=True)
 @click.option("--reference", help="Reference file for opening cram files",
               show_default=False, default="", required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
@@ -317,8 +307,6 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
-# @click.option('--regions', help="bed file of target regions. --max-cov is ignored within these regions", default=None,
-#               type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -328,7 +316,6 @@ def get_reads(ctx, **kwargs):
     saves bam file in WORKING_DIRECTORY"""
     logging.info("[dysgu-fetch] Version: {}".format(version))
     make_wd(kwargs)
-
     ctx = apply_ctx(ctx, kwargs)
     return sv2bam.process(ctx.obj)
 
@@ -456,6 +443,8 @@ def call_events(ctx, **kwargs):
 #@click.option('--wd', help="Working directory, required if --pon used", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
+@click.option("--collapse-nearby", help="Merges more aggressively by collapsing nearby SV",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-across", help="Merge records across input samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-within", help="Perform additional merge within input samples, prior to --merge-across",
@@ -540,7 +529,7 @@ def test_command(ctx, **kwargs):
 
     for t in tests:
         c = " ".join(t)
-        v = run(c, shell=True, capture_output=True, check=True)
+        v = run(shlex.split(c), shell=False, capture_output=True, check=True)
         if v.returncode != 0:
             raise RuntimeError(t, "finished with non zero: {}".format(v))
         else:

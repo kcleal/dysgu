@@ -8,8 +8,6 @@ import os
 import pysam
 import glob
 from sys import argv
-import subprocess
-import sysconfig
 
 
 # Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
@@ -67,66 +65,65 @@ def get_extra_args():
     return extra_compile_args
 
 
-# clang = False
-# icc = False
-# try:
-#     if os.environ['CC'] == "clang":
-#         clang = True
-# except KeyError:
-#     pass
-#
-# if not clang:
-#     try:
-#         if subprocess.check_output(
-#                 ["gcc", "--version"],
-#                 universal_newlines=True).find("clang") != -1:
-#             clang = True
-#     except (subprocess.CalledProcessError, FileNotFoundError):
-#         pass
-#
-# try:
-#     if os.environ['CC'] == "icc":
-#         icc = True
-# except KeyError:
-#     pass
-
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
-                             "-Wno-deprecated-declarations", '-Wno-volatile'
+                             "-Wno-deprecated-declarations",
                              ]
 
 ext_modules = list()
 
 root = os.path.abspath(os.path.dirname(__file__))
-# Try and link dynamically to htslib
-htslib = None
-if "--htslib" in argv:
-    idx = argv.index("--htslib")
+if "--conda-prefix" in argv:
+    idx = argv.index("--conda-prefix")
     h = argv[idx + 1]
+    prefix = None
     if h and os.path.exists(h):
-        if any("libhts" in i for i in glob.glob(h + "/*")):
-            print("Using --htslib at {}".format(h))
-            htslib = h
-            if htslib[-1] == "/":
-                htslib = htslib[:-1]
-            argv.remove("--htslib")
+        if any("libhts" in i for i in glob.glob(h + "/lib/*")):
+            print("Using htslib at {}".format(h))
+            prefix = h
+            if prefix[-1] == "/":
+                htslib = prefix[:-1]
+            argv.remove("--conda-prefix")
             argv.remove(h)
+        else:
+            raise ValueError("libhts not found at ", h + "/lib/*")
     else:
-        raise ValueError("--htslib path does not exists")
+        raise ValueError("--conda-prefix path does not exists")
+
+    libraries = ["hts"]
+    library_dirs = [f"{prefix}/lib", numpy.get_include()] + pysam.get_include()
+    include_dirs = [numpy.get_include(), root,
+                    f"{prefix}/include/htslib", f"{prefix}/include"] + pysam.get_include()
+    runtime_dirs = [f"{prefix}/lib"]
+
+else:
+    # Try and link dynamically to htslib
+    htslib = None
+    if "--htslib" in argv:
+        idx = argv.index("--htslib")
+        h = argv[idx + 1]
+        if h and os.path.exists(h):
+            if any("libhts" in i for i in glob.glob(h + "/*")):
+                print("Using --htslib at {}".format(h))
+                htslib = h
+                if htslib[-1] == "/":
+                    htslib = htslib[:-1]
+                argv.remove("--htslib")
+                argv.remove(h)
+        else:
+            raise ValueError("--htslib path does not exists")
+
+    if htslib is None:
+        print("Using packaged htslib")
+        htslib = os.path.join(root, "dysgu/htslib")
+
+    libraries = [f"{htslib}/hts"]
+    library_dirs = [htslib, numpy.get_include(), f"{htslib}/htslib"] + pysam.get_include()
+    include_dirs = [numpy.get_include(), root,
+                    f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
+    runtime_dirs = [htslib]
 
 
-if htslib is None:
-    print("Using packaged htslib")
-    htslib = os.path.join(root, "dysgu/htslib")
-
-
-libraries = [f"{htslib}/hts"]
-library_dirs = [htslib, numpy.get_include(), f"{htslib}/htslib"] + pysam.get_include()
-include_dirs = [numpy.get_include(), root,
-                f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
-runtime_dirs = [htslib]
-
-# Dysgu
 print("Libs", libraries)
 print("Library dirs", library_dirs)
 print("Include dirs", include_dirs)
@@ -159,7 +156,6 @@ for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_compo
                                  include_dirs=include_dirs,
                                  runtime_library_dirs=runtime_dirs,
                                  extra_compile_args=extras,
-
                                  define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                                  language="c++"))
 
@@ -172,7 +168,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.3.14',
+    version='1.3.15',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
             'cython',
@@ -202,7 +198,6 @@ setup(
         ],  # setup.py requires at compile time
     packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
     ext_modules=cythonize(ext_modules),
-
     include_package_data=True,
     zip_safe=False,
     entry_points='''
