@@ -73,22 +73,27 @@ extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
 ext_modules = list()
 
 root = os.path.abspath(os.path.dirname(__file__))
-if "--conda-prefix" in argv:
-    idx = argv.index("--conda-prefix")
-    h = argv[idx + 1]
+
+if "--conda-prefix" in argv or os.getenv('PREFIX'):
     prefix = None
+    if "--conda-prefix" in argv:
+        idx = argv.index("--conda-prefix")
+        h = argv[idx + 1]
+        argv.remove("--conda-prefix")
+        argv.remove(h)
+    else:
+        h = os.getenv('PREFIX')
+
     if h and os.path.exists(h):
         if any("libhts" in i for i in glob.glob(h + "/lib/*")):
             print("Using htslib at {}".format(h))
             prefix = h
             if prefix[-1] == "/":
                 htslib = prefix[:-1]
-            argv.remove("--conda-prefix")
-            argv.remove(h)
         else:
             raise ValueError("libhts not found at ", h + "/lib/*")
     else:
-        raise ValueError("--conda-prefix path does not exists")
+        raise ValueError("prefix path does not exists")
 
     libraries = ["hts"]
     library_dirs = [f"{prefix}/lib", numpy.get_include()] + pysam.get_include()
