@@ -12,7 +12,7 @@ import networkx as nx
 import pysam
 from sys import stdout
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call_metrics
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call  # _metrics
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import to_dict, merge_intervals, echo
 from dysgu import sites_utils
@@ -1206,25 +1206,25 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
 
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
 
-    coverage_analyser = post_call_metrics.CoverageAnalyser(tdir)
+    coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
 
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
 
     preliminaries = sample_level_density(preliminaries, regions)
-    preliminaries = post_call_metrics.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
+    preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
 
-    preliminaries = post_call_metrics.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
-    preliminaries = post_call_metrics.strand_binom_t(preliminaries)
+    preliminaries = post_call.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
+    preliminaries = post_call.strand_binom_t(preliminaries)
 
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    preliminaries = post_call_metrics.compressability(preliminaries)
-    preliminaries = post_call_metrics.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+    preliminaries = post_call.compressability(preliminaries)
+    preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
 
     # This has to be called after the genotype step, raw coverage values are needed
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-    preliminaries = post_call_metrics.get_ref_base(preliminaries, ref_genome)
+    preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:
@@ -1331,10 +1331,10 @@ def cluster_reads(args):
         for cl in ("DN", "DP", "DApri", "DAsupp"):
             del df[cl]
 
-    df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"], args["thresholds"])
+    df = post_call.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"], args["thresholds"])
 
     if args["sites"]:
-        df = post_call_metrics.update_prob_at_sites(df, events, args["thresholds"], parse_probs=args["parse_probs"] == "True",
+        df = post_call.update_prob_at_sites(df, events, args["thresholds"], parse_probs=args["parse_probs"] == "True",
                                         default_prob=args["sites_prob"])
         df["site_id"] = ["." if not s else s.id for s in df["site_info"]]
         if args["all_sites"] == "True":

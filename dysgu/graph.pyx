@@ -32,10 +32,10 @@ from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq
 
 from dysgu cimport map_set_utils
 from dysgu.io_funcs import intersecter
-from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance, position_distance
+from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
-from dysgu.post_call_metrics import BadClipCounter
+from dysgu.extra_metrics import BadClipCounter
 
 from dysgu.map_set_utils import echo  # for debugging
 

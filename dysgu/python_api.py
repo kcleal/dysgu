@@ -7,7 +7,7 @@ import numpy as np
 from collections import defaultdict
 
 from dysgu.cluster import pipe1, merge_events
-from dysgu import post_call_metrics
+from dysgu import post_call as post_call_metrics
 from dysgu.map_set_utils import to_dict, merge_intervals
 from dysgu.io_funcs import to_vcf
 from dysgu.io_funcs import get_bed_regions as load_bed

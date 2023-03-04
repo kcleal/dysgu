@@ -12,7 +12,7 @@ from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes
 from dysgu.sv_category cimport AlignmentItem, classify_d
-from dysgu.post_call_metrics cimport soft_clip_qual_corr
+from dysgu.extra_metrics cimport soft_clip_qual_corr
 
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_get_qname
