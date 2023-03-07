@@ -8,6 +8,7 @@ dysgu-SV
 
 .. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
    :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
+   
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
 for calling structural variants using paired-end or long read sequencing data.
 
@@ -17,7 +18,9 @@ Installation
 Dysgu requires Python >=3.7 - 3.10 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
-
+   
+    conda install -c bioconda -c conda-forge dysgu
+    # or
     pip install numpy dysgu
 
 To build from source, a >=c++11 compiler is needed. Grab the latest dysgu.tar.bz2 from `Releases page <https://github.com/kcleal/dysgu/releases>`_  For convenience use the install script::
