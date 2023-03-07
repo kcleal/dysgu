@@ -1,7 +1,13 @@
-========
 dysgu-SV
 ========
 
+|Generic badge| |Li badge|
+
+.. |Generic badge| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
+   :target: http://bioconda.github.io/recipes/dysgu/README.html
+
+.. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
+   :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
 for calling structural variants using paired-end or long read sequencing data.
 
