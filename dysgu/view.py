@@ -151,11 +151,11 @@ def to_csv(df, args, names, outfile, extended, small_output):
                 if not item:
                     ori.append("")
                 else:
-                    ori.append("|".join([f"{df.loc[i]['table_name']},{df.loc[i]['id']}" for i in item]))
+                    ori.append("|".join([f"{df.loc[i]['table_name']},{df.loc[i]['event_id']}" for i in item]))
             df2["partners"] = ori
             del df2["table_name"]
-            if "event_id" in df:
-                del df["event_id"]
+            # if "event_id" in df2:
+            #     del df2["event_id"]
             df2[keytable].to_csv(outfile[k], index=False)
     else:
         del df["table_name"]
