@@ -257,7 +257,6 @@ cdef class GenomeScanner:
             for c, s, e in regions:
 
                 for a in self.input_bam.fetch(c, int(s), int(e)):
-                    print(a.pos)
                     # Mate unmapped, not primary, fails QC, duplicate
                     if not a.flag & 1800:
                         p1 = a.pnext - pad
