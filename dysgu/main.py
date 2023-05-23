@@ -436,7 +436,7 @@ def call_events(ctx, **kwargs):
 
 @cli.command("merge")
 @click.argument('input_files', required=True, type=click.Path(), nargs=-1)
-@click.option("-o", "svs_out", help="Output file, [default: stdout]", required=False, type=click.Path())
+@click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 #@click.option('--pon', help="'Pool-of-normals' comma-separated list of indexed alignment files. If query SVs found in any of --pon, SV is removed", default=None, type=str)
 #@click.option('--pon-rt', help="Read-types of the --pon samples (comma-separated list). Either pe/pacbio/nanopore", default=None, type=str)
 #@click.option('--ref', help="Reference file, required if --pon used", required=False, type=click.Path(exists=True))
