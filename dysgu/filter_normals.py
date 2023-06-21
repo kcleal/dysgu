@@ -82,7 +82,6 @@ def load_samples(args, pths):
     if len(bams) == 0:
         logging.exception("No target bams in input list. Target bams must have a unique SM/name from input_vcf sample name")
         quit()
-
     if args['normal_vcf']:
         normal_vcfs = [pysam.VariantFile(i) for i in args['normal_vcf']]
     else:
