@@ -340,7 +340,7 @@ class DysguSV:
             iterable = region
 
         regions = None
-        events, extended_tags, site_adder = pipe1(self.args, self.bam, self.kind, regions,
+        events, site_adder = pipe1(self.args, self.bam, self.kind, regions,
                                                   self.args['ibam'], self.ref_genome, bam_iter=iterable)
         if len(events) == 0:
             return None
@@ -349,10 +349,6 @@ class DysguSV:
                   "contig_ref_start", "contig_right_weight", "modified", "preciseA",
                   "preciseB", "query_gap", "remapped", "site_info"}  # "partners",
         df = pd.DataFrame.from_records([{k: v for k, v in to_dict(e).items() if k not in unused} for e in events])
-        if not extended_tags:
-            for cl in ("DN", "DP", "DApri", "DAsupp"):
-                if cl in df:
-                    del df[cl]
 
         df = self.apply_model(df)
         args = self.args

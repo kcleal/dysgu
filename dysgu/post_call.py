@@ -648,10 +648,13 @@ def compressability(events):
 
 
 def apply_model(df, mode, contigs, diploid, paired, thresholds):
-
     pth = os.path.dirname(os.path.abspath(__file__))
     pth = f"{pth}/dysgu_model.1.pkl.gz"
-    models = pickle.load(gzip.open(pth, "rb"))
+    assert os.path.exists(pth)
+    try:
+        models = pickle.load(gzip.open(pth, "rb"))
+    except:
+        raise RuntimeError("Failed to load model")
 
     if diploid == 'False' and contigs == 'False':
         raise NotImplemented("Choose either diploid == False or contigs == False, not both")
@@ -679,11 +682,9 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
         if c in X:
             X[c] = [i if i == i and i is not None else 0 for i in X[c]]
             X[c] = X[c].astype("category")
-
     pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
     df = df.assign(filter=["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], pred)])
-
     return df
 
 

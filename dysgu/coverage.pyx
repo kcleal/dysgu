@@ -137,7 +137,6 @@ cdef class GenomeScanner:
         self.approx_read_length = -1
         self.last_tell = 0
         self.no_tell = True if stdin else False
-        self.extended_tags = False
         self.paired_end = paired_end
         self.bam_iter = bam_iter
 
@@ -363,9 +362,6 @@ cdef class GenomeScanner:
         cdef int flag, tlen
         cdef float approx_read_length
 
-        # Check if tags from dodi have been added to input reads --> add to vcf output if True
-        tags_checked = False
-
         # Use ibam for insert params if possible
 
         if ibam is not None:
@@ -416,10 +412,6 @@ cdef class GenomeScanner:
                         approx_read_length_l.append(rl)
                         if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
                             inserts.append(a.tlen)
-                            if not tags_checked:
-                                if a.has_tag("ZP"):
-                                    self.extended_tags = True
-                                tags_checked = True
 
             else:
                 break

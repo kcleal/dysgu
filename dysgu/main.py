@@ -8,7 +8,7 @@ from multiprocessing import cpu_count
 from subprocess import run
 import pkg_resources
 import warnings
-from dysgu import cluster, view, sv2bam
+from dysgu import cluster, view, sv2bam, filter_normals
 import datetime
 import logging
 import shlex
@@ -312,7 +312,7 @@ def run_pipeline(ctx, **kwargs):
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.pass_context
 def get_reads(ctx, **kwargs):
-    """Filters input .bam/.cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
+    """Filters input bam/cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
     saves bam file in WORKING_DIRECTORY"""
     logging.info("[dysgu-fetch] Version: {}".format(version))
     make_wd(kwargs)
@@ -345,7 +345,7 @@ def get_reads(ctx, **kwargs):
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
-                             "pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+                             " pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -437,10 +437,6 @@ def call_events(ctx, **kwargs):
 @cli.command("merge")
 @click.argument('input_files', required=True, type=click.Path(), nargs=-1)
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
-#@click.option('--pon', help="'Pool-of-normals' comma-separated list of indexed alignment files. If query SVs found in any of --pon, SV is removed", default=None, type=str)
-#@click.option('--pon-rt', help="Read-types of the --pon samples (comma-separated list). Either pe/pacbio/nanopore", default=None, type=str)
-#@click.option('--ref', help="Reference file, required if --pon used", required=False, type=click.Path(exists=True))
-#@click.option('--wd', help="Working directory, required if --pon used", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
 @click.option("--collapse-nearby", help="Merges more aggressively by collapsing nearby SV",
@@ -455,26 +451,37 @@ def call_events(ctx, **kwargs):
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",
               default="dysgu", type=str, show_default=True)
-@click.option("--no-chr", help="Remove 'chr' from chromosome names in vcf output", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--no-contigs", help="Remove contig sequences from vcf output", default="False",
-              type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--add-kind", help="Add region-overlap 'kind' to vcf output", default="False",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option('-v', '--verbosity', help="0 = no contigs in output, 1 = output contigs for variants without ALT sequence called, 2 = output all contigs",
               default='1', type=click.Choice(['0', '1', '2']), show_default=True)
-#@click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
-#@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.pass_context
 def view_data(ctx, **kwargs):
-    """Merge .vcf/csv variant files"""
-    # Add arguments to context insert_median, insert_stdev, read_length, out_name
+    """Merge vcf/csv variant files"""
     logging.info("[dysgu-merge] Version: {}".format(version))
-    # make_wd(kwargs, call_func=True)
     ctx = apply_ctx(ctx, kwargs)
     view.view_file(ctx.obj)
-    #if kwargs["wd"] is not None and kwargs["clean"]:
-    #    shutil.rmtree(kwargs["wd"])
+
+
+@cli.command("filter-normal")
+@click.argument('input_vcf', required=True, type=click.Path())
+@click.argument('normal_bams', required=True, type=click.Path(), nargs=-1)
+@click.option('--reference', help="Reference for cram input files", required=False, type=click.Path(exists=True))
+@click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
+@click.option("-n", "--normal-vcf", help="Vcf file for normal sample, or panel of normals. The SM tag of input bams is used to ignore the input_vcf for multi-sample vcfs",
+              required=False, type=click.Path(), multiple=True)
+@click.option("-p", "--procs", help="Reading threads for normal_bams", type=cpu_range, default=1, show_default=True)
+@click.option("--ignore-read-groups", help="Ignore ReadGroup RG tags when parsing sample names. Filenames will be used instead", is_flag=True, flag_value=True, show_default=False, default=False)
+@click.option("--min-prob", help="Remove events with PROB value < min-prob", default=0.2, type=float, show_default=True)
+@click.option("--interval-size", help="Interval size for searching normal-vcf/normal-bams", default=1000, type=int, show_default=True)
+@click.option("--random-bam-sample", help="Choose N random normal-bams to search. Use -1 to ignore", default=-1, type=int, show_default=True)
+@click.pass_context
+def filter_normal(ctx, **kwargs):
+    """Filter a single-sample vcf against a normal bam, or multiple bams. A normal vcf (single or multi-sample) can also
+    be supplied. Bam/vcf samples with the same name as the input_vcf will be ignored"""
+    logging.info("[dysgu-filter-normal] Version: {}".format(version))
+    ctx = apply_ctx(ctx, kwargs)
+    filter_normals.run_filtering(ctx.obj)
 
 
 @cli.command("test")

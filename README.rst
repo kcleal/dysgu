@@ -44,11 +44,12 @@ Usage
 -----
 Available commands::
 
-    dysgu run     # Run using default arguments, wraps fetch and call commands
-    dysgu fetch   # Separate SV reads from input bam file
-    dysgu call    # SV calling
-    dysgu merge   # Merge calls from multiple samples
-    dysgu test    # Run basic tests
+    dysgu run             # Run using default arguments, wraps fetch and call commands
+    dysgu fetch           # Separate SV reads from input bam file
+    dysgu call            # SV calling
+    dysgu merge           # Merge calls from multiple samples
+    dysgu filter-normal   # Filter SVs against normal panels to find somatic SVs
+    dysgu test            # Run basic tests
 
 For help use::
 
@@ -108,7 +109,7 @@ the insert size can be specified manually using the -I option::
 
 Merging SVs from multiple files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If you plan on merging samples, it is recommended that the -'v2' option be used when running the 'run/call' modules; this will
+If you plan on merging samples, it is recommended that the '-v2' option be used when running the 'run/call' modules; this will
 ensure that all consensus sequences will be reported in the vcf file to help with downstream merging.
 Multiple output vcf files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
 
@@ -120,6 +121,30 @@ a single round of merging for each input file before merging across input files.
 problem of duplication::
 
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
+
+
+Somatic SVs / tumor-normal calling
+----------------------------------
+To identify somatic SVs, or SVs that are unique in your input sample, called SVs can be filtered against normal VCFs and/or
+normal bam/cram files. The recommended workflow is to call SVs in your normal panel and your target sample. Cohort SVs are then
+merged using `dysgu merge`, before filtering each target sample to get the somatic/unique SVs::
+
+    dysgu filter-normal --normal-vcf merged.vcf sample1.vcf *.bams ... > sample1_somatic.vcf
+
+Here, sample names are inferred from the vcf and bam file headers (or filenames), so `sample1` will be ignored from the normal-vcf or list of bams.
+The normal-vcf may come from a different source or SV caller, provided 'SVTYPE' is listed in the info column.
+
+Increasing the number of bams to filter against will slow down filtering, but should increase specificity. To set a
+limit on the number of bams to filter against, a random sample can be drawn from the input list using::
+
+    dysgu filter-normal --random-bam-sample 10 --normal-vcf merged.vcf sample1.vcf *.bams ... > sample1_somatic.vcf
+
+This will draw 10 random bam samples from the input list to filter against.
+
+Also a target VCF can be filtered against just a normal vcf if desired::
+
+    dysgu filter-normal --normal-vcf normal.vcf sample1.vcf > unique.vcf
+
 
 
 Models available

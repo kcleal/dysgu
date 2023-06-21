@@ -10,6 +10,7 @@ import pkg_resources
 import sortedcontainers
 import pandas as pd
 import os
+import sys
 import gzip
 from dysgu.map_set_utils import Py_BasicIntervalTree
 
@@ -124,22 +125,13 @@ def get_include_reads(include_regions, bam):
             yield r
 
 
-cpdef list col_names(extended, small_output):  # todo fix for no-contigs view command
+cpdef list col_names(small_output):
 
     if small_output:
         return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
           ["GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc", "bnd",
          "raw_reads_10kb", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed", "bad_clip_count", "fcc", "inner_cn", "outer_cn", "prob"]
-            ]
-    if extended:  # to do fix this
-        return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp",  "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
-         ["GT", "GQ", "DP", "DN", "DApri", "DAsupp",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
-          "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
-         "raw_reads_10kb", "mcov",
-          "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
-                "minus", "n_gaps", "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed", "bad_clip_count", "fcc", "n_small_tlen", "ras", "fas",
-                "inner_cn", "outer_cn", "compress", "ref_rep", "prob"]
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
@@ -152,8 +144,7 @@ cpdef list col_names(extended, small_output):  # todo fix for no-contigs view co
             ]
 
 
-def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, small_output):
-
+def make_main_record(r, version, index, format_f, df_rows, add_kind, small_output):
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
     if len(format_f) > 1:
@@ -175,7 +166,6 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
         exp_seq = r["exp_seq"]
         ref_poly = r["ref_poly_bases"]
         overlaps = r["query_overlap"]
-
         su, pe, sr, sc, bnd, wr = 0, 0, 0, 0, 0, 0
         for row in df_rows.values():
             pe += row["pe"]
@@ -270,15 +260,12 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
 
     if small_output:
         fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
-    elif extended:
-        fmt_keys = "GT:GQ:DP:DN:DAP:DAS:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
     else:
         fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     if "variant_seq" in r and isinstance(r["variant_seq"], str):
         if r['svtype'] == "INS":
             alt_field = r.variant_seq.upper()
-
         else:
             alt_field = f"<{r['svtype']}>"
     else:
@@ -314,27 +301,13 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, extended, s
     return rec
 
 
-def get_fmt(r, extended, small_output):
+def get_fmt(r, small_output):
     if small_output:
         v = [r["GT"], r["GQ"], r['MAPQpri'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'],
              r['raw_reads_10kb'], r['neigh10kb'], r["plus"], r["minus"], r["remap_score"], r["remap_ed"],
              r["bad_clip_count"], round(r["fcc"], 3), round(r["inner_cn"], 3), round(r["outer_cn"], 3), r['prob']
              ]
         return v
-
-    elif extended:
-        v = [r["GT"], r['GQ'], r['DP'], r['DN'], r['DApri'], r['DAsupp'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
-             r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
-             r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'],
-             r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
-             r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
-             round(r["n_xa"], 2),
-             round(r["n_unmapped_mates"], 2), r["double_clips"], r["remap_score"], r["remap_ed"], r["bad_clip_count"],
-             round(r["fcc"], 3), r["n_small_tlen"], r["ras"], r['fas'],
-             round(r["inner_cn"], 3), round(r["outer_cn"], 3), round(r["compress"], 2), round(r["ref_rep"], 3), round(r["jitter"], 3), r['prob']
-             ]
-        return v
-
     else:
         v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
              r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
@@ -346,11 +319,9 @@ def get_fmt(r, extended, small_output):
         return v
 
 
-def gen_format_fields(r, df, names, extended, n_fields, small_output):
-
+def gen_format_fields(r, df, names, n_fields, small_output):
     if len(names) == 1:
-        return {0: get_fmt(r, extended, small_output)}, {}
-
+        return {0: get_fmt(r, small_output)}, {}
     cols = {}
     if "partners" in r:
         if not isinstance(r["partners"], set):
@@ -362,120 +333,22 @@ def gen_format_fields(r, df, names, extended, n_fields, small_output):
             if idx in df.index:  # might be already dropped
                 r2 = df.loc[idx]
                 cols[r2["table_name"]] = r2
-
     if "table_name" in r:
         cols[r["table_name"]] = r
-
     format_fields = sortedcontainers.SortedDict()
     for name in names:
         if name in cols:
             row = cols[name]
-            format_fields[name] = get_fmt(row, extended, small_output)
+            format_fields[name] = get_fmt(row, small_output)
         else:
             format_fields[name] = [0] * n_fields
-
     return format_fields, cols
 
 
-def get_headers(extended_tags):
-    if extended_tags:
-        HEADER = """##fileformat=VCFv4.2
+def get_header():
+    header = """##fileformat=VCFv4.2
 ##source=DYSGU
-##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
-##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
-##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
-##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
-##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate in case of a translocation">
-##INFO=<ID=CHR2_POS,Number=1,Type=Integer,Description="Chromosome position for END coordinate in case of a translocation">
-##INFO=<ID=GRP,Number=1,Type=Integer,Description="Group id for complex SVs">
-##INFO=<ID=NGRP,Number=1,Type=Integer,Description="Number of SVs in group">
-##INFO=<ID=RT,Number=1,Type=String,Description="Type of input reads, 1=paired-end, 2=pacbio, 3=nanopore">
-##INFO=<ID=CT,Number=1,Type=String,Description="Paired-end signature induced connection type">
-##INFO=<ID=CIPOS95,Number=1,Type=Integer,Description="Confidence interval size (95%) around POS for imprecise variants">
-##INFO=<ID=CIEND95,Number=1,Type=Integer,Description="Confidence interval size (95%) around END for imprecise variants">
-##INFO=<ID=SVMETHOD,Number=1,Type=String,Description="Type of approach used to detect SV">
-##INFO=<ID=KIND,Number=1,Type=String,Description="Kind of join with respect to input regions">
-##INFO=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant across all samples">
-##INFO=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
-##INFO=<ID=PE,Number=1,Type=Integer,Description="Number of paired-end reads supporting the variant across all samples">
-##INFO=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary reads supporting the variant across all samples">
-##INFO=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clip reads supporting the variant across all samples">
-##INFO=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
-##INFO=<ID=CONTIGA,Number=1,Type=String,Description="Contig from CHROM POS">
-##INFO=<ID=CONTIGB,Number=1,Type=String,Description="Contig from CHR2 END">
-##INFO=<ID=GC,Number=1,Type=Float,Description="GC% of assembled contigs">
-##INFO=<ID=REP,Number=1,Type=Float,Description="Repeat score for contigs aligned bases">
-##INFO=<ID=REPSC,Number=1,Type=Float,Description="Repeat score for contigs soft-clipped bases">
-##INFO=<ID=LPREC,Number=1,Type=Integer,Description="SV length precise=1, inferred=0">
-##INFO=<ID=NEXP,Number=1,Type=Integer,Description="Number of expanded repeat bases at break">
-##INFO=<ID=STRIDE,Number=1,Type=Integer,Description="Repeat expansion stride or period">
-##INFO=<ID=EXPSEQ,Number=1,Type=String,Description="Expansion sequence">
-##INFO=<ID=RPOLY,Number=1,Type=Integer,Description="Number of reference polymer bases">
-##INFO=<ID=OL,Number=1,Type=Integer,Description="Query overlap in bp">
-##INFO=<ID=SVINSSEQ,Number=.,Type=String,Description="Sequence of insertion">
-##INFO=<ID=LEFT_SVINSSEQ,Number=.,Type=String,Description="Known left side of insertion for an insertion of unknown length">
-##INFO=<ID=RIGHT_SVINSSEQ,Number=.,Type=String,Description="Known right side of insertion for an insertion of unknown length">
-##INFO=<ID=MeanPROB,Number=1,Type=Float,Description="Mean probability of event being true across samples">
-##INFO=<ID=MaxPROB,Number=1,Type=Float,Description="Max probability of event being true across samples">
-##ALT=<ID=DEL,Description="Deletion">
-##ALT=<ID=DUP,Description="Duplication">
-##ALT=<ID=INV,Description="Inversion">
-##ALT=<ID=TRA,Description="Translocation">
-##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
-##FORMAT=<ID=DP,Number=1,Type=Float,Description="Mean distance-to-pair metric supporting the variant">
-##FORMAT=<ID=DN,Number=1,Type=Float,Description="Mean distance-to-normal metric supporting the variant">
-##FORMAT=<ID=DAP,Number=1,Type=Float,Description="Mean distance-to-alignment metric for primary alignments">
-##FORMAT=<ID=DAS,Number=1,Type=Float,Description="Mean distance-to-alignment metric for supplementary alignments">
-##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
-##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
-##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
-##FORMAT=<ID=MAPQP,Number=1,Type=Float,Description="Mean MAPQ for primary reads supporting the variant">
-##FORMAT=<ID=MAPQS,Number=1,Type=Float,Description="Mean MAPQ for supplementary reads supporting the variant">
-##FORMAT=<ID=NP,Number=1,Type=Integer,Description="Number of alignments in normal-pair orientation supporting the variant">
-##FORMAT=<ID=MAS,Number=1,Type=Integer,Description="Maximum alignment score of supplementary reads supporting the variant">
-##FORMAT=<ID=SU,Number=1,Type=Integer,Description="Number of pieces of evidence supporting the variant">
-##FORMAT=<ID=WR,Number=1,Type=Integer,Description="Number of reads that have SV within-read">
-##FORMAT=<ID=PE,Number=1,Type=Integer,Description="Number of paired reads supporting the variant">
-##FORMAT=<ID=SR,Number=1,Type=Integer,Description="Number of supplementary alignments supporting the variant">
-##FORMAT=<ID=SC,Number=1,Type=Integer,Description="Number of soft-clipped alignments supporting the variant">
-##FORMAT=<ID=BND,Number=1,Type=Integer,Description="Number of break-end alignments supporting the variant">
-##FORMAT=<ID=SQC,Number=1,Type=Float,Description="Soft-clip quality value correlation between reads">
-##FORMAT=<ID=SCQ,Number=1,Type=Float,Description="Soft-clip quality weight value">
-##FORMAT=<ID=SQR,Number=1,Type=Float,Description="Soft-clip base-quality ratio wrt to aligned bases">
-##FORMAT=<ID=BE,Number=1,Type=Integer,Description="Block edge metric">
-##FORMAT=<ID=COV,Number=1,Type=Float,Description="Mean read coverage +/- 10kb around break site at A or B">
-##FORMAT=<ID=MCOV,Number=1,Type=Float,Description="Maximum read coverage +/- 10kb around break site at A or B">
-##FORMAT=<ID=LNK,Number=1,Type=Integer,Description="Contig A and contig B overlap">
-##FORMAT=<ID=NEIGH,Number=1,Type=Integer,Description="Number of other break points within 1 bp of break site">
-##FORMAT=<ID=NEIGH10,Number=1,Type=Integer,Description="Number of other break points within 10 kp of break site">
-##FORMAT=<ID=RB,Number=1,Type=Integer,Description="Number of reference bases in contigs">
-##FORMAT=<ID=PS,Number=1,Type=Integer,Description="Number of reads on plus strand">
-##FORMAT=<ID=MS,Number=1,Type=Integer,Description="Number of reads on minus strand">
-##FORMAT=<ID=SBT,Number=1,Type=Float,Description="Strand-bias, one-sided binomial test p-value">
-##FORMAT=<ID=NG,Number=1,Type=Float,Description="Mean number of small gaps < 30 bp">
-##FORMAT=<ID=NSA,Number=1,Type=Float,Description="Mean number of SA tags per read">
-##FORMAT=<ID=NXA,Number=1,Type=Float,Description="Mean number of XA tags per read">
-##FORMAT=<ID=NMU,Number=1,Type=Float,Description="Mean number of mates unmapped per read">
-##FORMAT=<ID=NDC,Number=1,Type=Integer,Description="Number of double-clips, alignments with left and right clips">
-##FORMAT=<ID=RMS,Number=1,Type=Integer,Description="Remapping score">
-##FORMAT=<ID=RED,Number=1,Type=Integer,Description="Remapping edit distance">
-##FORMAT=<ID=BCC,Number=1,Type=Integer,Description="Bad soft-clip count within +/- 500 bp">
-##FORMAT=<ID=FCC,Number=1,Type=Float,Description="Fold-coverage change for SVs">
-##FORMAT=<ID=STL,Number=1,Type=Integer,Description="N reads with small TLEN below 0.05% of distribution">
-##FORMAT=<ID=RAS,Number=1,Type=Integer,Description="Reverse soft-clip to alignment score">
-##FORMAT=<ID=FAS,Number=1,Type=Integer,Description="Forward soft-clip to alignment score">
-##FORMAT=<ID=ICN,Number=1,Type=Float,Description="Inner copy number">
-##FORMAT=<ID=OCN,Number=1,Type=Float,Description="Outer copy number">
-##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
-##FORMAT=<ID=RR,Number=1,Type=Float,Description="Repeat score for reference">
-##FORMAT=<ID=JIT,Number=1,Type=Float,Description="SV length jitter">
-##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
-#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
-
-    else:
-        HEADER = """##fileformat=VCFv4.2
-##source=DYSGU
+##command="{input_command}"
 ##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
@@ -561,32 +434,26 @@ def get_headers(extended_tags):
 ##FORMAT=<ID=CMP,Number=1,Type=Float,Description="Compression ratio of contigs">
 ##FORMAT=<ID=RR,Number=1,Type=Float,Description="Repeat score for reference">
 ##FORMAT=<ID=JIT,Number=1,Type=Float,Description="SV length jitter">
-##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{}
+##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{contig_names}
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
-    return HEADER
+    return header
 
 
-def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended_tags=False, header=None,
+def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=None,
            small_output_f=True, sort_output=True, n_fields=None):
 
-    if header is None:
-        HEADER = get_headers(extended_tags)
-    else:
-        HEADER = header
-
-    outfile.write(HEADER.format(contig_names) + "\t" + "\t".join(names) + "\n")
+    header = get_header()
+    input_command = ' '.join(sys.argv)
+    outfile.write(
+        header.format(input_command=input_command,
+                      contig_names=contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
         logging.info("Input samples: {}".format(str(list(names))))
-
     version = pkg_resources.require("dysgu")[0].version
-
     seen_idx = set([])
     cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp', "NMbase", "n_gaps"]
-    if extended_tags:
-        cnames += ['DP', 'DN', 'DApri', 'DAsupp']
-
     for col in cnames:
         if col in df.columns:
             df[col] = df[col].astype(float).round(2)
@@ -597,7 +464,6 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
 
     count = 0
     recs = []
-
     if args is not None:
         add_kind = args["add_kind"] == "True"
         if args["metrics"]:
@@ -610,7 +476,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
             df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
             df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
 
-        n_fields = len(col_names(extended_tags, small_output_f)[-1])
+        n_fields = len(col_names(small_output_f)[-1])
     else:
         small_output_f = False
 
@@ -618,12 +484,11 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", extended
         if idx in seen_idx:
             continue
 
-        format_f, df_rows = gen_format_fields(r, df, names, extended_tags, n_fields, small_output_f)
+        format_f, df_rows = gen_format_fields(r, df, names, n_fields, small_output_f)
         if "partners" in r and r["partners"] is not None and r["partners"] != ".":
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, extended_tags, small_output_f)
-
+        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, small_output_f)
         recs.append(r_main)
         count += 1
 

@@ -321,7 +321,7 @@ cdef class EventResult:
     cdef public np.float32_t contig_left_weight, contig_right_weight, contig2_left_weight, contig2_right_weight, ref_rep, compress
 
     cdef public int32_t su, pe, supp, sc, NP, maxASsupp, plus, minus, spanning, double_clips, n_unmapped_mates, n_small_tlen, bnd, ras, fas, cipos95A, cipos95B
-    cdef public np.float32_t DP, DApri, DN, NMpri, DAsupp, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
+    cdef public np.float32_t NMpri, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
 
     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
     cdef public np.float32_t jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t

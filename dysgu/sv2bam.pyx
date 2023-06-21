@@ -205,10 +205,10 @@ def process(args):
 
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))
-        return -1
+        quit()
     elif count == 0:
         logging.critical("No reads found")
-        return -1
+        quit()
     logging.info("dysgu fetch {} written to {}, n={}, time={} h:m:s".format(args["bam"], out_name,
                                                             count,
                                                             str(datetime.timedelta(seconds=int(time.time() - t0)))))

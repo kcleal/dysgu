@@ -368,7 +368,7 @@ cdef class PairedEndScoper:
         else:
             forward_scope = &self.chrom_scope[chrom2]
 
-        cdef cpp_map[int, LocalVal].iterator local_it, local_it2  #itr
+        cdef cpp_map[int, LocalVal].iterator local_it, local_it2
         cdef cpp_pair[int, LocalVal] vitem
 
         cdef float max_span, span_distance
@@ -566,15 +566,9 @@ cdef void add_template_edges(G, TemplateEdges template_edges):
     # cdef string qname
     cdef vector[int] arr
     while it != template_edges.templates_s.end():
-
-        # qname = str(dereference(it).first)
-
         arr = dereference(it).second
         # Array values are query start, node-name, flag
-        # if qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
-        #     echo(arr)
         postincrement(it)
-
         read1_aligns = []
         read2_aligns = []
         for ii in range(0, arr.size(), 3):
@@ -582,7 +576,6 @@ cdef void add_template_edges(G, TemplateEdges template_edges):
                 read1_aligns.append(arr[ii:ii + 3])
             else:
                 read2_aligns.append(arr[ii:ii + 3])
-
         primary1 = None
         primary2 = None
         if len(read1_aligns) > 0:
@@ -644,9 +637,8 @@ cdef class NodeName:
         self.tell = t
         self.cigar_index = cigar_index
         self.event_pos = event_pos
-
-    # def as_tuple(self):
-    #     return self.h, self.f, self.p, self.c, self.t, self.cigar_index, self.event_pos
+    def as_tuple(self):
+        return self.hash_name, self.flag, self.pos, self.chrom, self.tell, self.cigar_index, self.event_pos
 
 cdef class NodeToName:
     # Index these vectors to get the unique 'template_name'
@@ -657,11 +649,9 @@ cdef class NodeToName:
     cdef vector[uint64_t] t
     cdef vector[int32_t] cigar_index
     cdef vector[uint32_t] event_pos
-
-    def __cinit__(self):  # Possibly use a vector of structs instead. Reason for doing this way was to save mem
+    def __cinit__(self):
         # node names have the form (hash qname, flag, pos, chrom, tell, cigar index, event pos)
         pass
-
     cdef void append(self, long a, int b, int c, int d, long e, int f, int g) nogil:
         self.h.push_back(a)
         self.f.push_back(b)
@@ -672,10 +662,11 @@ cdef class NodeToName:
         self.t.push_back(e)
         self.cigar_index.push_back(f)
         self.event_pos.push_back(g)
-
     def __getitem__(self, idx):
         return NodeName(self.h[idx], self.f[idx], self.p[idx], self.c[idx], self.t[idx], self.cigar_index[idx], self.event_pos[idx])
-
+    cdef bint same_template(self, int query_node, int target_node):
+        if self.h[query_node] == self.h[target_node]:
+            return True
 
 cdef get_query_pos_from_cigarstring(cigar, pos):
     # Infer the position on the query sequence of the alignment using cigar string
@@ -714,7 +705,7 @@ cdef get_query_pos_from_cigartuples(r):
     return start, end, r.pos, r.reference_end, r.rname, r.mapq, "input"
 
 
-cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
+cpdef alignments_from_sa_tag(r, gettid):
     # Puts other alignments in order of query position, gets index of the current alignment
     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
     cdef int chrom2, start_pos2, query_start, query_end, ref_start, ref_end, start_temp, aln_start, aln_end
@@ -744,14 +735,9 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
             query_end = start_temp + query_end - query_start
             query_start = start_temp
 
-        # If another local alignment is found use only this, usually corresponds to the other side of an insertion/dup
-        # if aln_chrom == chrom2 and position_distance(aln_start, aln_end, ref_start, ref_end) < thresh:
-        #     query_aligns = [query_aligns[0], (query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand)]
-            # break
-
         query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand))
 
-    query_aligns = sorted(query_aligns, key=lambda x: x[0])
+    query_aligns = sorted(query_aligns)  # key=lambda x: x[0]
 
     cdef int index = 0
     for index in range(len(query_aligns)):
@@ -761,11 +747,16 @@ cdef alignments_from_sa_tag(r, gettid, thresh, paired_end, mapq_thresh):
     return query_aligns, index
 
 
-cdef connect_right(a, b, r, paired, max_dist, mq_thresh):
+cpdef connect_right(a, b, r, paired, max_dist, mq_thresh):
     event_pos = a[3]
     chrom = a[4]
-    pos2 = b[2]
-    pos2_end = b[3]
+    same_strand = b[6]
+    if same_strand:
+        pos2 = b[2]
+    else:
+        pos2 = b[3]
+    # pos2 = b[2]
+    # pos2_end = b[3]
     chrom2 = b[4]
     pos2_mq = b[5]
     same_strand = b[6]
@@ -778,17 +769,21 @@ cdef connect_right(a, b, r, paired, max_dist, mq_thresh):
             r.flag & 2 and r.pnext >= event_pos and \
             (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):  # is primary, is proper pair. Use primary mate info, not SA
             return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
+    return event_pos, chrom, pos2, chrom2, 0
+    # if same_strand:
+    #     return event_pos, chrom, pos2, chrom2, 0
+    # else:
+    #     return event_pos, chrom, pos2_end, chrom2, 0
 
-    if same_strand:
-        return event_pos, chrom, pos2, chrom2, 0
-    else:
-        return event_pos, chrom, pos2_end, chrom2, 0
 
-
-cdef connect_left(a, b, r, paired, max_dist, mq_thresh):
+cpdef connect_left(a, b, r, paired, max_dist, mq_thresh):
     event_pos = a[2]
     chrom = a[4]
-    pos2 = b[3]
+    same_strand = b[6]
+    if same_strand:
+        pos2 = b[3]
+    else:
+        pos2 = b[2]
     chrom2 = b[4]
     pos2_mq = b[5]
     if pos2_mq < mq_thresh:
@@ -798,19 +793,16 @@ cdef connect_left(a, b, r, paired, max_dist, mq_thresh):
             r.flag & 2 and r.pnext <= event_pos and \
             (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):
             return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
-
     return event_pos, chrom, pos2, chrom2, 0
 
 
 cdef int cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
-
     cdef int other_node
     cdef int count = 0
     cdef unordered_set[int] clustered_nodes
     clip_scope.update(r, node_name, chrom, pos, clustered_nodes)
     if not clustered_nodes.empty():
         for other_node in clustered_nodes:
-
             if not G.hasEdge(node_name, other_node):
                 G.addEdge(node_name, other_node, 2)
                 count += 1
@@ -840,19 +832,19 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
 
     both_overlap = p1_overlaps and p2_overlaps
 
-    if read_enum != BREAKEND and not mm_only and not chrom2 == -1: #(not mm_only or not both_overlap):
+    if read_enum != BREAKEND and not mm_only and not chrom2 == -1:
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar, trust_ins_len)
 
         for other_node in other_nodes:
+            # check if last seen node is also same template
+            if node_to_name.same_template(node_name, other_node):
+                continue
             if not G.hasEdge(node_name, other_node):
                 # 2 signifies that this is a local edge (black edge) as opposed to a template edge
                 G.addEdge(node_name, other_node, 2)
 
     elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations
         count_sc_edges = cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
-
-        # if read_enum == BREAKEND:  # Try and connect soft-clips to within-read events (doing this hurts precision)
-        #     other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom, event_pos, read_enum)
 
     if not mm_only and read_enum != BREAKEND:
         pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar)
@@ -866,9 +858,10 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
             G.addEdge(node_name, bnd_site_node2, 0)
 
     # Debug:
-    # echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
+    # if r.qname == "SAMD00261055.2257592":
+    #     echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
     # look = {'V100003378L3C001R005710380'}
-    # node_look = {155, 156, 158, 38, 184, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 223, 224, 228}
+    # node_look = {1, 2}
     # # if r.qname in look:
     # if node_name in node_look:
     #     echo(r.qname, r.pos)
@@ -1019,7 +1012,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
         if read_enum == SPLIT:
             # Parse SA tag. For paired reads
             if r.has_tag("SA") and good_clip:  # Parse SA, first alignment is the other read primary alignment
-                all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
+                all_aligns, index = alignments_from_sa_tag(r, gettid)
                 event = all_aligns[index]
                 if len(all_aligns) == 1:
                     return
@@ -1067,7 +1060,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
             # Use SA tag to get chrom2 and pos2
             if r.has_tag("SA"):
 
-                all_aligns, index = alignments_from_sa_tag(r, gettid, loci_dist, paired_end, mapq_thresh)
+                all_aligns, index = alignments_from_sa_tag(r, gettid)
                 event = all_aligns[index]
 
                 if len(all_aligns) == 1:
@@ -1075,7 +1068,6 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
 
                 if index < len(all_aligns) - 1:  # connect to next
                     event_pos, chrom, pos2, chrom2, _ = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
-
                     cigar_index = 0
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,

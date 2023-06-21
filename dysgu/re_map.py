@@ -92,11 +92,11 @@ def merge_align_regions(locations):
         if len(new_l) == 0:
             new_l.append([s, e])
         last = new_l[-1]
-
         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:
             new_l[-1][1] = e
         else:
-            return None
+            break
+            # return None
     return new_l
 
 

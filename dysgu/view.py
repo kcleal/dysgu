@@ -53,11 +53,7 @@ def set_numeric(d):
 
 
 def mung_df(df, args):
-    if args["no_chr"] == "True":
-        df["chrA"] = [i.replace("chr", "") for i in df["chrA"]]
-        df["chrB"] = [i.replace("chr", "") for i in df["chrB"]]
-
-    if args["no_contigs"] == "True":
+    if args["verbosity"] == "0":
         df["contigA"] = [None] * len(df)
         df["contigB"] = [None] * len(df)
     else:
@@ -116,9 +112,9 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
         return pd.DataFrame.from_records(found)
 
 
-def to_csv(df, args, names, outfile, extended, small_output):
+def to_csv(df, args, outfile, small_output):
     # Convert the partners to a human readable format
-    keytable = io_funcs.col_names(extended, small_output)
+    keytable = io_funcs.col_names(small_output)
     fmt = keytable.pop()
     keytable += fmt
     if "partners" not in df.columns:
@@ -606,11 +602,10 @@ def view_file(args):
     outfile = open_outfile(args, names_dict)
 
     if args["out_format"] == "vcf":
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, extended_tags=False, small_output_f=True)
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True)
         logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
     else:
-        extended_tags = 'DN' in df.columns or 'ZN' in df.columns
-        to_csv(df, args, seen_names, outfile, extended=extended_tags, small_output=False)
+        to_csv(df, args, outfile, small_output=False)
 
     logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
                                                     time.time() - t0))
