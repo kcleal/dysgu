@@ -1,3 +1,4 @@
+setuptools>=63.0
 cython
 click>=8.0
 numpy

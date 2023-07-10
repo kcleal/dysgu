@@ -9,9 +9,9 @@
 #include <sstream>
 
 #include "robin_hood.h"
-#include "htslib/sam.h"
-#include "htslib/hfile.h"
 #include "xxhash64.h"
+#include <htslib/sam.h>
+#include <htslib/hfile.h>
 
 
 class CoverageTrack

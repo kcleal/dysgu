@@ -29,3 +29,4 @@ setup-requires/*
 dysgu/.DS_Store
 docs/build/
 docs/source/_templates/
+dev

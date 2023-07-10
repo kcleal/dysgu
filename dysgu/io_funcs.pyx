@@ -348,7 +348,7 @@ def gen_format_fields(r, df, names, n_fields, small_output):
 def get_header():
     header = """##fileformat=VCFv4.2
 ##source=DYSGU
-##command="{input_command}"
+##FILTER=<ID=PASS,Description="All filters passed">
 ##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
 ##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
 ##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
@@ -435,6 +435,7 @@ def get_header():
 ##FORMAT=<ID=RR,Number=1,Type=Float,Description="Repeat score for reference">
 ##FORMAT=<ID=JIT,Number=1,Type=Float,Description="SV length jitter">
 ##FORMAT=<ID=PROB,Number=1,Type=Float,Description="Probability of event being true">{contig_names}
+##command="{input_command}"
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT"""
 
     return header

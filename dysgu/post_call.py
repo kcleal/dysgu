@@ -75,30 +75,24 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
 
 class CoverageAnalyser(object):
-
     def __init__(self, temp_dir):
         self.pad_size = 1000
         self.temp_dir = temp_dir
         self.chrom_cov_arrays = {}
-        chrom_cov_arrays = {}
         if os.path.exists(self.temp_dir):
             for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
                 chrom_name = pth.split("/")[-1].split(".")[0]
-                chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
-            if chrom_cov_arrays:
-                self.chrom_cov_arrays = chrom_cov_arrays
-                logging.info("Loaded n={} chromosome coverage arrays from {}".format(len(chrom_cov_arrays), self.temp_dir))
+                self.chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
+            if self.chrom_cov_arrays:
+                logging.info("Loaded n={} chromosome coverage arrays from {}".format(len(self.chrom_cov_arrays), self.temp_dir))
         else:
             logging.warning("Coverage track not loaded, working directory does not exist {}".format(self.temp_dir))
 
     def process_events(self, events):
-
-        # Try and load coverage tracks
         for e in events:
             e.fcc = -1
             e.inner_cn = -1
             e.outer_cn = -1
-
         for e in events:
             if e.svtype == "DEL" or e.svtype == "DUP" or e.svtype == "INV":
                 if e.svlen > 2000 or abs(e.posB - e.posA) > 2000:
@@ -107,9 +101,8 @@ class CoverageAnalyser(object):
                     self.process_one_window(e)
             elif e.svtype == "INS":
                 self.process_insertion(e)
-            else:  # TRA
+            else:
                 self.process_two_windows(e)
-
         return events
 
     def process_one_window(self, e):
@@ -647,14 +640,26 @@ def compressability(events):
     return events
 
 
-def apply_model(df, mode, contigs, diploid, paired, thresholds):
-    pth = os.path.dirname(os.path.abspath(__file__))
-    pth = f"{pth}/dysgu_model.1.pkl.gz"
+def apply_model(df, mode, contigs, diploid, thresholds, model_path=None):
+    if model_path is None:
+        pth = os.path.dirname(os.path.abspath(__file__))
+        pth = f"{pth}/dysgu_model.1.pkl.gz"
+    else:
+        pth = model_path
     assert os.path.exists(pth)
-    try:
-        models = pickle.load(gzip.open(pth, "rb"))
-    except:
-        raise RuntimeError("Failed to load model")
+    logging.info(f"Loading Model: {pth}")
+    if pth.endswith(".pkl.gz"):
+        try:
+            models = pickle.load(gzip.open(pth, "rb"))
+        except:
+            raise RuntimeError("Failed to load model")
+    elif pth.endswith(".pkl"):
+        try:
+            models = pickle.load(open(pth, "rb"))
+        except:
+            raise RuntimeError("Failed to load model")
+    else:
+        raise ValueError("Model must be pickle file with .pkl or .pkl.gz extension")
 
     if diploid == 'False' and contigs == 'False':
         raise NotImplemented("Choose either diploid == False or contigs == False, not both")
@@ -664,7 +669,7 @@ def apply_model(df, mode, contigs, diploid, paired, thresholds):
     model_key = f"{mode}_classifier{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"
 
     cols = models[col_key]
-    logging.info(f"Model: {mode}, diploid: {diploid}, contig features: {contigs}. N features: {len(cols)}")
+    logging.info(f"Model config: {mode}, diploid: {diploid}, contig features: {contigs}. N features: {len(cols)}")
 
     c = dict(zip(
         ['NMS',    'SQC', 'CIPOS95',  'CIEND95',  'GC', 'REP', 'REPSC',  'SU', 'WR',       'SR',   'SC', 'NEXP',        'RPOLY',          'STRIDE', 'SVTYPE', 'SVLEN', 'NMP',   'NMB',    'MAPQP',   'MAPQS',    'NP', 'MAS',       'BE',         'COV',            'MCOV', 'NEIGH', 'NEIGH10',   'RB',        'PS',   'MS',    'NG',     'NSA',  'NXA',  'NMU',              'NDC',          'RMS',         'RED',      'BCC',            'STL',          'BND', 'SCW', 'RAS', 'FAS', 'OL',            'FCC', 'CMP',     'NG',        'RR',      'JIT',    'SBT',            'SQR'],

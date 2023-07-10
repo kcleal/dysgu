@@ -8,29 +8,20 @@ import os
 import pysam
 import glob
 from sys import argv
+import sysconfig
 
 
-# Note building htslib for OSX version might need to be set: make CXXFLAGS="-mmacosx-version-min=10.09"
-
-# Remove the "-Wstrict-prototypes" compiler option, which isn't valid for C++.
-# https://stackoverflow.com/questions/8106258/cc1plus-warning-command-line-option-wstrict-prototypes-is-valid-for-ada-c-o
-import distutils.sysconfig
-cfg_vars = distutils.sysconfig.get_config_vars()
+cfg_vars = sysconfig.get_config_vars()
 for key, value in cfg_vars.items():
     if type(value) == str:
         cfg_vars[key] = value.replace("-Wstrict-prototypes", "")
 
 
-# This was stolen from pybind11
-# https://github.com/pybind/python_example/blob/master/setup.py
-# As of Python 3.6, CCompiler has a `has_flag` method.
-# cf http://bugs.python.org/issue26689
 def has_flag(compiler, flagname):
     """Return a boolean indicating whether a flag name is supported on
     the specified compiler.
     """
     import tempfile
-
     with tempfile.NamedTemporaryFile('w', suffix='.cpp') as f:
         f.write('int main (int argc, char **argv) { return 0; }')
         try:
@@ -173,9 +164,10 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.4.0',
+    version='1.4.2',
     python_requires='>=3.7',
     install_requires=[  # runtime requires
+            'setuptools>=63.0',
             'cython',
             'click>=8.0',
             'numpy>=1.18',
@@ -189,6 +181,7 @@ setup(
             'edlib',
         ],
     setup_requires=[
+            'setuptools>=63.0',
             'cython',
             'click>=8.0',
             'numpy>=1.18',
@@ -200,7 +193,7 @@ setup(
             'sortedcontainers',
             'lightgbm',
             'edlib'
-        ],  # setup.py requires at compile time
+        ],
     packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
     ext_modules=cythonize(ext_modules),
     include_package_data=True,

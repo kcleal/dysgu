@@ -2,8 +2,6 @@ include dysgu/tests/*
 include *.rst
 include *.md
 include dysgu/*
-# graft dysgu/htslib
-# graft dysgu/scikitbio
 include ci/*
 include scripts/*
 

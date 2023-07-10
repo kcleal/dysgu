@@ -15,20 +15,17 @@ for calling structural variants using paired-end or long read sequencing data.
 
 Installation
 ------------
-Dysgu requires Python >=3.7 - 3.10 and has been tested on linux and MacOS.
+Dysgu requires Python >=3.7 - 3.10 plus htslib and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
    
     conda install -c bioconda -c conda-forge dysgu
-    # or
-    pip install numpy dysgu
 
-To build from source, a >=c++11 compiler is needed. Grab the latest dysgu.tar.bz2 from `Releases page <https://github.com/kcleal/dysgu/releases>`_  For convenience use the install script::
+Or, fetch from PyPI / build from source::
 
-    cd dysgu
-    bash INSTALL.sh
+    pip install dysgu
 
-Additional build recipes (linux or osx) can be found in the 'ci' folder.
+To build from source, htslib must be available on your system.
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
@@ -44,12 +41,12 @@ Usage
 -----
 Available commands::
 
-    dysgu run             # Run using default arguments, wraps fetch and call commands
-    dysgu fetch           # Separate SV reads from input bam file
-    dysgu call            # SV calling
-    dysgu merge           # Merge calls from multiple samples
-    dysgu filter-normal   # Filter SVs against normal panels to find somatic SVs
-    dysgu test            # Run basic tests
+    dysgu run              # Run using default arguments, wraps fetch and call commands
+    dysgu fetch            # Separate SV reads from input bam file
+    dysgu call             # SV calling
+    dysgu merge            # Merge calls from multiple samples
+    dysgu filter-normal    # Filter SVs against normal panels to find somatic SVs
+    dysgu test             # Run basic tests
 
 For help use::
 
@@ -123,28 +120,41 @@ problem of duplication::
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
 
 
-Somatic SVs / tumor-normal calling
-----------------------------------
-To identify somatic SVs, or SVs that are unique in your input sample, called SVs can be filtered against normal VCFs and/or
-normal bam/cram files. The recommended workflow is to call SVs in your normal panel and your target sample. Cohort SVs are then
-merged using `dysgu merge`, before filtering each target sample to get the somatic/unique SVs::
+Somatic SVs / tumor-normal calling / pool-of-normals
+----------------------------------------------------
 
-    dysgu filter-normal --normal-vcf merged.vcf sample1.vcf *.bams ... > sample1_somatic.vcf
+For tumor/normal pairs::
 
-Here, sample names are inferred from the vcf and bam file headers (or filenames), so `sample1` will be ignored from the normal-vcf or list of bams.
-The normal-vcf may come from a different source or SV caller, provided 'SVTYPE' is listed in the info column.
+    dysgu run ref.fa wd_t tumour.bam > tumor.vcf
+    dysgu run ref.fa wd_n normal.bam > normal.vcf
+    dysgu filter-normal --normal-vcf normal.vcf tumour.vcf normal.bam ... > somatic.vcf
+
+Alternatively, unique SV can be identified when compared to a cohort. A third-party vcf of common SVs can be used (provided 'SVTYPE' is listed in the info column), or
+cohort SVs can be merged using `dysgu merge`, before filtering to get unique SVs::
+
+    dysgu merge *.vcf > merged.vcf
+    dysgu filter-normal --normal-vcf merged.vcf sample1.vcf *.bam ... > sample1_unique.vcf
+
+Here, sample1.vcf and merged.vcf can contain multiple samples, although if sample1.vcf is multi-sample, you must provide '--target-sample' to indicate which sample to filter.
+The output sampe1_somatic.vcf will be a single sample vcf containing unique SVs.
+
+Sample names are respected from the vcf and bam file headers (or filenames), so `sample1` will be ignored from the normal-vcf and list of bams.
+To keep all SVs in the output, use ``--keep-all`` - filtered SVs will be labelled 'normal', 'lowProb' or 'lowSupport' in the filter column.
 
 Increasing the number of bams to filter against will slow down filtering, but should increase specificity. To set a
-limit on the number of bams to filter against, a random sample can be drawn from the input list using::
+limit on the number of bams to filter against, a random sample can be drawn from the input list,
+e.g. draw 5 random bam samples from the input list to filter against using::
 
-    dysgu filter-normal --random-bam-sample 10 --normal-vcf merged.vcf sample1.vcf *.bams ... > sample1_somatic.vcf
+    dysgu filter-normal --random-bam-sample 5 --normal-vcf merged.vcf sample1.vcf *.bam
 
-This will draw 10 random bam samples from the input list to filter against.
 
-Also a target VCF can be filtered against just a normal vcf if desired::
+Also a target VCF can be filtered against a normal vcf if desired (no alignment files)::
 
-    dysgu filter-normal --normal-vcf normal.vcf sample1.vcf > unique.vcf
+    dysgu filter-normal --normal-vcf normal.vcf sample1.vcf
 
+By default, SV calls with a PROB value < ``--min-prob`` are removed from the final output,
+and SV calls with a PROB value >= ``--pass-prob`` will be re-labelled as PASS in the output. However, these
+thresholds can require tuning, depending on sequencing platform, coverage and cohort size. Suitable values often lie in the range 0.1 - 0.4.
 
 
 Models available
@@ -240,7 +250,7 @@ A helper script can be used to suggest different max-cov values with respect to 
 to use of threshold of 25 x mean genome coverage::
 
 
-    max_cov=$(python scripts/suggest_max_coverage.py -y 25 input.bam)
+    max_cov=$(python suggest_max_coverage.py -y 25 input.bam)
     >>> Read-length 148.0 bp, mean whole-genome coverage estimate: 31.88, max-cov ~ 797
 
     dysgu run --max-cov $max_cov reference.fa temp_dir input.bam > svs.vcf

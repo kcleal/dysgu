@@ -19,7 +19,6 @@ from sys import stdin, stdout
 def open_outfile(args, names_dict):
     if args["separate"] == "True":
         outfiles = {}
-        # for item in args["input_files"]:
         for item, name in names_dict.items():
             outname = f"{name}.{args['post_fix']}.csv"
             outfiles[name] = open(outname, "w")
@@ -86,7 +85,6 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                 current = f["table_name"]
                 targets = set([])
                 passed = True
-                # if not aggressive:
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
                     if t_name != current and t_name not in targets and len(targets) < n_samples:
@@ -113,7 +111,6 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
 
 
 def to_csv(df, args, outfile, small_output):
-    # Convert the partners to a human readable format
     keytable = io_funcs.col_names(small_output)
     fmt = keytable.pop()
     keytable += fmt
@@ -141,7 +138,6 @@ def to_csv(df, args, outfile, small_output):
     elif args["separate"] == "True":
         for k, df2 in df.groupby("table_name"):
             df2 = df2.copy()
-            # Convert parnet indexes into original indexes
             ori = []
             for item in df2["partners"]:
                 if not item:
@@ -150,8 +146,6 @@ def to_csv(df, args, outfile, small_output):
                     ori.append("|".join([f"{df.loc[i]['table_name']},{df.loc[i]['event_id']}" for i in item]))
             df2["partners"] = ori
             del df2["table_name"]
-            # if "event_id" in df2:
-            #     del df2["event_id"]
             df2[keytable].to_csv(outfile[k], index=False)
     else:
         del df["table_name"]
@@ -179,25 +173,32 @@ def read_from_inputfile(path):
 
 
 def vcf_to_df(path):
+    if os.stat(path).st_size == 0:
+        logging.warning(f"File is empty: {path}")
+        return pd.DataFrame()
+
     fin = read_from_inputfile(path)
-    # Parse sample
     header = ""
     last = ""
+    contig_names = ""
     for line in fin:
         if line[:2] == "##":
             header += line
+            if line.startswith("##contig="):
+                contig_names += line
         else:
             header += "\t".join(line.split("\t")[:9])
             last = line
             break
+    if not header:
+        logging.critical(f"File does not have vcf header: {path}")
+        quit()
 
     sample = last.strip().split("\t")[9]
-
     if path == '-':
         path_h = sys.stdin
     else:
         path_h = path
-
     df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None)
     if len(df.columns) > 10:
         raise ValueError(f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}")
@@ -303,9 +304,7 @@ def vcf_to_df(path):
                }
 
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
-
     df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
-
     for k, dtype in col_map.values():
         if k in df:
             if df[k].dtype != dtype:
@@ -322,19 +321,16 @@ def vcf_to_df(path):
         df["contigA"] = [""] * len(df)
     if "contigB" not in df:
         df["contigB"] = [""] * len(df)
-
     if 'posB_tra' in df:
         df["posB"] = [i if svt != 'TRA' else j for i, j, svt in zip(df['posB'], df['posB_tra'], df['svtype'])]
         del df['posB_tra']
     df["posA"] = df["posA"].astype(int) - 1  # convert to 0-indexing
     df["posB"] = df["posB"].astype(int) - 1
-
-    return df, header, n_fields
+    return df, header, n_fields, "\n" + contig_names.strip() if contig_names else contig_names
 
 
 def call_pons(samps, df, args):
     pad = 500
-    # go through each samps and get reads
     intervals = []
     for chrA, posA, chrB, posB in zip(df.chrA, df.posA, df.chrB, df.posB):
         r1 = chrA, 0 if posA - pad < 0 else posA - pad, posA + pad
@@ -352,25 +348,20 @@ def call_pons(samps, df, args):
     ref = args["ref"]
     pon_dfs = []
     for af, read_type in samps:  # todo parallelize this
-
         result = subprocess.run(
             f"dysgu fetch --mq 0 --search {wd}/pon.search.bed --min-size 25 -x -o {wd}/pon.dysgu_reads.bam {wd} {af}",
             shell=True, stdout=subprocess.PIPE)
-
         if result.returncode != 0:
             raise RuntimeError(f"dysgu run failed on {af}")
-
         result = subprocess.run(
             f"dysgu call --mq 0 --ibam {af} -f csv --min-support 1 -x --mode {read_type} {ref} {wd} {wd}/pon.dysgu_reads.bam",
             shell=True, stdout=subprocess.PIPE)
         if result.returncode != 0:
             raise RuntimeError("dysgu run failed on pon")
-
         output = io.StringIO()
         output.write(result.stdout.decode("utf-8"))
         output.seek(0)
         df_p = pd.read_csv(output, sep=",", index_col=None)
-
         df_p["sample"] = ["PON-dysgu"] * len(df_p)
         df_p["table_name"] = ["PON-dysgu"] * len(df_p)
         pon_dfs.append(df_p)
@@ -476,9 +467,7 @@ def check_raw_alignments(df, args, pon):
     return df
 
 
-def process_pon(df, args):
-
-    # open pon
+def process_pon(df, args):  # legacy code
     pon = []
     for item, read_type in zip(args["pon"].split(","), args["pon_rt"].split(",")):
         pon.append((item, read_type))
@@ -498,8 +487,6 @@ def process_pon(df, args):
 
         df_check = df.loc[list(check)]
         pon_idxs = call_from_samp(pon, df_check, args)
-
-        # drop pon_idxs from main df
         for idx, s in zip(df.index, df["partners"]):
             if idx in pon_idxs:
                 pon_idxs |= s
@@ -536,9 +523,8 @@ def view_file(args):
     names_dict = {}
     name_c = defaultdict(int)
     dfs = []
-
     header = None
-
+    contig_names = None
     for item in args["input_files"]:
 
         if item == "-":
@@ -552,7 +538,7 @@ def view_file(args):
         else:
             name, ext = os.path.splitext(item)
             if ext != ".csv":  # assume vcf
-                df, header, _ = vcf_to_df(item)  # header here, assume all input has same number of fields
+                df, header, _, contig_names = vcf_to_df(item)  # header here, assume all input has same number of fields
             else:
                 df = pd.read_csv(item, index_col=None)
             name = list(set(df["sample"]))
@@ -602,7 +588,7 @@ def view_file(args):
     outfile = open_outfile(args, names_dict)
 
     if args["out_format"] == "vcf":
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True)
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True, contig_names=contig_names)
         logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
     else:
         to_csv(df, args, outfile, small_output=False)

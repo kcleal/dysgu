@@ -84,28 +84,19 @@ def show_params():
 
 
 def apply_preset(kwargs):
-
     if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
         kwargs["paired"] = "False"
-
     for k, v in presets[kwargs["mode"]].items():
         if k in new_options_set and new_options_set[k] is not None:
-
-            # use the presents option if new_options_set is default
-            # if new_options_set[k] == defaults[k]:
-            #     kwargs[k] = v
-
             kwargs[k] = new_options_set[k]
         else:
             kwargs[k] = v
-
     for k, v in defaults.items():
         if k in kwargs and kwargs[k] is None:
             kwargs[k] = v
 
 
 version = pkg_resources.require("dysgu")[0].version
-
 
 logFormatter = logging.Formatter("%(asctime)s [%(levelname)-7.7s]  %(message)s")
 rootLogger = logging.getLogger()
@@ -127,14 +118,12 @@ def apply_ctx(ctx, kwargs):
 def make_wd(args, call_func=False):
     if "working_directory" in args:
         temp_dir = args["working_directory"]
-
         if not os.path.exists(temp_dir):
             os.mkdir(temp_dir)
         elif not args["overwrite"]:
             if (call_func and args["ibam"] is None) or not call_func:
                 raise ValueError("Working directory already exists. Add -x / --overwrite=True to proceed, "
                                  "or supply --ibam to re-use temp files in working directory")
-
     else:
         temp_dir = args["wd"]
         if temp_dir is None:
@@ -242,29 +231,20 @@ def run_pipeline(ctx, **kwargs):
     t0 = time.time()
     logging.info("[dysgu-run] Version: {}".format(version))
     make_wd(kwargs)
-
     apply_preset(kwargs)
     show_params()
-
     ctx = apply_ctx(ctx, kwargs)
-
     if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
         raise ValueError("Only dip=False or contigs=False are supported, not both")
-
     pfix = kwargs["pfix"]
-
     dest = os.path.expanduser(kwargs["working_directory"])
     logging.info(f"Destination: {dest}")
     bname = os.path.splitext(os.path.basename(kwargs["bam"]))[0]
     tmp_file_name = f"{dest}/{bname if bname != '-' else dest}.{pfix}.bam"
-
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
-
     max_cov_value = sv2bam.process(ctx.obj)
-
     ctx.obj["max_cov"] = max_cov_value
-    # Call SVs
     if kwargs["bam"] != "-":
         ctx.obj["ibam"] = kwargs["bam"]
     else:
@@ -272,10 +252,8 @@ def run_pipeline(ctx, **kwargs):
     ctx.obj["sv_aligns"] = tmp_file_name
     logging.info("Input file is: {}".format(tmp_file_name))
     cluster.cluster_reads(ctx.obj)
-
     if kwargs["clean"]:
         shutil.rmtree(kwargs["working_directory"])
-
     logging.info("dysgu run {} complete, time={} h:m:s".format(kwargs["bam"], str(datetime.timedelta(
         seconds=int(time.time() - t0)))))
 
@@ -403,8 +381,7 @@ def get_reads(ctx, **kwargs):
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
-    """Call structural variants from alignment file/stdin"""
-
+    """Call structural variants from bam alignment file/stdin"""
     logging.info("[dysgu-call] Version: {}".format(version))
     make_wd(kwargs, call_func=True)
     if kwargs["sv_aligns"] is None:
@@ -416,20 +393,17 @@ def call_events(ctx, **kwargs):
                 kwargs["sv_aligns"] = pth
             else:
                 raise ValueError("Could not find '{}'".format(kwargs["sv_aligns"]))
-
     if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
         raise ValueError("Only dip=False or contigs=False are supported, not both")
+    if kwargs["sv_aligns"].endswith(".cram"):
+        raise ValueError("Cram files are not supported for 'call' command, please use 'run' pipeline instead")
     logging.info("Input file is: {}".format(kwargs["sv_aligns"]))
-
     apply_preset(kwargs)
-
     if kwargs["max_cov"] == "-1":
         kwargs["max_cov"] = 1e6
     show_params()
     ctx = apply_ctx(ctx, kwargs)
-
     cluster.cluster_reads(ctx.obj)
-
     if kwargs["clean"]:
         shutil.rmtree(kwargs["working_directory"])
 
@@ -465,19 +439,23 @@ def view_data(ctx, **kwargs):
 
 @cli.command("filter-normal")
 @click.argument('input_vcf', required=True, type=click.Path())
-@click.argument('normal_bams', required=True, type=click.Path(), nargs=-1)
+@click.argument('normal_bams', required=False, type=click.Path(), nargs=-1)
 @click.option('--reference', help="Reference for cram input files", required=False, type=click.Path(exists=True))
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-n", "--normal-vcf", help="Vcf file for normal sample, or panel of normals. The SM tag of input bams is used to ignore the input_vcf for multi-sample vcfs",
               required=False, type=click.Path(), multiple=True)
 @click.option("-p", "--procs", help="Reading threads for normal_bams", type=cpu_range, default=1, show_default=True)
+@click.option("-f", "--support-fraction", help="Minimum threshold support fraction / coverage (SU/COV)", type=float, default=0.1, show_default=True)
+@click.option("--target-sample", help="If input_vcf if multi-sample, use target-sample as input", required=False, type=str, default="")
+@click.option("--keep-all", help="All SVs classified as normal will be kept in the output, labelled as filter=normal", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--ignore-read-groups", help="Ignore ReadGroup RG tags when parsing sample names. Filenames will be used instead", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("--min-prob", help="Remove events with PROB value < min-prob", default=0.2, type=float, show_default=True)
+@click.option("--min-prob", help="Remove SVs with PROB value < min-prob", default=0.1, type=float, show_default=True)
+@click.option("--pass-prob", help="Re-label SVs as PASS if PROB value >= pass-prob", default=0.2, type=float, show_default=True)
 @click.option("--interval-size", help="Interval size for searching normal-vcf/normal-bams", default=1000, type=int, show_default=True)
 @click.option("--random-bam-sample", help="Choose N random normal-bams to search. Use -1 to ignore", default=-1, type=int, show_default=True)
 @click.pass_context
 def filter_normal(ctx, **kwargs):
-    """Filter a single-sample vcf against a normal bam, or multiple bams. A normal vcf (single or multi-sample) can also
+    """Filter a vcf generated by dysgu against normal bam(s). A normal-vcf (single or multi-sample) can also
     be supplied. Bam/vcf samples with the same name as the input_vcf will be ignored"""
     logging.info("[dysgu-filter-normal] Version: {}".format(version))
     ctx = apply_ctx(ctx, kwargs)
@@ -491,7 +469,6 @@ def test_command(ctx, **kwargs):
     pwd = os.getcwd()
     logging.info("[dysgu-test] Version: {}".format(version))
     tests_path = os.path.dirname(__file__) + "/tests"
-
     tests = list()
     tests.append(["dysgu fetch",
                   "-x ",
@@ -533,7 +510,6 @@ def test_command(ctx, **kwargs):
                   pwd + '/test.dysgu{}.vcf'.format(version),
                   pwd + '/test2.dysgu{}.vcf'.format(version),
                   "-o " + pwd + '/test.merge.dysgu{}.vcf'.format(version)])
-
     for t in tests:
         c = " ".join(t)
         v = run(shlex.split(c), shell=False, capture_output=True, check=True)
@@ -541,5 +517,4 @@ def test_command(ctx, **kwargs):
             raise RuntimeError(t, "finished with non zero: {}".format(v))
         else:
             click.echo("PASS: " + c, err=True)
-
     logging.info("Run test complete")

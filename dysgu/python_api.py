@@ -396,7 +396,7 @@ class DysguSV:
     def apply_model(self, df):
         """
         Apply a machine leaning model to the dataframe. The model configuration is determined by the options set on
-        the DysguSV class. For example, to use a non diploid model, first set `diploid=False`:
+        the DysguSV class. For example, to use a non-diploid model, first set `diploid=False`:
 
         :param df: The input dataframe to apply the machine learning model to
         :type df: pandas.DataFrame
@@ -412,7 +412,6 @@ class DysguSV:
 
         """
         args = self.args
-        df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"],
-                                           args["thresholds"])
+        df = post_call_metrics.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["thresholds"])
         return df
 

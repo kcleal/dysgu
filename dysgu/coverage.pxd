@@ -1,7 +1,5 @@
 #cython: language_level=3
-
 from dysgu.map_set_utils cimport CoverageTrack
-
 
 cdef class GenomeScanner:
     """Takes care of scanning genome for reads and generating coverage track"""

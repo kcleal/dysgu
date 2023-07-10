@@ -1,5 +1,4 @@
 # cython: language_level=3
-
 from __future__ import absolute_import
 import datetime
 import os
@@ -12,19 +11,17 @@ import networkx as nx
 import pysam
 from sys import stdout
 import pandas as pd
-from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call  # _metrics
+from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import to_dict, merge_intervals, echo
 from dysgu import sites_utils
 from dysgu.io_funcs import intersecter
 import pickle
 import gc
-
 import itertools
 import multiprocessing
 from scipy import stats
 from libcpp.vector cimport vector
-
 import time
 
 ctypedef EventResult EventResult_t
@@ -34,7 +31,6 @@ def filter_potential(input_events, tree, regions_only):
     potential = []
     cdef EventResult_t i
     for i in input_events:
-
         if i.site_info:
             potential.append(i)
             continue
@@ -42,11 +38,9 @@ def filter_potential(input_events, tree, regions_only):
             i.sqc = -1
         if i.svtype == "INS" and i.svlen_precise == 0 and not i.contig and not i.contig2:
             continue
-
         # Remove events for which both ends are in --regions but no contig was found
         posA_intersects = intersecter(tree, i.chrA, i.posA, i.posA + 1)
         posB_intersects = intersecter(tree, i.chrB, i.posB, i.posB + 1)
-
         # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
             if not posA_intersects and not posB_intersects:
@@ -61,8 +55,6 @@ def compare_subset(potential, int max_dist):
     for idx in range(len(potential)):
         ei = potential[idx]
         tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
-
-        # Add another interval for large events, or translocations
         if ei.chrA != ei.chrB or abs(ei.posB - ei.posA) > 5:
             if ei.chrA != ei.chrB:
                 tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
@@ -71,9 +63,7 @@ def compare_subset(potential, int max_dist):
                 ci_a = max(ei.cipos95A, ei.cipos95A)
                 if dist1 + ci_a > max_dist:
                     tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
-
     nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
-
     for idx in range(len(potential)):
         ei = potential[idx]
         ols = nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1)
@@ -83,7 +73,6 @@ def compare_subset(potential, int max_dist):
 
 
 def compare_all(potential):
-    # Quadratic run time but fast for a hand full of events
     for idx, jdx in itertools.product(range(len(potential)), range(len(potential))):
         yield potential[idx], potential[jdx], idx, jdx
 
@@ -111,13 +100,11 @@ cdef span_position_distance(ei, ej):
             position_distance = abs(center1 - center2)
             spd = (position_distance / 900) + span_distance
             return spd
-
     return 0
 
 
 cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_precise, bint j_a_precise,
                      bint j_b_precise, bint intra=True):
-
     cdef int temp, dist_a, dist_b, precise_thresh, mprecise_thresh, same_thresh
     cdef bint dist_a_same, dist_a_close, dist_b_same, dist_b_close
     if intra:
@@ -127,83 +114,64 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
             i_b = temp
             temp = i_a_precise
             i_a_precise = i_b_precise
-
         if j_b < j_a:
             temp = j_a
             j_a = j_b
             j_b = temp
             temp = j_a_precise
             j_a_precise = j_b_precise
-
     dist_a = abs(i_a - j_a)
     dist_b = abs(i_b - j_b)
-
     precise_thresh = 250
     imprecise_thresh = 650
     same_thresh = 5
-
     dist_a_same = dist_a < same_thresh
     if not i_a_precise or not j_a_precise:
         dist_a_close = dist_a < imprecise_thresh
     else:
         dist_a_close = dist_a < precise_thresh
-
     dist_b_same = dist_b < same_thresh
     if not i_b_precise or not j_b_precise:
         dist_b_close = dist_b < imprecise_thresh
     else:
         dist_b_close = dist_b < precise_thresh
-
     return dist_a_close and dist_b_close, dist_a_same and dist_b_same
 
 
 
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False):
-
     if len(potential) < 3:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
     else:
         event_iter = compare_subset(potential, max_dist)  # Use iitree, generate overlap tree and perform intersections
-
     seen = set([])
     pad = 100
     disjoint_nodes = set([])  # if a component has more than one disjoint nodes it needs to be broken apart
-
     for ei, ej, idx, jdx in event_iter:
-
         i_id = ei.event_id
         j_id = ej.event_id
         if not same_sample:
             if ei.sample == ej.sample:
                 continue
-
         if i_id == j_id or (i_id, j_id) in seen or (j_id, i_id) in seen:
             continue
-
         seen.add((i_id, j_id))
-
         fail = False
         if ei.svtype != ej.svtype:
             continue
 
         # Check if events point to the same loci
-        both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and \
-                          intersecter(tree, ei.chrB, ei.posB, ei.posB + 1)
-
+        both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and intersecter(tree, ei.chrB, ei.posB, ei.posB + 1)
         loci_similar = False
         loci_same = False
         intra = ei.chrA == ei.chrB == ej.chrA == ej.chrB
-
         if intra:
             loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB)
-
         elif ei.chrA == ej.chrA and ei.chrB == ej.chrB:  # Try chrA matches chrA
             loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB, intra=False)
-
         elif ei.chrA == ej.chrB and ei.chrB == ej.chrA:
             loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, intra=False)
-
         if not loci_similar:
             continue
 
@@ -221,7 +189,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 both_imprecise = True
             else:
                 one_is_imprecise = True
-
         if paired_end and ei.su == ej.su == 1 and not ej.preciseA and not ej.preciseB:
             continue
 
@@ -231,7 +198,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if isinstance(ci_alt, str):
             if len(ci_alt) > 0 and ci_alt[0] in "<.":
                 ci_alt = ""
-
         cj = ej.contig
         cj2 = ej.contig2
         cj_alt = ej.variant_seq
@@ -244,27 +210,21 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # dont merge deletion events with low/poor evidence
         if same_sample and not loci_same and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0:
             continue
-
         recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
         overlap = max(0, min(ei.posA, ej.posA) - max(ei.posB, ej.posB))
-
         if paired_end:
             if ei.spanning > 0 and ej.spanning > 0 and overlap == 0:
                 disjoint_nodes.add(i_id)
                 disjoint_nodes.add(j_id)
                 continue
-
         m = False
-
         ml = max(int(ei.svlen), int(ej.svlen))
         if ml == 0 and ei.svtype != 'TRA':
             continue
-
         if ei.svtype == 'TRA':
-            l_ratio = 1  # not applicable for translocations
+            l_ratio = 1
         else:
             l_ratio = min(int(ei.svlen), int(ej.svlen)) / ml
-
         if ei.svtype == "INS":
             if aggressive_ins_merge:
                 m = True
@@ -281,9 +241,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                         m = True
                 elif ei.remap_score > 0 and ej.remap_score > 0 and ml > 0 and l_ratio > 0.8:
                     m = True
-                elif ei.remap_score == 0 or ej.remap_score == 0:  # merge if one break was not remapped
+                elif ei.remap_score == 0 or ej.remap_score == 0:
                     m = True
-
         elif ei.svtype != "INS":
             spd = span_position_distance(ei, ej)
             if paired_end or aggressive_ins_merge:  # when aggresive_ins_merge is True, then this is dysgu merge, not dysgu call
@@ -294,16 +253,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     m = True
             elif (recpi_overlap or spd > 0.3 or (loci_similar and any_contigs_to_check)) and not both_in_include:
                 m = True
-
-        if not m:  # dont try and merge by alignment
+        if not m:
             continue
-
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
-
         else:
             v = None
             if ci_alt and cj_alt:
@@ -318,7 +274,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 v = (ci2, cj)
             else:
                 continue
-
             # echo(ei.remap_score == 0 or ej.remap_score == 0, ei.svlen, ej.svlen, v, assembler.check_contig_match(v[0], v[1], return_int=True))
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
@@ -326,7 +281,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
                     G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
                     continue
-
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
             # see if alt sequence can be found in other contig
@@ -347,7 +301,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
                         continue
-
     return G, disjoint_nodes
 
 
@@ -371,16 +324,13 @@ def cut_components(G, disjoint_nodes):
             if len(n_disjoin) <= 1:
                 components2.append(c)
                 continue
-
             out_e = defaultdict(list)
             for node in n_disjoin:
                 for neigh in G.neighbors(node):
                     out_e[neigh].append(node)
-
             G3 = nx.Graph()
             for k, v in out_e.items():
-                G3.add_edge(k, random.choice(v))  # randomly assign to one of the sets
-
+                G3.add_edge(k, random.choice(v))
             components2 += list(nx.algorithms.components.connected_components(G3))
         return components2
     return components
@@ -397,11 +347,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                  skip_imprecise=False):
     """Try and merge similar events, use overlap of both breaks points
     """
-
     max_dist = max_dist / 2
     if len(potential) <= 1:
         return potential
-
     # Cluster events on graph
     G = nx.Graph()
     G, disjoint_nodes = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
@@ -411,38 +359,16 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item.event_id):
             found.append(item)
-
-    # high_qual = []
-    # mad_thresh=0.2
-    # components = nx.algorithms.components.connected_components(G)
-    # for comp in components:
-    #     ws = []
-    #     candidates = nx.edges(G, comp)
-    #     candidates = [(u, v, dict(G[u][v])) for u, v in candidates]
-    #     m = np.median([i[2]['w'] for i in candidates])
-    #     diff = [abs(i[2]['w'] - m) for i in candidates]
-    #     mad = np.mean(diff)
-    #     inliers = [i for i, d in zip(candidates, diff) if d <= mad_thresh]
-    #     high_qual += inliers
-    # G = nx.Graph()
-    # G.add_edges_from(high_qual)
-
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
     components = cut_components(G, disjoint_nodes)
     node_to_event = {i.event_id: i for i in potential}
-
     cdef int k
-    # Only keep edges with loci_same==False if removing the edge leads to an isolated node
     for grp in components:
-
         c = [node_to_event[n] for n in grp]
         best = sorted(c, key=srt_func, reverse=True)
         w0 = best[0]
-
         if not pick_best:
-
-            # Weighting for base result
             weight = w0.pe + w0.supp + w0.spanning
             spanned = bool(w0.spanning)
             if w0.svlen_precise >= 0:
@@ -455,13 +381,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             new_b = ""
             svt = w0.svtype
             sqc = w0.sqc
-
             best_var_seq = w0.variant_seq
-
             for k in range(1, len(best)):
-
                 item = best[k]
-                # Sum these
                 w0.pe += item.pe
                 w0.supp += item.supp
                 w0.sc += item.sc
@@ -472,101 +394,71 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 w0.minus += item.minus
                 w0.spanning += item.spanning
                 w0.n_small_tlen += item.n_small_tlen
-
                 if item.maxASsupp > w0.maxASsupp:
                     w0.maxASsupp = item.maxASsupp
-
-                if item.svtype == "DEL" and svt == "DEL": # and not w0.site_info:
+                if item.svtype == "DEL" and svt == "DEL":
                     if not spanned:
                         if item.spanning:
                             w0.svlen = item.svlen
-
-                        elif min_size > w0.svlen < item.svlen:  # increase svlen size
+                        elif min_size > w0.svlen < item.svlen:
                             w0.svlen = item.svlen
-
-                elif item.svtype == "INS" and svt == "INS": # and not w0.site_info:
+                elif item.svtype == "INS" and svt == "INS":
                     if not spanned:
                         if item.spanning:
                             w0.svlen = item.svlen
                             w0.variant_seq = item.variant_seq
-
-                        elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:  # increase svlen size
+                        elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:
                             if best_var_seq == -1:
                                 w0.svlen = item.svlen
-
-                        # update var seq
                         if best_var_seq is None and isinstance(item.variant_seq, str):
                             w0.variant_seq = item.variant_seq
                             w0.svlen = item.svlen
                             best_var_seq = item.variant_seq
                         if w0.posA == w0.posB < item.posB:
-                            w0.posB = item.posB  # use other end of insertion if found as posB
-
-
+                            w0.posB = item.posB
                 if item.sqc != -1 and sqc == 1:
                     w0.sqc = sqc
                     sqc = item.sqc
-
                 # Average weight these
                 wt = item.pe + item.supp + item.spanning
                 denom = weight + wt
-
                 def norm_vals(a, wt_a, b, wt_b, denom):
                     if denom > 0 and a is not None and b is not None:
                         return ((a * wt_a) + (b * wt_b)) / denom
                     return a
-
                 if denom > 0:
                     w0.MAPQsupp = norm_vals(w0.MAPQsupp, weight, item.MAPQsupp, wt, denom)
                     w0.MAPQpri = norm_vals(w0.MAPQpri, weight, item.MAPQpri, wt, denom)
                     w0.NMpri = norm_vals(w0.NMpri, weight, item.NMpri, wt, denom)
                     w0.NMsupp = norm_vals(w0.NMsupp, weight, item.NMsupp, wt, denom)
-
-                # reset to combined weight?
-                # weight = w0.pe + w0.supp + w0.spanning
-
                 if add_contig_a and item.contig and len(item.contig) > len(new_a):
                     new_a = item.contig
                 if add_contig_b and item.contig2 and len(item.contig2) > len(new_b):
                     new_b = item.contig2
-
             if add_contig_a and new_a:
                 w0.contig = new_a
             if add_contig_b and new_b:
                 w0.contig2 = new_b
-
         if add_partners:
             w0.partners = [i.event_id for i in best[1:]]
-
         found.append(w0)
-
     return found
 
 
 def sample_level_density(potential, regions, max_dist=50):
-
     tmp_list = defaultdict(list)
-
-    # Make a nested containment list for faster lookups
     cdef EventResult_t ei
     for idx in range(len(potential)):
         ei = potential[idx]
-
         # Only find density for non-region calls, otherwise too dense to be meaningful
         if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
             tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
-
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
-
     nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
-
     cdef int vv
-
     for idx in range(len(potential)):
         ei = potential[idx]
-
-        # Overlap right hand side
         neighbors = 0.
         count = 0.
         if ei.chrA == ei.chrB and abs(ei.posB - ei.posA) < 2:
@@ -577,13 +469,10 @@ def sample_level_density(potential, regions, max_dist=50):
             vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
-
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
-
-        # Merge overlapping intervals
         neighbors_10kb = 0.
         count_10kb = 0
         large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
@@ -592,7 +481,6 @@ def sample_level_density(potential, regions, max_dist=50):
                 vv = nc2[c].countOverlappingIntervals(s, e)
                 neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1
-
         if neighbors < 0:
             neighbors = 0
         if count > 0:
@@ -603,7 +491,6 @@ def sample_level_density(potential, regions, max_dist=50):
             ei.neigh10kb = neighbors_10kb / count_10kb
         else:
             ei.neigh10kb = 0
-
     return potential
 
 
@@ -616,7 +503,6 @@ cdef bint same_k(int start1, int start2, int n, const unsigned char[:] seq):
 
 
 cdef dict search_ssr_kc(ori):
-
     seq = ori.upper()
     cdef const unsigned char[:] string_view = bytes(seq.encode("ascii"))  # use for indexing
     cdef int str_len = len(seq)
@@ -627,23 +513,17 @@ cdef dict search_ssr_kc(ori):
     cdef int n_expansion = 0
     cdef int stride = 0
     expansion_seq = ""
-
     cdef unsigned char starting_base
     while i < str_len:
-
         if seq[i] == b"N":
             i += 1
             continue
-
         for t in range(1, rep_len):
-
             start = i
             if start + t >= str_len:
                 break
-
             starting_base = string_view[i]
             starting_kmer_idx = start
-
             count = 1
             mm = 0
             good_i = 0
@@ -653,7 +533,6 @@ cdef dict search_ssr_kc(ori):
                 start += t
                 if start + t + 1 > str_len:
                     break
-
                 if not same_k(start, starting_kmer_idx, t, string_view):
                     successive_bad += 1
                     mm += 1
@@ -665,14 +544,12 @@ cdef dict search_ssr_kc(ori):
                     finish = good_i
                     successive_bad = 0
                     count += 1
-
             if count >= 3 and (finish - i) + t > 10:
-
                 # check for lowercase to uppercase transition; determines repeat expansion length
                 lowercase = []
                 uppercase = []
                 expansion_index = -1
-                for j in range(i, finish, t):  # only check first base of repeat motif
+                for j in range(i, finish, t):
                     if ori[j].islower():
                         if not lowercase:  # finds first block of repeats
                             lowercase.append([j, j + t])
@@ -689,7 +566,6 @@ cdef dict search_ssr_kc(ori):
                             uppercase[-1][1] += t
                         else:
                             uppercase.append([j, j + t])
-
                 if expansion_index != -1:
                     e = lowercase[expansion_index]
                     size = e[1] - e[0]
@@ -697,18 +573,14 @@ cdef dict search_ssr_kc(ori):
                         n_expansion = size
                         expansion_seq = ori[e[0]:e[1]]
                         stride = t
-
                 for begin, end in uppercase:
                     n_ref_repeat_bases += end - begin
-
                 i = finish + t
         i += 1
-
     return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
 
 
 def find_repeat_expansions(events, insert_stdev):
-
     cdef EventResult_t e
     for e in events:
         e.n_expansion = 0
@@ -721,7 +593,6 @@ def find_repeat_expansions(events, insert_stdev):
             e.stride = r["stride"]
             e.exp_seq = r["exp_seq"]
             e.ref_poly_bases += r["ref_poly_bases"]
-
         if e.contig2:
             r = search_ssr_kc(e.contig2)
             if e.n_expansion < r["n_expansion"]:
@@ -729,14 +600,12 @@ def find_repeat_expansions(events, insert_stdev):
                 e.stride = r["stride"]
                 e.exp_seq = r["exp_seq"]
                 e.ref_poly_bases += r["ref_poly_bases"]
-
     return events
 
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
                   merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size, max_single_size,
                   sites_index, paired_end):
-
     potential_events = []
     grp_id = event_id
     cdef EventResult_t event
@@ -752,7 +621,6 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       max_single_size,
                                                       sites_index,
                                                       paired_end):
-
         if event:
             event.grp_id = grp_id
             event.event_id = event_id
@@ -764,34 +632,26 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
             event_id += 1
     if not potential_events:
         return potential_events, event_id
-
     potential_events = filter_potential(potential_events, regions, regions_only)
-
     return potential_events, event_id
 
 
 def process_job(msg_queue, args):
-
     job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size,\
         max_single_size, sites_index, paired_end = args
-
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
-
     pysam.set_verbosity(0)
     infile = pysam.AlignmentFile(infile_path, bam_mode, threads=1, reference_filename=None if bam_mode != "rc" else ref_path)
     pysam.set_verbosity(3)
     event_id = 0
-
     while 1:
-        msg = msg_queue.recv()  # wait for first message
+        msg = msg_queue.recv()
         if msg == 0:
             break
-
         res = msg
         event_id += 1
-
         potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                    insert_median,
                                                    insert_stdev,
@@ -804,40 +664,31 @@ def process_job(msg_queue, args):
                                                    rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
                                                    max_single_size=max_single_size, sites_index=sites_index,
                                                    paired_end=paired_end)
-
         if potential_events:
             for res in potential_events:
                 pickle.dump(res, completed_file)
-
     completed_file.close()
 
 
 def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
-
     procs = args['procs']
     low_mem = args['low_mem']
     tdir = args["working_directory"]
-
     regions_only = False if args["regions_only"] == "False" else True
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
-
     if args["max_cov"] == "auto":
         if args["ibam"] is not None:
             mc = coverage.auto_max_cov(args["max_cov"], args["ibam"])
         else:
             mc = coverage.auto_max_cov(args["max_cov"], args["sv_aligns"])
         args["max_cov"] = mc
-
     else:
         args["max_cov"] = int(args["max_cov"])
-
     if not args["ibam"]:
-        # Make a new coverage track if one hasn't been created yet
         cov_track_path = tdir
     else:
         cov_track_path = None
-
     genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], procs,
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
@@ -846,7 +697,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                             cov_track_path=cov_track_path,
                                             paired_end=paired_end,
                                             bam_iter=bam_iter)
-
     insert_median, insert_stdev, read_len = -1, -1, -1
     if args["template_size"] != "":
         try:
@@ -855,13 +705,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
             raise ValueError("Template-size must be in the format 'INT,INT,INT', for insert-median, insert-stdev, read-length")
 
     if paired_end:
-
-        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev,
-                                                                     read_len, ibam)
-
+        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev, read_len, ibam)
         if insert_median == -1:
             return [], None
-
         read_len = genome_scanner.approx_read_length
         max_dist = int(insert_median + (insert_stdev * 5))  # 5
         max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
@@ -880,7 +726,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
 
     # set upper bound on single-partition size
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
-
     event_id = 0
     block_edge_events = []
     min_support = args["min_support"]
@@ -892,13 +737,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
-
     read_buffer = genome_scanner.read_buffer
-
-    # Iterator over input sites
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
                                         default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
-
     G, node_to_name, bad_clip_counter, sites_adder = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
@@ -923,126 +764,82 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                             trust_ins_len=args["trust_ins_len"] == "True",
                                             low_mem=low_mem,
                                             temp_dir=tdir)
-
     sites_index = None
     if sites_adder:
         sites_index = sites_adder.sites_index
-
     logging.info("Graph constructed")
-
-    # Flat vector, components are separated by -1
-
     component_path = f"{tdir}/components.bin"
     cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
     cdef vector[int] cmp = G.connectedComponents(cmp_file, low_mem)
-
     cdef int length_components = cmp.size()
-
     if low_mem:
         cmp_mmap = np.memmap(component_path, dtype=np.int32, mode='r')
         length_components = len(cmp_mmap)
-
-    #cdef vector[int] cmp = G.connectedComponents()  # Flat vector, components are separated by -1
-
     if insert_median != -1:
         insert_ppf = stats.norm.ppf(0.05, loc=insert_median, scale=insert_stdev)
         if insert_ppf < 0:
             insert_ppf = 0
     else:
         insert_ppf = -1
-
     if paired_end:
         rel_diffs = False
         diffs = 15
     else:
         rel_diffs = True
         diffs = 0.15
-
     write_index = None
     minhq = None
-
     consumers = []
     msg_queues = []
-
     if procs > 1:
-
-        # Tried using a joinable queue, but it turned out to be very slow and buggy;
-
         write_index = itertools.cycle(range(procs))
-
-        # use load balancing, but doesnt make much difference
         minhq = [(0, i) for i in range(procs)]
-        # [(conn1, conn2)...]
-        # using multiple pipes seemed to be a bit quicker than one queue
         msg_queues = [multiprocessing.Pipe(duplex=False) for _ in range(procs)]
-
         for n in range(procs):
-
             job_path = f"{tdir}/job_{n}.pkl"
-
-            proc_args = (
-                job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
+            proc_args = ( job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, assemble_contigs,
-                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end
-            )
-
+                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end )
             p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
             p.start()
-
             consumers.append(p)
-
 
     num_jobs = 0
     completed = 0
     components_seen = 0
-
     if procs == 1 and low_mem:
         completed_file = open(f"{tdir}/job_0.done.pkl", "wb")
     else:
-        completed_file = None  # handled within worker function
-
+        completed_file = None
     cdef int last_i = 0
-    cdef int ci, cmp_idx, item_index
-    # cmp is a flat array of indexes. item == -1 signifies end of component
-
-    # for item_idx, item in enumerate(cmp):
+    cdef int ci, cmp_idx, item_index  # cmp is a flat array of indexes. item == -1 signifies end of component
     for item_idx in range(length_components):
-
         if low_mem:
             item = cmp_mmap[item_idx]
         else:
             item = cmp[item_idx]
-
         if item == -1:
             components_seen += 1
             start_i = last_i
             end_i = item_idx
             last_i = item_idx + 1
-
             component = np.zeros(end_i - start_i)
             ci = 0
             for cmp_idx in range(start_i, end_i):
-
                 if low_mem:
                     component[ci] = cmp_mmap[cmp_idx]
                 else:
                     component[ci] = cmp[cmp_idx]
                 ci += 1
-
             if len(component) > 100_000:
-
                 reduced = graph.break_large_component(G, component, min_support)
-
                 for cmp in reduced:
-
                     res = graph.proc_component(node_to_name, cmp, read_buffer, infile, G, lower_bound_support,
                                                procs, paired_end, sites_index)
                     if not res:
                         continue
-
                     event_id += 1
                     if procs == 1:
-
                         potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                                    insert_median,
                                                                    insert_stdev,
@@ -1057,37 +854,24 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                                                    max_single_size=max_single_size,
                                                                    sites_index=sites_index,
                                                                    paired_end=paired_end)
-
                         if potential_events:
-
                             if not low_mem:
                                 block_edge_events += potential_events
                             else:
                                 for res in potential_events:
                                     pickle.dump(res, completed_file)
-
-
-
                     else:
-
                         j_submitted, w_idx = heapq.heappop(minhq)
                         heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
                         msg_queues[w_idx][1].send(res)
-
-
             else:
-                # most partitions processed here:
-                # dict returned, or None
+                # most partitions processed here, dict returned, or None
                 res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
                                            procs, paired_end, sites_index)
-
                 if res:
-
                     event_id += 1
-                    # Res is a dict
-                    # {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+                    # Res is a dict {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
                     if procs == 1:
-
                         potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                                    insert_median,
                                                                    insert_stdev,
@@ -1101,7 +885,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                                                    max_single_size=max_single_size,
                                                                    sites_index=sites_index,
                                                                    paired_end=paired_end)
-
                         if potential_events:
                             if not low_mem:
                                 block_edge_events += potential_events
@@ -1109,30 +892,24 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                 for res in potential_events:
                                     pickle.dump(res, completed_file)
                     else:
-
                         j_submitted, w_idx = heapq.heappop(minhq)
                         heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
                         msg_queues[w_idx][1].send(res)
 
-
     if completed_file is not None:
         completed_file.close()
-
     del G
     del read_buffer
     cmp.clear()
     if low_mem:
         os.remove(component_path)
     gc.collect()
-
     # #
     if procs > 1 or low_mem:
         for w in msg_queues:
-            w[1].send(0)  # kill workers
+            w[1].send(0)
         for n in consumers:
             n.join()
-
-        # Collect results and update event ids
         event_id = 0
         last_seen_grp_id = None
         new_grp = None
@@ -1141,16 +918,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
             while 1:
                 try:
                     res = pickle.load(jf)
-
                     event_id += 1
-
                     current_id = res.event_id
                     current_grp = res.grp_id
-
                     if last_seen_grp_id != current_grp:
                         last_seen_grp_id = current_grp
                         new_grp = event_id  # replace old grp id with new_grp (id of first in group)
-
                     res.event_id = event_id
                     res.grp_id = new_grp
                     block_edge_events.append(res)
@@ -1158,23 +931,18 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                     break
             last_grp_id = event_id
             os.remove(f"{tdir}/job_{p}.done.pkl")
-
     if len(block_edge_events) == 0:
         return [], None
-
     logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
-
     keeps = len([i for i in block_edge_events if i.site_info])
     if keeps:
         logging.info("Number of matching SVs from --sites {}".format(keeps))
-
     preliminaries = []
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
                                                     min_support=args["min_support"])
         logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
-
     # Merge across calls
     if args["merge_within"] == "True":
         merged = merge_events(block_edge_events, args["merge_dist"], regions, bool(paired_end), try_rev=False, pick_best=False,
@@ -1183,10 +951,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
-
-    # Filter for absolute support and size here
     before = len(merged)
-
     if not args["keep_small"]:
         merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
         logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
@@ -1194,42 +959,31 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
         merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
         logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
 
-    # Add read-type information
     cdef EventResult_t d
     for d in merged:
         d.type = args["pl"]
-
     merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
-
     coverage_analyser = post_call.CoverageAnalyser(tdir)
+
     preliminaries = coverage_analyser.process_events(merged)
-
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
-
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
-
     preliminaries = post_call.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
     preliminaries = post_call.strand_binom_t(preliminaries)
-
     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call.compressability(preliminaries)
     preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
-
-    # This has to be called after the genotype step, raw coverage values are needed
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
     preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:
         d.n_in_grp = n_in_grp[d.grp_id]
-
     if len(preliminaries) == 0:
         return [], None
-
     bad_clip_counter.tidy()
-
     return preliminaries, sites_adder
 
 
@@ -1242,33 +996,27 @@ def cluster_reads(args):
     opts = {"bam": "rb", "cram": "rc", "sam": "r", "-": "rb", "stdin": "rb"}
     if kind not in opts:
         raise ValueError("Input must be a .bam/cam/sam or stdin")
-
     if (kind == "stdin" or kind == "sam") and args["regions"] is not None:
         raise ValueError("Cannot use stdin and include (an indexed bam is needed)")
 
     bam_mode = opts[kind]
     args["bam_mode"] = bam_mode
-
     pysam.set_verbosity(0)
     infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
                                  reference_filename=None if kind != "cram" else args["reference"])
     pysam.set_verbosity(3)
-
     has_index = True
     try:
         infile.check_index()
     except (ValueError, AttributeError):  # attribute error with sam file
         has_index = False
-
     if not has_index and args["regions"] is not None:
         logging.info("Input file has no index, but --regions was provided, attempting to index")
         infile.close()
         pysam.index(args["sv_aligns"])
         infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
                                      reference_filename=None if kind != "cram" else args["reference"])
-
     ref_genome = pysam.FastaFile(args["reference"])
-
     ibam = None
     if args["ibam"] is not None:
         kind2 = args["ibam"].split(".")[-1]
@@ -1277,7 +1025,6 @@ def cluster_reads(args):
 
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
                                    reference_filename=None if kind2 != "cram" else args["reference"])
-
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
@@ -1298,12 +1045,10 @@ def cluster_reads(args):
         args["thresholds"] = dict(zip(["DEL", "INS", "INV", "DUP", "TRA"], (map(float, args["thresholds"].split(",")))))
     except:
         raise ValueError("--thresholds parameter not understood, require a comma-separated string for DEL,INS,INV,DUP,TRA")
-
     if "insert_median" not in args and "I" in args:
         im, istd = map(float, args["I"].split(","))
         args["insert_median"] = im
         args["insert_stdev"] = istd
-
     if args["svs_out"] == "-" or args["svs_out"] is None:
         logging.info("Writing vcf to stdout")
         outfile = stdout
@@ -1314,17 +1059,16 @@ def cluster_reads(args):
     _debug_k = []
     regions = io_funcs.overlap_regions(args["regions"])
 
-    # Run dysgu here:
+    #####################
+    #  Run dysgu here   #
+    #####################
     events, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome)
-
     if not events:
         logging.critical("No events found")
         return
 
     df = pd.DataFrame.from_records([to_dict(e) for e in events])
-
-    df = post_call.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["paired"], args["thresholds"])
-
+    df = post_call.apply_model(df, args["pl"], args["contigs"], args["diploid"], args["thresholds"])
     if args["sites"]:
         df = post_call.update_prob_at_sites(df, events, args["thresholds"], parse_probs=args["parse_probs"] == "True",
                                         default_prob=args["sites_prob"])
@@ -1335,7 +1079,6 @@ def cluster_reads(args):
     if len(df) > 0:
         df = df.sort_values(["chrA", "posA", "event_id"])
         df["sample"] = [sample_name] * len(df)
-
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
             small_output_f = True
@@ -1351,10 +1094,8 @@ def cluster_reads(args):
                 contig_header_lines += f"\n##contig=<ID={item['SN']},length={item['LN']}>"
             args["add_kind"] = "True"
             args["sample_name"] = sample_name
-
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
                             sort_output=False)
-
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],
                len(df),
