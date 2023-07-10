@@ -631,24 +631,28 @@ def has_low_support(r, sample, support_fraction):
     return False
 
 
-def has_low_WR_support(r, sample, support_fraction):
+def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     sf = support_fraction / 2
     cov = r.samples[sample]['COV']
+    if n_mapq0 / n_overlapping > 0.3:
+        cov = max(cov, n_overlapping)
     min_support = min(4, round(1.5 + sf * cov))
     if 0 < r.info['WR'] < min_support:
         return True
     return False
 
 
-def too_many_clipped_reads(r, clipped_reads):
+def too_many_clipped_reads(r, clipped_reads, support_fraction):
+    sf = support_fraction / 2
     cov = r.samples[r.samples.keys()[0]]['COV']
-    max_nearby_clipped_reads = round(3 + 0.025 * cov)
+    max_nearby_clipped_reads = round(3 + sf * cov)
     if clipped_reads > max_nearby_clipped_reads:
         return True
     return False
 
 
-def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad, keep_all, sample):
+def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad, keep_all, sample,
+                          support_fraction):
     ct = r.info["CT"]
     chromA = r.chrom
     posA = r.pos
@@ -737,7 +741,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
                     r.filter.add("lowSupport")
                 return False
 
-    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips):
+    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
         if keep_all:
             r.filter.add("lowSupport")
         return False
@@ -758,6 +762,8 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
     covered = 0
     nearby_soft_clips = 0
     is_paired_end = False
+    n_mapq_0 = 0
+    n_overlpapping = 0
     for is_paired_end, aln in iterate_bams(bams, r.chrom, posA, r.chrom, posB, pad, bam_is_paired_end):
         if is_paired_end:
             a_posA = min(aln.pos, aln.pnext)
@@ -797,7 +803,10 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 if keep_all:
                     r.filter.add("normal")
                 return False
-            # if is_overlapping(posA, posA + 1, aln.pos, aln.reference_end):
+            if is_overlapping(posA, posA + 1, aln.pos, aln.reference_end):
+                n_overlpapping += 1
+                if aln.mapq == 0:
+                    n_mapq_0 += 1
             #     covered += 1
             if pos_covered(posA, aln):
                 covered += 1
@@ -809,11 +818,11 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
         if keep_all:
             r.filter.add("lowSupport")
         return False
-    if not is_paired_end and has_low_WR_support(r, sample, support_fraction):
+    if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
         if keep_all:
             r.filter.add("lowSupport")
         return False
-    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips):
+    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
         if keep_all:
             r.filter.add("lowSupport")
         return False
@@ -841,7 +850,7 @@ def run_filtering(args):
     filter_results = defaultdict(int)
     written = 0
     for idx, r in enumerate(vcf):
-        # if r.id != "20690":
+        # if r.id != "25979":
         #     continue
         r.filter.clear()
         if min_prob != 0 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] < min_prob:
@@ -879,7 +888,7 @@ def run_filtering(args):
             continue
         sv_type = get_sv_type(r, chrom_tid, chrom2_tid)
         if sv_type == "TRA" or sv_type == "BND":
-            good = process_translocation(r, r.info["CHR2"], posB, bams, infile, bam_is_paired_end, pad=pad, keep_all=keep_all, sample=sample_name)
+            good = process_translocation(r, r.info["CHR2"], posB, bams, infile, bam_is_paired_end, pad=pad, keep_all=keep_all, sample=sample_name, support_fraction=support_fraction)
         else:
             good = process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad=pad, sample=sample_name, keep_all=keep_all)
         if good:
