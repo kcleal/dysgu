@@ -305,13 +305,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
 
 def cut_components(G, disjoint_nodes):
-    e = G.edges(data=True)
-    G2 = nx.Graph([i for i in e if i[2]["loci_same"] == True])
-    for u in G.nodes():
-        if u not in G2:
-            e0 = next(G.edges(u).__iter__())  # Use first edge out of u to connect
-            G2.add_edge(*e0)
-    components = nx.algorithms.components.connected_components(G2)
+    # e = G.edges(data=True)
+    # G2 = nx.Graph([i for i in e if i[2]["loci_same"] == True])
+    # for u in G.nodes():
+    #     if u not in G2:
+    #         e0 = next(G.edges(u).__iter__())  # Use first edge out of u to connect
+    #         G2.add_edge(*e0)
+    # components = nx.algorithms.components.connected_components(G2)
+    components = nx.algorithms.components.connected_components(G)
     if len(disjoint_nodes) > 0:
         # try split this component into disjoint sets. This method works for small cluster sizes (most of the time)
         # but can fail when there are many disjoint nodes. Label propagation might be needed for these
@@ -605,7 +606,7 @@ def find_repeat_expansions(events, insert_stdev):
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
                   merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size, max_single_size,
-                  sites_index, paired_end):
+                  sites_index, paired_end, length_extend, divergence):
     potential_events = []
     grp_id = event_id
     cdef EventResult_t event
@@ -620,7 +621,9 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       assemble_contigs,
                                                       max_single_size,
                                                       sites_index,
-                                                      paired_end):
+                                                      paired_end,
+                                                      length_extend,
+                                                      divergence):
         if event:
             event.grp_id = grp_id
             event.event_id = event_id
@@ -639,7 +642,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 def process_job(msg_queue, args):
     job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size,\
-        max_single_size, sites_index, paired_end = args
+        max_single_size, sites_index, paired_end, length_extend, divergence = args
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
     pysam.set_verbosity(0)
@@ -663,7 +666,7 @@ def process_job(msg_queue, args):
                                                    assemble_contigs,
                                                    rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
                                                    max_single_size=max_single_size, sites_index=sites_index,
-                                                   paired_end=paired_end)
+                                                   paired_end=paired_end, length_extend=length_extend, divergence=divergence)
         if potential_events:
             for res in potential_events:
                 pickle.dump(res, completed_file)
@@ -705,7 +708,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
             raise ValueError("Template-size must be in the format 'INT,INT,INT', for insert-median, insert-stdev, read-length")
 
     if paired_end:
-        insert_median, insert_stdev = genome_scanner.get_read_length(args["max_tlen"], insert_median, insert_stdev, read_len, ibam)
+        insert_median, insert_stdev = genome_scanner.get_read_properties(args["max_tlen"], insert_median, insert_stdev, read_len, ibam)
         if insert_median == -1:
             return [], None
         read_len = genome_scanner.approx_read_length
@@ -714,7 +717,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
         logging.info(f"Max clustering dist {max_clust_dist}")
+        args["divergence"] = 1
     else:
+        if args["divergence"] == "auto":
+            divergence, _ = genome_scanner.get_read_properties(args["max_tlen"], insert_median, insert_stdev, read_len, ibam, find_divergence=True)
+            args["divergence"] = divergence
+        else:
+            args["divergence"] = float(args["divergence"])
+            logging.info(f"Sequence divergence upper bound {args['divergence']}")
         if args["mode"] == "pacbio":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
@@ -737,6 +747,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
+    length_extend = args["length_extend"]
+    divergence = args["divergence"]
     read_buffer = genome_scanner.read_buffer
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
                                         default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
@@ -799,7 +811,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
             job_path = f"{tdir}/job_{n}.pkl"
             proc_args = ( job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, assemble_contigs,
-                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end )
+                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end, length_extend, divergence )
             p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
             p.start()
             consumers.append(p)
@@ -853,7 +865,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                                                    min_size=min_size,
                                                                    max_single_size=max_single_size,
                                                                    sites_index=sites_index,
-                                                                   paired_end=paired_end)
+                                                                   paired_end=paired_end,
+                                                                   length_extend=length_extend,
+                                                                   divergence=divergence)
                         if potential_events:
                             if not low_mem:
                                 block_edge_events += potential_events
@@ -884,7 +898,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                                                    rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
                                                                    max_single_size=max_single_size,
                                                                    sites_index=sites_index,
-                                                                   paired_end=paired_end)
+                                                                   paired_end=paired_end,
+                                                                   length_extend=length_extend, divergence=divergence)
                         if potential_events:
                             if not low_mem:
                                 block_edge_events += potential_events
@@ -1022,7 +1037,6 @@ def cluster_reads(args):
         kind2 = args["ibam"].split(".")[-1]
         if kind2 == "stdin" or kind2 == "-" or kind2 not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
-
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
                                    reference_filename=None if kind2 != "cram" else args["reference"])
     if "RG" in infile.header:

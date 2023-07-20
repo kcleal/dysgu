@@ -289,30 +289,24 @@ cdef extern from "<map>" namespace "std" nogil:
         iterator upper_bound(const T&)
         const_iterator const_upper_bound "upper_bound"(const T&)
 
-
 cdef int cigar_exists(r)
-
 
 cdef tuple clip_sizes(r)
 
-
 cdef tuple clip_sizes_hard(r)
 
-
 cdef int cigar_clip(r, int clip_length)
-
 
 cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
 
 
-cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
+cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2)
 
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil
 
-
 cdef float position_distance(int x1, int x2, int y1, int y2) nogil
-
 
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""

@@ -833,6 +833,20 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
     return True
 
 
+def update_filter_value(r, sample_name, old_filter_values, pass_prob, new_value=""):
+    if pass_prob != 1 and 'PROB' in r.samples[sample_name]:
+        if r.samples[sample_name]['PROB'] >= pass_prob:
+            r.filter.add("PASS")
+        else:
+            r.filter.add("lowProb")
+    else:
+        if new_value not in old_filter_values:
+            old_filter_values.append(new_value)
+        for v in old_filter_values:
+            if v:
+                r.filter.add(v)
+
+
 def run_filtering(args):
     t0 = time.time()
     pths = get_bam_paths(args)
@@ -852,17 +866,18 @@ def run_filtering(args):
     for idx, r in enumerate(vcf):
         # if r.id != "25979":
         #     continue
+        old_filter_value = list(r.filter.keys())
         r.filter.clear()
         if min_prob != 0 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] < min_prob:
             filter_results['dropped, lowProb'] += 1
             if keep_all:
-                r.filter.add("lowProb")
+                update_filter_value(r, old_filter_value, pass_prob, new_value="lowProb")
                 out_vcf.write(r)
             continue
         if has_low_support(r, sample_name, support_fraction):
             filter_results['dropped, low support'] += 1
             if keep_all:
-                r.filter.add("lowSupport")
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowSupport")
                 out_vcf.write(r)
             continue
         chrom_tid, chrom2_tid = vcf_chroms_to_tids(r, infile)
@@ -877,12 +892,11 @@ def run_filtering(args):
                     if posA_overlaps.intersection(posB_overlaps):
                         filter_results['dropped, normal SV overlap'] += 1
                         if keep_all:
-                            r.filter.add("normal")
+                            update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="normal")
                             out_vcf.write(r)
                         continue
         if not bams:
-            if pass_prob != 1 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] >= pass_prob:
-                r.filter.add("PASS")
+            update_filter_value(r, sample_name, old_filter_value, pass_prob)
             out_vcf.write(r)
             written += 1
             continue
@@ -892,20 +906,18 @@ def run_filtering(args):
         else:
             good = process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad=pad, sample=sample_name, keep_all=keep_all)
         if good:
-            if pass_prob != 1 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] >= pass_prob:
-                r.filter.add("PASS")
-            else:
-                r.filter.add("lowProb")
+            update_filter_value(r, sample_name, old_filter_value, pass_prob)
             out_vcf.write(r)
             written += 1
         else:
             if keep_all:
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="normal")
                 out_vcf.write(r)
             filter_results['dropped, normal read support'] += 1
     out_vcf.close()
     logging.info(f'Filter results: {dict(sorted(filter_results.items()))}')
-    logging.info("dysgu filter-normal {} complete, n={}, h:m:s, {}".format(args['input_vcf'],
-                                                                           written,
-                                                                           str(datetime.timedelta(seconds=int(time.time() - t0))),
-                                                                           time.time() - t0))
+    logging.info("dysgu filter {} complete, n={}, h:m:s, {}".format(args['input_vcf'],
+                                                                    written,
+                                                                    str(datetime.timedelta(seconds=int(time.time() - t0))),
+                                                                    time.time() - t0))
 

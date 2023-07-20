@@ -1,5 +1,4 @@
-dysgu-SV
-========
+
 
 |Generic badge| |Li badge|
 
@@ -8,13 +7,16 @@ dysgu-SV
 
 .. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
    :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
-   
+
+.. image:: dysgu/logo.png
+    :align: left
+
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
 for calling structural variants using paired-end or long read sequencing data.
 
 
-Installation
-------------
+⚙️ Installation
+---------------
 Dysgu requires Python >=3.7 - 3.10 plus htslib and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
@@ -31,21 +33,19 @@ Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kc
 
     docker pull kcleal/dysgu
 
-
 Run tests::
 
     $ dysgu test
 
-
-Usage
------
+🚀 Usage
+--------
 Available commands::
 
     dysgu run              # Run using default arguments, wraps fetch and call commands
     dysgu fetch            # Separate SV reads from input bam file
     dysgu call             # SV calling
     dysgu merge            # Merge calls from multiple samples
-    dysgu filter-normal    # Filter SVs against normal panels to find somatic SVs
+    dysgu filter           # Filter SVs, find somatic SVs (version >= 1.5.0)
     dysgu test             # Run basic tests
 
 For help use::
@@ -56,8 +56,8 @@ For help use::
 To use the python-API see the `documentation <https://kcleal.github.io/dysgu/API.html>`_, or `jupyter notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,
 
 
-Calling SVs
-~~~~~~~~~~~
+📖 User Guide
+-------------
 
 Paired-end reads
 ****************
@@ -78,23 +78,24 @@ Dysgu also accepts reads from stdin. In this example, the --clean flag will remo
 
 Long reads
 **********
-Dysgy has been designed to work with long reads aligned using minimap2 or ngmlr. For very long reads (Oxford nanopore), the `fetch` stage of the pipeline is not necessary, so the `call` command should be used directly.
-For PacBio Sequel II HiFi reads, the `run` command is generally recommended as it results in lower run times although at the expense of generating additional temp files in the working directory::
+Dysgy is designed to work with long reads aligned using minimap2 or ngmlr. Use the 'call' pipeline if starting with a bam file, or 'run' if starting with a cram::
 
     dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
 
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
+Using '--mode' will apply preset options that work well with reads from Oxford Nanopore 'V14 kit', or PacBio Sequel II (or higher platforms). If you are using using noisy long-reads
+from older generation platforms, it is recommended to set '--divergence auto', to infer sequence divergence::
 
+    dysgu call --divergence auto --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
 Pipeline overview
 ~~~~~~~~~~~~~~~~~
 The first stage of the "run" pipeline is to separate SV-associated reads - split/discordant reads,
-and reads with a soft-clip >= clip_length (15 bp by default).
-This is achieved using the `fetch` command, which can be run independently if needs be::
+and reads with a soft-clip >= clip_length (15 bp by default for paired-end reads).
+This is achieved using the `fetch` command which can be run independently if needs be::
 
     dysgu fetch samp1_temp input.bam
-
 
 All SV associated reads will be placed in `samp1_temp/input.dysgu_reads.bam`.
 The next stage of the pipeline is to call SVs using the `call` command. Additionally, the `--ibam` option is recommended for paired-end data so dysgu can infer insert
@@ -105,7 +106,7 @@ the insert size can be specified manually using the -I option::
 
 
 Merging SVs from multiple files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-------------------------------
 If you plan on merging samples, it is recommended that the '-v2' option be used when running the 'run/call' modules; this will
 ensure that all consensus sequences will be reported in the vcf file to help with downstream merging.
 Multiple output vcf files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
@@ -120,6 +121,21 @@ problem of duplication::
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
 
 
+Filtering SVs
+-------------
+Remove events with low probability::
+
+    dysgu filter --min-prob 0.2 input.vcf > output.vcf
+
+Remove events with low support fraction::
+
+    dysgu filter --support-fraction 0.15 input.vcf > output.vcf
+
+Re-label events with probability >= 0.3 as PASS::
+
+    dysgu filter --pass-prob 0.3 input.vcf > output.vcf
+
+
 Somatic SVs / tumor-normal calling / pool-of-normals
 ----------------------------------------------------
 
@@ -127,34 +143,37 @@ For tumor/normal pairs::
 
     dysgu run ref.fa wd_t tumour.bam > tumor.vcf
     dysgu run ref.fa wd_n normal.bam > normal.vcf
-    dysgu filter-normal --normal-vcf normal.vcf tumour.vcf normal.bam ... > somatic.vcf
+    dysgu filter --pass-prob 0.2 --normal-vcf normal.vcf tumour.vcf normal.bam ... > somatic.vcf
 
-Alternatively, unique SV can be identified when compared to a cohort. A third-party vcf of common SVs can be used (provided 'SVTYPE' is listed in the info column), or
+Alternatively, unique SV can be identified when compared to a cohort. A third-party vcf of common SVs can be used (provided 'SVTYPE' is listed in the info column). Or,
 cohort SVs can be merged using `dysgu merge`, before filtering to get unique SVs::
 
     dysgu merge *.vcf > merged.vcf
-    dysgu filter-normal --normal-vcf merged.vcf sample1.vcf *.bam ... > sample1_unique.vcf
+    dysgu filter --normal-vcf merged.vcf sample1.vcf *.bam ... > sample1_unique.vcf
 
 Here, sample1.vcf and merged.vcf can contain multiple samples, although if sample1.vcf is multi-sample, you must provide '--target-sample' to indicate which sample to filter.
-The output sampe1_somatic.vcf will be a single sample vcf containing unique SVs.
+The output sample1_somatic.vcf will be a single sample vcf containing unique SVs.
 
 Sample names are respected from the vcf and bam file headers (or filenames), so `sample1` will be ignored from the normal-vcf and list of bams.
-To keep all SVs in the output, use ``--keep-all`` - filtered SVs will be labelled 'normal', 'lowProb' or 'lowSupport' in the filter column.
+To keep all SVs in the output, use ``--keep-all``. Filtered SVs will be labelled 'normal', 'lowProb' or 'lowSupport' in the filter column.
 
 Increasing the number of bams to filter against will slow down filtering, but should increase specificity. To set a
 limit on the number of bams to filter against, a random sample can be drawn from the input list,
 e.g. draw 5 random bam samples from the input list to filter against using::
 
-    dysgu filter-normal --random-bam-sample 5 --normal-vcf merged.vcf sample1.vcf *.bam
+    dysgu filter --random-bam-sample 5 --normal-vcf merged.vcf sample1.vcf *.bam
 
 
 Also a target VCF can be filtered against a normal vcf if desired (no alignment files)::
 
-    dysgu filter-normal --normal-vcf normal.vcf sample1.vcf
+    dysgu filter --normal-vcf normal.vcf sample1.vcf
 
 By default, SV calls with a PROB value < ``--min-prob`` are removed from the final output,
 and SV calls with a PROB value >= ``--pass-prob`` will be re-labelled as PASS in the output. However, these
-thresholds can require tuning, depending on sequencing platform, coverage and cohort size. Suitable values often lie in the range 0.1 - 0.4.
+thresholds require tuning depending on sequencing platform, coverage and cohort size.
+Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. e.g::
+
+    dysgu filter --pass-prob 0.2 --min-prob 0.1 --normal-vcf normal.vcf tumour.vcf normal.bam > somatic.vcf
 
 
 Models available
@@ -209,7 +228,7 @@ Calls from multiple samples can be merged into a unified site list::
 
     dysgu run -v2 ref.fa wd1 sample1.bam > sample1.vcf
     dysgu run -v2 ref.fa wd2 sample2.bam > sample2.vcf
-    dysgu merge sample1.vcf sample2.vcf ... > merged.vcf
+    dysgu merge sample1.vcf sample2.vcf > merged.vcf
 
 This list can be used to re-genotype at the sample level. Here, to save time, the temporary files in the working directory 'wd1' are re-used::
 
@@ -223,7 +242,7 @@ Dysgu can also accept --sites from other sources, for example calls from other S
 
     dysgu run --sites manta.diploidSVs.vcf ref.fa wd sample1.bam > sample1.vcf
 
-This can especially help discovery of events with low read-support.
+This can help discovery of events with low read-support.
 
 To output all variants in --sites including those with genotype 0/0 in the input sample, set '--all-sites True'.
 
@@ -243,7 +262,7 @@ Useful parameters
 The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.
 
 The --max-cov parameter may need to be adjusted for high coverage samples (default is 200), or samples that might have
-high copy number aberrations. Regions with coverage exceeding `max-cov` are ignored for SV calling.
+high copy number aberrations. Only reads with mapq >= `--mq` threshold count towards coverage values and regions with coverage exceeding `max-cov` are ignored for SV calling.
 Dysgu can automatically infer a max-cov value for bam files by setting `--max-cov auto`, which
 will correspond to ~6*whole-genome-coverage by default. However using 'auto', is only recommended for whole-genome samples.
 A helper script can be used to suggest different max-cov values with respect to mean genome coverage, for example
@@ -266,6 +285,9 @@ the alignment cigar string is assumed to be correct and more stringent clusterin
 sites but at the expense of increasing duplicate true-positive calls that arise mostly at SVs with
 ambiguous candidate alignments.
 
+--divergence applies to long reads only, and measures the proportion of non-reference cigar operations (deletions, insertions)
+compared to matching reference bases. Reads that have anomalous divergence at the ends of the read are ignored during calling.
+
 
 Resource requirements
 ---------------------
@@ -283,7 +305,7 @@ Issues
 
 - If dysgu is consuming a large amount of memory, you can try the --low-mem flag.
 
-- If sensitivity is lower than expected for paired-end data, check that the insert size was inferred accurately, and provide manually using the `-I` option otherwise.
+- If sensitivity is lower than expected, check that the insert size was inferred accurately (provide manually using the `-I`), and divergence is set appropriately.
 
 - If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
 

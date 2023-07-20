@@ -263,6 +263,21 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
     return int(max(x1, y1) <= min(x2, y2))
 
 
+cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2):
+    cdef int temp_v
+    if x1 == x2 or y1 == y2:
+        return 0
+    if x2 < x1:
+        temp_v = x2
+        x2 = x1
+        x1 = temp_v
+    if y2 < y1:
+        temp_v = y2
+        y2 = y1
+        y1 = temp_v
+    cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
+    return min( overlap / float(c_abs(x2 - x1)),  overlap / float(c_abs(y2 - y1)) )
+
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
     # Insertions have same x1/y1 position, use another measure
     if x1 == x2 or y1 == y2:
@@ -317,11 +332,20 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
     cdef float span_distance, position_distance, center1, center2
     if read_enum == BREAKEND:
         return 0
-    if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+    cdef bint within_read_event = cigar_len1 > 0 and cigar_len2 > 0
+    if within_read_event and c_abs(cigar_len1 - cigar_len2) > 500:
+        return 0
+    if read_enum == INSERTION and within_read_event and trust_ins_len:
         span1 = cigar_len1
         span2 = cigar_len2
         center1 = x1
         center2 = y1
+
+    # if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
+    #     span1 = cigar_len1
+    #     span2 = cigar_len2
+    #     center1 = x1
+    #     center2 = y1
     else:
         if x1 == x2:
             span1 = 1

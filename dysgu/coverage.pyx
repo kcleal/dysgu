@@ -11,7 +11,9 @@ ctypedef np.float_t DTYPE_t
 from dysgu.map_set_utils cimport CoverageTrack
 from dysgu.map_set_utils import merge_intervals, echo
 from dysgu.io_funcs import intersecter
-
+from libc.stdint cimport uint32_t
+from pysam.libcalignedsegment cimport AlignedSegment
+from pysam.libchtslib cimport bam_get_cigar
 
 def index_stats(f, rl=None):
     if rl is None:
@@ -128,10 +130,15 @@ cdef class GenomeScanner:
 
     def _get_reads(self):
         # Two options, reads are collected from whole genome, or from target regions only
-        cdef int index_start, opp, length, chrom_length, pos
+        cdef int index_start, opp, length, chrom_length, pos, i
         cdef bytes out_path
         cdef bint good_read
         cdef int mq_thresh = self.mapq_threshold
+        cdef AlignedSegment aln
+        cdef uint32_t cigar_value
+        cdef uint32_t cigar_l
+        cdef uint32_t *cigar_p
+
         if not self.include_regions or not self.regions_only:
             # Some reads may have been staged from getting read_length (if file is streamed from stdin)
             while len(self.staged_reads) > 0:
@@ -171,7 +178,12 @@ cdef class GenomeScanner:
                         good_read = True
                     elif not aln.flag & 2:
                         good_read = True
-                    for opp, length in aln.cigartuples:
+                    cigar_l = aln._delegate.core.n_cigar
+                    cigar_p = bam_get_cigar(aln._delegate)
+                    for i in range(cigar_l):
+                        cigar_value = cigar_p[i]
+                        opp = <int> cigar_value & 15
+                        length = <int> cigar_value >> 4
                         if opp == 4 and length >= self.clip_length:
                             good_read = True
                         elif opp == 2:
@@ -204,7 +216,7 @@ cdef class GenomeScanner:
             # Reads must be fed into graph in sorted order, find regions of interest first
             intervals_to_check = []  # Containing include_regions, and also mate pairs
             pad = 1000
-            regions = [i.strip().split("\t")[:3] for i in open(self.include_regions, "r") if i[0] != "#"]
+            regions = [j.strip().split("\t")[:3] for j in open(self.include_regions, "r") if j[0] != "#"]
             for c, s, e in regions:
                 intervals_to_check.append((c, int(s), int(e)))
             for c, s, e in regions:
@@ -248,7 +260,12 @@ cdef class GenomeScanner:
                         good_read = True
                     elif not aln.flag & 2:
                         good_read = True
-                    for opp, length in aln.cigartuples:
+                    cigar_l = aln._delegate.core.n_cigar
+                    cigar_p = bam_get_cigar(aln._delegate)
+                    for i in range(cigar_l):
+                        cigar_value = cigar_p[i]
+                        opp = <int> cigar_value & 15
+                        length = <int> cigar_value >> 4
                         if opp == 4 and length >= self.clip_length:
                             good_read = True
                         elif opp == 2:
@@ -277,15 +294,16 @@ cdef class GenomeScanner:
                     yield self.current_bin
 
 
-    def get_read_length(self, int max_tlen, int insert_median, int insert_stdev, int read_len, ibam=None):
+    def get_read_properties(self, int max_tlen, int insert_median, int insert_stdev, int read_len, ibam=None, find_divergence=False):
         # This is invoked first to scan the first part of the file for the insert size metrics,
         # or open and process the --ibam alignment file
-        if read_len != -1:
+        if not find_divergence and read_len != -1:
             logging.info(f"Read length {read_len}, insert_median {insert_median}, insert stdev {insert_stdev}")
             self.approx_read_length = read_len
             return insert_median, insert_stdev
         approx_read_length_l = []
         inserts = []
+        divergence = []
         cdef int required = 97
         restricted = 3484
         cdef int flag_mask = required | restricted
@@ -298,6 +316,12 @@ cdef class GenomeScanner:
         else:
             file_iter = self.input_bam
         cdef bint any_paired_end = False
+        cdef AlignedSegment a
+        cdef uint32_t cigar_value
+        cdef uint32_t cigar_l
+        cdef uint32_t *cigar_p
+        cdef int i
+        cdef int non_match_count, matched_bases
         for a in file_iter:
             if ibam is None:
                 if a.flag & 1284 or a.mapq < self.mapq_threshold or a.cigartuples is None:
@@ -314,48 +338,86 @@ cdef class GenomeScanner:
                         self.cpp_cov_track.set_cov_array(chrom_length)
                     index_start = 0
                     pos = a.pos
-                    for opp, length in a.cigartuples:
+                    cigar_l = a._delegate.core.n_cigar
+                    cigar_p = bam_get_cigar(a._delegate)
+                    for i in range(cigar_l):
+                        cigar_value = cigar_p[i]
+                        opp = <int> cigar_value & 15
+                        length = <int> cigar_value >> 4
                         if opp == 2:
                             index_start += length
                         elif opp == 0 or opp == 7 or opp == 8:
                             end = index_start + length
                             self.cpp_cov_track.add(pos + index_start, pos + end)
                             index_start += length
-            if len(approx_read_length_l) < 200000:
-                flag = a.flag
-                if a.seq is not None:
-                    rl = a.infer_read_length()
-                    if rl:
-                        approx_read_length_l.append(rl)
-                        if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
-                            inserts.append(a.tlen)
+            if find_divergence:
+                if len(divergence) < 20000:
+                    non_match_count = 0
+                    matched_bases = 0
+                    cigar_l = a._delegate.core.n_cigar
+                    cigar_p = bam_get_cigar(a._delegate)
+                    for i in range(cigar_l):
+                        cigar_value = cigar_p[i]
+                        opp = <int> cigar_value & 15
+                        length = <int> cigar_value >> 4
+                        if opp == 0 or opp == 7:
+                            matched_bases += length
+                        elif opp == 1 or opp == 2 or opp == 8:
+                            non_match_count += 1
+                    divergence.append(non_match_count / (non_match_count + matched_bases))
+                else:
+                    break
             else:
-                break
-            if c > 20000000:
-                logging.critical("Cant infer read length after 10 million reads, is max-tlen < 8000?")
-                return -1, -1
+                if len(approx_read_length_l) < 200000:
+                    flag = a.flag
+                    if a.seq is not None:
+                        rl = a.infer_read_length()
+                        if rl:
+                            approx_read_length_l.append(rl)
+                            if a.rname == a.rnext and flag & flag_mask == required and a.tlen >= 0:
+                                inserts.append(a.tlen)
+                else:
+                    break
+                if c > 20000000:
+                    logging.critical("Cant infer read properties after 10 million reads, please set manually")
+                    return -1, -1
             c += 1
-        if len(approx_read_length_l) == 0:
-            logging.critical("Cant infer read length, no reads?")
+
+        if find_divergence and len(divergence) == 0:
+            logging.critical("Cant infer read divergence, no reads?")
             return -1, -1
-        approx_read_length = int(np.median(approx_read_length_l))
-        self.approx_read_length = approx_read_length
-        assume_single = False
-        if len(inserts) <= 100 and insert_median == -1:
-            insert_median = 300
-            insert_stdev = 150
-            assume_single = True
-        if insert_median == -1:
-            insert_median, insert_stdev = get_insert_params(inserts)
-        if not assume_single:
-            logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
+        elif not find_divergence and len(approx_read_length_l) == 0:
+            logging.critical("Cant infer read insert and size, no reads?")
+            return -1, -1
+        if find_divergence:
+            div = divergence[-max(0, len(divergence) - 500):]
+            mean = np.mean(divergence)
+            divergence_upper_bound = min(1, max(2.5 * mean, mean + (2.5 * np.std(divergence))))
+            logging.info(f"Inferred sequence divergence upper bound {round(divergence_upper_bound,4)}")
+            if ibam is None:
+                self.last_tell = tell
+                if not self.no_tell:
+                    self.input_bam.reset()
+            return divergence_upper_bound, 0
         else:
-            logging.info(f"Inferred read length {approx_read_length}")
-        if ibam is None:
-            self.last_tell = tell
-            if not self.no_tell:
-                self.input_bam.reset()
-        return insert_median, insert_stdev
+            approx_read_length = int(np.median(approx_read_length_l))
+            self.approx_read_length = approx_read_length
+            assume_single = False
+            if len(inserts) <= 100 and insert_median == -1:
+                insert_median = 300
+                insert_stdev = 150
+                assume_single = True
+            if insert_median == -1:
+                insert_median, insert_stdev = get_insert_params(inserts)
+            if not assume_single:
+                logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
+            else:
+                logging.info(f"Inferred read length {approx_read_length}")
+            if ibam is None:
+                self.last_tell = tell
+                if not self.no_tell:
+                    self.input_bam.reset()
+            return insert_median, insert_stdev
 
     def iter_genome(self):
         # Read the rest of the genome, reads are sent in blocks
@@ -390,28 +452,43 @@ cdef class GenomeScanner:
         cdef str reference_name = ""
         cdef int aend = a.reference_end
         cdef float current_coverage
-        if rname not in self.depth_d:
-            ref_length = int(self.input_bam.get_reference_length(self.input_bam.get_reference_name(rname)) / 100)
-            self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float64)
+        # if rname not in self.depth_d:
+        #     ref_length = int(self.input_bam.get_reference_length(self.input_bam.get_reference_name(rname)) / 100)
+        #     self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float64)
+        # if self.current_chrom != rname:
+        #     self.current_chrom = rname
+        #     self.current_cov_array = self.depth_d[rname]
+        # elif self.current_cov_array is None:
+        #     self.current_cov_array = self.depth_d[rname]
+        # current_cov = add_coverage(apos, aend, self.current_cov_array)
+        # in_roi = False
+        # if self.overlap_regions:
+        #     in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
+        # if rname == self.current_chrom and bin_pos == self.current_pos:
+        #     if current_cov >= self.max_cov and not in_roi:
+        #         if len(self.current_bin) > 0:
+        #             self.current_bin = []
+        #             self.reads_dropped += len(self.current_bin)
+        #         self.reads_dropped += 1
+        #         return
+        #     self.current_bin.append((a, tell))
+        # else:
+        #     if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
+        #         self.staged_reads.append(self.current_bin)
+        #     self.current_chrom = rname
+        #     self.current_pos = bin_pos
+        #     self.current_bin = [(a, tell)]
+
+
         if self.current_chrom != rname:
             self.current_chrom = rname
-            self.current_cov_array = self.depth_d[rname]
-        elif self.current_cov_array is None:
-            self.current_cov_array = self.depth_d[rname]
-        current_cov = add_coverage(apos, aend, self.current_cov_array)
         in_roi = False
         if self.overlap_regions:
             in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
         if rname == self.current_chrom and bin_pos == self.current_pos:
-            if current_cov >= self.max_cov and not in_roi:
-                if len(self.current_bin) > 0:
-                    self.current_bin = []
-                    self.reads_dropped += len(self.current_bin)
-                self.reads_dropped += 1
-                return
             self.current_bin.append((a, tell))
         else:
-            if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
+            if len(self.current_bin) != 0:
                 self.staged_reads.append(self.current_bin)
             self.current_chrom = rname
             self.current_pos = bin_pos

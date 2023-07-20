@@ -45,7 +45,7 @@ defaults = {
 
 
 presets = {"nanopore": {"mq": 20,
-                        "min_support": 2,
+                        "min_support": 3,
                         "dist_norm": 900,
                         "max_cov": 150,
                         "pl": "nanopore",
@@ -54,7 +54,7 @@ presets = {"nanopore": {"mq": 20,
                         "trust_ins_len": "False"
                         },
            "pacbio": {"mq": 20,
-                      "min_support": 2,
+                      "min_support": 3,
                       "dist_norm": 600,
                       "max_cov": 150,
                       "pl": "pacbio",
@@ -168,8 +168,8 @@ def cli():
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 2 --max-cov 150 --dist-norm 900 --trust-ins-len False",
+                             "pacbio: --mq 20 --paired False --min-support 3 --max-cov 150 --dist-norm 200 --trust-ins-len True. "
+                             "nanopore: --mq 20 --paired False --min-support 3 --max-cov 150 --dist-norm 900 --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -189,6 +189,8 @@ def cli():
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
+@click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
+@click.option('--divergence', help=f"Threshold used for ignoring divergent ends of alignments. Ignored for paired-end reads. Use 'auto' to try to infer for noisy reads", type=str, default='0.02', show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--search', help=".bed file, limit search to regions", default=None, type=click.Path(exists=True))
@@ -323,7 +325,7 @@ def get_reads(ctx, **kwargs):
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
-                             " pacbio/nanopore: --mq 20 --paired False --min-support 2 --max-cov 150", default="pe",
+                             " pacbio/nanopore: --mq 20 --paired False --min-support 3 --max-cov 150", default="pe",
               type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -343,6 +345,8 @@ def get_reads(ctx, **kwargs):
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
+@click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
+@click.option('--divergence', help=f"Threshold used for ignoring divergent end-regions of alignments. Ignored for paired-end reads", type=str, default='0.02', show_default=True)
 @click.option("-I", "--template-size", help="Manually set insert size, insert stdev, read_length as 'INT,INT,INT'",
               default="", type=str, show_default=False)
 @click.option('--regions', help="bed file of target regions, used for labelling events", default=None, type=click.Path(exists=True))
@@ -437,27 +441,27 @@ def view_data(ctx, **kwargs):
     view.view_file(ctx.obj)
 
 
-@cli.command("filter-normal")
+@cli.command("filter")
 @click.argument('input_vcf', required=True, type=click.Path())
 @click.argument('normal_bams', required=False, type=click.Path(), nargs=-1)
 @click.option('--reference', help="Reference for cram input files", required=False, type=click.Path(exists=True))
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
-@click.option("-n", "--normal-vcf", help="Vcf file for normal sample, or panel of normals. The SM tag of input bams is used to ignore the input_vcf for multi-sample vcfs",
-              required=False, type=click.Path(), multiple=True)
+@click.option("-n", "--normal-vcf", help="Vcf file for normal sample, or panel of normals. The SM tag of input bams is used to ignore the input_vcf for multi-sample vcfs", required=False, type=click.Path(), multiple=True)
 @click.option("-p", "--procs", help="Reading threads for normal_bams", type=cpu_range, default=1, show_default=True)
 @click.option("-f", "--support-fraction", help="Minimum threshold support fraction / coverage (SU/COV)", type=float, default=0.1, show_default=True)
 @click.option("--target-sample", help="If input_vcf if multi-sample, use target-sample as input", required=False, type=str, default="")
 @click.option("--keep-all", help="All SVs classified as normal will be kept in the output, labelled as filter=normal", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--ignore-read-groups", help="Ignore ReadGroup RG tags when parsing sample names. Filenames will be used instead", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--min-prob", help="Remove SVs with PROB value < min-prob", default=0.1, type=float, show_default=True)
-@click.option("--pass-prob", help="Re-label SVs as PASS if PROB value >= pass-prob", default=0.2, type=float, show_default=True)
+@click.option("--pass-prob", help="Re-label SVs as PASS if PROB value >= pass-prob", default=1.0, type=float, show_default=True)
 @click.option("--interval-size", help="Interval size for searching normal-vcf/normal-bams", default=1000, type=int, show_default=True)
 @click.option("--random-bam-sample", help="Choose N random normal-bams to search. Use -1 to ignore", default=-1, type=int, show_default=True)
 @click.pass_context
 def filter_normal(ctx, **kwargs):
-    """Filter a vcf generated by dysgu against normal bam(s). A normal-vcf (single or multi-sample) can also
-    be supplied. Bam/vcf samples with the same name as the input_vcf will be ignored"""
-    logging.info("[dysgu-filter-normal] Version: {}".format(version))
+    """Filter a vcf generated by dysgu.
+    Unique SVs can be found in the input_vcf by supplying a --normal-vcf (single or multi-sample),
+    and normal bam files. Bam/vcf samples with the same name as the input_vcf will be ignored"""
+    logging.info("[dysgu-filter] Version: {}".format(version))
     ctx = apply_ctx(ctx, kwargs)
     filter_normals.run_filtering(ctx.obj)
 

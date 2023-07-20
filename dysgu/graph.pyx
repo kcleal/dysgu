@@ -27,7 +27,7 @@ from libc.stdint cimport uint16_t, uint32_t, int32_t, uint64_t
 from libc.stdlib cimport abs as c_abs
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 from pysam.libcalignedsegment cimport AlignedSegment
-from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq
+from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_cigar
 
 ctypedef cpp_pair[int, int] cpp_item
 
@@ -347,14 +347,14 @@ cdef class PairedEndScoper:
             local_it = forward_scope.lower_bound(pos2)
             steps = 0
             if local_it != forward_scope.end():
-                while steps < 6:
+                while steps < 20: #6: 
                     vitem = dereference(local_it)
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
                         steps += 1
                         continue
                     node_name2 = vitem.second.node_name
                     if node_name2 != node_name:  # Can happen due to within-read events
-                        # if node_name == 1:
+                        # if node_name == 77:
                             # echo("-->", node_name, node_name2, current_chrom == chrom2, current_pos, pos2, pos2 - current_pos, vitem.second.pos2 - vitem.first,
                             #      is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2),
                             #      )
@@ -392,7 +392,7 @@ cdef class PairedEndScoper:
                 if local_it != forward_scope.begin():
                     predecrement(local_it)  # Move back one before staring search, otherwise same value is processed twice
                     steps = 0
-                    while steps < 6:
+                    while steps < 20: # 6:
                         vitem = dereference(local_it)
                         if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
                             steps += 1
@@ -401,8 +401,8 @@ cdef class PairedEndScoper:
                         if node_name2 != node_name:
                             # if node_name == 1:
                             # echo("2", node_name, node_name2, read_enum) #, is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2), span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar))
-                            # if node_name == 0:
-                            #     echo(current_pos, pos2, vitem.first, vitem.second.pos2)
+                            # if node_name == 77:
+                            #     echo('r', current_pos, pos2, vitem.first, vitem.second.pos2, span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len))
                             if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
                                 sep = c_abs(vitem.first - pos2)
                                 sep2 = c_abs(vitem.second.pos2 - current_pos)
@@ -417,7 +417,6 @@ cdef class PairedEndScoper:
                                                 found_exact.push_back(node_name2)
                                         else:
                                             found_exact.push_back(node_name2)
-                                        found_exact.push_back(node_name2)
                                     elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                         found2.push_back(node_name2)
                                 elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
@@ -428,7 +427,6 @@ cdef class PairedEndScoper:
                             break
                         predecrement(local_it)
                         steps += 1
-
         if not found_exact.empty():
             return found_exact
         else:
@@ -601,32 +599,6 @@ cdef get_query_pos_from_cigarstring(cigar, pos):
     return start, end, pos, ref_end
 
 
-# cdef get_query_pos_from_cigartuples_old(r, query_length, current_strand):
-#     # Infer the position on the query sequence of the alignment using cigar string
-#     end = 0
-#     start = 0
-#     end = query_length
-#     if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
-#         start += r.cigartuples[0][1]
-#     if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
-#         end -= r.cigartuples[-1][1]
-#     return start, end, r.pos, r.reference_end, r.rname, r.mapq, current_strand, "input"
-#
-#
-# cdef get_query_pos_from_cigartuples_oldest(r):
-#     # Infer the position on the query sequence of the alignment using cigar string
-#     cdef int end = 0
-#     cdef int start = 0
-#     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
-#
-#     end = query_length
-#     if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
-#         start += r.cigartuples[0][1]
-#     if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
-#         end -= r.cigartuples[-1][1]
-#     return start, end, r.pos, r.reference_end, r.rname, r.mapq, "input"
-
-
 def get_query_pos_from_cigartuples(r):
     # Infer the position on the query sequence of the alignment using cigar string
     start = 0
@@ -734,84 +706,6 @@ class AlignmentsSA:
                 return
         self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, read_enum, cigar_index))
 
-#####
-
-# cpdef alignments_from_sa_tag(r, gettid):
-#     # Puts other alignments in order of query position, gets index of the current alignment
-#     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
-#     cdef int chrom2, start_pos2, query_start, query_end, ref_start, ref_end, start_temp, aln_start, aln_end
-#     current_strand = "-" if r.flag & 16 else "+"
-#     query_aligns = [get_query_pos_from_cigartuples_old(r, query_length, current_strand)]
-#     aln_start = query_aligns[0][2]
-#     aln_end = query_aligns[0][3]
-#     aln_chrom = r.rname
-#     for sa_block in r.get_tag("SA").split(";"):
-#         if sa_block == "":
-#             break
-#         sa = sa_block.split(",", 5)
-#         mq = int(sa[4])  # filter by mapq at later stage
-#         chrom2 = gettid(sa[0])
-#         start_pos2 = int(sa[1])
-#         strand = sa[2]
-#         cigar = sa[3]
-#         matches = [(int(slen), opp) for slen, opp in re.findall(r'(\d+)([A-Z]{1})', sa[3])]  # parse cigar
-#         query_start, query_end, ref_start, ref_end = get_query_pos_from_cigarstring(matches, start_pos2) #, strand == current_strand)
-#         if current_strand != strand:  # count from end
-#             start_temp = query_length - query_end
-#             query_end = start_temp + query_end - query_start
-#             query_start = start_temp
-#         query_aligns.append((query_start, query_end, ref_start, ref_end, chrom2, mq, strand == current_strand))
-#     query_aligns = sorted(query_aligns)
-#     cdef int index = 0
-#     for index in range(len(query_aligns)):
-#         if query_aligns[index][-1] == "input":
-#             break
-#     return query_aligns, index
-
-
-# cpdef connect_right(a, b, r, paired, max_dist, mq_thresh):
-#     event_pos = a[3]
-#     chrom = a[4]
-#     same_strand = b[6]
-#     if same_strand:
-#         pos2 = b[2]
-#     else:
-#         pos2 = b[3]
-#     chrom2 = b[4]
-#     pos2_mq = b[5]
-#     same_strand = b[6]
-#     if pos2_mq < mq_thresh:
-#         return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
-#     if paired:
-#         # If paired, and SA block fits between two normal primary alignments, and block is not local, then
-#         # ignore block and try and call insertion
-#         if not r.flag & 2304 and \
-#             r.flag & 2 and r.pnext >= event_pos and \
-#             (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):  # is primary, is proper pair. Use primary mate info, not SA
-#             return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
-#     return event_pos, chrom, pos2, chrom2, 0
-#
-#
-# cpdef connect_left(a, b, r, paired, max_dist, mq_thresh):
-#     event_pos = a[2]
-#     chrom = a[4]
-#     same_strand = b[6]
-#     if same_strand:
-#         pos2 = b[3]
-#     else:
-#         pos2 = b[2]
-#     chrom2 = b[4]
-#     pos2_mq = b[5]
-#     if pos2_mq < mq_thresh:
-#         return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
-#     if paired:
-#         if not r.flag & 2304 and \
-#             r.flag & 2 and r.pnext <= event_pos and \
-#             (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):
-#             return event_pos, chrom, event_pos, chrom, ReadEnum_t.BREAKEND
-#     return event_pos, chrom, pos2, chrom2, 0
-#
-# #####
 
 cdef int cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     cdef int other_node
@@ -867,8 +761,8 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
         if bnd_site_node != bnd_site_node2 and bnd_site_node2 >= 0 and not G.hasEdge(node_name, bnd_site_node2):
             G.addEdge(node_name, bnd_site_node2, 0)
     # Debug:
-    # if r.qname == "9621e015-30d0-4b67-9852-b0c66bc88daa":
-    #     echo("---", r.qname, read_enum, node_name, event_pos, pos2, list(other_nodes), chrom, chrom2)
+    # if r.qname == "6211787c-d032-4c6a-8f8b-020f616f2055":
+    #     echo("---", r.qname, read_enum, node_name, (event_pos, pos2), length_from_cigar, list(other_nodes))
     # look = {'a4d38568-fd80-4785-8fa5-84ed132b445c', '2313a985-385c-4c84-b02c-dddfc627940b', '0031840a-bd2d-475d-9a04-528f71c7b512'}
     # if r.qname in look:
     # # if r.qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
@@ -1269,6 +1163,11 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef vector[CigarEvent] events_to_add
     cdef vector[CigarEvent].iterator itr_events
     cdef CigarEvent v
+    cdef AlignedSegment r
+    cdef uint32_t cigar_value
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
             if r.mapq < mapq_thresh:
@@ -1278,7 +1177,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             added = False
             clipped = 0
             events_to_add.clear()
-            if len(r.cigartuples) > 1:
+            cigar_l = r._delegate.core.n_cigar
+            cigar_p = bam_get_cigar(r._delegate)
+            if cigar_l > 1:
                 if r.has_tag("SA"):
                     # Set cigar-index to -1 means it is unset, will be determined during SA parsing
                     cigar_index = -1
@@ -1288,7 +1189,11 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
                                       bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
                     added = True
-                for cigar_index, (opp, length) in enumerate(r.cigartuples):
+                for cigar_index in range(cigar_l):
+                    cigar_value = cigar_p[cigar_index]
+                    opp = <int> cigar_value & 15
+                    length = <int> cigar_value >> 4
+
                     if opp == 1:
                         if length >= min_sv_size:
                             # Insertion type

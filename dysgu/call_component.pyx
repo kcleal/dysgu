@@ -6,14 +6,17 @@ import numpy as np
 cimport numpy as np
 from numpy.random import normal
 import itertools
+
 from dysgu import assembler
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes, min_fractional_overlapping
 from dysgu.sv_category cimport AlignmentItem, classify_d
 from dysgu.extra_metrics cimport soft_clip_qual_corr
+from dysgu.extra_metrics import filter_poorly_aligned_ends, gap_size_upper_bound
 from pysam.libcalignedsegment cimport AlignedSegment
-from pysam.libchtslib cimport bam_get_qname
+from pysam.libchtslib cimport bam_get_qname, bam_get_cigar
+from libc.stdint cimport uint32_t
 from libc.stdint cimport uint64_t
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import fcluster
@@ -33,10 +36,16 @@ ctypedef enum ReadEnum_t:
     BREAKEND = 4
 
 
-cdef n_aligned_bases(ct):
-    cdef int opp, l, aligned, large_gaps, n_small_gaps
+cdef n_aligned_bases(AlignedSegment aln):
+    cdef int opp, l, aligned, large_gaps, n_small_gaps, i
+    cdef uint32_t cigar_value
+    cdef uint32_t cigar_l = aln._delegate.core.n_cigar
+    cdef uint32_t *cigar_p = bam_get_cigar(aln._delegate)
     aligned, large_gaps, n_small_gaps = 0, 0, 0
-    for opp, l in ct:
+    for i in range(cigar_l):
+        cigar_value = cigar_p[i]
+        opp = <int> cigar_value & 15
+        l = <int> cigar_value >> 4
         if opp == 0:
             aligned += l
         elif opp == 1 or opp == 2:
@@ -106,7 +115,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
             n_xa += a.get_tag("XA").count(";")
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
@@ -157,7 +166,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
             n_xa += a.get_tag("XA").count(";")
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a.cigartuples)
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
         if flag & 2304:  # Supplementary
@@ -654,7 +663,8 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
 
 
 cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
-            int to_assemble, sites_info, bint paired_end):
+            int to_assemble, sites_info, bint paired_end, int length_extend, float divergence):
+
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
@@ -714,6 +724,12 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     cdef bint passed
     cdef EventResult_t er
     if len(spanning_alignments) > 0:
+
+        if not paired_end:
+            spanning_alignments, rate_poor_ends = filter_poorly_aligned_ends(spanning_alignments, divergence)
+            if not spanning_alignments or rate_poor_ends > 0.7:
+                return []
+
         # make call from spanning alignments if possible
         svtype_m = Counter([i[0] for i in spanning_alignments]).most_common()[0][0]
         spanning_alignments = [i for i in spanning_alignments if i[0] == svtype_m]
@@ -736,18 +752,52 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
                     break
 
         best_align = spanning_alignments[best_index][5]
-        #todo check this
-        # svlen = spanning_alignments[best_index][4]
-        svlen = int(np.mean([sp[4] for sp in spanning_alignments]))
-        posA = spanning_alignments[best_index][2]
-        posB = spanning_alignments[best_index][3]
+
+        er = EventResult()
+
+        if not paired_end:
+            size_pos_bounded = [gap_size_upper_bound(sp[5], sp[6], sp[2], sp[3], length_extend, divergence) for sp in spanning_alignments]
+            svlen_adjusted = int(np.median([b[0] for b in size_pos_bounded]))
+            posA_adjusted = int(np.median([b[1] for b in size_pos_bounded]))
+            posB_adjusted = int(np.median([b[2] for b in size_pos_bounded]))
+            if svtype_m == 2:  # del
+                posA = posA_adjusted
+                posB = posB_adjusted
+                svlen = svlen_adjusted
+                er.preciseA = True
+                er.preciseB = True
+                # if min_fractional_overlapping(posA_adjusted, posB_adjusted, spanning_alignments[index][2], spanning_alignments[index][3]) < 0.8:
+                #     to_assemble = False
+                #     er.preciseA = False
+                #     er.preciseB = False
+                #     posA = posA_adjusted
+                #     posB = posB_adjusted
+                #     svlen = svlen_adjusted
+                # else:
+                #     er.preciseA = True
+                #     er.preciseB = True
+                #     svlen = int(np.median([sp[4] for sp in spanning_alignments]))
+            else:
+                # to_assemble = False
+                er.preciseA = True
+                er.preciseB = True
+                posA = posA_adjusted
+                posB = posB_adjusted
+                svlen = svlen_adjusted
+
+        else:
+            svlen = int(np.median([sp[4] for sp in spanning_alignments]))
+            posA = spanning_alignments[best_index][2]
+            posB = spanning_alignments[best_index][3]
+            er.preciseA = True
+            er.preciseB = True
+
         ab = abs(posB - posA)
         if svlen > 0:
             jitter = ((posA_95 + posB_95) / 2) / svlen
         else:
             jitter = -1
 
-        er = EventResult()
         er.svtype = "DEL" if svtype_m == 2 else "INS"
         er.join_type = "3to5"
         er.chrA = chrom
@@ -756,8 +806,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         er.posB = posB
         er.cipos95A = posA_95
         er.cipos95B = posB_95
-        er.preciseA = True
-        er.preciseB = True
         er.svlen = svlen if svlen >= ab else ab
         er.query_gap = 0
         er.query_overlap = 0
@@ -803,10 +851,15 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
             cigar_index = spanning_alignments[best_index][6]
             start_ins = 0
             ct = best_align.cigartuples
+            target_len = svlen
+            # if er.preciseA:
+            #     target_len = svlen
+            # else:
+            #     target_len = ct[cigar_index][1]
             for i in range(cigar_index):
                 if ct[i][0] in {0, 1, 4, 7, 8}:
                     start_ins += ct[i][1]
-            er.variant_seq = best_align.seq[start_ins:start_ins+svlen]
+            er.variant_seq = best_align.seq[start_ins:start_ins+target_len]
             er.ref_seq = best_align.seq[start_ins - 1]
         return er
     elif len(informative) > 0:
@@ -1562,7 +1615,7 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
 
 
 cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support, int lower_bound_support,
-                 int assemble_contigs, int max_single_size, info, bint paired_end):
+                 int assemble_contigs, int max_single_size, info, bint paired_end, int length_extend, float divergence):
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
@@ -1602,7 +1655,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                                sites_info, paired_end)
         if u_single:
             res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end)
+                         sites_info, paired_end, length_extend, divergence)
             if res:
                 if isinstance(res, EventResult):
                     events.append(res)
@@ -1610,7 +1663,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                     events += res
         if v_single:
             res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end)
+                         sites_info, paired_end, length_extend, divergence)
             if res:
                 if isinstance(res, EventResult):
                     events.append(res)
@@ -1628,7 +1681,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                 if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
                     continue
                 res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                             sites_info, paired_end)
+                             sites_info, paired_end, length_extend, divergence)
                 if res:
                     if isinstance(res, EventResult):
                         events.append(res)
@@ -1646,7 +1699,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
                     continue
             res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end)
+                         sites_info, paired_end, length_extend, divergence)
             if res:
                 if isinstance(res, EventResult):
                     events.append(res)
@@ -1656,7 +1709,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support,
-                                 assemble_contigs, max_single_size, sites_index, bint paired_end):
+                                 assemble_contigs, max_single_size, sites_index, bint paired_end, int length_extend, float divergence):
     n_parts = len(data["parts"])
     events = []
     if "info" in data:
@@ -1666,9 +1719,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
     cdef EventResult_t e
     if n_parts >= 1:
-        # Processed single edges and break apart connected
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
-                        assemble_contigs, max_single_size, info, paired_end)
+                        assemble_contigs, max_single_size, info, paired_end, length_extend, divergence)
     elif n_parts == 0:
         if len(data["n2n"]) > max_single_size:
             return []
@@ -1679,7 +1731,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
             sites_info = []
         if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
             return []
-        ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, sites_info, paired_end)
+        ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, sites_info, paired_end, length_extend, divergence)
         if ev:
             if isinstance(ev, list):
                 events += ev
