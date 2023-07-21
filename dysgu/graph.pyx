@@ -347,7 +347,7 @@ cdef class PairedEndScoper:
             local_it = forward_scope.lower_bound(pos2)
             steps = 0
             if local_it != forward_scope.end():
-                while steps < 20: #6: 
+                while steps < 20: #6:
                     vitem = dereference(local_it)
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
                         steps += 1
