@@ -1,13 +1,5 @@
 
 
-|Generic badge| |Li badge|
-
-.. |Generic badge| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
-   :target: http://bioconda.github.io/recipes/dysgu/README.html
-
-.. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
-   :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
-
 .. image:: dysgu/logo.png
     :align: left
 
@@ -17,6 +9,15 @@ for calling structural variants using paired-end or long read sequencing data.
 
 ⚙️ Installation
 ---------------
+
+|Generic badge| |Li badge|
+
+.. |Generic badge| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
+   :target: http://bioconda.github.io/recipes/dysgu/README.html
+
+.. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
+   :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
+
 Dysgu requires Python >=3.7 - 3.10 plus htslib and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
