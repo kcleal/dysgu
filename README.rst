@@ -4,7 +4,7 @@
     :align: left
 
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
-for calling structural variants using paired-end or long read sequencing data.
+for calling structural variants using paired-end or long read sequencing data. See a recent long-read benchmark `here <https://github.com/kcleal/SV_Benchmark_CMRG>`_.
 
 
 ⚙️ Installation
