@@ -177,7 +177,7 @@ Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. For paired-e
 
     dysgu filter --pass-prob 0.2 --min-prob 0.1 --normal-vcf normal.vcf tumour.vcf normal.bam > somatic.vcf
 
-To quickly test and visualise different filtering thresholds, output can be piped to the command line tool `GW <https://kcleal.github.io/dysgu/API.html>`_, or `jupyter notebook <https://github.com/kcleal/gw>`_, which will display the results to screen for inspection::
+To quickly test and visualise different filtering thresholds, output can be piped to the command line tool `GW <https://github.com/kcleal/gw>`_, which will display the results to screen for inspection::
 
     dysgu filter --pass-prob 0.2 filtered.vcf | \
     gw hg38 -b normal.bam -b tumor.bam -v - 
