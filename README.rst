@@ -85,8 +85,7 @@ Dysgy is designed to work with long reads aligned using minimap2 or ngmlr. Use t
 
     dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
-Using '--mode' will apply preset options that work well with reads from Oxford Nanopore 'V14 kit', or PacBio Sequel II (or higher platforms). If you are using using noisy long-reads
-from older generation platforms, it is recommended to set '--divergence auto', to infer sequence divergence::
+Using '--mode' will apply preset options that work well with reads from Oxford Nanopore 'V14 kit' (>99% accuracy), or HiFi reads from PacBio Sequel II (or higher platforms). If you are using using reads with higher error rates, or are unsure of the accuracy, it is recommended to set '--divergence auto', to infer a more conservative sequence divergence. The default is set at 0.02 which can be too stringent for lower accuracy reads and will result in more reads being filtered and lower sensitivity::
 
     dysgu call --divergence auto --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
@@ -140,17 +139,19 @@ Re-label events with probability >= 0.3 as PASS::
 Somatic SVs / tumor-normal calling / pool-of-normals
 ----------------------------------------------------
 
-For tumor/normal pairs::
+For tumor/normal pairs, the recommended workflow is to call SVs independently in each sample, then obtain tumor specific (somatic) SVs by running dysgu filter::
 
     dysgu run ref.fa wd_t tumour.bam > tumor.vcf
     dysgu run ref.fa wd_n normal.bam > normal.vcf
-    dysgu filter --pass-prob 0.2 --normal-vcf normal.vcf tumour.vcf normal.bam ... > somatic.vcf
+    dysgu filter --normal-vcf normal.vcf tumour.vcf normal.bam > somatic.vcf
 
-Alternatively, unique SV can be identified when compared to a cohort. A third-party vcf of common SVs can be used (provided 'SVTYPE' is listed in the info column). Or,
+The output vcf will contain SVs that are deemed to be unique in the tumor sample.
+
+Unique SV can also be identified when compared to a cohort vcf or list of bam files. A third-party vcf of common SVs can be used (provided 'SVTYPE' is listed in the info column). Or,
 cohort SVs can be merged using `dysgu merge`, before filtering to get unique SVs::
 
     dysgu merge *.vcf > merged.vcf
-    dysgu filter --normal-vcf merged.vcf sample1.vcf *.bam ... > sample1_unique.vcf
+    dysgu filter --normal-vcf merged.vcf sample1.vcf *.bam > sample1_unique.vcf
 
 Here, sample1.vcf and merged.vcf can contain multiple samples, although if sample1.vcf is multi-sample, you must provide '--target-sample' to indicate which sample to filter.
 The output sample1_somatic.vcf will be a single sample vcf containing unique SVs.
@@ -165,16 +166,21 @@ e.g. draw 5 random bam samples from the input list to filter against using::
     dysgu filter --random-bam-sample 5 --normal-vcf merged.vcf sample1.vcf *.bam
 
 
-Also a target VCF can be filtered against a normal vcf if desired (no alignment files)::
+Also a target VCF can be filtered against a normal vcf if desired (without alignment files)::
 
     dysgu filter --normal-vcf normal.vcf sample1.vcf
 
 By default, SV calls with a PROB value < ``--min-prob`` are removed from the final output,
 and SV calls with a PROB value >= ``--pass-prob`` will be re-labelled as PASS in the output. However, these
-thresholds require tuning depending on sequencing platform, coverage and cohort size.
-Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. e.g::
+thresholds currently require tuning depending on sequencing platform, coverage and the size of the cohort used for filtering. 
+Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. For paired-end reads, a pass-prob of around 0.35 can work well, whereas for long-reads a lower threshold of 0.2 can work better e.g::
 
     dysgu filter --pass-prob 0.2 --min-prob 0.1 --normal-vcf normal.vcf tumour.vcf normal.bam > somatic.vcf
+
+To quickly test and visualise different filtering thresholds, output can be piped to the command line tool `GW <https://kcleal.github.io/dysgu/API.html>`_, or `jupyter notebook <https://github.com/kcleal/gw>`_, which will display the results to screen for inspection::
+
+    dysgu filter --pass-prob 0.2 filtered.vcf | \
+    gw hg38 -b normal.bam -b tumor.bam -v - 
 
 
 Models available
