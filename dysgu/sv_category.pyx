@@ -271,16 +271,14 @@ cdef void same_read(AlignmentItem v):
                 else:
                     v.breakB = v.endB
 
-                v.svtype = "INS"
+                v.svtype = "DUP"
                 # Check if gap on query is bigger than gap on reference
-                # query_gap = abs(v.b_qstart - v.a_qend) + 1  # as A is first
                 ref_gap = abs(v.breakB - v.breakA)
-
                 if v.a_qstart > v.b_qstart:  # B is first on query seq
                     align_overlap = v.b_qend - v.a_qstart  # note, this is negative if there is a gap between alignments
                 else:
                     align_overlap = v.a_qend - v.b_qstart
-
+                align_overlap = 0 if align_overlap < 0 else align_overlap
                 v.inferred_sv_len = ref_gap - align_overlap
                 if align_overlap < 0:
                     v.query_gap = align_overlap

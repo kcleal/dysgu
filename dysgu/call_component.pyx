@@ -766,17 +766,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
                 svlen = svlen_adjusted
                 er.preciseA = True
                 er.preciseB = True
-                # if min_fractional_overlapping(posA_adjusted, posB_adjusted, spanning_alignments[index][2], spanning_alignments[index][3]) < 0.8:
-                #     to_assemble = False
-                #     er.preciseA = False
-                #     er.preciseB = False
-                #     posA = posA_adjusted
-                #     posB = posB_adjusted
-                #     svlen = svlen_adjusted
-                # else:
-                #     er.preciseA = True
-                #     er.preciseB = True
-                #     svlen = int(np.median([sp[4] for sp in spanning_alignments]))
             else:
                 # to_assemble = False
                 er.preciseA = True
