@@ -25,6 +25,10 @@ echo "Build threads:" $threads
 echo "htslib_folder:" $htslib_folder
 echo "Extra configure args:" $@
 
+cd dysgu
+wget https://github.com/samtools/htslib/releases/download/1.18/htslib-1.18.tar.bz2
+tar -xvf htslib-1.18.tar.bz2 && rm htslib-1.18.tar.bz2 && mv htslib-1.18 htslib
+cd ../
 
 if [[ $htslib_folder == "./dysgu/htslib" ]]
 then
