@@ -28,7 +28,7 @@ Or, fetch from PyPI::
 
     pip install dysgu
 
-To build from source, run the install script `bash INSTALL.sh`.
+To build from source, run the install script: ``bash INSTALL.sh``.
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
