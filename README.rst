@@ -24,11 +24,11 @@ To install::
    
     conda install -c bioconda -c conda-forge dysgu
 
-Or, fetch from PyPI / build from source::
+Or, fetch from PyPI::
 
     pip install dysgu
 
-To build from source, htslib must be available on your system.
+To build from source, run the install script `bash INSTALL.sh`.
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
