@@ -4,4 +4,3 @@
 *.pyx linguist-vendored=false
 *.py linguist-vendored=false
 *.pxd linguist-vendored=false
-*.h linguist-vendored=false
