@@ -161,8 +161,12 @@ cdef class GenomeScanner:
                 else:
                     f_iter = self.input_bam
                 for aln in f_iter:
-                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
+                    # if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
+                    #     continue
+                    cigar_l = aln._delegate.core.n_cigar
+                    if cigar_l == 0 or aln.flag & 1284:
                         continue
+
                     if aln.rname != self.current_tid:
                         if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
                             out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
@@ -178,7 +182,7 @@ cdef class GenomeScanner:
                         good_read = True
                     elif not aln.flag & 2:
                         good_read = True
-                    cigar_l = aln._delegate.core.n_cigar
+                    # cigar_l = aln._delegate.core.n_cigar
                     cigar_p = bam_get_cigar(aln._delegate)
                     for i in range(cigar_l):
                         cigar_value = cigar_p[i]
@@ -195,6 +199,8 @@ cdef class GenomeScanner:
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
                             index_start += length
+                    if aln.mapq < mq_thresh:
+                        continue
                     if not good_read:
                         continue
                     if not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
@@ -452,34 +458,6 @@ cdef class GenomeScanner:
         cdef str reference_name = ""
         cdef int aend = a.reference_end
         cdef float current_coverage
-        # if rname not in self.depth_d:
-        #     ref_length = int(self.input_bam.get_reference_length(self.input_bam.get_reference_name(rname)) / 100)
-        #     self.depth_d[rname] = np.zeros(ref_length + 1, dtype=np.float64)
-        # if self.current_chrom != rname:
-        #     self.current_chrom = rname
-        #     self.current_cov_array = self.depth_d[rname]
-        # elif self.current_cov_array is None:
-        #     self.current_cov_array = self.depth_d[rname]
-        # current_cov = add_coverage(apos, aend, self.current_cov_array)
-        # in_roi = False
-        # if self.overlap_regions:
-        #     in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
-        # if rname == self.current_chrom and bin_pos == self.current_pos:
-        #     if current_cov >= self.max_cov and not in_roi:
-        #         if len(self.current_bin) > 0:
-        #             self.current_bin = []
-        #             self.reads_dropped += len(self.current_bin)
-        #         self.reads_dropped += 1
-        #         return
-        #     self.current_bin.append((a, tell))
-        # else:
-        #     if len(self.current_bin) != 0 and (current_cov < self.max_cov or in_roi):
-        #         self.staged_reads.append(self.current_bin)
-        #     self.current_chrom = rname
-        #     self.current_pos = bin_pos
-        #     self.current_bin = [(a, tell)]
-
-
         if self.current_chrom != rname:
             self.current_chrom = rname
         in_roi = False

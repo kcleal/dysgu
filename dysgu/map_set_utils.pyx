@@ -142,10 +142,10 @@ cdef class Py_DiGraph:
         self.thisptr.addEdge(u, v, w)
     cdef int numberOfNodes(self) nogil:
         return self.thisptr.numberOfNodes()
-    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil:
-        return self.thisptr.forInEdgesOf(u)
-    cdef cpp_vector[int] neighbors(self, int u) nogil:
-        return self.thisptr.neighbors(u)
+    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) nogil:
+        self.thisptr.forInEdgesOf(u, inEdges)
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) nogil:
+        self.thisptr.neighbors(u, neigh)
     cdef float node_path_quality(self, int u, int v, int w)  nogil:
         return self.thisptr.node_path_quality(u, v, w)
 
@@ -166,12 +166,12 @@ cdef class Py_SimpleGraph:
         return self.thisptr.edgeCount()
     cpdef int weight(self, int u, int v):
         return self.thisptr.weight(u, v)
-    cpdef cpp_vector[int] neighbors(self, int u):
-        return self.thisptr.neighbors(u)
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh):
+        self.thisptr.neighbors(u, neigh)
     cpdef void removeNode(self, int u):
         self.thisptr.removeNode(u)
-    cpdef cpp_vector[int] connectedComponents(self, char* pth, bint low_mem):
-        return self.thisptr.connectedComponents(pth, low_mem)
+    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& components):
+        self.thisptr.connectedComponents(pth, low_mem, components)
     cpdef int showSize(self):
         return self.thisptr.showSize()
 
@@ -330,8 +330,8 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
-    if read_enum == BREAKEND:
-        return 0
+    # if read_enum == BREAKEND:
+    #     return 0
     cdef bint within_read_event = cigar_len1 > 0 and cigar_len2 > 0
     if within_read_event and c_abs(cigar_len1 - cigar_len2) > 500:
         return 0
@@ -341,11 +341,6 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
         center1 = x1
         center2 = y1
 
-    # if trust_ins_len and read_enum == INSERTION and cigar_len1 > 0 and cigar_len2 > 0:
-    #     span1 = cigar_len1
-    #     span2 = cigar_len2
-    #     center1 = x1
-    #     center2 = y1
     else:
         if x1 == x2:
             span1 = 1
@@ -373,7 +368,7 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
             return 1
         return 0
 
-    if (position_distance / max_span) < thresh and span_distance < thresh:  # 0.2, 0.3
+    if (position_distance / max_span) < thresh and span_distance < thresh:
         return 1
     return 0
 

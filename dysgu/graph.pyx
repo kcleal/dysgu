@@ -9,7 +9,7 @@ from cpython cimport array
 import array
 import re
 import logging
-from dysgu.map_set_utils cimport unordered_map as robin_map
+from dysgu.map_set_utils cimport unordered_map as robin_map, Py_SimpleGraph
 from dysgu.map_set_utils cimport multimap as cpp_map
 from dysgu cimport map_set_utils
 from dysgu.io_funcs import intersecter
@@ -471,7 +471,7 @@ cdef class TemplateEdges:
         self.templates_s[key].insert(self.templates_s[key].end(), val.begin(), val.end())
 
 
-cdef void add_template_edges(G, TemplateEdges template_edges):
+cdef void add_template_edges(Py_SimpleGraph G, TemplateEdges template_edges):
     # this function joins up template reads (read 1, read 2, plus any supplementary)
     cdef int ii, u_start, v_start, u, v, uflag, vflag
     cdef unordered_map[string, vector[int]].iterator it = template_edges.templates_s.begin()
@@ -707,7 +707,7 @@ class AlignmentsSA:
         self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, read_enum, cigar_index))
 
 
-cdef int cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
+cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     cdef int other_node
     cdef int count = 0
     cdef unordered_set[int] clustered_nodes
@@ -720,12 +720,12 @@ cdef int cluster_clipped(G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     return count
 
 
-cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
+cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
                        NodeToName node_to_name, genome_scanner,
                        int flag, int chrom, tell, int cigar_index, int event_pos,
                        int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
                        bint p1_overlaps, bint p2_overlaps, bint mm_only, int clip_l, site_adder,
-                       int length_from_cigar, bint trust_ins_len):
+                       int length_from_cigar, bint trust_ins_len, bint paired_end):
     # Adds relevant information to graph and other data structures for further processing
     cdef int other_node
     cdef vector[int] other_nodes  # Other alignments to add edges between
@@ -733,7 +733,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
     cdef uint64_t v = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)  # Hash qname to save mem
     cdef int bnd_site_node, bnd_site_node2
     cdef int q_start
-    # echo("\nADDING", node_name, r.qname, (chrom, event_pos), (chrom2, pos2), flag)
+    # echo("\nADDING", node_name, r.qname, (chrom, event_pos), (chrom2, pos2), flag, read_enum)
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
     genome_scanner.add_to_buffer(r, node_name, tell)  # Add read to buffer
     if read_enum < 2:  # Prevents joining up within-read svs with between-read svs
@@ -741,7 +741,7 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
         template_edges.add(r.qname, flag, node_name, q_start)
 
     both_overlap = p1_overlaps and p2_overlaps
-    if read_enum != BREAKEND and not mm_only and not chrom2 == -1:
+    if not paired_end or (paired_end and read_enum != BREAKEND and not mm_only and not chrom2 == -1):
         other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar, trust_ins_len)
         for other_node in other_nodes:
             if node_to_name.same_template(node_name, other_node):
@@ -749,9 +749,10 @@ cdef void add_to_graph(G, AlignedSegment r, PairedEndScoper_t pe_scope, Template
             if not G.hasEdge(node_name, other_node):
                 G.addEdge(node_name, other_node, 2)  # 'black' edge
 
-    elif chrom != chrom2 and clip_l != -1:  # Note all BREAKENDS have chrom != chrom2, but also includes translocations
+    elif chrom != chrom2 and clip_l != -1:  # Note all paired-end reads have BREAKENDS where chrom != chrom2, but also includes translocations
         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
-    if not mm_only and read_enum != BREAKEND:
+
+    if not paired_end or (paired_end and not mm_only and read_enum != BREAKEND):
         pe_scope.add_item(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar)
     if site_adder and (read_enum == BREAKEND or read_enum == SPLIT):
         bnd_site_node = site_adder.find_nearest_site(chrom, event_pos)
@@ -844,7 +845,7 @@ cdef int good_quality_clip(AlignedSegment r, int clip_length):
     return 0
 
 
-cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gettid,
+cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int loci_dist, gettid,
                             overlap_regions, int clustering_dist, PairedEndScoper_t pe_scope,
                             int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
                             TemplateEdges_t template_edges, NodeToName node_to_name,
@@ -917,31 +918,8 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                  tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
                                  current_overlaps_roi, next_overlaps_roi,
-                                 mm_only, clip_l, site_adder, 0, trust_ins_len)
+                                 mm_only, clip_l, site_adder, 0, trust_ins_len, paired_end)
                 return
-
-                # all_aligns, index = alignments_from_sa_tag(r, gettid)
-                # event = all_aligns[index]
-                # #if r.qname == "D00360:18:H8VC6ADXX:1:1215:4738:83181":
-                # echo(r.qname, all_aligns, index)
-                # if len(all_aligns) == 1:
-                #     return
-                # if index < len(all_aligns) - 1:  # connect to next
-                #     event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
-                #     cigar_index = len(r.cigartuples) - 1
-                #     if inferred_clip_type == BREAKEND:
-                #         read_enum = ReadEnum_t.BREAKEND
-                #     #if r.qname == "D00360:18:H8VC6ADXX:1:1215:4738:83181":
-                #     echo("connect right", (event_pos, chrom), (pos2, chrom2), inferred_clip_type)
-                # if index > 0:
-                #     event_pos, chrom, pos2, chrom2, inferred_clip_type = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
-                #     cigar_index = 0
-                #     if inferred_clip_type == BREAKEND:
-                #         read_enum = ReadEnum_t.BREAKEND
-                #     #if r.qname == "D00360:18:H8VC6ADXX:1:1215:4738:83181":
-                #     echo("connect left", (event_pos, chrom), (pos2, chrom2), inferred_clip_type)
-                #
-                # echo((chrom, event_pos), (chrom2, pos2), r.qname, read_enum, inferred_clip_type)
 
         if read_enum == BREAKEND:
             if mm_only and current_overlaps_roi and next_overlaps_roi:  # Probably too many reads in ROI to reliably separate out break end reads
@@ -959,7 +937,7 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                 pos2 = event_pos
         add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum, current_overlaps_roi, next_overlaps_roi,
-                               mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
+                               mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
     ###
     else:  # Single end
         current_overlaps_roi, next_overlaps_roi = False, False  # not supported
@@ -974,44 +952,17 @@ cdef void process_alignment(G, AlignedSegment r, int clip_l, int loci_dist, gett
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, j.chrom,
                                  tell, j.cigar_index, j.event_pos, j.chrom2, j.pos2, clip_scope, j.read_enum,
                                  current_overlaps_roi, next_overlaps_roi,
-                                 mm_only, clip_l, site_adder, 0, trust_ins_len)
+                                 mm_only, clip_l, site_adder, 0, trust_ins_len, paired_end)
 
-                    # if r.qname == "e0559e08-1b63-4418-9cc8-252432ad93c7":
-                    #     echo("index: ", (chrom, event_pos), (chrom2, pos2))
-
-                #
-                #
-                #
-                # all_aligns, index = alignments_from_sa_tag(r, gettid)
-                # event = all_aligns[index]
-                # if len(all_aligns) == 1:
-                #     return
-                # if index < len(all_aligns) - 1:  # connect to next
-                #     event_pos, chrom, pos2, chrom2, _ = connect_right(all_aligns[index], all_aligns[index + 1], r, paired_end, loci_dist, mapq_thresh)
-                #     cigar_index = 0
-                #     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                #                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                #                            current_overlaps_roi, next_overlaps_roi,
-                #                            mm_only, clip_l, site_adder, 0, trust_ins_len)
-                # if index > 0:
-                #     event_pos, chrom, pos2, chrom2, _ = connect_left(all_aligns[index], all_aligns[index -1], r, paired_end, loci_dist, mapq_thresh)
-                #     cigar_index = len(r.cigartuples) - 1
-                #     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                #                            tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                #                            current_overlaps_roi, next_overlaps_roi,
-                #                            mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
-                #
-                # if r.qname == "e0559e08-1b63-4418-9cc8-252432ad93c7":
-                #     echo("index: ", index, all_aligns, (chrom, event_pos), (chrom2, pos2))
-        elif read_enum >= 2:  # Sv within read
+        elif read_enum >= 2:  # Sv within read or breakend
             chrom2 = r.rname
-            if r.cigartuples[cigar_index][0] != 1:  # If not insertion
+            if cigar_index != -1 and r.cigartuples[cigar_index][0] != 1:  # If not insertion
                 pos2 = cigar_pos2
             else:
                 pos2 = event_pos
             add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                                   tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
-                                   current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len)
+                         tell, cigar_index, event_pos, chrom2, pos2, clip_scope, read_enum,
+                         current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
 
 
 cdef struct CigarEvent:
@@ -1090,7 +1041,7 @@ class SiteAdder:
         else:
             self.scope = sortedcontainers.sortedlist.SortedList([site], key=lambda x: x.start)
             self.current_chrom = site.chrom
-    def add_any_sites(self, int chrom, int pos, G, PairedEndScoper_t pe_scope, NodeToName node_to_name, cluster_dist):
+    def add_any_sites(self, int chrom, int pos, Py_SimpleGraph G, PairedEndScoper_t pe_scope, NodeToName node_to_name, cluster_dist):
         cdef int node_name, start, stop, file_index
         cdef ReadEnum_t read_enum
         if chrom not in self.sites_queue:
@@ -1138,7 +1089,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir="."):
+                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir=".",
+                            find_n_aligned_bases=True):
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
     cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
     cdef int event_pos, cigar_index, opp, length
@@ -1149,7 +1101,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end)
     bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
-    G = map_set_utils.Py_SimpleGraph()
+    cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
     site_adder = None
     if sites:
         site_adder = SiteAdder(sites)
@@ -1167,6 +1119,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
+    cdef long n_aligned_bases = 0
 
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
@@ -1194,6 +1147,9 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     opp = <int> cigar_value & 15
                     length = <int> cigar_value >> 4
 
+                    if find_n_aligned_bases and (opp == 0 or opp == 7 or opp == 8):
+                        n_aligned_bases += length
+
                     if opp == 1:
                         if length >= min_sv_size:
                             # Insertion type
@@ -1211,13 +1167,15 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             event_pos += length
                         elif opp == 4 and length >= clip_l:
                             clipped = 1
-            if not added and contigs:
+
+            if (paired_end and not added and contigs) or not paired_end:
                 # Whole alignment will be used, try infer position from soft-clip
                 cigar_index = -1
                 pos2 = -1
                 left_clip_size, right_clip_size = clip_sizes_hard(r)  # soft and hard-clips
-                if r.flag & 8 and clipped:
+                if r.flag & 8 and clipped:  # paired by inference
                     # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
+                    # if not (left_clip_size and right_clip_size) and ((paired_end and good_quality_clip(r, 20)) or (not paired_end and) ):
                     if not (left_clip_size and right_clip_size) and good_quality_clip(r, 20):
                         # Mate is unmapped, insertion type. Only add if soft-clip is available
                         process_alignment(G, r, clip_l, max_dist, gettid,
@@ -1228,21 +1186,35 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           mm_only, site_adder, 0, trust_ins_len)
                 else:
                     # Use whole read, could be normal or discordant
-                    if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
-                        if not clipped:
-                            continue
-                        read_enum = ReadEnum_t.BREAKEND
+                    if not paired_end:
+                        if max(left_clip_size, right_clip_size) > 250:
+                            read_enum = ReadEnum_t.BREAKEND
+                            if left_clip_size > right_clip_size:
+                                event_pos = r.pos  # else reference_end is used
+                            process_alignment(G, r, clip_l, max_dist, gettid,
+                                              overlap_regions, clustering_dist, pe_scope,
+                                              cigar_index, event_pos, paired_end, tell, genome_scanner,
+                                              template_edges, node_to_name,
+                                              pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
+                                              mm_only, site_adder, 0, trust_ins_len)
+
                     else:
-                        read_enum = ReadEnum_t.DISCORDANT
-                    if left_clip_size or right_clip_size:
-                        if left_clip_size > right_clip_size:
-                            event_pos = r.pos  # else reference_end is used
-                    process_alignment(G, r, clip_l, max_dist, gettid,
-                                      overlap_regions, clustering_dist, pe_scope,
-                                      cigar_index, event_pos, paired_end, tell, genome_scanner,
-                                      template_edges, node_to_name,
-                                      pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                      mm_only, site_adder, 0, trust_ins_len)
+                        if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
+                            if not clipped:
+                                continue
+                            read_enum = ReadEnum_t.BREAKEND
+                        else:
+                            read_enum = ReadEnum_t.DISCORDANT
+
+                        if left_clip_size or right_clip_size:
+                            if left_clip_size > right_clip_size:
+                                event_pos = r.pos  # else reference_end is used
+                        process_alignment(G, r, clip_l, max_dist, gettid,
+                                          overlap_regions, clustering_dist, pe_scope,
+                                          cigar_index, event_pos, paired_end, tell, genome_scanner,
+                                          template_edges, node_to_name,
+                                          pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
+                                          mm_only, site_adder, 0, trust_ins_len)
             # process within-read events
             if not events_to_add.empty():
                 itr_events = events_to_add.begin()
@@ -1263,17 +1235,17 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     add_template_edges(G, template_edges)
     if site_adder:
         logging.info(f"Added {site_adder.count} variants from input sites")
-    return G, node_to_name, bad_clip_counter, site_adder
+    return G, node_to_name, bad_clip_counter, site_adder, n_aligned_bases
 
 
-cdef BFS_local(G, int source, unordered_set[int]& visited ):
+cdef BFS_local(Py_SimpleGraph G, int source, unordered_set[int]& visited ):
     cdef array.array queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
     cdef vector[int] neighbors
     while queue:
         u = queue.pop(0)
-        neighbors = G.neighbors(u)
+        G.neighbors(u, neighbors)
         for v in neighbors:
             if visited.find(v) == visited.end():
                 if G.weight(u, v) > 1:
@@ -1286,7 +1258,7 @@ cdef BFS_local(G, int source, unordered_set[int]& visited ):
     return array.array("L", nodes_found)
 
 
-cdef get_partitions(G, nodes):
+cdef get_partitions(Py_SimpleGraph G, nodes):
     cdef unordered_set[int] seen
     cdef int u, v, i
     cdef vector[int] neighbors
@@ -1294,7 +1266,7 @@ cdef get_partitions(G, nodes):
     for u in nodes:
         if seen.find(u) != seen.end():
             continue
-        neighbors = G.neighbors(u)
+        G.neighbors(u, neighbors)
         for v in neighbors:
             if seen.find(v) != seen.end():
                 continue
@@ -1306,7 +1278,7 @@ cdef get_partitions(G, nodes):
     return parts
 
 
-cdef tuple count_support_between(G, parts):
+cdef tuple count_support_between(Py_SimpleGraph G, parts):
     cdef int i, j, node, child, any_out_edges
     cdef tuple t
     cdef unsigned long[:] p
@@ -1329,7 +1301,7 @@ cdef tuple count_support_between(G, parts):
         current_t = set([])
         for node in p:
             any_out_edges = 0
-            neighbors = G.neighbors(node)
+            G.neighbors(node, neighbors)
             for child in neighbors:
                 if not p2i.has_key(child):
                     continue  # Exterior child, not in any partition
@@ -1363,15 +1335,13 @@ cdef tuple count_support_between(G, parts):
     return counts, self_counts
 
 
-cpdef break_large_component(G, component, int min_support):
+cpdef break_large_component(Py_SimpleGraph G, component, int min_support):
     # similar to count_support_between except only counts are returned without the node labels partitioned
     parts = get_partitions(G, component)
     cdef int i, j, node, child
     cdef tuple t
-    if len(parts) == 0:
-        return {}, {}
-    elif len(parts) == 1:
-        return {}, {0: parts[0]}
+    if len(parts) <= 1:
+        return parts
     # Make a table to count from, int-int
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
     for i, p in enumerate(parts):
@@ -1388,7 +1358,7 @@ cpdef break_large_component(G, component, int min_support):
         current_t = set([])
         for node in p:
             any_out_edges = 0  # Keeps track of number of outgoing pairs, or self edges
-            neighbors = G.neighbors(node)
+            G.neighbors(node, neighbors)
             for child in neighbors:
                 if not p2i.has_key(child):
                     continue  # Exterior child, not in any partition
@@ -1412,7 +1382,9 @@ cpdef break_large_component(G, component, int min_support):
         if sup >= min_support:
             f.add(u)
             f.add(v)
-            b = parts[u]
+            if len(parts[u]) > 500 or len(parts[v]) > 500:
+                continue
+            b = list(parts[u])
             b.extend(parts[v])
             jobs.append(b)
     for k, v in self_counts.items():
@@ -1421,7 +1393,7 @@ cpdef break_large_component(G, component, int min_support):
     return jobs
 
 
-cpdef proc_component(node_to_name, component, read_buffer, infile, G, int min_support, int procs, int paired_end,
+cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGraph G, int min_support, int procs, int paired_end,
                      sites_index):
     n2n = {}
     reads = {}

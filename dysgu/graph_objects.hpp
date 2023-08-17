@@ -31,12 +31,9 @@ class DiGraph {
         int n_edges = 0;
 
         int addNode() {
-
             int n = N;
-
             std::vector<PairW2> node;
             std::vector<PairW2> in_node;
-
             outList.push_back(node);  // empty, no edges
             inList.push_back(in_node);
             N++;
@@ -45,15 +42,12 @@ class DiGraph {
 
         int hasEdge(int u, int v) {
             if ((u > N ) || (v > N)) { return 0; }
-
-            // Look for v
             for (const auto& val: outList[u]) {
                 if (val.first == v) {
                     return 1;
                 }
             }
             return 0;
-
         }
 
         void addEdge(int u, int v, int w) {
@@ -71,93 +65,65 @@ class DiGraph {
                 n_edges += 1;
                 return;
             }
-
-//            for (auto& val: outList[u]) {
-//                if (val.first == v) {
-//                    val.second += w;
-//                    return;
-//                }
-//            }
-//
-//            outList[u].push_back(std::make_pair(v, w));
-//            inList[v].push_back(std::make_pair(u, w));
-//            n_edges += 1;
-
             bool updated = false;
             for (auto& val: outList[u]) {
                 if (val.first == v) {
                     val.second += w;
-                    //return;
                     updated = true;
                 }
             }
-
             if (updated == false) {
                 outList[u].push_back(std::make_pair(v, w));
                 n_edges += 1;
             }
-
             updated = false;
-
             for (auto& vali: inList[v]) {
                 if (vali.first == u) {
                     vali.second += w;
-                    //return;
                     updated = true;
                 }
             }
-
             if (updated == false) {
                 inList[v].push_back(std::make_pair(u, w));
             }
-
         }
 
         int weight(int u, int v) {
-
             if ((u > N ) || (v > N)) { return 0; }
-
             for (const auto& val: outList[u]) {
                 if (val.first == v) {
                     return val.second;
                 }
             }
-
             return 0;
         }
 
         int numberOfNodes() { return N; }
 
-
-        std::vector<int> neighbors(int u) {  // Get all out edges
-
-            std::vector<int> neigh;
-
+        void neighbors(int u, std::vector<int> &neigh) {  // Get all out edges
+            //std::vector<int> neigh;
+            if (!neigh.empty()) {
+                neigh.clear();
+            }
             for (const auto& val: outList[u]) {
                 neigh.push_back(val.first);
             }
-
-            return neigh;
-
+            //return neigh;
         }
 
 
-        std::vector<PairW2> forInEdgesOf(int u) {
-
-            std::vector<PairW2> inEdges;
-
+        void forInEdgesOf(int u, std::vector<PairW2>& inEdges) {
+//            std::vector<PairW2> inEdges;
+            if (!inEdges.empty()) {
+                inEdges.clear();
+            }
             for (const auto& val: inList[u]) {
                 inEdges.push_back(val);
             }
-
-            return inEdges;
-
+//            return inEdges;
         }
 
         float node_path_quality(int u, int v, int w) {
-
-//            std::cerr << u << "u " << v << "v " << w << "w " << std::endl;
-
             int sum_in = 0;
             float q_in = 1;
             if (u != -1) {
@@ -170,7 +136,6 @@ class DiGraph {
                     q_in = in_weight / sum_in;
                 }
             }
-
             int sum_out = 0;
             float q_out = 1;
             if (w != -1) {
@@ -183,13 +148,9 @@ class DiGraph {
                     q_out = out_weight / sum_out;
                 }
             }
-
             if (q_out < q_in) { return q_out; };
             return q_in;
-
         }
-
-
 };
 
 
@@ -200,160 +161,116 @@ class SimpleGraph {
         SimpleGraph() {}  // Construct
         ~SimpleGraph() {}
 
-        // Used for undirected graph
         std::vector<std::vector<PairW>> adjList;
-
-        // Used for directed graph
-//        std::vector<std::vector<PairW>> inList;
-//        std::vector<std::vector<PairW>> outList;
 
         int N = 0;
         int n_edges = 0;
 
-
         int addNode() {
-
             int n = N;
-
             std::vector<PairW> node;
-//            node.push_back(std::make_pair(-1, -1));
             adjList.push_back(node);
-
             N++;
             return n;
         }
 
         int hasEdge(int u, int v) {
             if ((u > N ) || (v > N)) { return 0; }
-
-            // Look for v
             for (const auto& val: adjList[u]) {
                 if (val.first == v) {
                     return 1;
                 }
             }
             return 0;
-
         }
 
         void addEdge(int u, int v, uint8_t w) {
-
-            // Assume hasEdge has been call
-            // If node has no edge add first in, otherwise push a new node
-//            if ((adjList[u].size() == 1) && (adjList[u].front().first == -1)) {
-//                adjList[u].front().first = v;
-//                adjList[u].front().second = w;
-//            } else {
-//                adjList[u].push_back(std::make_pair(v, w));
-//            };
-//
-//            if ((adjList[v].size() == 1) && (adjList[v].front().first == -1)) {
-//                adjList[v].front().first = u;
-//                adjList[v].front().second = w;
-//            } else {
-//                adjList[v].push_back(std::make_pair(u, w));
-//            };
-
             adjList[u].push_back(std::make_pair(v, w));
             adjList[v].push_back(std::make_pair(u, w));
-
             n_edges += 1;
-
         }
 
         int edgeCount() { return n_edges; }
 
         int weight(int u, int v) {
-
             if ((u > N ) || (v > N)) { return 0; }
-
             for (const auto& val: adjList[u]) {
                 if (val.first == v) {
                     return val.second;
                 }
             }
-
             return 0;
         }
 
-        std::vector<int> neighbors(int u) {
-
-            std::vector<int> neigh;
-
+        void neighbors(int u, std::vector<int>& neigh) {
+//            std::vector<int> neigh;
+            if (!neigh.empty()) {
+                neigh.clear();
+            }
             for (const auto& val: adjList[u]) {
                 neigh.push_back(val.first);
             }
-
-            return neigh;
-
+//            return neigh;
         }
 
         void removeNode(int u) {
+            // make dead nodes, takes more memory but faster
+            for (auto& val_u: adjList[u]) {
+                for (auto& val_v: adjList[val_u.first]) {
+                    if (val_v.first == u) {
+                        val_v.first = -1;
+                        val_v.second = -1;
+                    }
+                }
+            }
             // Set node edges to empty
             std::vector<PairW> node;
             node.push_back(std::make_pair(-1, -1));
             adjList[u] = node;
         }
 
-        std::vector<int> connectedComponents(const char* outpath, bool low_mem) {
-
+        void connectedComponents(const char* outpath, bool low_mem, std::vector<int>& components) {
             std::string outpath_string = outpath;
-
             std::ofstream outf(outpath);
-
             std::vector<bool> visited(adjList.size(), false);
-
-            std::vector<int> components;
-
+            if (!components.empty()) {
+                components.clear();
+            }
+//            std::vector<int> components;
             for (int u=0; u<N; u++) {
-
                 if (visited[u] == false) {
-
                     if (!low_mem) {
                         components.push_back(u);
                     } else {
                         outf.write((char*)&u, sizeof(int32_t));
                     }
                     visited[u] = true;
-
-
                     std::vector<int> queue;
                     // visit direct neighbors
                     if (adjList[u].size() > 0) {
-
                         for (const auto& val: adjList[u]) {
-
                             if ((val.first != -1) && (visited[val.first] == false)) {
                                 queue.push_back(val.first);
                             }
                         }
                     }
-
-
                     while (!queue.empty()) {
                         int v = queue.back();
                         queue.pop_back();
-
                         if (visited[v] == false) {
-//                            components.push_back(v);
-
                             if (!low_mem) {
                                 components.push_back(v);
                             } else {
                                 outf.write((char*)&v, sizeof(int32_t));
                             }
-
                             visited[v] = true;
-
                             for (const auto& val2: adjList[v]) {
-
                                 if ((val2.first != -1) && (visited[val2.first] == false)) {
                                     queue.push_back(val2.first);
                                 }
                             }
                         }
                     }
-
                     // -1 is end of component
                     if (!low_mem) {
                         components.push_back(-1);
@@ -361,15 +278,10 @@ class SimpleGraph {
                         int v = -1;
                         outf.write((char*)&v, sizeof(int32_t));
                     }
-//                    components.push_back(-1);
                 }
             }
-
             outf.close();
-
-            return components;
-
-
+//            return components;
         }
 
         std::size_t showSize() {
@@ -381,12 +293,8 @@ class SimpleGraph {
                 }
             }
             return tot;  // bytes
-
         }
-
-
 };
-
 
 
 typedef std::pair<int, int> lookup_result;
@@ -422,7 +330,6 @@ class Int2IntMap
         }
 
     private:
-//        tsl::robin_map<int, int> map;
         robin_hood::unordered_flat_map<int, int> map;
 };
 
@@ -445,7 +352,6 @@ class IntSet
         }
 
     private:
-//        tsl::robin_set<int> set;
         robin_hood::unordered_set<int> set;
 };
 
@@ -467,14 +373,11 @@ class TwoWayMap
         }
 
         void insert_tuple_key(uint64_t packed_data, int index) {
-//            string_key.insert_or_assign(packed_data, index);
-//            string_key.insert(std::make_pair(packed_data, index));
             string_key[packed_data] = index;
             index_key_map.push_back(packed_data);
         }
 
         int has_tuple_key(uint64_t packed_data) {
-//            tsl::robin_map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
             robin_hood::unordered_flat_map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
             if (got == string_key.end()) {
                 return 0;
@@ -504,7 +407,6 @@ class TwoWayMap
         }
 
     private:
-
         uint64_t last_key = 0;  // Set this on call to has_tuple_key to prevent calculating twice
         int last_index = 0;
         robin_hood::unordered_flat_map<uint64_t, int> string_key;
@@ -529,7 +431,6 @@ class MinimizerTable
 // Key's are read-names (integer), the table value is a set with each item a minimizer (long)
 {
     public:
-
         MinimizerTable() {}
         ~MinimizerTable() {}
 
@@ -549,8 +450,8 @@ class MinimizerTable
 
         set_of_long_t::iterator get_iterator_begin () {
             return itr->second.begin();
-//            return set_itr;
         }
+
         set_of_long_t::iterator get_iterator_end () {
             return itr->second.end();
         }
@@ -569,12 +470,10 @@ class MinimizerTable
             return set_itr;
         }
 
-
     private:
         mm_map_t mm_map;
         mm_map_t::iterator itr;
         set_of_long_t::iterator set_itr;
-
 };
 
 

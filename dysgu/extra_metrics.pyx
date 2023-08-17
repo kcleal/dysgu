@@ -40,7 +40,6 @@ class BadClipCounter:
             self.clip_pos_arr[chrom].write(position.to_bytes(4, byteorder))
 
     def sort_arrays(self):
-
         if not self.low_mem:
             self.clip_pos_arr = [np.array(i, dtype=np.dtype("i")) for i in self.clip_pos_arr]
         else:
@@ -52,7 +51,7 @@ class BadClipCounter:
     def count_near(self, int chrom, int start, int end):
         py_a = self.clip_pos_arr[chrom]
         cdef int len_a = len(py_a)
-        if chrom < 0 or chrom >= len_a or len_a == 0:
+        if chrom < 0 or len_a == 0:
             return 0
         cdef int[:] a = py_a
         if start < 0:
@@ -261,6 +260,7 @@ cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
 
 
 cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_input, int end_input, int length_extend=15, float divergence=0.02):
+    # expand indel using cigar, merges nearby gaps into the SV event
     cdef int pos, end, l, opp, extent_left, extent_right, candidate_type, candidate_len, len_input, i, dist, dist_thresh, middle, last_seen_size
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l = alignment._delegate.core.n_cigar

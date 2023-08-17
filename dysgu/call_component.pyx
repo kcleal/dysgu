@@ -397,7 +397,9 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     if insert_std > 0:
         rand_insert_pos = insert_size - aln_span + int(normal(0, insert_std))
     else:  # single read mode
-        rand_insert_pos = 100
+        v_item.svtype = "BND"
+        clip_s = max(clip_sizes(aln))
+        rand_insert_pos = 100 if not clip_s else clip_s
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
     return v_item
 
@@ -519,11 +521,11 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     if to_assemble or len(spanning_alignments) > 0:
         if er.preciseA:
             as1 = assembler.base_assemble(u_reads, er.posA, 500)
-            if er.svtype != "TRA" or (as1['contig'] and (as1['contig'][0].islower() or as1['contig'][-1].islower())):
+            if as1 and (er.svtype != "TRA" or (as1['contig'] and (as1['contig'][0].islower() or as1['contig'][-1].islower()))):
                 ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
         if er.preciseB:
             as2 = assembler.base_assemble(v_reads, er.posB, 500)
-            if er.svtype != "TRA" or (as2['contig'] and (as2['contig'][0].islower() or as2['contig'][-1].islower())):
+            if as2 and (er.svtype != "TRA" or (as2['contig'] and (as2['contig'][0].islower() or as2['contig'][-1].islower()))):
                 ref_bases += assign_contig_to_break(as2, er, "B", 0)
     er.linked = 0
     er.block_edge = 0
@@ -825,13 +827,16 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         if to_assemble:
             if er.preciseA:
                 as1 = assembler.base_assemble(u_reads, er.posA, 500)
-                ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
+                if as1:
+                    ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
             if er.preciseB:
                 as2 = assembler.base_assemble(v_reads, er.posB, 500)
-                ref_bases += assign_contig_to_break(as2, er, "B", 0)
+                if as2:
+                    ref_bases += assign_contig_to_break(as2, er, "B", 0)
             if not as1 and len(generic_insertions) > 0:
                 as1 = assembler.base_assemble([item.read_a for item in generic_insertions], er.posA, 500)
-                ref_bases += assign_contig_to_break(as1, er, "A", 0)
+                if as1:
+                    ref_bases += assign_contig_to_break(as1, er, "A", 0)
         er.linked = 0
         er.block_edge = 0
         er.ref_bases = ref_bases
@@ -921,8 +926,9 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
     return break_point, cipos95, is_precise
 
 
-def value_closest_to_mean(l):
-    cdef float svlen_m = np.mean(l)
+def value_closest_to_m(l):
+    # cdef float svlen_m = np.mean(l)
+    svlen_m = np.median(l)
     return min(l, key=lambda x:abs(x-svlen_m))
 
 
@@ -1079,10 +1085,10 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                     else:
                         lens.append(i.inferred_sv_len)
             if len(lens) > 0:
-                svlen = value_closest_to_mean(lens)
+                svlen = value_closest_to_m(lens)
                 svlen_precise = 1
             elif len(inferred_lens) > 0:
-                svlen = value_closest_to_mean(inferred_lens)
+                svlen = value_closest_to_m(inferred_lens)
             else:
                 main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB, svlen = \
                     infer_unmapped_insertion_break_point(main_A_break, cipos95A, preciseA, main_B_break, cipos95B, preciseB)
@@ -1100,14 +1106,14 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
                         else:
                             lens.append(i.inferred_sv_len)
                 if len(lens) > 0:
-                    svlen = value_closest_to_mean(lens)
+                    svlen = value_closest_to_m(lens)
                     if main_svlen > 0 and (svlen / main_svlen) > 0.7:
                         svlen_precise = 1
                     else:
                         svlen = main_svlen
                 else:
                     if len(inferred_lens) > 0:
-                        svlen = value_closest_to_mean(inferred_lens)
+                        svlen = value_closest_to_m(inferred_lens)
                     else:
                         svlen = main_svlen
 

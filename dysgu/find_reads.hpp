@@ -107,7 +107,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
                        robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
                        const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
                        sam_hdr_t **samHdr, htsFile **f_out,
-                       std::string& temp_folder, const bool write_all) {
+                       std::string& temp_folder, const bool write_all, long *n_aligned_bases) {
 
     int result;
     bam1_t* aln;
@@ -139,10 +139,11 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     // Process current alignment as it arrives in scope. Add rname to hash if it is an SV read. Add coverage info
     aln = scope.back().second;
     const uint16_t flag = aln->core.flag;
+    const uint32_t* cigar;
 
     // Skip uninteresting reads before putting on queue
     // unmapped, not primary, duplicate
-    if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0 || aln -> core.qual < mapq_thresh ) {
+    if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) {
         // Next item will overwrite this record
         return 0;
     }
@@ -153,18 +154,34 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         if (current_tid != -1 ) {
             const char* rname = sam_hdr_tid2name(*samHdr, current_tid);
             if (rname != NULL) {
-
                 std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
                 cov_track.write_track(&out_name[0]);
             }
         }
-
         int chrom_length = sam_hdr_tid2len(*samHdr, tid);
         if (chrom_length == 0) {
             return 0;
         }
         cov_track.set_cov_array(chrom_length);
         current_tid = tid;
+    }
+
+    if (aln->core.qual < mapq_thresh) {
+        cigar = bam_get_cigar(aln);
+        int index_start = aln->core.pos;
+        for (uint32_t k=0; k < aln->core.n_cigar; k++) {
+            uint32_t op = bam_cigar_op(cigar[k]);
+            uint32_t length = bam_cigar_oplen(cigar[k]);
+            if (op == BAM_CDEL) {
+                index_start += length;
+            } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
+                int index_end = index_start + length;
+                cov_track.add(index_start, index_end);
+                index_start = index_end;
+                *n_aligned_bases += length;
+            }
+        }
+        return 0;
     }
 
     uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
@@ -184,7 +201,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     scope.push_back(std::make_pair(0, bam_init1()));
 
     // add alignment to coverage track, check for indels and soft-clips
-    const uint32_t* cigar = bam_get_cigar(aln);
+    cigar = bam_get_cigar(aln);
     bool sv_read = false;
 
 
@@ -213,6 +230,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
             int index_end = index_start + length;
             cov_track.add(index_start, index_end);
             index_start = index_end;
+            *n_aligned_bases += length;
         }
     }
 
@@ -290,40 +308,6 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     CoverageTrack cov_track;
     cov_track.max_coverage = max_coverage;
 
-    // Add any capture regions from --regions to interval tree
-//    std::string mcs = max_cov_ignore_regions;
-//    std::cerr << mcs << std::endl;
-//    if (mcs != ".,") {
-//
-//        cov_track.region_intervals = true;
-//        std::istringstream input;
-//        input.str(mcs);
-//
-//        std::string segment;
-//        std::string chrom;
-//        int r_start;
-//        int r_end;
-//
-//        while (true) {
-//
-//            std::getline(input, segment, '-');
-//            chrom = segment;
-//            if (chrom.size() == 0) {break;}
-//
-//            segment = "";
-//            std::getline(input, segment, '-');
-//            r_start = std::stoi(segment);
-//            segment = "";
-//
-//            std::getline(input, segment, '-');
-//            r_end = std::stoi(segment);
-//            segment = "";
-//            std::cerr << chrom << " " << r_start << " " << r_end << std::endl;
-//            cov_track.add_interval(chrom, r_start, r_end);
-//        }
-//    }
-
-
     std::string temp_folder = temp_f;
 
     int current_tid = -1;
@@ -331,6 +315,8 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     hts_itr_t *iter = NULL;
 
     std::string region_string = region;
+
+    long n_aligned_bases = 0;
 
     // iterate through regions
     if (region_string != ".,") {
@@ -361,7 +347,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                            max_scope, max_write_queue, clip_length,
                            read_names, cov_track, total,
                            n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                           &samHdr, &f_out, temp_folder, write_all);
+                           &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases);
                 if (success < 0) {
                     std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                     break;
@@ -376,7 +362,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                        max_scope, max_write_queue, clip_length,
                        read_names, cov_track, total,
                        n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                       &samHdr, &f_out, temp_folder, write_all);
+                       &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases);
             if (success < 0) {
                 std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                 break;
@@ -412,6 +398,11 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
             cov_track.write_track(&out_name[0]);
         }
     }
+
+    std::ofstream bases_file;
+    bases_file.open(temp_folder + "/n_aligned_bases.txt");
+    bases_file << n_aligned_bases << std::endl;
+    bases_file.close();
 
     result = hts_close(fp_in);
     if (result != 0) { return -1; };
