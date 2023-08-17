@@ -33,7 +33,6 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
             if not intersecter(regions, e.chrB, e.posB, e.posB + 1):
                 c2 = bad_clip_counter.count_near(bam.gettid(e.chrB), e.posB - 500, e.posB + 500)
             count = c1 + c2
-
         e.bad_clip_count = count
         e.ras = 0
         e.fas = 0
@@ -270,7 +269,18 @@ class CoverageAnalyser(object):
         return events
 
 
-def ref_repetitiveness(events, mode, ref_genome):
+def filter_auto_min_support(events):
+    new = []
+    support_fraction = 0.05
+    for e in events:
+        cov = e.raw_reads_10kb
+        min_support = round(1.5 + support_fraction * cov)
+        if e.su >= min_support:
+            new.append(e)
+    return new
+
+
+def ref_repetitiveness(events, ref_genome):
     for e in events:
         e.ref_rep = 0
         if e.svlen < 150 and e.svtype == "DEL":
@@ -294,6 +304,9 @@ def median(arr, start, end):
     if e > len(arr):
         e = len(arr)
     if e > s:
+        # m = np.mean(arr[s:e])
+        # if m == m:
+        #     return m
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
             m = np.median(arr[s:e])
@@ -479,8 +492,6 @@ def del_like(r):
         ref_supp = r.outer_cn
     else:
         return 0, 0
-        # logging.warning("No genotype for", r.chrA, r.posA, "pe", r.pe, "np", r.NP, "su", r.su, "sr", r.supp, "bnd", r.bnd, "rms", r.remap_score, "icn", r.inner_cn, "ocn", r.outer_cn,
-        #       r.svtype)
 
     return round(ref_supp), round(variant_supp)
 
@@ -536,8 +547,6 @@ def ins_like(r):
         ref_support = r.inner_cn - r.su
     else:
         return 0, 0
-        # logging.warning("No genotype for", r.chrA, r.posA, "pe", r.pe, "np", r.NP, "su", r.su, "sr", r.supp, "bnd", r.bnd, "rms", r.remap_score, "icn", r.inner_cn, "ocn", r.outer_cn,
-        #       r.svtype)
 
     return round(ref_support), round(variant_support)
 

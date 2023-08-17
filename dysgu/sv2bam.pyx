@@ -6,10 +6,12 @@ import time
 import datetime
 from collections import defaultdict
 import os
+import sys
 import itertools
 import logging
 from libc.stdint cimport uint32_t
 
+import pkg_resources
 from dysgu.map_set_utils import echo
 from dysgu.coverage import auto_max_cov
 from dysgu.io_funcs import bed_iter
@@ -133,7 +135,7 @@ def assert_indexed_input(bam, fasta):
     return bam
 
 
-cdef extern from "find_reads.h":
+cdef extern from "find_reads.hpp":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region,
                                    char* max_cov_ignore, char *fasta, bint write_all, char* out_write_mode_b)
@@ -159,6 +161,10 @@ def process(args):
     else:
         bname = "-"
         out_name = args["output"]
+
+    with open(os.path.join(temp_dir, "fetch_command.txt"), "w") as info:
+        info.write(f"# dysgu v{pkg_resources.require('dysgu')[0].version}\n")
+        info.write(" ".join(sys.argv))
 
     # update max cov automatically if applicable
     args["max_cov"] = auto_max_cov(args["max_cov"], args["bam"])

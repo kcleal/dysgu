@@ -67,7 +67,7 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         bint empty()
 
 
-cdef extern from "find_reads.h" nogil:
+cdef extern from "find_reads.hpp" nogil:
     cdef cppclass CoverageTrack:
         CoverageTrack() nogil
 
@@ -79,13 +79,13 @@ cdef extern from "find_reads.h" nogil:
         void set_max_cov(int)
 
 
-cdef extern from "wrap_map_set2.h":
+cdef extern from "graph_objects.hpp":
     ctypedef struct Interval:
         int low
         int high
 
 
-cdef extern from "wrap_map_set2.h":
+cdef extern from "graph_objects.hpp":
     cdef cppclass BasicIntervalTree:
         BasicIntervalTree()
         void add(int, int, int)
@@ -107,7 +107,7 @@ cdef class Py_BasicIntervalTree:
     cpdef int countOverlappingIntervals(self, int pos, int pos2)
 
 
-cdef extern from "wrap_map_set2.h" nogil:
+cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass DiGraph:
         DiGraph() nogil
 
@@ -117,8 +117,8 @@ cdef extern from "wrap_map_set2.h" nogil:
         int weight(int, int)
         void updateEdge(int, int, int)
         int numberOfNodes() nogil
-        cpp_vector[cpp_pair[int, int]] forInEdgesOf(int) nogil
-        cpp_vector[int] neighbors(int) nogil
+        void forInEdgesOf(int, cpp_vector[cpp_pair[int, int]]&) nogil
+        void neighbors(int, cpp_vector[int]&) nogil
         float node_path_quality(int, int, int) nogil
 
 
@@ -131,12 +131,12 @@ cdef class Py_DiGraph:
     cdef void addEdge(self, int u, int v, int w)
     cdef void updateEdge(self, int u, int v, int w)
     cdef int numberOfNodes(self) nogil
-    cdef cpp_vector[cpp_pair[int, int]] forInEdgesOf(self, int u) nogil
-    cdef cpp_vector[int] neighbors(self, int u) nogil
+    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) nogil
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) nogil
     cdef float node_path_quality(self, int u, int v, int w) nogil
 
 
-cdef extern from "wrap_map_set2.h" nogil:
+cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass MinimizerTable:
         MinimizerTable() nogil
 
@@ -152,7 +152,7 @@ cdef extern from "wrap_map_set2.h" nogil:
         unordered_set[long].iterator get_iterator_end()
 
 
-cdef extern from "wrap_map_set2.h":
+cdef extern from "graph_objects.hpp":
     cdef cppclass SimpleGraph:
         SimpleGraph()
 
@@ -161,9 +161,9 @@ cdef extern from "wrap_map_set2.h":
         void addEdge(int, int, int)
         int edgeCount()
         int weight(int, int)
-        cpp_vector[int] neighbors(int)
+        void neighbors(int, cpp_vector[int]&)
         void removeNode(int)
-        cpp_vector[int] connectedComponents(char*, bint)
+        void connectedComponents(char*, bint, cpp_vector[int]&)
         int showSize()
 
 
@@ -176,13 +176,13 @@ cdef class Py_SimpleGraph:
     cpdef void addEdge(self, int u, int v, int w)
     cpdef int edgeCount(self)
     cpdef int weight(self, int u, int v)
-    cpdef cpp_vector[int] neighbors(self, int u)
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh)
     cpdef void removeNode(self, int u)
-    cpdef cpp_vector[int] connectedComponents(self, char* pth, bint low_mem)
+    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& neigh)
     cpdef int showSize(self)
 
 
-cdef extern from "wrap_map_set2.h" nogil:
+cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass Int2IntMap:
         Int2IntMap() nogil
         void insert(int, int) nogil
@@ -205,7 +205,7 @@ cdef class Py_Int2IntMap:
     cdef int size(self) nogil
 
 
-cdef extern from "wrap_map_set2.h" nogil:
+cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass IntSet:
         IntSet() nogil
         void insert(int) nogil

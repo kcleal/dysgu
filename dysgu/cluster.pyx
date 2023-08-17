@@ -12,7 +12,7 @@ import pysam
 from sys import stdout
 import pandas as pd
 from dysgu import coverage, graph, call_component, assembler, io_funcs, re_map, post_call
-from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
+from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult, Py_SimpleGraph
 from dysgu.map_set_utils import to_dict, merge_intervals, echo
 from dysgu import sites_utils
 from dysgu.io_funcs import intersecter
@@ -104,7 +104,7 @@ cdef span_position_distance(ei, ej):
 
 
 cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_precise, bint j_a_precise,
-                     bint j_b_precise, bint intra=True):
+                     bint j_b_precise, int min_svlen, bint intra=True):
     cdef int temp, dist_a, dist_b, precise_thresh, mprecise_thresh, same_thresh
     cdef bint dist_a_same, dist_a_close, dist_b_same, dist_b_close
     if intra:
@@ -122,7 +122,7 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
             j_a_precise = j_b_precise
     dist_a = abs(i_a - j_a)
     dist_b = abs(i_b - j_b)
-    precise_thresh = 250
+    precise_thresh = min(max(350, min_svlen), 1500)
     imprecise_thresh = 650
     same_thresh = 5
     dist_a_same = dist_a < same_thresh
@@ -141,7 +141,7 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
 
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False):
-    if len(potential) < 3:
+    if len(potential) < 50:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
     else:
         event_iter = compare_subset(potential, max_dist)  # Use iitree, generate overlap tree and perform intersections
@@ -158,7 +158,10 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
         seen.add((i_id, j_id))
         fail = False
-        if ei.svtype != ej.svtype:
+        if ei.svtype == "INS" or ei.svtype == "DUP":
+            if not (ej.svtype == "INS" or ej.svtype == "DUP"):
+                continue
+        elif ei.svtype != ej.svtype:
             continue
 
         # Check if events point to the same loci
@@ -167,14 +170,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         loci_same = False
         intra = ei.chrA == ei.chrB == ej.chrA == ej.chrB
         if intra:
-            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB)
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB, min(ei.svlen, ej.svlen))
         elif ei.chrA == ej.chrA and ei.chrB == ej.chrB:  # Try chrA matches chrA
-            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB, intra=False)
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB, ej.preciseA, ej.preciseB, min(ei.svlen, ej.svlen), intra=False)
         elif ei.chrA == ej.chrB and ei.chrB == ej.chrA:
-            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, intra=False)
+            loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posB, ej.posA, ei.preciseA, ei.preciseB, ej.preciseB, ej.preciseA, min(ei.svlen, ej.svlen), intra=False)
         if not loci_similar:
             continue
-
         # Force merging of translocations that have similar loci
         if not intra:
             G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=0)
@@ -259,7 +261,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not any_contigs_to_check:
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
-                    G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)
         else:
             v = None
             if ci_alt and cj_alt:
@@ -279,7 +281,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             # also long-reads will normally have remap_score == 0
             if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
-                    G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=spd)
+                    G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
@@ -287,19 +289,19 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             else:
                 if ci_alt and cj:
                     if assembler.check_contig_match(ci_alt, cj, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
+                        G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if ci_alt and cj2:
                     if assembler.check_contig_match(ci_alt, cj2, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
+                        G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if cj_alt and ci:
                     if assembler.check_contig_match(cj_alt, ci, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
+                        G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if cj_alt and ci2:
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
-                        G.add_edge(i_id, j_id, loci_same=True)  #, w=spd)
+                        G.add_edge(i_id, j_id, loci_same=True)
                         continue
     return G, disjoint_nodes
 
@@ -673,6 +675,32 @@ def process_job(msg_queue, args):
     completed_file.close()
 
 
+def postcall_job(preliminaries, aux_data):
+    mode, ref_path, no_gt, insert_stdev, paired_end, drop_gaps = aux_data
+    ref_genome = pysam.FastaFile(ref_path)
+    preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, drop_gaps)
+    preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
+    preliminaries = post_call.strand_binom_t(preliminaries)
+    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    preliminaries = post_call.compressability(preliminaries)
+    preliminaries = post_call.get_gt_metric2(preliminaries, mode, no_gt)
+    preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
+    return preliminaries
+
+
+# https://rvprasad.medium.com/data-and-chunk-sizes-matter-when-using-multiprocessing-pool-map-in-python-5023c96875ef
+aux_data = None
+
+def initializer(init_data):
+    global aux_data
+    aux_data = init_data
+
+
+def with_initializer_worker_wrapper(varying_data):
+    return postcall_job(varying_data, aux_data)
+
+
 def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     procs = args['procs']
     low_mem = args['low_mem']
@@ -692,6 +720,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
         cov_track_path = tdir
     else:
         cov_track_path = None
+
+    if os.path.exists(os.path.join(tdir, "n_aligned_bases.txt")):
+        n_aligned_bases_file = int(open(os.path.join(tdir, "n_aligned_bases.txt"), "r").readline().strip())
+        assert n_aligned_bases_file > 0
+        find_n_aligned_bases = False
+    else:
+        find_n_aligned_bases = True
+
     genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], procs,
                                             args["buffer_size"], regions_only,
                                             kind == "stdin",
@@ -728,22 +764,23 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
         if args["mode"] == "pacbio":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 500
+                args["merge_dist"] = 700
         elif args["mode"] == "nanopore":
             max_dist, max_clust_dist = 100, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 500
+                args["merge_dist"] = 700
 
     # set upper bound on single-partition size
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
     event_id = 0
     block_edge_events = []
-    min_support = args["min_support"]
-    logging.info("Minimum support {}".format(min_support))
-    if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
-        lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
-    else:
-        lower_bound_support = min_support
+    # min_support = int(args["min_support"])
+    # args["min_support"] = min_support
+    # logging.info("Minimum support {}".format(min_support))
+    # if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
+    #     lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
+    # else:
+    #     lower_bound_support = min_support
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
@@ -752,7 +789,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     read_buffer = genome_scanner.read_buffer
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
                                         default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
-    G, node_to_name, bad_clip_counter, sites_adder = graph.construct_graph(genome_scanner,
+
+    cdef Py_SimpleGraph G
+    G, node_to_name, bad_clip_counter, sites_adder, n_aligned_bases = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
@@ -775,14 +814,40 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                                             sites=sites_info,
                                             trust_ins_len=args["trust_ins_len"] == "True",
                                             low_mem=low_mem,
-                                            temp_dir=tdir)
+                                            temp_dir=tdir,
+                                            find_n_aligned_bases=find_n_aligned_bases)
     sites_index = None
     if sites_adder:
         sites_index = sites_adder.sites_index
     logging.info("Graph constructed")
+
+    auto_support = False
+    if args["min_support"] != "auto":
+        args["min_support"] = int(args["min_support"])
+        min_support = args["min_support"]
+        logging.info(f"Minimum support {args['min_support']}")
+    else:
+        auto_support = True
+        genome_length = sum(infile.lengths)
+        if find_n_aligned_bases:
+            bases = n_aligned_bases
+        else:
+            bases = n_aligned_bases_file
+        assert bases > 0
+        cov_estimate = bases / genome_length
+        min_support = round(1.5 + 0.05 * cov_estimate)
+        args["min_support"] = min_support
+        logging.info(f"Inferred minimum support {min_support}")
+
+    if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
+        lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
+    else:
+        lower_bound_support = min_support
+
     component_path = f"{tdir}/components.bin"
     cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
-    cdef vector[int] cmp = G.connectedComponents(cmp_file, low_mem)
+    cdef vector[int] cmp
+    G.connectedComponents(cmp_file, low_mem, cmp)
     cdef int length_components = cmp.size()
     if low_mem:
         cmp_mmap = np.memmap(component_path, dtype=np.int32, mode='r')
@@ -824,7 +889,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     else:
         completed_file = None
     cdef int last_i = 0
-    cdef int ci, cmp_idx, item_index  # cmp is a flat array of indexes. item == -1 signifies end of component
+    cdef int start_i, end_i, ci, cmp_idx, item_index, item  # cmp is a flat array of indexes. item == -1 signifies end of component
     for item_idx in range(length_components):
         if low_mem:
             item = cmp_mmap[item_idx]
@@ -845,8 +910,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
                 ci += 1
             if len(component) > 100_000:
                 reduced = graph.break_large_component(G, component, min_support)
-                for cmp in reduced:
-                    res = graph.proc_component(node_to_name, cmp, read_buffer, infile, G, lower_bound_support,
+                for cmp2 in reduced:
+                    res = graph.proc_component(node_to_name, cmp2, read_buffer, infile, G, lower_bound_support,
                                                procs, paired_end, sites_index)
                     if not res:
                         continue
@@ -956,7 +1021,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
-                                                    min_support=args["min_support"])
+                                                    min_support=min_support)
         logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
     # Merge across calls
     if args["merge_within"] == "True":
@@ -967,31 +1032,78 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
     before = len(merged)
-    if not args["keep_small"]:
-        merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
-        logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
+
+    # if not args["keep_small"]:
+    #     merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
+    #     logging.info("Number of candidate SVs dropped with sv-len < min-size or support < min support: {}".format(before - len(merged)))
+    # else:
+    #     merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
+    #     logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
+    #
+    # cdef EventResult_t d
+    # for d in merged:
+    #     d.type = args["pl"]
+    # merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
+    # coverage_analyser = post_call.CoverageAnalyser(tdir)
+    #
+    # preliminaries = coverage_analyser.process_events(merged)
+    # preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
+    # preliminaries = sample_level_density(preliminaries, regions)
+    # preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
+    # preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
+    # preliminaries = post_call.strand_binom_t(preliminaries)
+    # preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    # preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    # preliminaries = post_call.compressability(preliminaries)
+    # preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+    # preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
+    # preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
+
+
+
+    if auto_support:
+        if not args["keep_small"]:
+            merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) or event.site_info]
     else:
-        merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
-        logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
+        if not args["keep_small"]:
+            merged = [event for event in merged if (event.svlen >= args["min_size"] or event.chrA != event.chrB) and (event.su >= args["min_support"] or event.site_info)]
+        else:
+            merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
 
     cdef EventResult_t d
     for d in merged:
         d.type = args["pl"]
-    merged = re_map.drop_svs_near_reference_gaps(merged, paired_end, ref_genome, args["drop_gaps"] == "True")
-    coverage_analyser = post_call.CoverageAnalyser(tdir)
 
+    coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
-    preliminaries = sample_level_density(preliminaries, regions)
+
+    if auto_support:
+        preliminaries = post_call.filter_auto_min_support(preliminaries)
+        logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
+
     preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
-    preliminaries = post_call.ref_repetitiveness(preliminaries, args["mode"], ref_genome)
-    preliminaries = post_call.strand_binom_t(preliminaries)
-    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    preliminaries = post_call.compressability(preliminaries)
-    preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+
+    if False:
+        aux_data = args["mode"], args["reference"], args["no_gt"], insert_stdev, paired_end, args["drop_gaps"] == "True"
+        pool = multiprocessing.Pool(procs, initializer, (aux_data,))
+        n = int(len(preliminaries) / procs)
+        preliminaries = [preliminaries[i:i + n] for i in range(0, len(preliminaries), n)]
+        preliminaries = pool.map(with_initializer_worker_wrapper, preliminaries)
+        preliminaries = [item for m in preliminaries for item in m]
+
+    else:
+        preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, args["drop_gaps"] == "True")
+        preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
+        preliminaries = post_call.strand_binom_t(preliminaries)
+        preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+        preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+        preliminaries = post_call.compressability(preliminaries)
+        preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+        preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
+
+    preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
-    preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
 
     n_in_grp = Counter([d.grp_id for d in preliminaries])
     for d in preliminaries:

@@ -38,11 +38,10 @@ ctypedef map_set_utils.Py_IntSet Py_IntSet
 ctypedef EventResult EventResult_t
 
 
-cdef extern from "wrap_map_set2.h" nogil:
+cdef extern from "graph_objects.hpp" nogil:
 
     cdef cppclass TwoWayMap:
         TwoWayMap() nogil
-
         uint64_t key_2_64(char, uint64_t, uint64_t, uint64_t) nogil
         void insert_tuple_key(uint64_t, int) nogil
         int has_tuple_key(uint64_t) nogil
@@ -290,7 +289,7 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
             if new_nodes.size() > 0:
                 new_nodes.clear()
 
-            neighbors = G.neighbors(w)
+            G.neighbors(w, neighbors)
             for n in neighbors:
                 if explored.find(n) == explored.end():
 
@@ -335,16 +334,12 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
         return path
 
     with nogil:
-
         for i in range(0, len_nodes):
-
             u = nodes_to_visit[i]
             node_weight = n_weights[u]
 
             # Find best incoming node scores, best inEdge, and also best predecessor node
-
-            neighborList = G.forInEdgesOf(u)
-
+            G.forInEdgesOf(u, neighborList)
             if neighborList.size() == 0:
                 node_scores[u] = node_weight
                 if node_weight >= best_score:
@@ -377,7 +372,6 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
     if best_node == -1:
         return path
     # Start traceback from best scoring node, use locally best edge to trace path back
-
     u = best_node
     while True:
         path.push_front(u)

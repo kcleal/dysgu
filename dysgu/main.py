@@ -26,7 +26,7 @@ defaults = {
             "svs_out": "-",
             "max_cov": 200,
             "buffer_size": 0,
-            "min_support": 3,
+            "min_support": "3",
             "min_size": 30,
             "model": None,
             "max_tlen": 1000,
@@ -44,8 +44,8 @@ defaults = {
             }
 
 
-presets = {"nanopore": {"mq": 20,
-                        "min_support": 3,
+presets = {"nanopore": {"mq": 1,
+                        "min_support": "auto",
                         "dist_norm": 900,
                         "max_cov": 150,
                         "pl": "nanopore",
@@ -53,8 +53,8 @@ presets = {"nanopore": {"mq": 20,
                         "clip_length": -1,
                         "trust_ins_len": "False"
                         },
-           "pacbio": {"mq": 20,
-                      "min_support": 3,
+           "pacbio": {"mq": 1,
+                      "min_support": "auto",
                       "dist_norm": 600,
                       "max_cov": 150,
                       "pl": "pacbio",
@@ -168,8 +168,8 @@ def cli():
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 3 --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 3 --max-cov 150 --dist-norm 900 --trust-ins-len False",
+                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
+                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -180,7 +180,7 @@ def cli():
               type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
-@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
+@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=str, callback=add_option_set)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help=f"Minimum map quality < threshold are discarded  [default: {defaults['mq']}]",
@@ -207,7 +207,7 @@ def cli():
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 500 bp for single-end reads",
+                                   "reads, or 700 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
@@ -324,9 +324,10 @@ def get_reads(ctx, **kwargs):
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options"
-                             " pacbio/nanopore: --mq 20 --paired False --min-support 3 --max-cov 150", default="pe",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
+                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
+                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
+              default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
@@ -336,7 +337,7 @@ def get_reads(ctx, **kwargs):
               type=str, callback=add_option_set)
 @click.option('--max-tlen', help="Maximum template length to consider when calculating paired-end template size",
               default=defaults["max_tlen"], type=int, show_default=True)
-@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=int, callback=add_option_set)
+@click.option('--min-support', help=f"Minimum number of reads per SV  [default: {defaults['min_support']}]", type=str, callback=add_option_set)
 @click.option('--min-size', help="Minimum size of SV to report",
               default=defaults["min_size"], type=int, show_default=True)
 @click.option('--mq', help=f"Minimum map quality < threshold are discarded  [default: {defaults['mq']}]",
@@ -364,7 +365,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 500 bp for single-end reads",
+                                   "reads, or 700 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
