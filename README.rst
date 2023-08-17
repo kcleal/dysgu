@@ -202,7 +202,6 @@ see the dysgu_api_demon.ipynb
 
 Specifying regions of interest / excluding regions
 --------------------------------------------------
-
 Regions of the genome can be skipped from analysis by providing a .bed file using the `--exclude` option. This option
 takes precedence over the options detailed below, and acts as a hard filter, removing regions of the genome from analysis.
 
