@@ -762,7 +762,7 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
         if bnd_site_node != bnd_site_node2 and bnd_site_node2 >= 0 and not G.hasEdge(node_name, bnd_site_node2):
             G.addEdge(node_name, bnd_site_node2, 0)
     # Debug:
-    # if r.qname == "6211787c-d032-4c6a-8f8b-020f616f2055":
+    # if r.qname == "M03762:232:000000000-L65J4:1:2111:17729:15161":
     #     echo("---", r.qname, read_enum, node_name, (event_pos, pos2), length_from_cigar, list(other_nodes))
     # look = {'a4d38568-fd80-4785-8fa5-84ed132b445c', '2313a985-385c-4c84-b02c-dddfc627940b', '0031840a-bd2d-475d-9a04-528f71c7b512'}
     # if r.qname in look:
@@ -1449,6 +1449,11 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             else:
                 return
     # Debug:
+    # if 157835 in n2n:
+    #     echo("parts", partitions)
+    #     echo("s_between", support_between)
+    #     echo("s_within", support_within)
+
     # echo("parts", partitions)
     # echo("s_between", support_between)
     # echo("s_within", support_within)

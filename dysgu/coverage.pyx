@@ -159,7 +159,7 @@ cdef class GenomeScanner:
                 if self.bam_iter is not None:
                     f_iter = self.bam_iter
                 else:
-                    f_iter = self.input_bam
+                    f_iter = self.input_bam.fetch(until_eof=True)
                 for aln in f_iter:
                     # if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
                     #     continue

@@ -198,13 +198,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         ci2 = ei.contig2
         ci_alt = ei.variant_seq
         if isinstance(ci_alt, str):
-            if len(ci_alt) > 0 and ci_alt[0] in "<.":
+            if len(ci_alt) == 1 or (len(ci_alt) > 0 and ci_alt[0] in "<."):
                 ci_alt = ""
         cj = ej.contig
         cj2 = ej.contig2
         cj_alt = ej.variant_seq
         if isinstance(cj_alt, str):
-            if len(cj_alt) > 0 and cj_alt[0] in "<.":
+            if len(cj_alt) == 1 or (len(cj_alt) > 0 and cj_alt[0] in "<."):
                 cj_alt = ""
 
         any_contigs_to_check = any((ci, ci2, ci_alt)) and any((cj, cj2, cj_alt))
@@ -675,30 +675,30 @@ def process_job(msg_queue, args):
     completed_file.close()
 
 
-def postcall_job(preliminaries, aux_data):
-    mode, ref_path, no_gt, insert_stdev, paired_end, drop_gaps = aux_data
-    ref_genome = pysam.FastaFile(ref_path)
-    preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, drop_gaps)
-    preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
-    preliminaries = post_call.strand_binom_t(preliminaries)
-    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-    preliminaries = post_call.compressability(preliminaries)
-    preliminaries = post_call.get_gt_metric2(preliminaries, mode, no_gt)
-    preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
-    return preliminaries
+# def postcall_job(preliminaries, aux_data):
+#     mode, ref_path, no_gt, insert_stdev, paired_end, drop_gaps = aux_data
+#     ref_genome = pysam.FastaFile(ref_path)
+#     preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, drop_gaps)
+#     preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
+#     preliminaries = post_call.strand_binom_t(preliminaries)
+#     preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+#     preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+#     preliminaries = post_call.compressability(preliminaries)
+#     preliminaries = post_call.get_gt_metric2(preliminaries, mode, no_gt)
+#     preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
+#     return preliminaries
 
 
 # https://rvprasad.medium.com/data-and-chunk-sizes-matter-when-using-multiprocessing-pool-map-in-python-5023c96875ef
-aux_data = None
+# aux_data = None
+#
+# def initializer(init_data):
+#     global aux_data
+#     aux_data = init_data
 
-def initializer(init_data):
-    global aux_data
-    aux_data = init_data
 
-
-def with_initializer_worker_wrapper(varying_data):
-    return postcall_job(varying_data, aux_data)
+# def with_initializer_worker_wrapper(varying_data):
+#     return postcall_job(varying_data, aux_data)
 
 
 def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
@@ -1084,23 +1084,24 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
 
     preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
 
-    if False:
-        aux_data = args["mode"], args["reference"], args["no_gt"], insert_stdev, paired_end, args["drop_gaps"] == "True"
-        pool = multiprocessing.Pool(procs, initializer, (aux_data,))
-        n = int(len(preliminaries) / procs)
-        preliminaries = [preliminaries[i:i + n] for i in range(0, len(preliminaries), n)]
-        preliminaries = pool.map(with_initializer_worker_wrapper, preliminaries)
-        preliminaries = [item for m in preliminaries for item in m]
+    # if False:
+    #     aux_data = args["mode"], args["reference"], args["no_gt"], insert_stdev, paired_end, args["drop_gaps"] == "True"
+    #     pool = multiprocessing.Pool(procs, initializer, (aux_data,))
+    #     n = int(len(preliminaries) / procs)
+    #     preliminaries = [preliminaries[i:i + n] for i in range(0, len(preliminaries), n)]
+    #     preliminaries = pool.map(with_initializer_worker_wrapper, preliminaries)
+    #     preliminaries = [item for m in preliminaries for item in m]
+    #
+    # else:
 
-    else:
-        preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, args["drop_gaps"] == "True")
-        preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
-        preliminaries = post_call.strand_binom_t(preliminaries)
-        preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
-        preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
-        preliminaries = post_call.compressability(preliminaries)
-        preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
-        preliminaries = post_call.get_ref_base(preliminaries, ref_genome)
+    preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, args["drop_gaps"] == "True")
+    preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
+    preliminaries = post_call.strand_binom_t(preliminaries)
+    preliminaries = assembler.contig_info(preliminaries)  # GC info, repetitiveness
+    preliminaries = find_repeat_expansions(preliminaries, insert_stdev)
+    preliminaries = post_call.compressability(preliminaries)
+    preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+    preliminaries = post_call.get_ref_base(preliminaries, ref_genome, args["symbolic_sv_size"])
 
     preliminaries = sample_level_density(preliminaries, regions)
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)

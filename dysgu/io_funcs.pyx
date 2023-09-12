@@ -264,7 +264,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, small_outpu
         fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     if "variant_seq" in r and isinstance(r["variant_seq"], str):
-        if r['svtype'] == "INS":
+        if r['svtype'] == "INS" or r.variant_seq:
             alt_field = r.variant_seq.upper()
         else:
             alt_field = f"<{r['svtype']}>"
