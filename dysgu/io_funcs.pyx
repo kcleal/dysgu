@@ -6,7 +6,7 @@ cimport numpy as np
 import logging
 from map_set_utils import merge_intervals, echo
 from collections import defaultdict
-import pkg_resources
+from importlib.metadata import version
 import sortedcontainers
 import pandas as pd
 import os
@@ -144,7 +144,7 @@ cpdef list col_names(small_output):
             ]
 
 
-def make_main_record(r, version, index, format_f, df_rows, add_kind, small_output):
+def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small_output):
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
     if len(format_f) > 1:
@@ -281,7 +281,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, small_outpu
            alt_field,
            ".", "." if "filter" not in r else r['filter'],
            # INFO line
-           ";".join([f"SVMETHOD=DYSGUv{version}",
+           ";".join([f"SVMETHOD=DYSGUv{dysgu_version}",
                    f"SVTYPE={r['svtype']}",
                    f"END={r['posB']}" if r['chrA'] == r['chrB'] else f"END={r['posA'] + 1}",
                    f"CHR2={r['chrB']}" + chr2_pos,
@@ -341,7 +341,7 @@ def gen_format_fields(r, df, names, n_fields, small_output):
             row = cols[name]
             format_fields[name] = get_fmt(row, small_output)
         else:
-            format_fields[name] = [0] * n_fields
+            format_fields[name] = ['0/0'] + [0] * (n_fields - 1)
     return format_fields, cols
 
 
@@ -451,8 +451,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
                       contig_names=contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
-        logging.info("Input samples: {}".format(str(list(names))))
-    version = pkg_resources.require("dysgu")[0].version
+        logging.info("Samples: {}".format(str(list(names))))
+    dysgu_version = version("dysgu")
     seen_idx = set([])
     cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp', "NMbase", "n_gaps"]
     for col in cnames:
@@ -489,7 +489,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
         if "partners" in r and r["partners"] is not None and r["partners"] != ".":
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, small_output_f)
+        r_main = make_main_record(r, dysgu_version, count, format_f, df_rows, add_kind, small_output_f)
         recs.append(r_main)
         count += 1
 

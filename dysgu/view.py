@@ -1,3 +1,4 @@
+import glob
 import os
 import sys
 import pandas as pd
@@ -8,26 +9,31 @@ import datetime
 from collections import defaultdict
 from dysgu import io_funcs, cluster
 from dysgu.map_set_utils import echo, merge_intervals
-import subprocess
-import io
+import multiprocessing
 import gzip
 import pysam
 import numpy as np
-from sys import stdin, stdout
+from sys import stdout
+from heapq import heappop, heappush
+import resource
+from copy import deepcopy
+import re
 
 
-def open_outfile(args, names_dict):
+def open_outfile(args, names_list, log_messages=True):
     if args["separate"] == "True":
         outfiles = {}
-        for item, name in names_dict.items():
+        for name in names_list:
             outname = f"{name}.{args['post_fix']}.csv"
             outfiles[name] = open(outname, "w")
         return outfiles
     if args["svs_out"] == "-" or args["svs_out"] is None:
-        logging.info("SVs output to stdout")
+        if log_messages:
+            logging.info("SVs output to stdout")
         outfile = stdout
     else:
-        logging.info("SVs output to {}".format(args["svs_out"]))
+        if log_messages:
+            logging.info("SVs output to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
     return outfile
 
@@ -61,8 +67,9 @@ def mung_df(df, args):
     return df
 
 
-def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, aggressive=False):
-    logging.info("Merge distance: {} bp".format(merge_dist))
+def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, aggressive=False, log_messages=True):
+    if log_messages:
+        logging.info("Merge distance: {} bp".format(merge_dist))
     df.reset_index(inplace=True)
     df["event_id"] = df.index
     df["contig"] = df["contigA"]
@@ -201,7 +208,8 @@ def vcf_to_df(path):
         path_h = path
     df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None)
     if len(df.columns) > 10:
-        raise ValueError(f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}")
+        msg = f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}"
+        raise ValueError(msg)
     parsed = pd.DataFrame()
     parsed["chrA"] = df[0]
     parsed["posA"] = df[1]
@@ -304,19 +312,28 @@ def vcf_to_df(path):
                }
 
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
+    for value_name, value_type in col_map.values():
+        if value_name != "posB_tra" and value_name not in df:
+            if value_type == np.int64 or value_type == float:
+                df[value_name] = [0] * len(df)
+            else:
+                df[value_name] = [''] * len(df)
+
     df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
     for k, dtype in col_map.values():
         if k in df:
             if df[k].dtype != dtype:
                 if dtype == str:
-                    df[k] = df[k].fillna("")
+                    if k == "GT":
+                        df[k] = ["0/0" if not i else i for i in list(df[k])]
+                    else:
+                        df[k] = df[k].fillna("")
                 else:
                     df[k] = df[k].fillna(0)
                 try:
                     df[k] = df[k].astype(dtype)
                 except ValueError or OverflowError:
-                    echo(list(df[k]))
-                    raise ValueError("Problem for feature {}, could not intepret as {}".format(k, dtype))
+                    raise ValueError("Problem for feature {}, could not interpret as {}".format(k, dtype))
     if "contigA" not in df:
         df["contigA"] = [""] * len(df)
     if "contigB" not in df:
@@ -329,187 +346,302 @@ def vcf_to_df(path):
     return df, header, n_fields, "\n" + contig_names.strip() if contig_names else contig_names
 
 
-def call_pons(samps, df, args):
-    pad = 500
-    intervals = []
-    for chrA, posA, chrB, posB in zip(df.chrA, df.posA, df.chrB, df.posB):
-        r1 = chrA, 0 if posA - pad < 0 else posA - pad, posA + pad
-        r2 = chrB, 0 if posB - pad < 0 else posB - pad, posB + pad
-        intervals.append(r1)
-        intervals.append(r2)
-
-    merged_intervals = merge_intervals(intervals)
-
-    wd = args["wd"]
-    with open(f"{wd}/pon.search.bed", "w") as b:
-        for c, s, e in merged_intervals:
-            b.write(f"{c}\t{s}\t{e}\n")
-
-    ref = args["ref"]
-    pon_dfs = []
-    for af, read_type in samps:  # todo parallelize this
-        result = subprocess.run(
-            f"dysgu fetch --mq 0 --search {wd}/pon.search.bed --min-size 25 -x -o {wd}/pon.dysgu_reads.bam {wd} {af}",
-            shell=True, stdout=subprocess.PIPE)
-        if result.returncode != 0:
-            raise RuntimeError(f"dysgu run failed on {af}")
-        result = subprocess.run(
-            f"dysgu call --mq 0 --ibam {af} -f csv --min-support 1 -x --mode {read_type} {ref} {wd} {wd}/pon.dysgu_reads.bam",
-            shell=True, stdout=subprocess.PIPE)
-        if result.returncode != 0:
-            raise RuntimeError("dysgu run failed on pon")
-        output = io.StringIO()
-        output.write(result.stdout.decode("utf-8"))
-        output.seek(0)
-        df_p = pd.read_csv(output, sep=",", index_col=None)
-        df_p["sample"] = ["PON-dysgu"] * len(df_p)
-        df_p["table_name"] = ["PON-dysgu"] * len(df_p)
-        pon_dfs.append(df_p)
-
-    return pon_dfs
-
-
-def call_from_samp(samps, df, args):
-
-    pon_dfs = call_pons(samps, df, args)
-
-    df_c = pd.concat([df] + pon_dfs)
-
-    df_c["chrA"] = df_c["chrA"].astype(str)
-    df_c["chrB"] = df_c["chrB"].astype(str)
-    df_c["contigA"] = [i if isinstance(i, str) else "" for i in df_c["contigA"]]
-    df_c["contigB"] = [i if isinstance(i, str) else "" for i in df_c["contigB"]]
-
-    if "partners" in df_c:
-        del df_c["partners"]
-    if "event_id" in df_c:
-        del df_c["event_id"]
-
-    seen_names = len(set(df_c["sample"]))
-
-    df_m = merge_df(df_c, seen_names, args["merge_dist"], {}, aggressive=True)
-    df_m = df_m.sort_values(["chrA", "posA", "chrB", "posB"])
-
-    pon_partners = set([])
-    for s in df_m[df_m["sample"] == "PON-dysgu"]["partners"]:
-        pon_partners |= s
-
-    return pon_partners
-
-
-def check_raw_alignments(df, args, pon):
-
-    # get soft-clip position and direction
-    clips = []
-    for chrA, posA, contA, chrB, posB, contB, idx, svlen, spanning in zip(df.chrA, df.posA, df.contigA, df.chrB, df.posB, df.contigB, df.index, df.svlen, df.spanning):
-        if spanning:
-            clips.append((chrA, posA, 3, idx, chrA == chrB, svlen))
-            clips.append((chrB, posB, 3, idx, chrA == chrB, svlen))
+def get_names_list(file_list, ignore_csv=True):
+    seen_names = sortedcontainers.SortedSet([])
+    names_list = []
+    name_c = defaultdict(int)
+    for item in file_list:
+        if item == "-":
+            raise ValueError("Reading from stdin is not supported using merge")
+        if item.endswith(".csv"):
+            if ignore_csv:
+                continue
+            raise ValueError(".csv files are not supported when using merge and option --wd")
+        name = list(pysam.VariantFile(item, 'r').header.samples)
+        if len(name) > 1:
+            msg = f"Sample file {item} contains more than one sample: {name}"
+            raise ValueError(msg)
+        name = name[0]
+        if name in seen_names:
+            bname = f"{name}_{name_c[name]}"
+            names_list.append(bname)
+            logging.info(f"Sample {name} is present in more than one input file, sample in file {item} will be named {bname} in merged vcf")
+            seen_names.add(bname)
         else:
-            if contA:
-                start_lower = contA[0].islower()
-                end_lower = contA[-1].islower()
-                if start_lower and not end_lower:
-                    clip_side = 0
-                elif not start_lower and end_lower:
-                    clip_side = 1
-                else:  # start_lower and end_lower:
-                    clip_side = 3  # any side
-                clips.append((chrA, posA, clip_side, idx, chrA == chrB, svlen))
-            if contB:
-                start_lower = contB[0].islower()
-                end_lower = contB[-1].islower()
-                if start_lower and not end_lower:
-                    clip_side = 0
-                elif not start_lower and end_lower:
-                    clip_side = 1
-                else:
-                    clip_side = 3
-                clips.append((chrB, posB, clip_side, idx, chrA == chrB, svlen))
-
-    clips = sorted(clips, key=lambda x: (x[0], x[1]))
-
-    opts = {"bam": "rb", "cram": "rc", "sam": "r", "-": "rb", "stdin": "rb"}
-    pad = 20
-    found = set([])
-    for pth, _ in pon:
-        # open alignment file
-        kind = pth.split(".")[-1]
-        bam_mode = opts[kind]
-
-        pysam.set_verbosity(0)
-        infile = pysam.AlignmentFile(pth, bam_mode, threads=1,
-                                     reference_filename=None if kind != "cram" else args["ref"])
-        pysam.set_verbosity(3)
-
-        for chrom, pos, cs, index, intra, svlen in clips:
-
-            if index in found:
-                continue
-
-            for a in infile.fetch(chrom, pos - pad if pos - pad > 0 else 0, pos + pad):
-                if not a.cigartuples:
-                    continue
-
-                if a.cigartuples[0][0] == 4 and cs != 1:
-                    current_pos = a.pos
-                    if abs(current_pos - pos) < 8:
-                        found.add(index)
-                        break
-                if a.cigartuples[-1][0] == 4 and cs != 0:
-                    current_pos = a.reference_end
-                    if abs(current_pos - pos) < 8:
-                        found.add(index)
-                        break
-
-    df = df.drop(found)
-
-    return df
+            names_list.append(name)
+            seen_names.add(name)
+        name_c[name] += 1
+    return seen_names, names_list
 
 
-def process_pon(df, args):  # legacy code
-    pon = []
-    for item, read_type in zip(args["pon"].split(","), args["pon_rt"].split(",")):
-        pon.append((item, read_type))
+def process_file_list(args, file_list, seen_names, names_list, log_messages=True):
+    dfs = []
+    header = None
+    contig_names = None
+    for bname, item in zip(names_list, file_list):
+        name, ext = os.path.splitext(item)
+        if ext != ".csv":  # assume vcf
+            df, header, _, contig_names = vcf_to_df(item)  # header here, assume all input has same number of fields
+        else:
+            df = pd.read_csv(item, index_col=None)
+        name = list(set(df["sample"]))
+        if len(name) > 1:
+            msg = f"More than one sample in {item}"
+            raise ValueError(msg)
 
-    if len(pon) == 0:
-        raise IOError("--pon parse failed")
+        df["sample"] = [bname] * len(df)
+        df["table_name"] = [bname for _ in range(len(df))]
+        if len(set(df["sample"])) > 1:
+            raise ValueError("More than one sample per input file")
 
-    if "partners" in df.columns:
-        # check one representative from each group
-        dont_check = set([])
-        check = set([])
-        for idx, p in zip(df.index, df["partners"]):
-            if idx not in dont_check:
-                check.add(idx)
-                if p is not None:
-                    dont_check |= p
+        df = mung_df(df, args)
+        if args["merge_within"] == "True":
+            l_before = len(df)
+            df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
+                          aggressive=args['collapse_nearby'] == "True", log_messages=log_messages)
+            if log_messages:
+                logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
+        if "partners" in df:
+            del df["partners"]
+        dfs.append(df)
 
-        df_check = df.loc[list(check)]
-        pon_idxs = call_from_samp(pon, df_check, args)
-        for idx, s in zip(df.index, df["partners"]):
-            if idx in pon_idxs:
-                pon_idxs |= s
-                continue
-            for i in s:
-                if i in pon_idxs:
-                    pon_idxs |= s
-                    break
+    df = pd.concat(dfs)
+    if args["merge_across"] == "True":
+        if len(seen_names) > 1:
+            df = merge_df(df, len(seen_names), args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True",
+                          log_messages=log_messages)
 
+    df = df.sort_values(["chrA", "posA", "chrB", "posB"])
+
+    outfile = open_outfile(args, names_list, log_messages=log_messages)
+    if args["out_format"] == "vcf":
+        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
+                                contig_names=contig_names, show_names=log_messages)
+        if log_messages:
+            logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
     else:
-        pon_idxs = call_from_samp(pon, df, args)
+        to_csv(df, args, outfile, small_output=False)
 
-    df = df.drop([i for i in pon_idxs if i in df.index])  # indexes might reference pon dataframe
 
-    # now check pon alignment files for matching soft-clips or other false negative events
-    df = check_raw_alignments(df, args, pon)
+class VcfWriter(object):
+    def __init__(self, out_path, target_header, new_name=None):
+        self.vcf = open(out_path, 'w') if out_path != '-' else stdout
+        self.header = target_header
+        str_hdr = str(target_header)
+        if new_name:
+            endi = len(str_hdr)
+            while True:
+                endi -= 1
+                if str_hdr[endi] == "\t":
+                    break
+            str_hdr = str_hdr[:endi + 1] + f"{new_name}\n"
+        self.vcf.write(str_hdr)
+    def __del__(self):
+        self.vcf.close()
 
-    return df
+    def close(self):
+        self.__del__()
+    def write(self, r):
+        self.vcf.write(str(r))
+
+
+def shard_job(wd, item_path, name):
+    shards = {}
+    vcf = pysam.VariantFile(item_path, 'r')
+    rows = 0
+    for r in vcf.fetch():
+        svtype = r.info['SVTYPE']
+        svtype = 'INSDUP' if (svtype == "INS" or svtype == "DUP") else svtype
+        chrom = r.chrom
+        if svtype != "TRA":
+            key = f'{svtype}_{chrom}', name
+        else:
+            chrom2 = r.info["CHR2"]
+            key = f'{svtype}_{min(chrom, chrom2)}_{max(chrom, chrom2)}', name
+        if key not in shards:
+            shards[key] = VcfWriter(os.path.join(wd, name + "~" + key[0] + f".vcf"), vcf.header, name)
+        shards[key].write(r)
+        rows += 1
+    for v in shards.values():
+        v.close()
+    vcf.close()
+    return list(shards.keys()), rows, name
+
+
+def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list):
+
+    outf = VcfWriter(out_f, target_header=vcf_header)
+    file_iterators = []
+    count = 0
+    for item in file_paths_to_combine:
+        file_iterators.append(pysam.VariantFile(item, 'r'))
+        count += 1
+
+    var_q = []
+    done_count = 0
+    for idx, item in enumerate(file_iterators):
+        try:
+            v = item.__next__()
+            heappush(var_q, (v.chrom, v.pos, idx, v))
+        except StopIteration:
+            file_iterators[idx].close()
+            file_iterators[idx] = None
+            done_count += 1
+
+    written = 0
+    while done_count < len(file_iterators):
+        if var_q:
+            chrom, pos, idx, v = heappop(var_q)
+            # ensure correct sample ordering
+            str_v = str(v).strip().split('\t')
+            main_record = str_v[:9]
+            samp_records = str_v[9:]
+            record_samples = {k: v for k, v in zip(v.samples.keys(), samp_records)}
+            rd = []
+            c = 0
+            for samp in sample_list:
+                if samp in record_samples:
+                    rd.append(record_samples[samp])
+                    c += 1
+                else:
+                    rd.append('0/0:' + ':'.join(list('0' * (len(v.format.keys()) - 1))))
+            if c < len(record_samples):
+                raise RuntimeError('Number of samples in record was greater than out file, please report this')
+            main_record += rd
+            outf.write('\t'.join(main_record) + '\n')
+            written += 1
+
+            if file_iterators[idx] is None:
+                continue
+            try:
+                v = file_iterators[idx].__next__()
+                heappush(var_q, (v.chrom, v.pos, idx, v))
+            except StopIteration:
+                file_iterators[idx].close()
+                file_iterators[idx] = None
+                done_count += 1
+        else:
+            for idx, item in enumerate(file_iterators):
+                if item is None:
+                    continue
+                try:
+                    v = item.__next__()
+                    heappush(var_q, (v.chrom, v.pos, idx, v))
+                except StopIteration:
+                    file_iterators[idx].close()
+                    file_iterators[idx] = None
+                    done_count += 1
+    outf.close()
+    assert all(i is None for i in file_iterators)
+    return written
+
+
+def shard_data(args, input_files):
+    logging.info(f"Merge distance: {args['merge_dist']} bp")
+    out_f = args['svs_out'] if args['svs_out'] else '-'
+    logging.info("SVs output to {}".format(out_f if out_f != '-' else 'stdout'))
+
+    to_delete = []
+    seen_names, names_list = get_names_list(input_files, ignore_csv=False)
+
+    # Split files into shards
+    job_args = []
+    for name, item in zip(names_list, input_files):
+        job_args.append((args['wd'], item, name))
+    pool = multiprocessing.Pool(args['procs'])
+    results = pool.starmap(shard_job, job_args)
+    input_rows = {}
+    job_blocks = defaultdict(list)
+    for block_keys, rows, sample_name in results:
+        input_rows[sample_name] = rows
+        for block_id, _ in block_keys:
+            job_blocks[block_id].append(sample_name)
+            to_delete.append(os.path.join(args['wd'], block_id + '_merged.vcf'))
+
+    # Process shards
+    job_args2 = []
+    needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind"]}
+    merged_outputs = []
+    for block_id, names in job_blocks.items():
+        job_files = glob.glob(os.path.join(args['wd'], '*' + block_id + '.vcf'))
+        to_delete += job_files
+        srt_keys = {os.path.basename(i).split("~")[0]: i for i in job_files}
+        file_targets = tuple(srt_keys[n] for n in names)
+        target_args = deepcopy(needed_args)
+        fout = os.path.join(args['wd'], block_id + '_merged.vcf')
+        merged_outputs.append(fout)
+        target_args["svs_out"] = fout
+        job_args2.append((target_args, file_targets, seen_names, names, False))
+
+    if args['procs'] > 1:
+        pool.starmap(process_file_list, job_args2)
+    else:
+        for ja in job_args2:
+            process_file_list(*ja)
+
+    # Find a header with all the samples in to use
+    vcf_header = None
+    for result_file in merged_outputs:
+        vcf_header = pysam.VariantFile(result_file, 'r').header
+        tmp = list(filter(None, str(vcf_header).split("\n")))
+        new_header = pysam.VariantHeader()
+        for line in tmp:
+            l = str(line)
+            if re.search('^#CHROM', l):
+                break
+            new_header.add_line(l)
+        new_header.add_samples(names_list)
+        vcf_header = new_header
+        break
+    #     if len(list(vcf_header.samples)) == len(input_files):
+    #         break
+    # else:
+    #     assert vcf_header is not None
+    #     tmp = list(filter(None, str(vcf_header).split("\n")))
+    #     new_header = pysam.VariantHeader()
+    #     for line in tmp:
+    #         l = str(line)
+    #         if re.search('^#CHROM', l):
+    #             l = '\t'.join(l.split('\t')[:9] + names_list)
+    #         new_header.add_line(l)
+    #     vcf_header = new_header
+
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    sample_list = list(vcf_header.samples)
+    logging.info(f"Samples: {sample_list}")
+    # write sorted output
+    if len(merged_outputs) > soft - 1:
+        step = int(min(len(merged_outputs) / args['procs'], soft))
+        while True:
+            chunks = [merged_outputs[x:x+step] for x in range(0, len(merged_outputs), step)]
+            if len(chunks) > 1:
+                temp_filenames = [os.path.join(args['wd'], f'{idx}.chunk_temp.vcf') for idx, c in enumerate(chunks)]
+                to_delete += temp_filenames
+                for temp_out_f, merge_targets in zip(temp_filenames, chunks):
+                    _ = sort_into_single_file(temp_out_f, vcf_header, merge_targets, sample_list)
+                merged_outputs = temp_filenames
+            else:
+                to_delete += merged_outputs
+                written = sort_into_single_file(out_f, vcf_header, merged_outputs, sample_list)
+                break
+    else:
+        written = sort_into_single_file(out_f, vcf_header, merged_outputs, sample_list)
+
+    logging.info("Sample rows before merge {}, rows after {}".format( [input_rows[k] for k in names_list], written))
+
+    for item in to_delete:
+        if os.path.exists(item):
+            os.remove(item)
 
 
 def view_file(args):
 
     t0 = time.time()
+    if args["input_list"]:
+        with open(args["input_list"], "r") as il:
+            args["input_files"] += tuple([i.strip() for i in il.readlines()])
+
     if args["separate"] == "True":
         if args["out_format"] == "vcf":
             raise ValueError("--separate only supported for --out-format csv")
@@ -519,79 +651,14 @@ def view_file(args):
 
     args["metrics"] = False  # only option supported so far
     args["contigs"] = False
-    seen_names = sortedcontainers.SortedSet([])
-    names_dict = {}
-    name_c = defaultdict(int)
-    dfs = []
-    header = None
-    contig_names = None
-    for item in args["input_files"]:
 
-        if item == "-":
-            df = pd.read_csv(stdin)
-            name = list(set(df["sample"]))
-            if len(name) > 1:
-                raise ValueError("More than one sample in stdin")
-            else:
-                name = name[0]
-                seen_names.add(name)
-        else:
-            name, ext = os.path.splitext(item)
-            if ext != ".csv":  # assume vcf
-                df, header, _, contig_names = vcf_to_df(item)  # header here, assume all input has same number of fields
-            else:
-                df = pd.read_csv(item, index_col=None)
-            name = list(set(df["sample"]))
-
-            if len(name) > 1:
-                raise ValueError("More than one sample in stdin")
-            else:
-                name = name[0]
-                names_dict[item] = name
-                if name in seen_names:
-                    logging.info("Sample {} is present in more than one input file".format(name))
-                    bname = f"{name}_{name_c[name]}"
-                    df["sample"] = [bname] * len(df)
-                    df["table_name"] = [bname for _ in range(len(df))]
-                    seen_names.add(bname)
-                else:
-                    df["table_name"] = [name for _ in range(len(df))]
-                    seen_names.add(name)
-                name_c[name] += 1
-
-        if len(set(df["sample"])) > 1:
-            raise ValueError("More than one sample per input file")
-
-        df = mung_df(df, args)
-
-        if args["merge_within"] == "True":
-            l_before = len(df)
-            df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
-                          aggressive=args['collapse_nearby'] == "True")
-            logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
-
-        if "partners" in df:
-            del df["partners"]
-        dfs.append(df)
-
-    df = pd.concat(dfs)
-    if args["merge_across"] == "True":
-        if len(seen_names) > 1:
-            df = merge_df(df, len(seen_names), args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True")
-
-    df = df.sort_values(["chrA", "posA", "chrB", "posB"])
-
-    # if "pon" in args and args["pon"] is not None:
-    #     logging.info("Calling SVs from --pon samples")
-    #     df = process_pon(df, args)
-
-    outfile = open_outfile(args, names_dict)
-
-    if args["out_format"] == "vcf":
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True, contig_names=contig_names)
-        logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
+    if not args["wd"]:
+        seen_names, names_list = get_names_list(args["input_files"])
+        process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
     else:
-        to_csv(df, args, outfile, small_output=False)
+        shard_data(args, args["input_files"])
+        if args['clean']:
+            os.rmdir(args['wd'])
 
     logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
                                                     time.time() - t0))
