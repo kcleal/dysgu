@@ -255,18 +255,20 @@ def get_right_clip(r):
 
 
 def get_contig_clipped_bases(cont, extend_by_ratio=2):
-    if not cont:
+    if not cont or len(cont) < 20:
         return None, None
     left = ""
     right = ""
     if cont[0].islower():
         i = 1
-        while cont[i].islower():
+        m = len(cont)
+        while i < m and cont[i].islower():
             i += 1
         left = cont[:(extend_by_ratio*i)-1]
     if cont[-1].islower():
         i = -1
-        while cont[i].islower():
+        m = -len(cont)
+        while i > m and cont[i].islower():
             i -= 1
         i = max(0, len(cont) + (extend_by_ratio*i))
         right = cont[i:]
