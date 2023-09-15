@@ -77,7 +77,6 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
     # Assume:
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
-
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
     if not merge_within_sample:
         found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
