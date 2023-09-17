@@ -167,9 +167,9 @@ def cli():
               show_default=True, default="wb0", type=str)
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
+@click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -325,9 +325,9 @@ def get_reads(ctx, **kwargs):
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
+@click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
