@@ -152,6 +152,8 @@ def cli():
 @click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
               default="True", type=click.Choice(["True", "False"]),
               show_default=True)
+@click.option('--ignore-sample-sites', help="If --sites is multi-sample, ignore variants from the input file SV-ALIGNS",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -315,8 +317,9 @@ def get_reads(ctx, **kwargs):
 @click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
               required=False, type=click.FloatRange(0, 1), default=0.6, show_default=True)
 @click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
-              default="True", type=click.Choice(["True", "False"]),
-              show_default=True)
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option('--ignore-sample-sites', help="If --sites is multi-sample, ignore variants from the input file SV-ALIGNS",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)

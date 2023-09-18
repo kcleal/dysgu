@@ -701,7 +701,7 @@ def process_job(msg_queue, args):
 #     return postcall_job(varying_data, aux_data)
 
 
-def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
+def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=None):
     procs = args['procs']
     low_mem = args['low_mem']
     tdir = args["working_directory"]
@@ -774,21 +774,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, bam_iter=None):
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
     event_id = 0
     block_edge_events = []
-    # min_support = int(args["min_support"])
-    # args["min_support"] = min_support
-    # logging.info("Minimum support {}".format(min_support))
-    # if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
-    #     lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
-    # else:
-    #     lower_bound_support = min_support
+
     clip_length = args["clip_length"]
     merge_dist = args["merge_dist"]
     min_size = args["min_size"]
     length_extend = args["length_extend"]
     divergence = args["divergence"]
     read_buffer = genome_scanner.read_buffer
-    sites_info = sites_utils.vcf_reader(args["sites"], infile, args["reference"], paired_end, parse_probs=args["parse_probs"],
-                                        default_prob=args["sites_prob"], pass_only=args["sites_pass_only"] == "True")
+    sites_info = sites_utils.vcf_reader(args["sites"], infile, args["parse_probs"], sample_name, args["ignore_sample_sites"] == "True", args["sites_prob"], args["sites_pass_only"] == "True")
 
     cdef Py_SimpleGraph G
     G, node_to_name, bad_clip_counter, sites_adder, n_aligned_bases = graph.construct_graph(genome_scanner,
@@ -1189,7 +1182,7 @@ def cluster_reads(args):
     #####################
     #  Run dysgu here   #
     #####################
-    events, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome)
+    events, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name)
     if not events:
         logging.critical("No events found")
         return
