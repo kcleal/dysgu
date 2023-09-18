@@ -14,7 +14,7 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 from sys import byteorder
 import os
-
+import resource
 ctypedef EventResult EventResult_t
 
 
@@ -27,6 +27,9 @@ class BadClipCounter:
         if not self.low_mem:
             self.clip_pos_arr = [array.array("L", []) for i in range(n_references)]  # 32 bit unsigned int
         else:
+            soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+            if soft + (n_references * 2) > soft:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, soft + (n_references * 2)), hard))
             self.clip_pos_arr = [open(f"{self.temp_dir}/{i}.badclip.bin", "wb") for i in range(n_references)]
 
     def tidy(self):

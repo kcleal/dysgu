@@ -373,16 +373,18 @@ def get_names_list(file_list, ignore_csv=True):
     return seen_names, names_list
 
 
-def process_file_list(args, file_list, seen_names, names_list, log_messages=True):
+def process_file_list(args, file_list, seen_names, names_list, log_messages):
     dfs = []
     header = None
     contig_names = None
     for bname, item in zip(names_list, file_list):
         name, ext = os.path.splitext(item)
+
         if ext != ".csv":  # assume vcf
             df, header, _, contig_names = vcf_to_df(item)  # header here, assume all input has same number of fields
         else:
             df = pd.read_csv(item, index_col=None)
+
         name = list(set(df["sample"]))
         if len(name) > 1:
             msg = f"More than one sample in {item}"
@@ -424,6 +426,7 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages=True
 
 class VcfWriter(object):
     def __init__(self, out_path, target_header, new_name=None):
+        self.path = out_path
         self.vcf = open(out_path, 'w') if out_path != '-' else stdout
         self.header = target_header
         str_hdr = str(target_header)
@@ -435,18 +438,24 @@ class VcfWriter(object):
                     break
             str_hdr = str_hdr[:endi + 1] + f"{new_name}\n"
         self.vcf.write(str_hdr)
-    def __del__(self):
-        self.vcf.close()
-
     def close(self):
-        self.__del__()
+        self.vcf.close()
     def write(self, r):
         self.vcf.write(str(r))
 
 
-def shard_job(wd, item_path, name):
+def shard_job(wd, item_path, name, Global):
     shards = {}
     vcf = pysam.VariantFile(item_path, 'r')
+    contigs = len(vcf.header.contigs)
+    if contigs == 0:
+        contigs = 250
+    ub = contigs * contigs
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    ub += soft
+    resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, ub), hard))
+    Global.soft = ub
+
     rows = 0
     for r in vcf.fetch():
         svtype = r.info['SVTYPE']
@@ -468,13 +477,14 @@ def shard_job(wd, item_path, name):
 
 
 def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list):
-
     outf = VcfWriter(out_f, target_header=vcf_header)
     file_iterators = []
     count = 0
     for item in file_paths_to_combine:
         file_iterators.append(pysam.VariantFile(item, 'r'))
         count += 1
+    if not file_iterators:
+        return 0
 
     var_q = []
     done_count = 0
@@ -535,7 +545,7 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
     return written
 
 
-def shard_data(args, input_files):
+def shard_data(args, input_files, Global):
     logging.info(f"Merge distance: {args['merge_dist']} bp")
     out_f = args['svs_out'] if args['svs_out'] else '-'
     logging.info("SVs output to {}".format(out_f if out_f != '-' else 'stdout'))
@@ -546,7 +556,7 @@ def shard_data(args, input_files):
     # Split files into shards
     job_args = []
     for name, item in zip(names_list, input_files):
-        job_args.append((args['wd'], item, name))
+        job_args.append((args['wd'], item, name, Global))
     pool = multiprocessing.Pool(args['procs'])
     results = pool.starmap(shard_job, job_args)
     input_rows = {}
@@ -556,6 +566,10 @@ def shard_data(args, input_files):
         for block_id, _ in block_keys:
             job_blocks[block_id].append(sample_name)
             to_delete.append(os.path.join(args['wd'], block_id + '_merged.vcf'))
+
+    # Set upper bound on open files
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, max(Global.soft, soft) * len(input_files)), hard))
 
     # Process shards
     job_args2 = []
@@ -578,7 +592,7 @@ def shard_data(args, input_files):
         for ja in job_args2:
             process_file_list(*ja)
 
-    # Find a header with all the samples in to use
+    # Make a header with all the samples in
     vcf_header = None
     for result_file in merged_outputs:
         vcf_header = pysam.VariantFile(result_file, 'r').header
@@ -592,43 +606,11 @@ def shard_data(args, input_files):
         new_header.add_samples(names_list)
         vcf_header = new_header
         break
-    #     if len(list(vcf_header.samples)) == len(input_files):
-    #         break
-    # else:
-    #     assert vcf_header is not None
-    #     tmp = list(filter(None, str(vcf_header).split("\n")))
-    #     new_header = pysam.VariantHeader()
-    #     for line in tmp:
-    #         l = str(line)
-    #         if re.search('^#CHROM', l):
-    #             l = '\t'.join(l.split('\t')[:9] + names_list)
-    #         new_header.add_line(l)
-    #     vcf_header = new_header
-
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 
     sample_list = list(vcf_header.samples)
     logging.info(f"Samples: {sample_list}")
-    # write sorted output
-    if len(merged_outputs) > soft - 1:
-        step = int(min(len(merged_outputs) / args['procs'], soft))
-        while True:
-            chunks = [merged_outputs[x:x+step] for x in range(0, len(merged_outputs), step)]
-            if len(chunks) > 1:
-                temp_filenames = [os.path.join(args['wd'], f'{idx}.chunk_temp.vcf') for idx, c in enumerate(chunks)]
-                to_delete += temp_filenames
-                for temp_out_f, merge_targets in zip(temp_filenames, chunks):
-                    _ = sort_into_single_file(temp_out_f, vcf_header, merge_targets, sample_list)
-                merged_outputs = temp_filenames
-            else:
-                to_delete += merged_outputs
-                written = sort_into_single_file(out_f, vcf_header, merged_outputs, sample_list)
-                break
-    else:
-        written = sort_into_single_file(out_f, vcf_header, merged_outputs, sample_list)
-
-    logging.info("Sample rows before merge {}, rows after {}".format( [input_rows[k] for k in names_list], written))
-
+    written = sort_into_single_file(out_f, vcf_header, merged_outputs, sample_list)
+    logging.info("Sample rows before merge {}, rows after {}".format([input_rows[k] for k in names_list], written))
     for item in to_delete:
         if os.path.exists(item):
             os.remove(item)
@@ -651,11 +633,17 @@ def view_file(args):
     args["metrics"] = False  # only option supported so far
     args["contigs"] = False
 
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    manager = multiprocessing.Manager()
+    Global = manager.Namespace()
+    Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
+    Global.soft = soft
+
     if not args["wd"]:
         seen_names, names_list = get_names_list(args["input_files"])
         process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
     else:
-        shard_data(args, args["input_files"])
+        shard_data(args, args["input_files"], Global=Global)
         if args['clean']:
             os.rmdir(args['wd'])
 

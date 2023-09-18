@@ -26,6 +26,9 @@ import time
 
 ctypedef EventResult EventResult_t
 
+np.random.seed(0)
+random.seed(0)
+
 
 def filter_potential(input_events, tree, regions_only):
     potential = []

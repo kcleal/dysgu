@@ -13,7 +13,7 @@ import os
 import sys
 import gzip
 from dysgu.map_set_utils import Py_BasicIntervalTree
-
+import random
 
 from libc.stdlib cimport malloc
 
@@ -28,7 +28,7 @@ cdef char *basemap = [ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0
                        '\0', '\0', '\0', '\0',  'a',  'a' ]
 
 np.random.seed(0)
-
+random.seed(0)
 
 cpdef str reverse_complement(str seq, int seq_len):
     """https://bioinformatics.stackexchange.com/questions/3583/\
@@ -147,8 +147,13 @@ cpdef list col_names(small_output):
 def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small_output):
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
+    debug = False
+    # if abs(r['posA'] - 39084726) < 10:
+    #     echo('found', dict(r))
+    #     echo(len(format_f) > 1)
+    #     echo([(int(v["su"]), v["posA"], v["event_id"], k) for k, v in df_rows.items()])
+    #     debug = True
     if len(format_f) > 1:
-
         best = sorted([(int(v["su"]), k) for k, v in df_rows.items()], reverse=True)[0][1]
         probs = [v["prob"] for k, v in df_rows.items()]
         mean_prob = np.mean(probs)
@@ -297,7 +302,8 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
-
+    # if debug:
+    #     echo("returned ", rec)
     return rec
 
 
