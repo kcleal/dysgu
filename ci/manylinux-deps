@@ -15,11 +15,8 @@ git clone --depth 1 https://github.com/ebiggers/libdeflate.git && \
     cd libdeflate && CFLAGS+=' -fPIC -O3 ' cmake -B build && CFLAGS+=' -fPIC -O3 ' cmake --build build && \
     cp build/libdeflate.a /usr/local/lib && cp libdeflate.h /usr/local/include && cd ../
 
-echo $PWD
-ls
-
 cd ./dysgu
-curl -O htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2
+curl -o htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2
 tar -xvf htslib.tar.bz2
 mv htslib-1.17 htslib && rm htslib.tar.bz2
 cd htslib
@@ -29,7 +26,5 @@ autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
 make -j8
 cd ../../
-
-pip install -r requirements.txt
 
 echo "MANYLINUX-DEPS DONE"
