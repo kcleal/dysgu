@@ -17,7 +17,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.0
         env:
           CIBW_BEFORE_BUILD: pip install cython numpy
-          CIBW_BEFORE_BUILD_LINUX: bash ci/ubuntu-deps
+          CIBW_BEFORE_BUILD_LINUX: bash ci/manylinux-deps
         #    ...
         # with:
         #   package-dir: .
