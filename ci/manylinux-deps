@@ -1,0 +1,28 @@
+#!/bin/bash
+# Install build dependencies. Run from inside dysgu folder
+
+echo "STARTING MANYLINUX-DEPS"
+
+#apt-get install -y gcc make autoconf wget
+#apt-get install -y libcurl4-openssl-dev libffi-dev libcurl-dev libssh-dev \
+#libs3-dev libbz2-dev zlib1g-dev libncurses5-dev libncursesw5-dev liblzma-dev libdeflate-dev 
+
+yum -y install gcc wget autoconf openssl-devel libffi libffi-devel zlib-devel sudo \
+    bzip2-devel bzip2-libs xz-devel xz-libs libffi atlas-devel libjpeg-devel libssh2 curl-devel curl \
+    libdeflate libs3
+
+cd dysgu
+wget -O htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2
+tar -xvf htslib.tar.bz2
+mv htslib-1.17 htslib && rm htslib.tar.bz2
+cd htslib
+
+autoheader
+autoconf
+./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
+make -j8
+cd ../../
+
+pip install cython numpy
+
+echo "MANYLINUX-DEPS DONE"
