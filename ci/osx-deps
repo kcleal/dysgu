@@ -14,5 +14,5 @@ cd htslib
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
 make
 
-cd ../../
-pip install -r requirements.txt
+#cd ../../
+#pip install -r requirements.txt
