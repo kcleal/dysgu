@@ -3,7 +3,7 @@
 
 echo "STARTING MANYLINUX-DEPS"
 
-yum -y install gcc wget autoconf openssl-devel libffi libffi-devel zlib-devel \
+yum -y install gcc gcc-c++ wget autoconf openssl-devel libffi libffi-devel zlib-devel \
     bzip2-devel bzip2-libs xz-devel xz-libs libffi atlas-devel libjpeg-devel libssh2 curl-devel curl \
     cmake libs3
 
@@ -18,9 +18,8 @@ tar -xvf htslib.tar.bz2
 mv htslib-1.17 htslib && rm htslib.tar.bz2
 cd htslib
 
-autoheader
-autoconf
-echo "-------------"
+#autoheader
+#autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
 make
 cd ../../
