@@ -21,7 +21,7 @@ cd htslib
 #autoheader
 #autoconf
 ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
-make
+make && make install
 cd ../../
 
 echo "MANYLINUX-DEPS DONE"
