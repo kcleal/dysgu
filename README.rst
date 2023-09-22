@@ -3,39 +3,7 @@
 .. image:: dysgu/logo.png
     :align: left
 
-dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
-for calling structural variants using paired-end or long read sequencing data. See a recent long-read benchmark `here <https://github.com/kcleal/SV_Benchmark_CMRG>`_.
-
 ----
-
-   `⚙️ Installation`_
-
-   `🚀 Quick start`_
-
-   `🎯 Calling SVs`_
-
-   `➕ Merging SVs`_
-
-   `🚦Filtering SVs`_
-
-   `♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
-
-   `🔍 Genotype list of sites`_
-
-   `🔪 Regions of interest / excluding regions`_
-
-   `🔧 Useful parameters`_
-
-   `🚑 Issues`_
-
-   `🐍 Python API`_
-
-   `🎓 Citation`_
-
-----
-
-⚙️ Installation
----------------
 
 |Generic badge| |Li badge|
 
@@ -44,6 +12,39 @@ for calling structural variants using paired-end or long read sequencing data. S
 
 .. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
    :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
+
+dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
+for calling structural variants using paired-end or long read sequencing data. See a recent long-read benchmark `here <https://github.com/kcleal/SV_Benchmark_CMRG>`_.
+
+
+`⚙️ Installation`_
+
+`🚀 Quick start`_
+
+`🎯 Calling SVs`_
+
+`➕ Merging SVs`_
+
+`🚦Filtering SVs`_
+
+`♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
+
+`🔍 Genotype list of sites`_
+
+`🔪 Regions of interest / excluding regions`_
+
+`🔧 Useful parameters`_
+
+`🚑 Issues`_
+
+`🐍 Python API`_
+
+`🎓 Citation`_
+
+----
+
+⚙️ Installation
+---------------
 
 Dysgu requires Python >=3.8 - 3.10 plus htslib and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
