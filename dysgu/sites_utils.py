@@ -46,23 +46,27 @@ def parse_variant_seqs_dysgu(r, svt, chrom, start, chrom2, stop, paired_end, ref
 Site = namedtuple("Site", ["chrom", "start", "chrom2", "end", "svtype", "index", "id", "svlen", "prob"])
 
 
-def vcf_reader(pth, infile, ref_genome_pth, paired_end, parse_probs, default_prob=0.6, pass_only=True):
+def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_prob=0.6, pass_only=True):
     if pth is None:
         return None
 
-    logging.info("Reading --sites")
-    # ref_genome = pysam.FastaFile(ref_genome_pth)
-    vcf = pysam.VariantFile(pth)  # auto detect vcf / bcf / vcf.gz
+    logging.info(f"Reading --sites {pth}")
+    vcf = pysam.VariantFile(pth)
+
+    samples = list(vcf.header.samples)
+    if len(samples) == 1 or sample_name not in samples:
+        ignore_sample = False
 
     # variants must be fed into graph in roughly sorted order
     recs = {}
-
     not_parsed = []
     for idx, r in enumerate(vcf):
-
         if pass_only and "PASS" not in r.filter:
             continue
-
+        if ignore_sample and sample_name in r.samples and "GT" in r.samples[sample_name]:
+            this_gt = r.samples[sample_name]['GT']
+            if not (this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
+                continue
         if "CHROM2" in r.info:
             chrom2_info = r.info["CHROM2"]
         else:

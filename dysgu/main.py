@@ -6,7 +6,7 @@ import shutil
 import time
 from multiprocessing import cpu_count
 from subprocess import run
-import pkg_resources
+from importlib.metadata import version
 import warnings
 from dysgu import cluster, view, sv2bam, filter_normals
 import datetime
@@ -96,7 +96,7 @@ def apply_preset(kwargs):
             kwargs[k] = v
 
 
-version = pkg_resources.require("dysgu")[0].version
+dysgu_version = version("dysgu")
 
 logFormatter = logging.Formatter("%(asctime)s [%(levelname)-7.7s]  %(message)s")
 rootLogger = logging.getLogger()
@@ -126,11 +126,11 @@ def make_wd(args, call_func=False):
                                  "or supply --ibam to re-use temp files in working directory")
     else:
         temp_dir = args["wd"]
-        if temp_dir is None:
-            return -1
+        if not temp_dir:
+            raise ValueError("Working directory is empty")
         if not os.path.exists(temp_dir):
             os.mkdir(temp_dir)
-        elif not args["overwrite"]:
+        elif "overwrite" in args and not args["overwrite"]:
             raise ValueError("Working directory already exists. Add -x / --overwrite=True to proceed")
 
 
@@ -152,6 +152,8 @@ def cli():
 @click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
               default="True", type=click.Choice(["True", "False"]),
               show_default=True)
+@click.option('--ignore-sample-sites', help="If --sites is multi-sample, ignore variants from the input file SV-ALIGNS",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -167,9 +169,9 @@ def cli():
               show_default=True, default="wb0", type=str)
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
+@click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -221,9 +223,10 @@ def cli():
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore", default=-1, type=int, show_default=False)
 @click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
+@click.option("-c", "--clean", help="Remove temp files and working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
@@ -231,7 +234,7 @@ def run_pipeline(ctx, **kwargs):
     """Run the dysgu pipeline. Important parameters are --mode, --diploid, --min-support, --min-size, --max-cov"""
     # Add arguments to context
     t0 = time.time()
-    logging.info("[dysgu-run] Version: {}".format(version))
+    logging.info("[dysgu-run] Version: {}".format(dysgu_version))
     make_wd(kwargs)
     apply_preset(kwargs)
     show_params()
@@ -294,7 +297,7 @@ def run_pipeline(ctx, **kwargs):
 def get_reads(ctx, **kwargs):
     """Filters input bam/cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
     saves bam file in WORKING_DIRECTORY"""
-    logging.info("[dysgu-fetch] Version: {}".format(version))
+    logging.info("[dysgu-fetch] Version: {}".format(dysgu_version))
     make_wd(kwargs)
     ctx = apply_ctx(ctx, kwargs)
     return sv2bam.process(ctx.obj)
@@ -314,8 +317,9 @@ def get_reads(ctx, **kwargs):
 @click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
               required=False, type=click.FloatRange(0, 1), default=0.6, show_default=True)
 @click.option('--sites-pass-only', help="Only add variants from sites that have PASS",
-              default="True", type=click.Choice(["True", "False"]),
-              show_default=True)
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option('--ignore-sample-sites', help="If --sites is multi-sample, ignore variants from the input file SV-ALIGNS",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--parse-probs', help="Parse INFO:MeanPROB or FORMAT:PROB instead of using --sites-p",
               default="False", type=click.Choice(["True", "False"]),
               show_default=True)
@@ -324,9 +328,9 @@ def get_reads(ctx, **kwargs):
 @click.option('--pfix', help="Post-fix of temp alignment file (used when a working-directory is provided instead of "
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
-@click.option('--mode', help="Type of input reads. Multiple options are set, overrides other options. "
-                             "pacbio: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 200 --trust-ins-len True. "
-                             "nanopore: --mq 20 --paired False --min-support 'auto' --max-cov 150 --dist-norm 900 --trust-ins-len False",
+@click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
               default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -379,15 +383,16 @@ def get_reads(ctx, **kwargs):
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
+@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore", default=-1, type=int, show_default=False)
 @click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("-c", "--clean", help="Remove temp files when finished", is_flag=True, flag_value=True, show_default=False, default=False)
+@click.option("-c", "--clean", help="Remove temp files and working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA'", default="0.45,0.45,0.45,0.45,0.45",
               type=str, show_default=True)
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural variants from bam alignment file/stdin"""
-    logging.info("[dysgu-call] Version: {}".format(version))
+    logging.info("[dysgu-call] Version: {}".format(dysgu_version))
     make_wd(kwargs, call_func=True)
     if kwargs["sv_aligns"] is None:
         # Try and open from working director
@@ -414,10 +419,14 @@ def call_events(ctx, **kwargs):
 
 
 @cli.command("merge")
-@click.argument('input_files', required=True, type=click.Path(), nargs=-1)
+@click.argument('input_files', required=False, type=click.Path(), nargs=-1)
+@click.option("-i", "--input-list", help="Input list of file paths, one line per file ", required=False, type=click.Path(exists=True))
 @click.option("-o", "--svs-out", help="Output file, [default: stdout]", required=False, type=click.Path())
 @click.option("-f", "--out-format", help="Output format", default="vcf", type=click.Choice(["csv", "vcf"]),
               show_default=True)
+@click.option("-p", "--procs", help="Number of processors to use when merging, requires --wd option to be supplied", type=cpu_range, default=1, show_default=True)
+@click.option("-d", "--wd", help="Working directory to use/create when merging", type=click.Path(exists=False), required=False)
+@click.option("-c", "--clean", help="Remove working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--collapse-nearby", help="Merges more aggressively by collapsing nearby SV",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-across", help="Merge records across input samples", default="True",
@@ -437,8 +446,13 @@ def call_events(ctx, **kwargs):
 @click.pass_context
 def view_data(ctx, **kwargs):
     """Merge vcf/csv variant files"""
-    logging.info("[dysgu-merge] Version: {}".format(version))
+    logging.info("[dysgu-merge] Version: {}".format(dysgu_version))
     ctx = apply_ctx(ctx, kwargs)
+    if ctx.obj["wd"]:
+        make_wd(ctx.obj)
+    if not ctx.obj["input_files"] and not ctx.obj["input_list"]:
+        logging.error("Please supply either INPUT_FILES as an argument or use the --input-list option")
+        quit()
     view.view_file(ctx.obj)
 
 
@@ -462,7 +476,7 @@ def filter_normal(ctx, **kwargs):
     """Filter a vcf generated by dysgu.
     Unique SVs can be found in the input_vcf by supplying a --normal-vcf (single or multi-sample),
     and normal bam files. Bam/vcf samples with the same name as the input_vcf will be ignored"""
-    logging.info("[dysgu-filter] Version: {}".format(version))
+    logging.info("[dysgu-filter] Version: {}".format(dysgu_version))
     ctx = apply_ctx(ctx, kwargs)
     filter_normals.run_filtering(ctx.obj)
 
@@ -472,7 +486,7 @@ def filter_normal(ctx, **kwargs):
 def test_command(ctx, **kwargs):
     """Run dysgu tests"""
     pwd = os.getcwd()
-    logging.info("[dysgu-test] Version: {}".format(version))
+    logging.info("[dysgu-test] Version: {}".format(dysgu_version))
     tests_path = os.path.dirname(__file__) + "/tests"
     tests = list()
     tests.append(["dysgu fetch",
@@ -481,40 +495,40 @@ def test_command(ctx, **kwargs):
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False",
-                  "-o " + pwd + '/test.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test.dysgu{}.vcf'.format(dysgu_version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test',
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False",
                   "--regions " + tests_path + '/targets.bed',
-                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(dysgu_version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test2',
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False --procs 2",
                   "--regions " + tests_path + '/targets.bed',
-                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test_regions.dysgu{}.vcf'.format(dysgu_version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test2',
                   tests_path + '/small.bam'])
     tests.append(["dysgu run",
                   "-x --drop-gaps False --mode pacbio",
-                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(dysgu_version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test',
                   tests_path + '/small.bam'])
     tests.append(["dysgu call",
                   "-x --drop-gaps False",
-                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(version),
+                  "-o " + pwd + '/test2.dysgu{}.vcf'.format(dysgu_version),
                   tests_path + '/ref.fa',
                   pwd + '/wd_test',
                   tests_path + '/small.bam'])
     tests.append(["dysgu merge",
-                  pwd + '/test.dysgu{}.vcf'.format(version),
-                  pwd + '/test2.dysgu{}.vcf'.format(version),
-                  "-o " + pwd + '/test.merge.dysgu{}.vcf'.format(version)])
+                  pwd + '/test.dysgu{}.vcf'.format(dysgu_version),
+                  pwd + '/test2.dysgu{}.vcf'.format(dysgu_version),
+                  "-o " + pwd + '/test.merge.dysgu{}.vcf'.format(dysgu_version)])
     for t in tests:
         c = " ".join(t)
         v = run(shlex.split(c), shell=False, capture_output=True, check=True)

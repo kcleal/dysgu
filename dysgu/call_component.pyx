@@ -395,7 +395,7 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     aln_span = aln.reference_end - aln.pos
     v_item.size_inferred = 1
     if insert_std > 0:
-        rand_insert_pos = insert_size - aln_span + int(normal(0, insert_std))
+        rand_insert_pos = abs(insert_size - aln_span + int(normal(0, insert_std)))
     else:  # single read mode
         v_item.svtype = "BND"
         clip_s = max(clip_sizes(aln))

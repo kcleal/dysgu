@@ -343,16 +343,35 @@ def strand_binom_t(events):
     return events
 
 
-def get_ref_base(events, ref_genome):
+def get_ref_base(events, ref_genome, symbolic_sv_size):
     for e in events:
         if not e.ref_seq:
-            if e.posA == 0:
-                e.posA = 1
-            try:
-                base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
-                e.ref_seq = base
-            except:
-                pass
+            if symbolic_sv_size == -1 or e.svtype == "INS" or e.svtype == "TRA":
+                if e.posA == 0:
+                    e.posA = 1
+                try:
+                    base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
+                    e.ref_seq = base
+                except:
+                    pass
+            else:
+                if e.svlen < symbolic_sv_size:
+                    if e.posA == 0:
+                        e.posA = 1
+                    try:
+                        bases = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
+                        e.ref_seq = bases
+                        e.variant_seq = bases[0] if len(bases) else ""
+                    except:
+                        pass
+                else:
+                    if e.posA == 0:
+                        e.posA = 1
+                    try:
+                        base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
+                        e.ref_seq = base
+                    except:
+                        pass
     return events
 
 

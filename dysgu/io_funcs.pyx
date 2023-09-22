@@ -6,14 +6,14 @@ cimport numpy as np
 import logging
 from map_set_utils import merge_intervals, echo
 from collections import defaultdict
-import pkg_resources
+from importlib.metadata import version
 import sortedcontainers
 import pandas as pd
 import os
 import sys
 import gzip
 from dysgu.map_set_utils import Py_BasicIntervalTree
-
+import random
 
 from libc.stdlib cimport malloc
 
@@ -28,7 +28,7 @@ cdef char *basemap = [ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0
                        '\0', '\0', '\0', '\0',  'a',  'a' ]
 
 np.random.seed(0)
-
+random.seed(0)
 
 cpdef str reverse_complement(str seq, int seq_len):
     """https://bioinformatics.stackexchange.com/questions/3583/\
@@ -144,11 +144,16 @@ cpdef list col_names(small_output):
             ]
 
 
-def make_main_record(r, version, index, format_f, df_rows, add_kind, small_output):
+def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small_output):
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
+    debug = False
+    # if abs(r['posA'] - 39084726) < 10:
+    #     echo('found', dict(r))
+    #     echo(len(format_f) > 1)
+    #     echo([(int(v["su"]), v["posA"], v["event_id"], k) for k, v in df_rows.items()])
+    #     debug = True
     if len(format_f) > 1:
-
         best = sorted([(int(v["su"]), k) for k, v in df_rows.items()], reverse=True)[0][1]
         probs = [v["prob"] for k, v in df_rows.items()]
         mean_prob = np.mean(probs)
@@ -264,7 +269,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, small_outpu
         fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     if "variant_seq" in r and isinstance(r["variant_seq"], str):
-        if r['svtype'] == "INS":
+        if r['svtype'] == "INS" or r.variant_seq:
             alt_field = r.variant_seq.upper()
         else:
             alt_field = f"<{r['svtype']}>"
@@ -281,7 +286,7 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, small_outpu
            alt_field,
            ".", "." if "filter" not in r else r['filter'],
            # INFO line
-           ";".join([f"SVMETHOD=DYSGUv{version}",
+           ";".join([f"SVMETHOD=DYSGUv{dysgu_version}",
                    f"SVTYPE={r['svtype']}",
                    f"END={r['posB']}" if r['chrA'] == r['chrB'] else f"END={r['posA'] + 1}",
                    f"CHR2={r['chrB']}" + chr2_pos,
@@ -297,7 +302,8 @@ def make_main_record(r, version, index, format_f, df_rows, add_kind, small_outpu
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
-
+    # if debug:
+    #     echo("returned ", rec)
     return rec
 
 
@@ -341,7 +347,7 @@ def gen_format_fields(r, df, names, n_fields, small_output):
             row = cols[name]
             format_fields[name] = get_fmt(row, small_output)
         else:
-            format_fields[name] = [0] * n_fields
+            format_fields[name] = ['0/0'] + [0] * (n_fields - 1)
     return format_fields, cols
 
 
@@ -451,8 +457,8 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
                       contig_names=contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
-        logging.info("Input samples: {}".format(str(list(names))))
-    version = pkg_resources.require("dysgu")[0].version
+        logging.info("Samples: {}".format(str(list(names))))
+    dysgu_version = version("dysgu")
     seen_idx = set([])
     cnames = ['raw_reads_10kb', 'NMpri', 'NMsupp', 'MAPQpri', 'MAPQsupp', "NMbase", "n_gaps"]
     for col in cnames:
@@ -489,7 +495,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
         if "partners" in r and r["partners"] is not None and r["partners"] != ".":
             seen_idx |= set(r["partners"])
 
-        r_main = make_main_record(r, version, count, format_f, df_rows, add_kind, small_output_f)
+        r_main = make_main_record(r, dysgu_version, count, format_f, df_rows, add_kind, small_output_f)
         recs.append(r_main)
         count += 1
 

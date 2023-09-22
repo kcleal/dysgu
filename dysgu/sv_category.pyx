@@ -786,7 +786,7 @@ cdef void translocation(AlignmentItem v):
     v.query_overlap = query_overlap
 
 
-cdef void classify_d(AlignmentItem v):
+cdef void classify_d(AlignmentItem v):  #, debug=False):
 
     v.breakA_precise = 0
     v.breakB_precise = 0
@@ -803,4 +803,5 @@ cdef void classify_d(AlignmentItem v):
 
 
     # Debug
-    # echo(v.read_a.qname, v.rA == v.rB, v.priA and v.priB, v.inferred_sv_len, "strands", v.strandA == v.strandB, "pos", v.posA, v.posB, "breaks", v.breakA, v.breakB, "a_q > b_q", v.a_qstart > v.b_qstart)
+    # if debug:
+    #     echo(v.read_a.qname, v.rA == v.rB, v.priA and v.priB, v.inferred_sv_len, "strands", v.strandA == v.strandB, "pos", v.posA, v.posB, "breaks", v.breakA, v.breakB, "a_q > b_q", v.a_qstart > v.b_qstart)
