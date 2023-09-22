@@ -6,6 +6,33 @@
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
 for calling structural variants using paired-end or long read sequencing data. See a recent long-read benchmark `here <https://github.com/kcleal/SV_Benchmark_CMRG>`_.
 
+----
+
+   `⚙️ Installation`_
+
+   `🚀 Quick start`_
+
+   `🎯 Calling SVs`_
+
+   `➕ Merging SVs`_
+
+   `🚦Filtering SVs`_
+
+   `♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
+
+   `🔍 Genotype list of sites`_
+
+   `🔪 Regions of interest / excluding regions`_
+
+   `🔧 Useful parameters`_
+
+   `🚑 Issues`_
+
+   `🐍 Python API`_
+
+   `🎓 Citation`_
+
+----
 
 ⚙️ Installation
 ---------------
@@ -18,10 +45,10 @@ for calling structural variants using paired-end or long read sequencing data. S
 .. |Li badge| image:: https://anaconda.org/bioconda/dysgu/badges/license.svg
    :target: https://github.com/kcleal/dysgu/blob/master/LICENSE.md
 
-Dysgu requires Python >=3.7 - 3.10 plus htslib and has been tested on linux and MacOS.
+Dysgu requires Python >=3.8 - 3.10 plus htslib and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
-   
+
     conda install -c bioconda -c conda-forge dysgu
 
 Or, fetch from PyPI / build from source::
@@ -38,8 +65,8 @@ Run tests::
 
     $ dysgu test
 
-🚀 Usage
---------
+🚀 Quick start
+--------------
 Available commands::
 
     dysgu run              # Run using default arguments, wraps fetch and call commands
@@ -57,8 +84,8 @@ For help use::
 To use the python-API see the `documentation <https://kcleal.github.io/dysgu/API.html>`_, or `jupyter notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,
 
 
-📖 User Guide
--------------
+🎯 Calling SVs
+--------------
 
 Paired-end reads
 ****************
@@ -104,14 +131,39 @@ the insert size can be specified manually using the -I option::
 
     dysgu call --ibam all_reads.bam reference.fa temp_dir temp_dir/temp_dir.dysgu_reads.bam > svs.vcf
 
+Models available
+~~~~~~~~~~~~~~~~~
+There are a choice of three models per read type. By default, a diploid model will be used that takes into account
+changes in read-depth around break sites. This model is
+preferred as it often attains higher precision in germline whole-genome samples. However, for somatic samples (e.g. tumors) copy
+number changes, poly-clonality or poly-ploidy can lead to events with low allelic fraction. For such samples, a non-diploid
+model might work better. This is selected by applying `--diploid False`. A model with no information on allelic fraction
+will then be utilized.
 
-Merging SVs from multiple files
--------------------------------
+Finally, if the diploid/non-diploid models are not picking up your SV of interest, a simpler model can be used with the
+`--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
+retained. In general the performance of models follows diploid > non-diploid > no-contigs.
+
+It is also possible to switch models post-calling using the python-API. For an example of how to do this,
+see the dysgu_api_demon.ipynb
+
+Resource requirements
+~~~~~~~~~~~~~~~~~~~~~
+Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and
+uses < 6 GB memory. Also note that when `fetch` is utilized (or using run command), a large temp file is generated consisting of SV-associated reads >5 Gb in size.
+
+
+➕ Merging SVs
+--------------
 If you plan on merging samples, it is recommended that the '-v2' option be used when running the 'run/call' modules; this will
 ensure that all consensus sequences will be reported in the vcf file to help with downstream merging.
 Multiple output vcf files can be merged, e.g. tumor.vcf and normal.vcf, or illumina.vcf and pacbio.vcf::
 
-    dysgu merge sample1.vcf sample2.vcf > combined.vcf
+    dysgu merge *.vcf > combined.vcf
+
+For large numbers of samples, an input list can be used, and merging can be performed in parallel (by chromosome and SV type)::
+
+    dysgu merge -p24 --input-list samples.txt --wd wd > combined.vcf
 
 Merging SVs between platforms at multiallelic/complex sites is still tricky and there is a trade off between under merging
 (leading to duplication) and over merging (leading to loss of multiallelic/complex SVs). Setting the '--merge-within True' option will perform
@@ -121,8 +173,8 @@ problem of duplication::
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
 
 
-Filtering SVs
--------------
+🚦Filtering SVs
+----------------
 Remove events with low probability::
 
     dysgu filter --min-prob 0.2 input.vcf > output.vcf
@@ -136,8 +188,8 @@ Re-label events with probability >= 0.3 as PASS::
     dysgu filter --pass-prob 0.3 input.vcf > output.vcf
 
 
-Somatic SVs / tumor-normal calling / pool-of-normals
-----------------------------------------------------
+♋ Somatic SVs / tumor-normal calling / pool-of-normals
+------------------------------------------------------
 
 For tumor/normal pairs, the recommended workflow is to call SVs independently in each sample, then obtain tumor specific (somatic) SVs by running dysgu filter::
 
@@ -172,7 +224,7 @@ Also a target VCF can be filtered against a normal vcf if desired (without align
 
 By default, SV calls with a PROB value < ``--min-prob`` are removed from the final output,
 and SV calls with a PROB value >= ``--pass-prob`` will be re-labelled as PASS in the output. However, these
-thresholds currently require tuning depending on sequencing platform, coverage and the size of the cohort used for filtering. 
+thresholds currently require tuning depending on sequencing platform, coverage and the size of the cohort used for filtering.
 Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. For paired-end reads, a pass-prob of around 0.35 can work well, whereas for long-reads a lower threshold of 0.2 can work better e.g::
 
     dysgu filter --pass-prob 0.2 --min-prob 0.1 --normal-vcf normal.vcf tumour.vcf normal.bam > somatic.vcf
@@ -180,56 +232,11 @@ Suitable values for `--pass-prob` often lie in the range 0.2 - 0.4. For paired-e
 To quickly test and visualise different filtering thresholds, output can be piped to the command line tool `GW <https://github.com/kcleal/gw>`_, which will display the results to screen for inspection::
 
     dysgu filter --pass-prob 0.2 filtered.vcf | \
-    gw hg38 -b normal.bam -b tumor.bam -v - 
+    gw hg38 -b normal.bam -b tumor.bam -v -
 
 
-Models available
-----------------
-There are a choice of three models per read type. By default, a diploid model will be used that takes into account
-changes in read-depth around break sites. This model is
-preferred as it often attains higher precision in germline whole-genome samples. However, for somatic samples (e.g. tumors) copy
-number changes, poly-clonality or poly-ploidy can lead to events with low allelic fraction. For such samples, a non-diploid
-model might work better. This is selected by applying `--diploid False`. A model with no information on allelic fraction
-will then be utilized.
-
-Finally, if the diploid/non-diploid models are not picking up your SV of interest, a simpler model can be used with the
-`--contigs False` option. This model has all sequence-related metrics removed, so only read-support information is
-retained. In general the performance of models follows diploid > non-diploid > no-contigs.
-
-It is also possible to switch models post-calling using the python-API. For an example of how to do this,
-see the dysgu_api_demon.ipynb
-
-
-Specifying regions of interest / excluding regions
---------------------------------------------------
-Regions of the genome can be skipped from analysis by providing a .bed file using the `--exclude` option. This option
-takes precedence over the options detailed below, and acts as a hard filter, removing regions of the genome from analysis.
-
-Dysgu provides two ways to analyse regions of interest. Target genomic regions can be specified using a .bed file with
-the --search option. This will also act as a hard filter, limiting analysis only to those regions, while regions outside
-will be ignored.
-
-Alternatively, regions can be specified using the --regions option (.bed file). If this option is used, all reads not
-excluded by the --exclude/--search options will be analysed. Variants will then be
-labelled in the output vcf according to their intersection with those regions. The INFO > KIND column will be labelled
-with either 'intra-regional' - both SV ends within same interval, 'extra-regional' - neither SV end in an interval,
-'inter-regional' - SV ends in separate intervals, or 'hemi-regional' - one SV end in an interval. These labels may be
-useful for some targeted sequencing experiments.
-
-Additionally, there is also the --regions-only option. The option is only available for 'dysgu call'. If this is set to 'True', then dysgu will search all reads in
---regions and also analyse any mate-pairs that do not overlap those regions of interest. This method can be quicker to
-run when the regions of interest are small relative to the genome. However, this option can consume a lot of memory if the
-regions are large, so use with caution.
-
-For deep targeted sequencing experiments, the --regions-mm-only option can also be used, which can help prevent over
-clustering of reads. When set to 'True', dysgu will only use minimizer based clustering within the intervals specified
-by --regions.
-
-Also of note, it is possible to use --exclude, --search, and --regions at the same time.
-
-
-Genotype list of sites
-----------------------
+🔍 Genotype list of sites
+-------------------------
 Calls from multiple samples can be merged into a unified site list::
 
     dysgu run -v2 ref.fa wd1 sample1.bam > sample1.vcf
@@ -262,9 +269,41 @@ in --sites is also a true variant in the input sample. For related individuals o
 If the --sites vcf file is from a previous dysgu run, the PROB values can be utilized by setting '--parse-probs True'. This
 option can work well when using dysgu calls from a related individual.
 
+Also of note, the ``--ignore-sample-sites`` option is set to True by default. This results in the input sample name (from the bam SM tag)
+ being ignored from a multi-sample sites file. This may not be the deired behavior if trying to re-genotype a sample using different
+ read types, for example.
 
-Useful parameters
------------------
+
+🔪 Regions of interest / excluding regions
+------------------------------------------
+Regions of the genome can be skipped from analysis by providing a .bed file using the `--exclude` option. This option
+takes precedence over the options detailed below, and acts as a hard filter, removing regions of the genome from analysis.
+
+Dysgu provides two ways to analyse regions of interest. Target genomic regions can be specified using a .bed file with
+the --search option. This will also act as a hard filter, limiting analysis only to those regions, while regions outside
+will be ignored.
+
+Alternatively, regions can be specified using the --regions option (.bed file). If this option is used, all reads not
+excluded by the --exclude/--search options will be analysed. Variants will then be
+labelled in the output vcf according to their intersection with those regions. The INFO > KIND column will be labelled
+with either 'intra-regional' - both SV ends within same interval, 'extra-regional' - neither SV end in an interval,
+'inter-regional' - SV ends in separate intervals, or 'hemi-regional' - one SV end in an interval. These labels may be
+useful for some targeted sequencing experiments.
+
+Additionally, there is also the --regions-only option. The option is only available for 'dysgu call'. If this is set to 'True', then dysgu will search all reads in
+--regions and also analyse any mate-pairs that do not overlap those regions of interest. This method can be quicker to
+run when the regions of interest are small relative to the genome. However, this option can consume a lot of memory if the
+regions are large, so use with caution.
+
+For deep targeted sequencing experiments, the --regions-mm-only option can also be used, which can help prevent over
+clustering of reads. When set to 'True', dysgu will only use minimizer based clustering within the intervals specified
+by --regions.
+
+Also of note, it is possible to use --exclude, --search, and --regions at the same time.
+
+
+🔧 Useful parameters
+--------------------
 The most important parameter affecting sensitivity is --min-support, lower values increase sensitivity but also runtime.
 
 The --max-cov parameter may need to be adjusted for high coverage samples (default is 200), or samples that might have
@@ -295,14 +334,8 @@ ambiguous candidate alignments.
 compared to matching reference bases. Reads that have anomalous divergence at the ends of the read are ignored during calling.
 
 
-Resource requirements
----------------------
-Using a single core and depending on hard-drive speed, dysgu usually takes ~1h to analyse a 30X coverage genome of 150 bp paired-end reads and
-uses < 6 GB memory. Also note that when `fetch` is utilized (or using run command), a large temp file is generated consisting of SV-associated reads >5 Gb in size.
-
-
-Issues
-------
+🚑 Issues
+---------
 - Currently cram files are only supported when using the "run" command. This is because pysam cannot use seek on a cram file.
 
 - If the temp file created during the fetch stage of the pipeline is too big, the --compression level can be set to reduce space.
@@ -316,8 +349,8 @@ Issues
 - If you input data or aligner do not seem to be working well with dysgu, please get in touch clealk@cardiff.ac.uk
 
 
-Python API
-----------
+🐍 Python API
+-------------
 
 Dysgu can also be used from a python script. A full demo of the API can be found in the
 `ipython notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,. In this example, dysgu is
@@ -344,8 +377,8 @@ used to call SVs on the first 10 Mb of chr1:
 
 The API can also be used to apply different machine-learning models, merge SVs, and call SVs using target bed regions.
 
-Citation
---------
+🎓 Citation
+-----------
 To cite dysgu, or to learn more about implementation details please see:
 
 https://academic.oup.com/nar/advance-article/doi/10.1093/nar/gkac039/6517943
