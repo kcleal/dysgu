@@ -1,11 +1,6 @@
 
-
 .. image:: dysgu/logo.png
     :align: left
-
-----
-
-|Generic badge| |Li badge|
 
 .. |Generic badge| image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg
    :target: http://bioconda.github.io/recipes/dysgu/README.html
@@ -16,6 +11,7 @@
 dysgu (pronounced *duss-key*) is a set of command line tools and `python-API <https://kcleal.github.io/dysgu/API.html>`_,
 for calling structural variants using paired-end or long read sequencing data. See a recent long-read benchmark `here <https://github.com/kcleal/SV_Benchmark_CMRG>`_.
 
+|Generic badge| |Li badge|
 
 `⚙️ Installation`_
 
@@ -23,9 +19,9 @@ for calling structural variants using paired-end or long read sequencing data. S
 
 `🎯 Calling SVs`_
 
-`➕ Merging SVs`_
-
 `🚦Filtering SVs`_
+
+`➕ Merging SVs`_
 
 `♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
 
@@ -154,6 +150,21 @@ Using a single core and depending on hard-drive speed, dysgu usually takes ~1h t
 uses < 6 GB memory. Also note that when `fetch` is utilized (or using run command), a large temp file is generated consisting of SV-associated reads >5 Gb in size.
 
 
+🚦Filtering SVs
+----------------
+Remove events with low probability::
+
+    dysgu filter --min-prob 0.2 input.vcf > output.vcf
+
+Remove events with low support fraction::
+
+    dysgu filter --support-fraction 0.15 input.vcf > output.vcf
+
+Re-label events with probability >= 0.3 as PASS::
+
+    dysgu filter --pass-prob 0.3 input.vcf > output.vcf
+
+
 ➕ Merging SVs
 --------------
 If you plan on merging samples, it is recommended that the '-v2' option be used when running the 'run/call' modules; this will
@@ -172,21 +183,6 @@ a single round of merging for each input file before merging across input files.
 problem of duplication::
 
     dysgu merge --merge-within True pacbio.vcf illumina.vcf > combined.vcf
-
-
-🚦Filtering SVs
-----------------
-Remove events with low probability::
-
-    dysgu filter --min-prob 0.2 input.vcf > output.vcf
-
-Remove events with low support fraction::
-
-    dysgu filter --support-fraction 0.15 input.vcf > output.vcf
-
-Re-label events with probability >= 0.3 as PASS::
-
-    dysgu filter --pass-prob 0.3 input.vcf > output.vcf
 
 
 ♋ Somatic SVs / tumor-normal calling / pool-of-normals
