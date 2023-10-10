@@ -5,6 +5,8 @@ on: [push, pull_request]
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    env:
+      PREFIX: "/usr/local/"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
