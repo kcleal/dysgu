@@ -51,7 +51,7 @@ def get_bam_paths(args):
     if len(pths) == 1:
         if pths[0].endswith(".txt"):
             pths = []
-            with open(pths, "r") as f:
+            with open(args['normal_bams'][0], "r") as f:
                 for line in f:
                     pths.append(line)
     if args["random_bam_sample"] > 0:
