@@ -48,6 +48,12 @@ def parse_SM_name(infile, path, ignore_RG, warn=True):
 
 def get_bam_paths(args):
     pths = args['normal_bams']
+    if len(pths) == 1:
+        if pths[0].endswith(".txt"):
+            pths = []
+            with open(pths, "r") as f:
+                for line in f:
+                    pths.append(line)
     if args["random_bam_sample"] > 0:
         n = min(args["random_bam_sample"], len(pths))
         pths = random.choices(pths, k=n)
