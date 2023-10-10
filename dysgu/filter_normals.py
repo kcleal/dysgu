@@ -13,6 +13,7 @@ from enum import Enum
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import zlib
 import edlib
+import glob
 
 
 random.seed(42)
@@ -44,16 +45,26 @@ def parse_SM_name(infile, path, ignore_RG, warn=True):
             logging.warning("Warning: no @RG, using input file name as sample name: {}".format(sample_name))
     return sample_name
 
-
+def get_paths_from_txt(file):
+    pths = []
+    with open(file, "r") as f:
+        for line in f:
+            pths.append(line)
+    return pths
 
 def get_bam_paths(args):
     pths = args['normal_bams']
     if len(pths) == 1:
         if pths[0].endswith(".txt"):
-            pths = []
-            with open(args['normal_bams'][0], "r") as f:
-                for line in f:
-                    pths.append(line)
+            list_file = pths
+            pths = get_paths_from_txt(list_file[0])
+        elif "*" in pths[0]:
+            pths = glob.glob(pths[0])
+    for pth in pths:
+        if "*" in pth:
+            pths = pths + glob.glob(pth)
+    pths = [i for i in pths if "*" not in i]
+    
     if args["random_bam_sample"] > 0:
         n = min(args["random_bam_sample"], len(pths))
         pths = random.choices(pths, k=n)
