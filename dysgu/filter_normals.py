@@ -49,13 +49,13 @@ def get_paths_from_txt(file):
     pths = []
     with open(file, "r") as f:
         for line in f:
-            pths.append(line)
+            pths.append(line.strip())
     return pths
 
 def get_bam_paths(args):
     pths = args['normal_bams']
     if len(pths) == 1:
-        if pths[0].endswith(".txt"):
+        if not pths[0].endswith(".bam") or pths[0].endswith(".cram"):
             list_file = pths
             pths = get_paths_from_txt(list_file[0])
         elif "*" in pths[0]:
@@ -64,6 +64,7 @@ def get_bam_paths(args):
         if "*" in pth:
             pths = pths + glob.glob(pth)
     pths = [i for i in pths if "*" not in i]
+    pths = [i for i in pths if i.endswith(".bam") or i.endswith(".cram")]
     
     if args["random_bam_sample"] > 0:
         n = min(args["random_bam_sample"], len(pths))
