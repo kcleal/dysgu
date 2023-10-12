@@ -54,15 +54,11 @@ def get_paths_from_txt(file):
 
 def get_bam_paths(args):
     pths = args['normal_bams']
-    if len(pths) == 1:
-        if not pths[0].endswith(".bam") or pths[0].endswith(".cram"):
-            list_file = pths
-            pths = get_paths_from_txt(list_file[0])
-        elif "*" in pths[0]:
-            pths = glob.glob(pths[0])
     for pth in pths:
         if "*" in pth:
             pths = pths + glob.glob(pth)
+        elif not pth.endswith(".bam") or pth.endswith(".cram"):
+            paths = pths + get_paths_from_txt(pth)
     pths = [i for i in pths if "*" not in i]
     pths = [i for i in pths if i.endswith(".bam") or i.endswith(".cram")]
     
