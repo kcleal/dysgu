@@ -53,7 +53,7 @@ def get_paths_from_txt(file):
     return pths
 
 def get_bam_paths(args):
-    pths = args['normal_bams']
+    pths = list(args['normal_bams'])
     for pth in pths:
         if "*" in pth:
             pths = pths + glob.glob(pth)
