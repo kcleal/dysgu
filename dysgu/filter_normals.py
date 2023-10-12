@@ -58,7 +58,7 @@ def get_bam_paths(args):
         if "*" in pth:
             pths = pths + glob.glob(pth)
         elif not pth.endswith(".bam") or pth.endswith(".cram"):
-            paths = pths + get_paths_from_txt(pth)
+            pths = pths + get_paths_from_txt(pth)
     pths = [i for i in pths if "*" not in i]
     pths = [i for i in pths if i.endswith(".bam") or i.endswith(".cram")]
     
