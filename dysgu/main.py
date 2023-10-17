@@ -245,7 +245,7 @@ def run_pipeline(ctx, **kwargs):
     dest = os.path.expanduser(kwargs["working_directory"])
     logging.info(f"Destination: {dest}")
     bname = os.path.splitext(os.path.basename(kwargs["bam"]))[0]
-    tmp_file_name = f"{dest}/{bname if bname != '-' else os.path.basename(kwargs["working_directory"])}.{pfix}.bam"
+    tmp_file_name = f"{dest}/{bname if kwargs["bam"] != '-' else os.path.basename(kwargs["working_directory"])}.{pfix}.bam"
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
     max_cov_value = sv2bam.process(ctx.obj)
