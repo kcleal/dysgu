@@ -164,6 +164,12 @@ Re-label events with probability >= 0.3 as PASS::
 
     dysgu filter --pass-prob 0.3 input.vcf > output.vcf
 
+Use normal bams to filter common/germline structural variants::
+
+    dysgu filter input.vcf /path/to/normal/normal.bam > output.vcf
+    dysgu filter input.vcf /path/to/normals/*.bam > output.vcf
+    dysgu filter input.vcf list_of_normals.txt > output.vcf
+
 
 ➕ Merging SVs
 --------------
