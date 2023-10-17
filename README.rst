@@ -164,6 +164,12 @@ Re-label events with probability >= 0.3 as PASS::
 
     dysgu filter --pass-prob 0.3 input.vcf > output.vcf
 
+Use normal bams to filter common/germline structural variants::
+
+    dysgu filter input.vcf normal.bam > output.vcf
+    dysgu filter input.vcf normals/*.bam > output.vcf
+    dysgu filter input.vcf list_of_normals.txt > output.vcf
+
 
 ➕ Merging SVs
 --------------
@@ -201,6 +207,7 @@ cohort SVs can be merged using `dysgu merge`, before filtering to get unique SVs
 
     dysgu merge *.vcf > merged.vcf
     dysgu filter --normal-vcf merged.vcf sample1.vcf *.bam > sample1_unique.vcf
+    dysgu filter --normal-vcf merged.vcf sample1.vcf list_of_normals.txt > sample1_unique.vcf
 
 Here, sample1.vcf and merged.vcf can contain multiple samples, although if sample1.vcf is multi-sample, you must provide '--target-sample' to indicate which sample to filter.
 The output sample1_somatic.vcf will be a single sample vcf containing unique SVs.
