@@ -58,7 +58,7 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
-                             "-Wno-deprecated-declarations", "-fpermissive"
+                             "-Wno-deprecated-declarations", # "-fpermissive"
                              ]
 
 ext_modules = list()
@@ -187,7 +187,7 @@ setup(
             'numpy>=1.18',
             'scipy',
             'pandas',
-            'pysam==0.21.0',
+            'pysam==0.22.0',
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
