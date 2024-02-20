@@ -867,9 +867,9 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
     cdef bint good_clip
     if paired_end and read_enum == SPLIT and flag & 8:  # clip event, or whole read, but mate is unmapped
         return
+
     if site_adder:
-        if site_adder:
-            site_adder.add_any_sites(r.rname, event_pos, G, pe_scope, node_to_name, clustering_dist)
+        site_adder.add_any_sites(r.rname, event_pos, G, pe_scope, node_to_name, clustering_dist)
     if paired_end or flag & 1:
         pnext = r.pnext
         rnext = r.rnext
