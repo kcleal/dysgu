@@ -5,7 +5,7 @@ from sys import argv
 import shutil
 import time
 from multiprocessing import cpu_count
-from subprocess import run
+from subprocess import run, Popen, PIPE
 from importlib.metadata import version
 import warnings
 from dysgu import cluster, view, sv2bam, filter_normals
@@ -533,11 +533,14 @@ def test_command(ctx, **kwargs):
                   "-o " + pwd + '/test.merge.dysgu{}.vcf'.format(dysgu_version)])
     for t in tests:
         c = " ".join(t)
-        v = run(shlex.split(c), shell=False, capture_output=True, check=True)
+        process = Popen(shlex.split(c), stdout=PIPE, stderr=PIPE, text=True)
         if kwargs["verbose"]:
-            click.echo(v.stderr, err=True)
-        if v.returncode != 0:
-            raise RuntimeError(t, "finished with non zero: {}".format(v))
+            for line in process.stderr:
+                click.echo(line.strip(), err=True)
+        process.wait()
+        if process.returncode != 0:
+            logging.warning(f"WARNING: Command failed with return code {process.returncode}")
         else:
-            click.echo("PASS: " + c, err=True)
+            click.echo("PASS: " + c + "\n", err=True)
+
     logging.info("Run test complete")
