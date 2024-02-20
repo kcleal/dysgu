@@ -58,7 +58,7 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
-                             "-Wno-deprecated-declarations",
+                             "-Wno-deprecated-declarations", "-fpermissive"
                              ]
 
 ext_modules = list()
