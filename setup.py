@@ -173,7 +173,7 @@ setup(
             'numpy>=1.18',
             'scipy',
             'pandas',
-            'pysam==0.21.0',
+            'pysam==0.22.0',
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
