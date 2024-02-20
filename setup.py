@@ -165,7 +165,7 @@ setup(
     description="Structural variant calling",
     license="MIT",
     version='1.6.3',
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     install_requires=[  # runtime requires
             'setuptools>=63.0',
             'cython',

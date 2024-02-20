@@ -482,6 +482,8 @@ def filter_normal(ctx, **kwargs):
 
 
 @cli.command("test")
+@click.option("--verbose", help="Show output of test commands",
+              is_flag=True, flag_value=True, show_default=False, default=False)
 @click.pass_context
 def test_command(ctx, **kwargs):
     """Run dysgu tests"""
@@ -532,6 +534,8 @@ def test_command(ctx, **kwargs):
     for t in tests:
         c = " ".join(t)
         v = run(shlex.split(c), shell=False, capture_output=True, check=True)
+        if kwargs["verbose"]:
+            click.echo(v.stderr, err=True)
         if v.returncode != 0:
             raise RuntimeError(t, "finished with non zero: {}".format(v))
         else:
