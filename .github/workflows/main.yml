@@ -25,7 +25,7 @@ jobs:
           CIBW_BEFORE_ALL: wget -O /usr/local/include/longintrepr.h https://github.com/python/cpython/blob/main/Include/cpython/longintrepr.h
           CIBW_BEFORE_ALL_MACOS: bash ci/osx-deps
           CIBW_BEFORE_ALL_LINUX: bash ci/manylinux-deps
-          CIBW_BEFORE_BUILD_MACOS: pip install -r requirements.txt --global-option="-I/usr/local/include"
+          CIBW_BEFORE_BUILD_MACOS: CFLAGS+="-I/usr/local/include" pip install -r requirements.txt # --global-option="-I/usr/local/include"
           CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
           CIBW_TEST_SKIP: "*-macosx_arm64"
           CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam==0.22.0 networkx>=2.4 scikit-learn>=0.22 edlib sortedcontainers lightgbm
