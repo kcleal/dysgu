@@ -23,8 +23,8 @@ jobs:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_LINUX: "auto"
           CIBW_BEFORE_ALL_MACOS: |
-            mkdir -p /usr/local/include
-            wget -O /usr/local/include/longintrepr.h https://github.com/python/cpython/blob/main/Include/cpython/longintrepr.h
+#            mkdir -p /usr/local/include
+#            wget -O /usr/local/include/longintrepr.h https://github.com/python/cpython/blob/main/Include/cpython/longintrepr.h
             bash ci/osx-deps
           CIBW_BEFORE_ALL_LINUX:
             #wget -O /usr/local/include/longintrepr.h https://github.com/python/cpython/blob/main/Include/cpython/longintrepr.h
@@ -33,7 +33,7 @@ jobs:
             ls -lh /usr/local/include/*
             echo "-----" && \
             ls -lh /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/*
-            CFLAGS+="-I/usr/local/include" pip install -r requirements.txt
+            CFLAGS+="-I/Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython" pip install -r requirements.txt
           CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
           CIBW_TEST_SKIP: "*-macosx_arm64"
           CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam==0.22.0 networkx>=2.4 scikit-learn>=0.22 edlib sortedcontainers lightgbm
