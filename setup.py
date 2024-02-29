@@ -195,7 +195,7 @@ setup(
             'lightgbm',
             #'edlib'
         ],
-    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
+    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"],
     ext_modules=cythonize(ext_modules),
     include_package_data=True,
     zip_safe=False,
