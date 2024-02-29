@@ -12,7 +12,7 @@ from collections import defaultdict
 from enum import Enum
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import zlib
-import edlib
+from dysgu.edlib import edlib
 import glob
 
 
