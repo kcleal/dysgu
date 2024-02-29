@@ -7,6 +7,6 @@ pandas
 pysam==0.22.0
 networkx>=2.4
 scikit-learn>=0.22
-edlib
+#edlib
 sortedcontainers
 lightgbm

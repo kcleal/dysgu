@@ -128,18 +128,19 @@ print("Extras compiler args", extras)
 
 # Scikit-bio module
 ssw_extra_compile_args = ["-Wno-deprecated-declarations", '-std=c99', '-I.']
-# if icc or sysconfig.get_config_vars()['CC'] == 'icc':
-#     ssw_extra_compile_args.extend(['-qopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
-# elif not (clang or sysconfig.get_config_vars()['CC'] == 'clang'):
-#     ssw_extra_compile_args.extend(['-fopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
+
 
 ext_modules.append(Extension(f"dysgu.scikitbio._ssw_wrapper",
                              [f"dysgu/scikitbio/_ssw_wrapper.pyx", f"dysgu/scikitbio/ssw.c"],
                              include_dirs=[f"{root}/dysgu/scikitbio", numpy.get_include()],
                              extra_compile_args=ssw_extra_compile_args,
-                             # define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                              language="c"))
 
+ext_modules.append(Extension(f"dysgu.edlib.edlib",
+                             [f"dysgu/edlib/edlib.pyx", f"dysgu/edlib/src/edlib.cpp"],
+                             include_dirs=[f"{root}/dysgu/edlib", numpy.get_include()],
+                             extra_compile_args=["-O3", "-std=c++11"],
+                             language="c++"))
 
 # Dysgu modules
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
@@ -178,7 +179,7 @@ setup(
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            'edlib',
+            #'edlib',
         ],
     setup_requires=[
             'setuptools>=63.0',
@@ -192,7 +193,7 @@ setup(
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            'edlib'
+            #'edlib'
         ],
     packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
     ext_modules=cythonize(ext_modules),

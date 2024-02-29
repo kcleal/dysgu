@@ -5,18 +5,21 @@ include dysgu/*
 include ci/*
 include scripts/*
 
-include dysgu/htslib/*.o
-include dysgu/htslib/*.c
-include dysgu/htslib/*.h
-include dysgu/htslib/htslib/*.h
-include dysgu/htslib/cram/*.c
-include dysgu/htslib/cram/*.h
-graft dysgu/htslib/os
-graft dysgu/htslib/m4
-graft dysgu/htslib/htscodecs/htscodecs
-graft dysgu/htslib/htscodecs/m4
+include dysgu/htslib/*.so
+include dysgu/htslib/*.dylib
 
-prune dysgu/htslib/test
-prune dysgu/htslib/htscodecs/test
-exclude dysgu/htslib/.*
-exclude dysgu/scikitbio/.*
+#include dysgu/htslib/*.o
+#include dysgu/htslib/*.c
+#include dysgu/htslib/*.h
+#include dysgu/htslib/htslib/*.h
+#include dysgu/htslib/cram/*.c
+#include dysgu/htslib/cram/*.h
+#graft dysgu/htslib/os
+#graft dysgu/htslib/m4
+#graft dysgu/htslib/htscodecs/htscodecs
+#graft dysgu/htslib/htscodecs/m4
+
+#prune dysgu/htslib/test
+#prune dysgu/htslib/htscodecs/test
+#exclude dysgu/htslib/.*
+#exclude dysgu/scikitbio/.*

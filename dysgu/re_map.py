@@ -4,7 +4,7 @@ from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
 from dysgu.assembler import compute_rep
 import math
-import edlib
+import dysgu.edlib as edlib
 import logging
 
 

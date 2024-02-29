@@ -373,7 +373,7 @@ def get_names_list(file_list, ignore_csv=True):
     return seen_names, names_list
 
 
-def process_file_list(args, file_list, seen_names, names_list, log_messages):
+def process_file_list(args, file_list, seen_names, names_list, log_messages, show_progress=False, job_id=None):
     dfs = []
     header = None
     contig_names = None
@@ -398,10 +398,14 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages):
         df = mung_df(df, args)
         if args["merge_within"] == "True":
             l_before = len(df)
+            if show_progress and job_id:
+                logging.info("{} started, records {}".format(job_id, l_before))
             df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
                           aggressive=args['collapse_nearby'] == "True", log_messages=log_messages)
             if log_messages:
                 logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
+            elif show_progress and job_id:
+                logging.info("{} rows before merge-within {}, rows after {}".format(job_id, l_before, len(df)))
         if "partners" in df:
             del df["partners"]
         dfs.append(df)
@@ -416,10 +420,15 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages):
 
     outfile = open_outfile(args, names_list, log_messages=log_messages)
     if args["out_format"] == "vcf":
+        lens_before = list(map(len, dfs))
+        if show_progress and job_id:
+            logging.info("{} started, records {}".format(job_id, lens_before))
         count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
                                 contig_names=contig_names, show_names=log_messages)
         if log_messages:
-            logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
+            logging.info("Sample rows before merge {}, rows after {}".format(lens_before, count))
+        elif show_progress and job_id:
+            logging.info("{} rows after {}".format(job_id, count))
     else:
         to_csv(df, args, outfile, small_output=False)
 
@@ -444,7 +453,7 @@ class VcfWriter(object):
         self.vcf.write(str(r))
 
 
-def shard_job(wd, item_path, name, Global):
+def shard_job(wd, item_path, name, Global, show_progress):
     shards = {}
     vcf = pysam.VariantFile(item_path, 'r')
     contigs = len(vcf.header.contigs)
@@ -473,6 +482,8 @@ def shard_job(wd, item_path, name, Global):
     for v in shards.values():
         v.close()
     vcf.close()
+    if show_progress:
+        logging.info(f"Finished splitting {item_path}")
     return list(shards.keys()), rows, name
 
 
@@ -545,7 +556,7 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
     return written
 
 
-def shard_data(args, input_files, Global):
+def shard_data(args, input_files, Global, show_progress):
     logging.info(f"Merge distance: {args['merge_dist']} bp")
     out_f = args['svs_out'] if args['svs_out'] else '-'
     logging.info("SVs output to {}".format(out_f if out_f != '-' else 'stdout'))
@@ -554,9 +565,11 @@ def shard_data(args, input_files, Global):
     seen_names, names_list = get_names_list(input_files, ignore_csv=False)
 
     # Split files into shards
+    if show_progress:
+        logging.info("Splitting files into shards")
     job_args = []
     for name, item in zip(names_list, input_files):
-        job_args.append((args['wd'], item, name, Global))
+        job_args.append((args['wd'], item, name, Global, show_progress))
     pool = multiprocessing.Pool(args['procs'])
     results = pool.starmap(shard_job, job_args)
     input_rows = {}
@@ -572,6 +585,8 @@ def shard_data(args, input_files, Global):
     resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, max(Global.soft, soft) * len(input_files)), hard))
 
     # Process shards
+    if show_progress:
+        logging.info("Processing shards")
     job_args2 = []
     needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind"]}
     merged_outputs = []
@@ -584,7 +599,7 @@ def shard_data(args, input_files, Global):
         fout = os.path.join(args['wd'], block_id + '_merged.vcf')
         merged_outputs.append(fout)
         target_args["svs_out"] = fout
-        job_args2.append((target_args, file_targets, seen_names, names, False))
+        job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id))
 
     if args['procs'] > 1:
         pool.starmap(process_file_list, job_args2)
@@ -643,7 +658,7 @@ def view_file(args):
         seen_names, names_list = get_names_list(args["input_files"])
         process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
     else:
-        shard_data(args, args["input_files"], Global=Global)
+        shard_data(args, args["input_files"], Global=Global, show_progress=args['progress'])
         if args['clean']:
             os.rmdir(args['wd'])
 
