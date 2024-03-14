@@ -189,6 +189,7 @@ def cli():
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
+@click.option('--sd', help="Span distance, only SV span is considered, lower values separate multi-allelic sites", default=0.8, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -348,6 +349,7 @@ def get_reads(ctx, **kwargs):
               type=int, callback=add_option_set)
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
+@click.option('--sd', help="Span distance, only SV span is considered, lower values separate multi-allelic sites", default=0.8, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)

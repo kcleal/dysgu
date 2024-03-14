@@ -286,9 +286,11 @@ def ref_repetitiveness(events, ref_genome):
         if e.svlen < 150 and e.svtype == "DEL":
             try:
                 ref_seq = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
-            except ValueError:  # todo out or range, needs fixing
-                continue
-            e.ref_rep = compute_rep(ref_seq)
+                e.ref_rep = compute_rep(ref_seq)
+            except (ValueError, KeyError, IndexError) as errors:
+                # Might be different reference genome version, compared to bam genome
+                logging.warning("Error fetching reference chromosome: {}".format(e.chrA), errors)
+                e.ref_seq = 0
     return events
 
 

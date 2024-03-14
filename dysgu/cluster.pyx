@@ -150,10 +150,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         event_iter = compare_subset(potential, max_dist)  # Use iitree, generate overlap tree and perform intersections
     seen = set([])
     pad = 100
+    # max_edges = 8
     disjoint_nodes = set([])  # if a component has more than one disjoint nodes it needs to be broken apart
+    # edge_counts = defaultdict(int)
     for ei, ej, idx, jdx in event_iter:
         i_id = ei.event_id
         j_id = ej.event_id
+        # if edge_counts[i_id] > max_edges and edge_counts[j_id] > max_edges:
+        #     continue
         if not same_sample:
             if ei.sample == ej.sample:
                 continue
@@ -183,6 +187,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Force merging of translocations that have similar loci
         if not intra:
             G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=0)
+            # edge_counts[i_id] += 1
+            # edge_counts[j_id] += 1
             continue
 
         one_is_imprecise = False
@@ -265,6 +271,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
+                    # edge_counts[i_id] += 1
+                    # edge_counts[j_id] += 1
         else:
             v = None
             if ci_alt and cj_alt:
@@ -285,26 +293,42 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
+                    # edge_counts[i_id] += 1; edge_counts[j_id] += 1
                     continue
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
+                # edge_counts[i_id] += 1; edge_counts[j_id] += 1
             # see if alt sequence can be found in other contig
             else:
+                # echo("checking alts")
+                # if ci_alt and cj_alt:
+                    # echo("yes0", ci_alt, cj_alt)
+                    # if assembler.check_contig_match(ci_alt, cj_alt, return_int=True):
+                    #     G.add_edge(i_id, j_id, loci_same=True)
+                        # edge_counts[i_id] += 1; edge_counts[j_id] += 1
+                        # continue
                 if ci_alt and cj:
                     if assembler.check_contig_match(ci_alt, cj, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
+                        # edge_counts[i_id] += 1; edge_counts[j_id] += 1
                         continue
                 if ci_alt and cj2:
                     if assembler.check_contig_match(ci_alt, cj2, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
+                        # edge_counts[i_id] += 1;
+                        # edge_counts[j_id] += 1
                         continue
                 if cj_alt and ci:
                     if assembler.check_contig_match(cj_alt, ci, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
+                        # edge_counts[i_id] += 1;
+                        # edge_counts[j_id] += 1
                         continue
                 if cj_alt and ci2:
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
+                        # edge_counts[i_id] += 1;
+                        # edge_counts[j_id] += 1
                         continue
     return G, disjoint_nodes
 
@@ -811,7 +835,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             trust_ins_len=args["trust_ins_len"] == "True",
                                             low_mem=low_mem,
                                             temp_dir=tdir,
-                                            find_n_aligned_bases=find_n_aligned_bases)
+                                            find_n_aligned_bases=find_n_aligned_bases,
+                                            position_distance_thresh=args['sd'],
+    )
     sites_index = None
     if sites_adder:
         sites_index = sites_adder.sites_index
@@ -937,7 +963,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                     pickle.dump(res, completed_file)
                     else:
                         j_submitted, w_idx = heapq.heappop(minhq)
-                        heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
+                        heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
                         msg_queues[w_idx][1].send(res)
             else:
                 # most partitions processed here, dict returned, or None
@@ -969,7 +995,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                     pickle.dump(res, completed_file)
                     else:
                         j_submitted, w_idx = heapq.heappop(minhq)
-                        heapq.heappush(minhq, (j_submitted + len(res["n2n"]), w_idx))
+                        heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
                         msg_queues[w_idx][1].send(res)
 
     if completed_file is not None:

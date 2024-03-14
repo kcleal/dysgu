@@ -6,16 +6,10 @@ from dysgu.map_set_utils import echo
 
 cdef class AlignmentItem:
     """Data holder for classifying alignments into SV types"""
-    # cdef public int chrA, chrB, priA, priB, rA, rB, posA, endA, posB, endB, strandA, strandB, left_clipA, right_clipA,\
-    #     left_clipB, right_clipB, breakA_precise, breakB_precise, breakA, breakB, a_qstart, a_qend, b_qstart, b_qend,\
-    #     a_len, b_len, query_gap, read_overlaps_mate, size_inferred, query_overlap, inferred_sv_len
-    # cdef public str svtype, join_type
-    # cdef public object read_a, read_b
     def __cinit__(self, int chrA, int chrB, int priA, int priB, int rA, int rB, int posA, int endA, int posB, int endB,
                   int strandA, int strandB, int left_clipA, int right_clipA, int left_clipB, int right_clipB,
                   int a_qstart, int a_qend, int b_qstart, int b_qend, int a_len, int b_len,
-                  int read_overlaps_mate, object read_a,
-                  object read_b):
+                  int read_overlaps_mate, read_a, read_b, a_node_info=None, b_node_info=None):
         self.chrA = chrA
         self.chrB = chrB
         self.priA = priA
@@ -41,7 +35,8 @@ cdef class AlignmentItem:
         self.read_overlaps_mate = read_overlaps_mate
         self.read_a = read_a
         self.read_b = read_b
-
+        self.a_node_info = a_node_info
+        self.b_node_info = b_node_info
         # These will be determined
         self.breakA_precise = 0
         self.breakB_precise = 0
@@ -53,6 +48,56 @@ cdef class AlignmentItem:
         self.inferred_sv_len = -1
         self.size_inferred = 0  # set to 1 if insertion size was inferred
 
+# cdef void from_node_info(AlignmentItem v):
+#     a_info = v.a_node_info
+#     b_info = v.b_node_info
+#
+#     v.breakA = v.a_node_info.event_pos
+#     v.breakA_precise = 1 if v.a_node_info.read_enum == 1 else 0
+#     v.breakB = v.b_node_info.event_pos
+#     v.breakB_precise = 1 if v.b_node_info.read_enum == 1 else 0
+#
+#     v.join_type = f"{v.strandA}to{v.strandB}"
+#
+#     cdef int query_gap = 0
+#     cdef int query_overlap = 0
+#     if v.rA == v.rB:  # same read
+#         if v.b_qstart < v.a_qstart:  # B is first on query
+#             query_gap = v.a_qstart - v.b_qend
+#         else:
+#             query_gap = v.b_qstart - v.a_qend
+#         if query_gap < 0:
+#             query_overlap = abs(query_gap)
+#             query_gap = 0
+#
+#     v.query_gap = query_gap
+#     v.query_overlap = query_overlap
+#
+#     if a_info.chrom != b_info.chrom:
+#         v.svtype = "TRA"
+#     else:
+#         if a_info.event_pos < b_info.event_pos:
+#             if a_info.connect_right:
+#                 if not b_info.connect_right:
+#                     v.svtype = "DEL"
+#                 else:
+#                     v.svtype = "INV"
+#             else:
+#                 if not b_info.connect_right:
+#                     v.svtype = "INV"
+#                 else:
+#                     v.svtype = "DUP"
+#         else:
+#             if a_info.connect_right:
+#                 if not b_info.connect_right:
+#                     v.svtype = "DUP"
+#                 else:
+#                     v.svtype = "INV"
+#             else:
+#                 if not b_info.connect_right:
+#                     v.svtype = "INV"
+#                 else:
+#                     v.svtype = "DEL"
 
 cdef void two_primary(AlignmentItem v):
 
@@ -272,7 +317,6 @@ cdef void same_read(AlignmentItem v):
                     v.breakB = v.endB
 
                 v.svtype = "DUP"
-                # v.svtype = "INS"
                 # Check if gap on query is bigger than gap on reference
                 ref_gap = abs(v.breakB - v.breakA)
                 if v.a_qstart > v.b_qstart:  # B is first on query seq
@@ -784,7 +828,6 @@ cdef void translocation(AlignmentItem v):
 
     v.query_gap = query_gap
     v.query_overlap = query_overlap
-
 
 cdef void classify_d(AlignmentItem v):  #, debug=False):
 

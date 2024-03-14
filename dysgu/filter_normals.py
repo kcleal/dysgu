@@ -1,5 +1,7 @@
 import random
 from sys import stderr, argv
+
+import numpy as np
 import pysam
 from pysam import CSOFT_CLIP, CHARD_CLIP, CDEL, CINS, CDIFF, CMATCH
 import time
@@ -14,6 +16,7 @@ from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import zlib
 from dysgu.edlib import edlib
 import glob
+from dysgu.map_set_utils import echo
 
 
 random.seed(42)
@@ -398,6 +401,7 @@ def matching_gap(posA, posB, r, svtype, is_insertion, svlen, pos_threshold=100, 
     min_length = svlen * 0.2  # 0.25
     max_distance = svlen * 10
     ins_like = svtype == "DUP" or svtype == "INV"
+    debug = False
     for k, l in ct:
         if k == CHARD_CLIP or k == CSOFT_CLIP:
             continue
@@ -408,17 +412,22 @@ def matching_gap(posA, posB, r, svtype, is_insertion, svlen, pos_threshold=100, 
             pos += l
             continue
         elif not is_insertion and k == CINS:
-            if l > 250 and ins_like:
+            span_similarity = min(l, svlen) / max(l, svlen)
+            if l > 250 and ins_like and span_similarity > 0.85 and abs(posA - pos) < max(l, svlen):
+                if debug: echo("ret0", svlen, f"{posA}-{posA + svlen}", f"{pos}-{pos + l}", (k, l))
                 return True
             elif svlen * 2 < l and (abs(posA - pos) < max_distance or (abs(posB - pos + l) < max_distance)):
+                if debug: echo("ret1")
                 return True
             continue
         end = pos + l
         if l > min_length and abs(posA - pos) < max_distance:
             if is_insertion:
                 if span_position_distance(posA, posA + svlen, pos, end, pos_threshold, span_threshold):
+                    if debug: echo("ret2", f"{posA}-{posA + svlen}", f"{pos}-{end}")
                     return True
             elif span_position_distance(posA, posB, pos, end, pos_threshold, span_threshold):
+                if debug: echo("ret3")
                 return True
         if k == CDEL:
             pos += l
@@ -640,7 +649,12 @@ def matching_soft_clips(r, reads_with_nearby_soft_clips, pe):
 
 
 def has_low_support(r, sample, support_fraction):
-    cov = r.samples[sample]['COV']
+    d = r.samples[sample]
+    m = max(d['ICN'], d['OCN'])
+    if m == 0:
+        cov = d['COV']
+    else:
+        cov = d['COV'] * (min(d['ICN'], d['OCN']) / m)
     min_support = round(1.5 + support_fraction * cov)
     if r.info['SU'] < min_support:
         return True
@@ -649,7 +663,13 @@ def has_low_support(r, sample, support_fraction):
 
 def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     sf = support_fraction / 2
-    cov = r.samples[sample]['COV']
+    # cov = r.samples[sample]['COV']
+    d = r.samples[sample]
+    m = max(d['ICN'], d['OCN'])
+    if m == 0:
+        cov = d['COV']
+    else:
+        cov = d['COV'] * (min(d['ICN'], d['OCN']) / m)
     if n_mapq0 / n_overlapping > 0.3:
         cov = max(cov, n_overlapping)
     min_support = min(4, round(1.5 + sf * cov))
@@ -681,6 +701,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
     has_contig = 'CONTIG' in r.info or 'CONTIG2' in r.info or r.alts[0][0] != "<"
     is_paired_end = False
     good_step = good_step_translocation(r, sample)
+    debug = False #True
     for is_paired_end, aln in iterate_bams_single_region(bams, chromA, posA, pad, bam_is_paired_end):
         if is_paired_end:
             distance = 50
@@ -703,10 +724,12 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
             if aln.flag & 4 or not has_clip(aln):
                 continue
             if matching_supplementary(aln, infile, posA, posB):
+                if debug: echo("tra0")
                 if keep_all:
                     r.filter.add("normal")
                 return False
             if not good_step and matching_ins_translocation(posA, aln):
+                if debug: echo("tra1")
                 if keep_all:
                     r.filter.add("normal")
                 return False
@@ -715,6 +738,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
                 if any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=50):
                     nearby_soft_clips += 1
             elif any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=250):
+                if debug: echo("tra2")
                 if keep_all:
                     r.filter.add("lowSupport")
                 return False
@@ -741,10 +765,12 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
             if aln.flag & 4 or not has_clip(aln):
                 continue
             if matching_supplementary(aln, infile, posB, posA):
+                if debug: echo("tra3")
                 if keep_all:
                     r.filter.add("normal")
                 return False
             if not good_step and matching_ins_translocation(posB, aln):
+                if debug: echo("tra4")
                 if keep_all:
                     r.filter.add("normal")
                 return False
@@ -753,15 +779,18 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
                 if any_nearby_soft_clip(r.pos, posB, aln, ct, "TRA", 30, clip_length=50):
                     nearby_soft_clips += 1
             elif any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=250):
+                if debug: echo("tra5")
                 if keep_all:
                     r.filter.add("lowSupport")
                 return False
 
     if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
+        if debug: echo("tra6")
         if keep_all:
             r.filter.add("lowSupport")
         return False
     if cached and matching_soft_clips(r, cached, is_paired_end):
+        if debug: echo("tra7")
         if keep_all:
             r.filter.add("normal")
         return False
@@ -780,6 +809,8 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
     is_paired_end = False
     n_mapq_0 = 0
     n_overlpapping = 0
+    # debug = False if r.rid != "229738" else True
+    debug = False #False
     for is_paired_end, aln in iterate_bams(bams, r.chrom, posA, r.chrom, posB, pad, bam_is_paired_end):
         if is_paired_end:
             a_posA = min(aln.pos, aln.pnext)
@@ -788,6 +819,7 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 continue
             if aln.rname != aln.rnext:
                 if matching_supplementary(aln, infile, posA, posB):
+                    if debug: echo("1")
                     if keep_all:
                         r.filter.add("normal")
                     return False
@@ -796,15 +828,18 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
             if abs(a_posA - posA) > pad or abs(a_posB - posB) > pad:
                 continue
             if not is_insertion and not aln.flag & 10:  # proper pair, mate unmapped
-                if span_position_distance(posA, posB, a_posA, a_posB, pos_threshold=20, span_threshold=0.5):
+                if span_position_distance(posA, posB, a_posA, a_posB, pos_threshold=20, span_threshold=0.7):
+                    if debug: echo("2")
                     if keep_all:
                         r.filter.add("normal")
                     return False
             if not is_insertion and matching_supplementary(aln, infile, posA, posB):
+                if debug: echo("3")
                 if keep_all:
                     r.filter.add("normal")
                 return False
             if svlen < 80 and matching_gap(posA, posB, aln, svtype, is_insertion, svlen):
+                if debug: echo("4")
                 if keep_all:
                     r.filter.add("normal")
                 return False
@@ -812,10 +847,12 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
 
         else:
             if matching_gap(posA, posB, aln, svtype, is_insertion, svlen, pos_threshold=30, span_threshold=0.7):
+                if debug: echo("5", svlen, aln.qname)
                 if keep_all:
                     r.filter.add("normal")
                 return False
             if matching_supplementary(aln, infile, posA, posB):
+                if debug: echo("6")
                 if keep_all:
                     r.filter.add("normal")
                 return False
@@ -828,21 +865,25 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 covered += 1
             if any_nearby_soft_clip(posA, posB, aln, ct, svtype, 30, clip_length=50):
                 nearby_soft_clips += 1
-            cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=min(500, svlen * 0.5), clip_length=50)
+            # cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=min(500, svlen * 0.5), clip_length=50)
 
     if not is_paired_end and not covered:
+        if debug: echo("7")
         if keep_all:
             r.filter.add("lowSupport")
         return False
     if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
+        if debug: echo("8")
         if keep_all:
             r.filter.add("lowSupport")
         return False
     if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
+        if debug: echo("9")
         if keep_all:
             r.filter.add("lowSupport")
         return False
     if cached and matching_soft_clips(r, cached, is_paired_end):
+        if debug: echo("10")
         if keep_all:
             r.filter.add("normal")
         return False
@@ -880,7 +921,7 @@ def run_filtering(args):
     filter_results = defaultdict(int)
     written = 0
     for idx, r in enumerate(vcf):
-        # if r.id != "25979":
+        # if r.id != "165324":
         #     continue
         old_filter_value = list(r.filter.keys())
         r.filter.clear()
