@@ -36,7 +36,7 @@ ctypedef enum ReadEnum_t:
     BREAKEND = 4
 
 
-cdef n_aligned_bases(AlignedSegment aln):
+cpdef n_aligned_bases(AlignedSegment aln):
     cdef int opp, l, aligned, large_gaps, n_small_gaps, i
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l = aln._delegate.core.n_cigar
@@ -123,7 +123,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             MAPQsupp += a.mapq
             if a.has_tag("NM"):
                 if a_bases:
-                    NMsupp += float(a.get_tag("NM")) / a_bases
+                    nm = float(a.get_tag("NM"))
+                    NMsupp += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             if a.has_tag("AS"):
                 this_as = a.get_tag("AS")
                 if this_as > maxASsupp:
@@ -173,7 +175,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             MAPQsupp += a.mapq
             if a.has_tag("NM"):
                 if a_bases:
-                    NMsupp += float(a.get_tag("NM")) / a_bases
+                    nm = float(a.get_tag("NM"))
+                    NMsupp += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             if a.has_tag("AS"):
                 this_as = a.get_tag("AS")
                 if this_as > maxASsupp:
@@ -202,7 +206,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             clipped_base_quals += cbq
             clipped_bases += cb
 
-    cdef int tot = er.supp + total_pri
+    cdef float tot = er.plus + er.minus  # er.supp + total_pri
+    if tot == 0:
+        return
     er.NMpri = (NMpri / total_pri) * 100 if total_pri > 0 else 0
     er.NMsupp = (NMsupp / er.supp) * 100 if er.supp > 0 else 0
     er.NMbase = (NMbase / tot) * 100 if tot > 0 else 0
@@ -222,7 +228,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
-    cdef int i, end, idx, opp, length, cigar_skip, n_aligned_bases, target_bases
+    cdef int i, end
     if svtype == 1:  # insertion (or other e.g. duplication/inversion within read)
         return event_pos + 1
     else:  # deletion type
@@ -1607,7 +1613,7 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
         if sites_index and int_node in sites_index:
             continue
         n = n2n[int_node]
-        if int_node in buffered_reads:
+        if buffered_reads and int_node in buffered_reads:
             aligns.append((n, buffered_reads[int_node]))
             continue
         fpos.append((n, int_node))
@@ -1664,59 +1670,58 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
     n2n = data.n2n
-    seen = set(range(len(data.parts)))
+    seen = set(range(len(data.parts))) if data.parts else {}
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     cdef int buffered_reads = 0
     cdef bint add_to_buffer = 1
     cdef int int_node
     cdef unsigned long[:] partition
     events = []
-    if info:
-        sites_info = list(info.values())
-    else:
-        sites_info = []
-    # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
-    for (u, v), d in data.s_between: #.items():
-        rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
-        rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
-        total_reads = len(rd_u) + len(rd_v)
-        buffered_reads += total_reads
-        if add_to_buffer and buffered_reads > 50000:
-            add_to_buffer = 0
-        out_counts[u] += len(rd_u)
-        out_counts[v] += len(rd_v)
-        if len(rd_u) == 0 or len(rd_v) == 0:
-            continue
-        if u in seen:
-            seen.remove(u)
-        if v in seen:
-            seen.remove(v)
+    sites_info = list(info.values()) if info else []
 
-        events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1,
-                           assemble_contigs,
-                           sites_info, paired_end)
+    if data.s_between:
+        # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
+        for (u, v), d in data.s_between: #.items():
+            rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
+            rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
+            total_reads = len(rd_u) + len(rd_v)
+            buffered_reads += total_reads
+            if add_to_buffer and buffered_reads > 50000:
+                add_to_buffer = 0
+            out_counts[u] += len(rd_u)
+            out_counts[v] += len(rd_v)
+            if len(rd_u) == 0 or len(rd_v) == 0:
+                continue
+            if u in seen:
+                seen.remove(u)
+            if v in seen:
+                seen.remove(v)
 
-        # finds reads that should be a single partition
-        # u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
-        # if len(u_reads) > 0 and len(v_reads) > 0:
-        #     events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
-        #                        sites_info, paired_end)
-        # if u_single:
-        #     res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-        #                  sites_info, paired_end, length_extend, divergence)
-        #     if res:
-        #         if isinstance(res, EventResult):
-        #             events.append(res)
-        #         else:
-        #             events += res
-        # if v_single:
-        #     res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-        #                  sites_info, paired_end, length_extend, divergence)
-        #     if res:
-        #         if isinstance(res, EventResult):
-        #             events.append(res)
-        #         else:
-        #             events += res
+            events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1,
+                               assemble_contigs,
+                               sites_info, paired_end)
+
+            # finds reads that should be a single partition
+            # u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
+            # if len(u_reads) > 0 and len(v_reads) > 0:
+            #     events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
+            #                        sites_info, paired_end)
+            # if u_single:
+            #     res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+            #                  sites_info, paired_end, length_extend, divergence)
+            #     if res:
+            #         if isinstance(res, EventResult):
+            #             events.append(res)
+            #         else:
+            #             events += res
+            # if v_single:
+            #     res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+            #                  sites_info, paired_end, length_extend, divergence)
+            #     if res:
+            #         if isinstance(res, EventResult):
+            #             events.append(res)
+            #         else:
+            #             events += res
 
     # Process any singles / unconnected blocks
     if seen:
@@ -1737,33 +1742,33 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                         events += res
 
     # Check for events within clustered nodes
-    for k, d in data.s_within:  #.items():
-        o_count = out_counts[k]
-        i_counts = len(d)
-        if i_counts > max_single_size:
-            continue
-        if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
-            rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
-            if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
-                    continue
-            res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end, length_extend, divergence)
-            if res:
-                if isinstance(res, EventResult):
-                    events.append(res)
-                else:
-                    events += res
+    if data.s_within:
+        for k, d in data.s_within:  #.items():
+            o_count = out_counts[k]
+            i_counts = len(d)
+            if i_counts > max_single_size:
+                continue
+            if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
+                rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
+                if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+                        continue
+                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                             sites_info, paired_end, length_extend, divergence)
+                if res:
+                    if isinstance(res, EventResult):
+                        events.append(res)
+                    else:
+                        events += res
     return events
 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support,
                                  assemble_contigs, max_single_size, sites_index, bint paired_end, int length_extend, float divergence):
-    n_parts = len(data.parts)
+    n_parts = len(data.parts) if data.parts else 0
     events = []
-    if data.info:
-        info = data.info
-    else:
-        info = None
+    info = data.info
+    if data.reads is None:
+        data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
     cdef EventResult_t e
     if n_parts >= 1:
@@ -1773,10 +1778,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
         if len(data.n2n) > max_single_size:
             return []
         rds = get_reads(bam, data.n2n.keys(), data.reads, data.n2n, 0, info)
-        if info:
-            sites_info = list(info.values())
-        else:
-            sites_info = []
+        sites_info = list(info.values()) if info else []
         if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
             return []
         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, sites_info, paired_end, length_extend, divergence)

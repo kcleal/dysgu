@@ -65,7 +65,7 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             continue
         if ignore_sample and sample_name in r.samples and "GT" in r.samples[sample_name]:
             this_gt = r.samples[sample_name]['GT']
-            if not (this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
+            if not (this_gt == (0, 0) or this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
                 continue
         if "CHROM2" in r.info:
             chrom2_info = r.info["CHROM2"]
@@ -149,7 +149,6 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             raise ValueError("PROB or MeanPROB must be in a float in range 0-1, error at CHROM {}, POS {}".format(chrom, start))
 
         recs[chrom].append(Site(chrom, start, chrom2, stop, svt, idx, r.id, svlen, pval))
-
     if not_parsed:
         logging.warning("Some records had incompatible SVTYPE: {}".format(
             str({k: v for k, v in Counter(not_parsed).items()})))

@@ -631,6 +631,54 @@ def shard_data(args, input_files, Global, show_progress):
             os.remove(item)
 
 
+def update_cohort_only(args):
+
+    cohort = pysam.VariantFile(args["update_cohort"])
+    cohort_samples = set(cohort.header.samples)
+    # contigs = list(cohort.header.contigs)
+    samples = {}
+    # iters = {}
+    #current = {}
+    samps_counts = defaultdict(int)
+    for pth in args["input_files"]:
+        v = pysam.VariantFile(pth)
+        if v.index is None:
+            raise ValueError(f"Input files must be indexed. {pth} has not index")
+        samps = list(v.header.samples)
+        if len(samps) > 1:
+            raise ValueError(f"Only one sample supported per input file but {pth} has {list(samps)}")
+        samp = samps[0]
+        samps_counts[samp] += 1
+        if samp in samples:
+            logging.warning(f"{samp} already in samples list, {samp} is assumed to be {samp}_{samps_counts[samp]} in cohort file")
+            samp = f"{samp}_{samps_counts[samp]}"
+        if samp not in cohort_samples:
+            raise ValueError(f"Input file has sample name {samp}, but this was not found in the cohort file {args['update_cohort']}")
+        samples[samp] = v
+
+    for r in cohort.fetch():
+        ch_svtype = r.info["SVTYPE"]
+        for k in samples:
+            ch_fmt = r.samples[k]
+            sample_items = [i for i in list(samples[k].fetch(r.chrom, r.pos, r.pos + 10)) if (ch_svtype == i.info["SVTYPE"] and abs(i.pos - r.pos) < 10)]
+            if not sample_items:
+                continue
+            index = 0
+            if len(sample_items) > 1:
+                # choose row with any genotype in sample, or last row
+                for index, candidate in enumerate(sample_items):
+                    candidate_gt = candidate.samples[k]["GT"]
+                    if candidate_gt != (0, 0):
+                        break
+            item = sample_items[index]
+            if item.samples[k]["GT"] == (0, 0):
+                continue
+            echo("samples items", len(sample_items))
+            if ch_fmt["PROB"] != item.samples[k]["PROB"]:
+                echo(k, r.chrom, r.pos, item.chrom, item.pos, dict(ch_fmt)["PROB"], dict(item.samples[k])["PROB"])
+        echo("---")
+
+
 def view_file(args):
 
     t0 = time.time()
@@ -645,22 +693,29 @@ def view_file(args):
         if not all(os.path.splitext(i)[1] == ".csv" for i in args["input_files"]):
             raise ValueError("All input files must have .csv extension")
 
-    args["metrics"] = False  # only option supported so far
-    args["contigs"] = False
+    if args["update_cohort"]:
+        for opt, v in (("out_format", "vcf"), ("merge_within", "False"), ("merge_across", "True"), ("add_kind", "False"), ("separate", "False")):
+            if args[opt] != v:
+                raise ValueError(f"{opt}={v} fot supported with --update-cohort")
+        update_cohort_only(args)
 
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    manager = multiprocessing.Manager()
-    Global = manager.Namespace()
-    Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
-    Global.soft = soft
-
-    if not args["wd"]:
-        seen_names, names_list = get_names_list(args["input_files"])
-        process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
     else:
-        shard_data(args, args["input_files"], Global=Global, show_progress=args['progress'])
-        if args['clean']:
-            os.rmdir(args['wd'])
+        args["metrics"] = False  # only option supported so far
+        args["contigs"] = False
+
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        manager = multiprocessing.Manager()
+        Global = manager.Namespace()
+        Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
+        Global.soft = soft
+
+        if not args["wd"]:
+            seen_names, names_list = get_names_list(args["input_files"])
+            process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
+        else:
+            shard_data(args, args["input_files"], Global=Global, show_progress=args['progress'])
+            if args['clean']:
+                os.rmdir(args['wd'])
 
     logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
                                                     time.time() - t0))

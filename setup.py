@@ -144,7 +144,7 @@ ext_modules.append(Extension(f"dysgu.edlib.edlib",
 
 # Dysgu modules
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv_category", "extra_metrics"]:  # "post_call_metrics",
+             "map_set_utils", "cluster", "sv_category", "extra_metrics"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -166,7 +166,7 @@ setup(
     description="Structural variant calling",
     license="MIT",
     version='1.6.3',
-    python_requires='>=3.8',
+    python_requires='>=3.10',
     install_requires=[  # runtime requires
             'setuptools>=63.0',
             'cython',
@@ -179,7 +179,6 @@ setup(
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            #'edlib',
         ],
     setup_requires=[
             'setuptools>=63.0',
@@ -193,7 +192,6 @@ setup(
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            #'edlib'
         ],
     packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"],
     ext_modules=cythonize(ext_modules),

@@ -1358,9 +1358,9 @@ cdef tuple count_support_between(Py_SimpleGraph G, parts):
     cdef tuple t
     cdef unsigned long[:] p
     if len(parts) == 0:
-        return {}, {}
+        return None, None
     elif len(parts) == 1:
-        return {}, {0: parts[0]}
+        return None, {0: parts[0]}
     cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
     for i, p in enumerate(parts):
         for node in p:
@@ -1390,7 +1390,7 @@ cdef tuple count_support_between(Py_SimpleGraph G, parts):
                     if t in seen_t:
                         continue
                     if t not in counts:
-                        counts[t] = [set([]), set([])]
+                        counts[t] = (set([]), set([]))
                     if j < i:
                         counts[t][0].add(child)
                         counts[t][1].add(node)
@@ -1406,7 +1406,7 @@ cdef tuple count_support_between(Py_SimpleGraph G, parts):
                     self_counts[i].append(node)
         seen_t.update(current_t)  # Only count edge once
         for t in current_t:  # save memory by converting support_between to array
-            counts[t] = [np.fromiter(m, dtype="uint32", count=len(m)) for m in counts[t]]
+            counts[t] = tuple(np.fromiter(m, dtype="uint32", count=len(m)) for m in counts[t])
 
     return counts, self_counts
 
@@ -1519,18 +1519,19 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
     support_between, support_within = count_support_between(G, partitions)
-    if len(support_between) == 0 and len(support_within) == 0:
+
+    if not support_between and not support_within:
         if not paired_end:
             if len(n2n) >= min_support or len(reads) >= min_support or info:
-                return GraphComponent((), (), {}, (), n2n, info)
+                return GraphComponent(None, None, None, None, n2n, info)
             else:
                 return
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
-                return GraphComponent((), (), {}, (), n2n, info)
+                return GraphComponent(None, None, None, None, n2n, info)
             elif len(reads) >= min_support or info:
-                return GraphComponent((), (), {}, (), n2n, info)
+                return GraphComponent(None, None, None, None, n2n, info)
             else:
                 return
     # Debug:
@@ -1552,4 +1553,11 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     #     echo("s_between", sb)
     #     echo("s_within", support_within)
 
-    return GraphComponent(partitions, tuple(support_between.items()), reads, tuple(support_within.items()), n2n, info)
+    support_between = tuple(support_between.items()) if support_between else None
+    support_within = tuple(support_within.items()) if support_within else None
+    return GraphComponent(partitions,
+                          support_between,
+                          reads,
+                          support_within,
+                          n2n,
+                          info)

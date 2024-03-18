@@ -42,15 +42,16 @@ for calling structural variants using paired-end or long read sequencing data. S
 ⚙️ Installation
 ---------------
 
-Dysgu requires Python >=3.8 - 3.10 plus htslib and has been tested on linux and MacOS.
+Dysgu can be installed via pip using Python 3.10 - 3.12 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
 
+    pip install dysgu
+
+Or, from conda::
+
     conda install -c bioconda -c conda-forge dysgu
 
-Or, fetch from PyPI::
-
-    pip install dysgu
 
 To build from source, run the install script: ``bash INSTALL.sh``.
 
