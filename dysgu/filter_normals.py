@@ -700,8 +700,10 @@ def has_low_support(r, sample, support_fraction):
     m = max(d['ICN'], d['OCN'])
     if m == 0:
         cov = d['COV']
+        if cov == 0:
+            return False
     else:
-        cov = d['COV'] * (min(d['ICN'], d['OCN']) / m)
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     min_support = round(1.5 + support_fraction * cov)
     if r.info['SU'] < min_support:
         return True
@@ -715,8 +717,10 @@ def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     m = max(d['ICN'], d['OCN'])
     if m == 0:
         cov = d['COV']
+        if cov == 0:
+            return False
     else:
-        cov = d['COV'] * (min(d['ICN'], d['OCN']) / m)
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     if n_mapq0 / n_overlapping > 0.3:
         cov = max(cov, n_overlapping)
     min_support = min(4, round(1.5 + sf * cov))
@@ -732,8 +736,10 @@ def too_many_clipped_reads(r, clipped_reads, support_fraction):
     m = max(d['ICN'], d['OCN'])
     if m == 0:
         cov = d['COV']
+        if cov == 0:
+            return False
     else:
-        cov = d['COV'] * (min(d['ICN'], d['OCN']) / m)
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     # max_nearby_clipped_reads = round(3 + sf * cov)
     max_nearby_clipped_reads = round(1 + sf * cov)
     # echo("max", clipped_reads,  max_nearby_clipped_reads, support_fraction)

@@ -430,7 +430,7 @@ def call_events(ctx, **kwargs):
 @click.option("-d", "--wd", help="Working directory to use/create when merging", type=click.Path(exists=False), required=False)
 @click.option("-c", "--clean", help="Remove working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--progress", help="Prints detailed progress information",  is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("--update-cohort", help="Updated this cohort file with new calls from input_files", required=False, type=click.Path(exists=True))
+@click.option("--cohort-update", help="Updated this cohort file with new calls from input_files", required=False, type=click.Path(exists=True))
 @click.option("--collapse-nearby", help="Merges more aggressively by collapsing nearby SV",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-across", help="Merge records across input samples", default="True",
