@@ -279,18 +279,17 @@ cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, ReadEnum_t rea
 
 
 cdef class PairedEndScoper:
-    cdef int clst_dist
-    cdef int max_dist
-    cdef int local_chrom
+    cdef int clst_dist, max_dist, local_chrom, max_search_depth
     cdef cpp_map[int, LocalVal] loci  # Track the local breaks and mapping locations
     cdef vector[cpp_map[int, LocalVal]] chrom_scope  # Track the mate-pair breaks and locations
     cdef float norm
     cdef float thresh # spd
     cdef float position_distance_thresh
     cdef bint paired_end
-    def __init__(self, max_dist, clst_dist, n_references, norm, thresh, paired_end, position_distance_thresh):
+    def __init__(self, max_dist, clst_dist, n_references, norm, thresh, paired_end, position_distance_thresh, max_search_depth):
         self.clst_dist = clst_dist
         self.max_dist = max_dist
+        self.max_search_depth = max_search_depth
         self.local_chrom = -1
         self.norm = norm
         self.thresh = thresh
@@ -348,7 +347,7 @@ cdef class PairedEndScoper:
             local_it = forward_scope.lower_bound(pos2)
             steps = 0
             if local_it != forward_scope.end():
-                while local_it != forward_scope.end() and steps < 20:
+                while local_it != forward_scope.end() and steps < self.max_search_depth:
                     vitem = dereference(local_it)
                     preincrement(local_it)
                     steps += 1
@@ -386,7 +385,7 @@ cdef class PairedEndScoper:
             if local_it != forward_scope.begin():
                 predecrement(local_it)  # Move back one before staring search, otherwise same value is processed twice
                 steps = 0
-                while local_it != forward_scope.begin() and steps < 20:
+                while local_it != forward_scope.begin() and steps < self.max_search_depth:
                     vitem = dereference(local_it)
                     predecrement(local_it)
                     steps += 1
@@ -1164,7 +1163,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
                             sites=None, bint trust_ins_len=True, low_mem=False, temp_dir=".",
-                            find_n_aligned_bases=True, position_distance_thresh=0.8):
+                            find_n_aligned_bases=True, position_distance_thresh=0.8, max_search_depth=20):
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
     cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
     cdef int event_pos, cigar_index, opp, length
@@ -1173,7 +1172,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth, read_length=read_length)
     # Infers long-range connections, outside local scope using pe information
-    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh)
+    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh, max_search_depth)
 
     bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
     cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()

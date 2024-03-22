@@ -262,7 +262,7 @@ cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
     return spanning, 1 - (len(spanning) / len(spanning_alignments))
 
 
-cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_input, int end_input, int length_extend=15, float divergence=0.02):
+cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_input, int end_input, int length_extend=15, float divergence=0.02, float len_t=3):
     # expand indel using cigar, merges nearby gaps into the SV event
     cdef int pos, end, l, opp, extent_left, extent_right, candidate_type, candidate_len, len_input, i, dist, dist_thresh, middle, last_seen_size
     cdef uint32_t cigar_value
@@ -276,7 +276,7 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
     candidate_type = cigar_value & BAM_CIGAR_MASK
     candidate_len = cigar_value >> BAM_CIGAR_SHIFT
     len_input = candidate_len
-    dist_thresh = min(len_input * 3, <int> (<float> log2_32(1 + candidate_len) / divergence))
+    dist_thresh = min(<int> (len_input * len_t), <int> (<float> log2_32(1 + candidate_len) / divergence))
     i = cigarindex + 1
     dist = 0
     last_seen_size = candidate_len
@@ -308,7 +308,7 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
                 else:
                     candidate_len += l
                     extent_right = end
-            dist_thresh = min(l * 3, <int> (<float> log2_32(1 + candidate_len) / divergence))
+            dist_thresh = min(<int> (l * len_t), <int> (<float> log2_32(1 + candidate_len) / divergence))
             dist = 0
         i += 1
 
@@ -342,7 +342,7 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
                 else:
                     candidate_len += l
                     extent_left = pos
-            dist_thresh = min(l * 3, <int>( <float>log2_32(1 + candidate_len) / divergence) )
+            dist_thresh = min(<int> (l * len_t), <int>( <float>log2_32(1 + candidate_len) / divergence) )
             dist = 0
         i -= 1
 

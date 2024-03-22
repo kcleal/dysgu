@@ -772,19 +772,19 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
             svlen_adjusted = int(np.median([b[0] for b in size_pos_bounded]))
             posA_adjusted = int(np.median([b[1] for b in size_pos_bounded]))
             posB_adjusted = int(np.median([b[2] for b in size_pos_bounded]))
-            if svtype_m == 2:  # del
-                posA = posA_adjusted
-                posB = posB_adjusted
-                svlen = svlen_adjusted
-                er.preciseA = True
-                er.preciseB = True
-            else:
+            # if svtype_m == 2:  # del
+            #     posA = posA_adjusted
+            #     posB = posB_adjusted
+            #     svlen = svlen_adjusted
+            #     er.preciseA = True
+            #     er.preciseB = True
+            # else:
                 # to_assemble = False
-                er.preciseA = True
-                er.preciseB = True
-                posA = posA_adjusted
-                posB = posB_adjusted
-                svlen = svlen_adjusted
+            er.preciseA = True
+            er.preciseB = True
+            posA = posA_adjusted
+            posB = posB_adjusted
+            svlen = svlen_adjusted
 
         else:
             svlen = int(np.median([sp[4] for sp in spanning_alignments]))

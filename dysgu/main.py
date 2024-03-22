@@ -190,6 +190,7 @@ def cli():
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option('--sd', help="Span distance, only SV span is considered, lower values separate multi-allelic sites", default=0.8, type=float, show_default=True)
+@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=20, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -350,6 +351,7 @@ def get_reads(ctx, **kwargs):
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help="Span position distance", default=0.3, type=float, show_default=True)
 @click.option('--sd', help="Span distance, only SV span is considered, lower values separate multi-allelic sites", default=0.8, type=float, show_default=True)
+@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=20, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -471,8 +473,9 @@ def view_data(ctx, **kwargs):
 @click.option("--target-sample", help="If input_vcf if multi-sample, use target-sample as input", required=False, type=str, default="")
 @click.option("--keep-all", help="All SVs classified as normal will be kept in the output, labelled as filter=normal", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("--ignore-read-groups", help="Ignore ReadGroup RG tags when parsing sample names. Filenames will be used instead", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("--max-divergence", help="Remove SV if normal_bam displays divergence > max-divergence at same location", default=0.08, type=float, show_default=True)
+@click.option("--max-divergence", help="Remove SV if normal_bam displays divergence > max-divergence at same location", default=0.1, type=float, show_default=True)
 @click.option("--min-prob", help="Remove SV with PROB value < min-prob", default=0.1, type=float, show_default=True)
+@click.option("--min-mapq", help="Remove SV with mean mapqq < min-mapq", default=10, type=float, show_default=True)
 @click.option("--pass-prob", help="Re-label SV as PASS if PROB value >= pass-prob", default=1.0, type=float, show_default=True)
 @click.option("--interval-size", help="Interval size for searching normal-vcf/normal-bams", default=1000, type=int, show_default=True)
 @click.option("--random-bam-sample", help="Choose N random normal-bams to search. Use -1 to ignore", default=-1, type=int, show_default=True)

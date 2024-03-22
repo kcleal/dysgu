@@ -837,6 +837,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             temp_dir=tdir,
                                             find_n_aligned_bases=find_n_aligned_bases,
                                             position_distance_thresh=args['sd'],
+                                            max_search_depth=args['search_depth']
     )
     sites_index = None
     if sites_adder:
