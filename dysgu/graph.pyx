@@ -704,7 +704,7 @@ class AlignmentsSA:
                 query_end = start_temp + query_end - query_start
                 query_start = start_temp
             query_aligns.append(AlnBlock(query_start, query_end, ref_start, ref_end, gettid(sa[0]), int(sa[4]), sa[2], False))
-        query_aligns = sorted(query_aligns)
+        query_aligns.sort()
         cdef int index = 0
         for i, item in enumerate(query_aligns):
             if item.this:

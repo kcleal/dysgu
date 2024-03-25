@@ -395,8 +395,8 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     node_to_event = {i.event_id: i for i in potential}
     cdef int k
     for grp in components:
-        c = [node_to_event[n] for n in grp]
-        best = sorted(c, key=srt_func, reverse=True)
+        best = [node_to_event[n] for n in grp]
+        best.sort(key=srt_func, reverse=True)
         w0 = best[0]
         if not pick_best:
             weight = w0.pe + w0.supp + w0.spanning

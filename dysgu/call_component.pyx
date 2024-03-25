@@ -930,7 +930,7 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
             ops.append((i + v + 1, -1, 1))
         else:
             ops.append((i + v, -1, 1))
-    ops = sorted(ops, reverse=limit < 0)
+    ops.sort(reverse=limit < 0)
     cdef int cum_sum = 0
     cdef int max_sum = 0
     cdef int max_sum_i = 0
@@ -1386,10 +1386,10 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
             svtypes_counts[2].append(i)
         elif i.svtype == "TRA":
             svtypes_counts[3].append(i)
-    svtypes_res = sorted(svtypes_counts, key=sort_by_length, reverse=True)
+    svtypes_counts.sort(key=sort_by_length, reverse=True)
     results = []
     cdef EventResult_t er
-    for sub_informative in svtypes_res:
+    for sub_informative in svtypes_counts:
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
             if svtype == "INV" or svtype == "TRA":
@@ -1617,7 +1617,8 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
             aligns.append((n, buffered_reads[int_node]))
             continue
         fpos.append((n, int_node))
-    for node, int_node in sorted(fpos, key=fpos_srt):
+    fpos.sort(key=fpos_srt)
+    for node, int_node in fpos:
         infile.seek(node.tell)
         try:
             a = next(infile)
@@ -1643,7 +1644,7 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
                     if add_to_buffer:
                         buffered_reads[int_node] = a
                     break
-    #         else:
+            # else:
     #             if has_index:
     #                 nn = n2n[int_node]
     #                 hash_names[(nn.hash_name, nn.flag, nn.pos, nn.chrom)] = nn

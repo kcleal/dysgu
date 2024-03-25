@@ -161,10 +161,10 @@ cdef class GenomeScanner:
                 else:
                     f_iter = self.input_bam.fetch(until_eof=True)
                 for aln in f_iter:
-                    # if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
-                    #     continue
+
                     cigar_l = aln._delegate.core.n_cigar
                     if cigar_l == 0 or aln.flag & 1284:
+                        tell = 0 if self.no_tell else self.input_bam.tell()
                         continue
 
                     if aln.rname != self.current_tid:
@@ -182,7 +182,6 @@ cdef class GenomeScanner:
                         good_read = True
                     elif not aln.flag & 2:
                         good_read = True
-                    # cigar_l = aln._delegate.core.n_cigar
                     cigar_p = bam_get_cigar(aln._delegate)
                     for i in range(cigar_l):
                         cigar_value = cigar_p[i]
@@ -199,12 +198,11 @@ cdef class GenomeScanner:
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
                             index_start += length
-                    if aln.mapq < mq_thresh:
+
+                    if aln.mapq < mq_thresh or not good_read or not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
+                        tell = 0 if self.no_tell else self.input_bam.tell()
                         continue
-                    if not good_read:
-                        continue
-                    if not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
-                        continue
+
                     self._add_to_bin_buffer(aln, tell)
                     tell = 0 if self.no_tell else self.input_bam.tell()
                     while len(self.staged_reads) > 0:
@@ -460,9 +458,9 @@ cdef class GenomeScanner:
         cdef float current_coverage
         if self.current_chrom != rname:
             self.current_chrom = rname
-        in_roi = False
-        if self.overlap_regions:
-            in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
+        # in_roi = False
+        # if self.overlap_regions:
+        #     in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
         if rname == self.current_chrom and bin_pos == self.current_pos:
             self.current_bin.append((a, tell))
         else:
