@@ -441,6 +441,8 @@ def call_events(ctx, **kwargs):
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Distance threshold for merging",
               default=500, type=int, show_default=True)
+@click.option("--max-comparisons", help="Compare each event with up to --max-comparisons local SVs",
+              default=20, type=int, show_default=True)
 @click.option("--separate", help="Keep merged tables separate, adds --post-fix to file names, csv format only",
               default="False", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--post-fix", help="Adds --post-fix to file names, only if --separate is True",

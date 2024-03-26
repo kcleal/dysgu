@@ -52,24 +52,27 @@ def filter_potential(input_events, tree, regions_only):
     return potential
 
 
-def compare_subset(potential, int max_dist):
+def get_chrom_key(ei):
+    if ei.chrA != ei.chrB:
+        return min(ei.chrA, ei.chrB), max(ei.chrA, ei.chrB)
+    return ei.chrA
+
+
+def compare_subset(potential, int max_dist, int max_comparisons):
     tmp_list = defaultdict(list)
     cdef int idx, jdx, dist1, ci_a
     for idx in range(len(potential)):
         ei = potential[idx]
-        tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
-        if ei.chrA != ei.chrB or abs(ei.posB - ei.posA) > 5:
-            if ei.chrA != ei.chrB:
-                tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
-            else:
-                dist1 = abs(ei.posB - ei.posA)
-                ci_a = max(ei.cipos95A, ei.cipos95A)
-                if dist1 + ci_a > max_dist:
-                    tmp_list[ei.chrB].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
+        tmp_list[get_chrom_key(ei)].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
+
     nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
     for idx in range(len(potential)):
         ei = potential[idx]
-        ols = nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1)
+        ols = nc2[get_chrom_key(ei)].allOverlappingIntervals(ei.posA, ei.posA + 1)
+        ols.remove(idx)
+        if len(ols) > max_comparisons:
+            random.shuffle(ols)
+            ols = ols[:max_comparisons]
         for jdx in ols:
             ej = potential[jdx]
             yield ei, ej, idx, jdx
@@ -143,21 +146,19 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
 
 
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
-                     same_sample=True, aggressive_ins_merge=False, debug=False):
+                     same_sample=True, aggressive_ins_merge=False, debug=False, max_comparisons=20):
     if len(potential) < 50:
         event_iter = compare_all(potential)  # N^2 compare all events to all others
     else:
-        event_iter = compare_subset(potential, max_dist)  # Use iitree, generate overlap tree and perform intersections
+        event_iter = compare_subset(potential, max_dist, max_comparisons)  # Use iitree, generate overlap tree and perform intersections
+
     seen = set([])
     pad = 100
-    # max_edges = 8
     disjoint_nodes = set([])  # if a component has more than one disjoint nodes it needs to be broken apart
-    # edge_counts = defaultdict(int)
+    node_counts = defaultdict(int)
     for ei, ej, idx, jdx in event_iter:
         i_id = ei.event_id
         j_id = ej.event_id
-        # if edge_counts[i_id] > max_edges and edge_counts[j_id] > max_edges:
-        #     continue
         if not same_sample:
             if ei.sample == ej.sample:
                 continue
@@ -187,8 +188,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         # Force merging of translocations that have similar loci
         if not intra:
             G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=0)
-            # edge_counts[i_id] += 1
-            # edge_counts[j_id] += 1
             continue
 
         one_is_imprecise = False
@@ -271,8 +270,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
-                    # edge_counts[i_id] += 1
-                    # edge_counts[j_id] += 1
         else:
             v = None
             if ci_alt and cj_alt:
@@ -287,48 +284,35 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 v = (ci2, cj)
             else:
                 continue
-            # echo(ei.remap_score == 0 or ej.remap_score == 0, ei.svlen, ej.svlen, v, assembler.check_contig_match(v[0], v[1], return_int=True))
             # if not remapped and nearby insertions with opposing soft-clips --> merge
             # also long-reads will normally have remap_score == 0
             if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
                     G.add_edge(i_id, j_id, loci_same=loci_same)
-                    # edge_counts[i_id] += 1; edge_counts[j_id] += 1
                     continue
             if assembler.check_contig_match(v[0], v[1], return_int=True):
                 G.add_edge(i_id, j_id, loci_same=True)
-                # edge_counts[i_id] += 1; edge_counts[j_id] += 1
             # see if alt sequence can be found in other contig
             else:
-                # echo("checking alts")
                 # if ci_alt and cj_alt:
-                    # echo("yes0", ci_alt, cj_alt)
                     # if assembler.check_contig_match(ci_alt, cj_alt, return_int=True):
                     #     G.add_edge(i_id, j_id, loci_same=True)
-                        # edge_counts[i_id] += 1; edge_counts[j_id] += 1
                         # continue
                 if ci_alt and cj:
                     if assembler.check_contig_match(ci_alt, cj, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
-                        # edge_counts[i_id] += 1; edge_counts[j_id] += 1
                         continue
                 if ci_alt and cj2:
                     if assembler.check_contig_match(ci_alt, cj2, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
-                        # edge_counts[i_id] += 1;
-                        # edge_counts[j_id] += 1
                         continue
                 if cj_alt and ci:
                     if assembler.check_contig_match(cj_alt, ci, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
-                        # edge_counts[i_id] += 1;
-                        # edge_counts[j_id] += 1
                         continue
                 if cj_alt and ci2:
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
                         G.add_edge(i_id, j_id, loci_same=True)
-                        # edge_counts[i_id] += 1;
-                        # edge_counts[j_id] += 1
                         continue
     return G, disjoint_nodes
 
@@ -374,7 +358,7 @@ cpdef srt_func(c):
 
 def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pick_best=False, add_partners=False,
                  rel_diffs=False, diffs=15, same_sample=True, debug=False, min_size=0, aggressive_ins_merge=False,
-                 skip_imprecise=False):
+                 skip_imprecise=False, max_comparisons=100):
     """Try and merge similar events, use overlap of both breaks points
     """
     max_dist = max_dist / 2
@@ -384,7 +368,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     G = nx.Graph()
     G, disjoint_nodes = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
                         aggressive_ins_merge=aggressive_ins_merge,
-                        debug=debug)
+                        debug=debug, max_comparisons=max_comparisons)
     found = []
     for item in potential:  # Add singletons, non-merged
         if not G.has_node(item.event_id):
@@ -1049,7 +1033,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     # Merge across calls
     if args["merge_within"] == "True":
         merged = merge_events(block_edge_events, args["merge_dist"], regions, bool(paired_end), try_rev=False, pick_best=False,
-                                         debug=True, min_size=args["min_size"])
+                                         debug=True, min_size=args["min_size"],
+                              max_comparisons=args["max_comparisons"] if "max_comparisons" in args else 100)
     else:
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
