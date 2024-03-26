@@ -7,6 +7,7 @@ cdef class AlignmentItem:
         a_len, b_len, query_gap, read_overlaps_mate, size_inferred, query_overlap, inferred_sv_len
     cdef public str svtype, join_type
     cdef public object read_a, read_b
+    cdef public object a_node_info, b_node_info
 
 
 cdef void classify_d(AlignmentItem v)

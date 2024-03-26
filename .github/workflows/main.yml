@@ -14,24 +14,23 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.0
+        uses: pypa/cibuildwheel@v2.16.5
         env:
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.8, <3.12"
-          CIBW_SKIP: "*-win32 *-manylinux_i686 pp* cp311-macosx* *musl* "
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10"  #  >=3.8 <3.12
+          CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *musl* "  # cp311-macosx*
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_LINUX: "auto"
           CIBW_BEFORE_ALL_MACOS: bash ci/osx-deps
           CIBW_BEFORE_ALL_LINUX: bash ci/manylinux-deps
-          CIBW_BEFORE_BUILD: pip install -r requirements.txt
-          CIBW_TEST_COMMAND: dysgu test
-          
-        #    ...
-        # with:
-        #   package-dir: .
-        #   output-dir: wheelhouse
-        #   config-file: "{package}/pyproject.toml"
+          CIBW_BEFORE_BUILD_MACOS: |
+            ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
+            pip install -r requirements.txt
+          CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel}
+          CIBW_TEST_SKIP: "*-macosx_arm64"
+          CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
+          CIBW_TEST_COMMAND: dysgu test --verbose
 
       - uses: actions/upload-artifact@v3
         with:

@@ -1,6 +1,6 @@
 #cython: language_level=3, boundscheck=True, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 from __future__ import absolute_import
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 import logging
 import numpy as np
 cimport numpy as np
@@ -36,7 +36,7 @@ ctypedef enum ReadEnum_t:
     BREAKEND = 4
 
 
-cdef n_aligned_bases(AlignedSegment aln):
+cpdef n_aligned_bases(AlignedSegment aln):
     cdef int opp, l, aligned, large_gaps, n_small_gaps, i
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l = aln._delegate.core.n_cigar
@@ -123,7 +123,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             MAPQsupp += a.mapq
             if a.has_tag("NM"):
                 if a_bases:
-                    NMsupp += float(a.get_tag("NM")) / a_bases
+                    nm = float(a.get_tag("NM"))
+                    NMsupp += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             if a.has_tag("AS"):
                 this_as = a.get_tag("AS")
                 if this_as > maxASsupp:
@@ -173,7 +175,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             MAPQsupp += a.mapq
             if a.has_tag("NM"):
                 if a_bases:
-                    NMsupp += float(a.get_tag("NM")) / a_bases
+                    nm = float(a.get_tag("NM"))
+                    NMsupp += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             if a.has_tag("AS"):
                 this_as = a.get_tag("AS")
                 if this_as > maxASsupp:
@@ -202,7 +206,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             clipped_base_quals += cbq
             clipped_bases += cb
 
-    cdef int tot = er.supp + total_pri
+    cdef float tot = er.plus + er.minus  # er.supp + total_pri
+    if tot == 0:
+        return
     er.NMpri = (NMpri / total_pri) * 100 if total_pri > 0 else 0
     er.NMsupp = (NMsupp / er.supp) * 100 if er.supp > 0 else 0
     er.NMbase = (NMbase / tot) * 100 if tot > 0 else 0
@@ -222,7 +228,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
 
 cdef int within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
-    cdef int i, end, idx, opp, length, cigar_skip, n_aligned_bases, target_bases
+    cdef int i, end
     if svtype == 1:  # insertion (or other e.g. duplication/inversion within read)
         return event_pos + 1
     else:  # deletion type
@@ -684,6 +690,9 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     tmp = defaultdict(list)  # group by template name
     small_tlen_outliers = 0  # for paired reads note any smaller than expected TLENs
     for cigar_info, align in rds:
+        # echo(cigar_info, cigar_info.read_enum)
+        # if not paired_end and cigar_info.read_enum < 2:  # split read
+        #     continue
         tmp[align.qname].append((cigar_info, align))
         if align.flag & 1 and abs(align.tlen) < insert_ppf:
             small_tlen_outliers += 1
@@ -694,6 +703,7 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         l_align = list(alignments)
         if len(l_align) > 1:
             pair = guess_informative_pair(l_align)
+            # pair = informative_pair(alignments, alignments, paired_end=paired_end)
             if pair is not None:
                 if len(pair) == 2:
                     a, b = pair
@@ -762,19 +772,19 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
             svlen_adjusted = int(np.median([b[0] for b in size_pos_bounded]))
             posA_adjusted = int(np.median([b[1] for b in size_pos_bounded]))
             posB_adjusted = int(np.median([b[2] for b in size_pos_bounded]))
-            if svtype_m == 2:  # del
-                posA = posA_adjusted
-                posB = posB_adjusted
-                svlen = svlen_adjusted
-                er.preciseA = True
-                er.preciseB = True
-            else:
+            # if svtype_m == 2:  # del
+            #     posA = posA_adjusted
+            #     posB = posB_adjusted
+            #     svlen = svlen_adjusted
+            #     er.preciseA = True
+            #     er.preciseB = True
+            # else:
                 # to_assemble = False
-                er.preciseA = True
-                er.preciseB = True
-                posA = posA_adjusted
-                posB = posB_adjusted
-                svlen = svlen_adjusted
+            er.preciseA = True
+            er.preciseB = True
+            posA = posA_adjusted
+            posB = posB_adjusted
+            svlen = svlen_adjusted
 
         else:
             svlen = int(np.median([sp[4] for sp in spanning_alignments]))
@@ -872,18 +882,35 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 cdef tuple informative_pair(u, v):
     pri_u = None
     pri_v = None
-    for i in u:
+    for i_info, i in u:
         ri_flag = i.flag & 64
         if not i.flag & 2304:  # Not pri, supplementary --> is primary
-            pri_u = i
-        for j in v:
+            pri_u = i_info, i
+        for j_info, j in v:
             if j.flag & 64 == ri_flag:  # Same read
                 # Same read, primary + supp, or supp + supp
-                return i, j
+                return (i_info, i), (j_info, j)
             if not j.flag & 2304:  # Is primary
-                pri_v = j
+                pri_v = j_info, j
     if pri_u is not None and pri_v is not None:
         return pri_u, pri_v
+    return None
+
+# cdef tuple informative_pair(u, v, bint paired_end):
+#     # fetch either a split read or pair1 and pair2
+#     for i in u:
+#         i_info = i[0]
+#         for j in v:
+#             j_info = j[0]
+#             if j_info.hash_name == i_info.hash_name:
+#                 continue
+#             if not paired_end:
+#                 if i_info.read_enum == 1 and j_info.read_enum == 1:
+#                     return i, j
+#             elif i_info.read_enum == j_info.read_enum:
+#                 return i, j
+#     return None
+
 
 
 cdef tuple break_ops(positions, precise, int limit, float median_pos):
@@ -903,7 +930,7 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
             ops.append((i + v + 1, -1, 1))
         else:
             ops.append((i + v, -1, 1))
-    ops = sorted(ops, reverse=limit < 0)
+    ops.sort(reverse=limit < 0)
     cdef int cum_sum = 0
     cdef int max_sum = 0
     cdef int max_sum_i = 0
@@ -1286,63 +1313,66 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
     er.ref_bases = rbases
 
 
-cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float insert_ppf, int min_support,
+cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_stdev, float insert_ppf, int min_support,
                      int block_edge, int assemble, info, bint paired_end):
     grp_u = defaultdict(list)
     grp_v = defaultdict(list)
-    for r in u_reads:
-        grp_u[r.qname].append(r)
-    for r in v_reads:
-        grp_v[r.qname].append(r)
+    for uinfo, r in u_reads_info:
+        grp_u[r.qname].append((uinfo, r))
+    for vinfo, r in v_reads_info:
+        grp_v[r.qname].append((vinfo, r))
     informative = []
     cdef AlignmentItem v_item, i
     cdef int left_clip_a, right_clip_a, left_clip_b, right_clip_b
     for qname in [k for k in grp_u if k in grp_v]:  # Qname found on both sides
         u = grp_u[qname]
         v = grp_v[qname]
-        if len(u) == 1 and len(v) == 1:
-            pair = (u[0], v[0])
-        else:
-            pair = informative_pair(u, v)
-        if pair:
-            a, b = pair
-            a_ct = a.cigartuples
-            b_ct = b.cigartuples
-            a_qstart, a_qend, b_qstart, b_qend, a_len, b_len = start_end_query_pair(a, b)
-            # Soft-clips for the chosen pair, plus template start of alignment
-            left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
-            a_chrom, b_chrom = a.rname, b.rname
-            a_start, a_end = a.pos, a.reference_end
-            b_start, b_end = b.pos, b.reference_end
-            read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
-            v_item = AlignmentItem(a.rname,
-                                   b.rname,
-                                   int(not a.flag & 2304),  # Is primary
-                                   int(not b.flag & 2304),
-                                   1 if a.flag & 64 else 2,
-                                   1 if b.flag & 64 else 2,
-                                   a.pos, a.reference_end,
-                                   b.pos, b.reference_end,
-                                   3 if a.flag & 16 == 0 else 5,
-                                   3 if b.flag & 16 == 0 else 5,
-                                   left_clip_a, right_clip_a,
-                                   left_clip_b, right_clip_b,
-                                   a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,
-                                   read_overlaps_mate,
-                                   a, b
-                                   )
-            if v_item.left_clipA and v_item.right_clipA:
-                if a_ct[0][1] >= a_ct[-1][1]:
-                    v_item.right_clipA = 0
-                else:
-                    v_item.left_clipA = 0
-            if v_item.left_clipB and v_item.right_clipB:
-                if b_ct[0][1] >= b_ct[-1][1]:
-                    v_item.right_clipB = 0
-                else:
-                    v_item.left_clipB = 0
-            classify_d(v_item)
-            informative.append(v_item)
+        pair = informative_pair(u, v) #, paired_end)
+        if not pair:
+            continue
+        # if len(u) == 1 and len(v) == 1:
+        #     pair = (u[0], v[0])
+        # else:
+        #     pair = informative_pair(u, v, paired_end)
+        a_node_info, a, b_node_info, b, = pair[0][0], pair[0][1], pair[1][0], pair[1][1]
+        a_ct = a.cigartuples
+        b_ct = b.cigartuples
+        a_qstart, a_qend, b_qstart, b_qend, a_len, b_len = start_end_query_pair(a, b)
+        # Soft-clips for the chosen pair, plus template start of alignment
+        left_clip_a, right_clip_a, left_clip_b, right_clip_b = mask_soft_clips(a.flag, b.flag, a_ct, b_ct)
+        a_chrom, b_chrom = a.rname, b.rname
+        a_start, a_end = a.pos, a.reference_end
+        b_start, b_end = b.pos, b.reference_end
+        read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
+        v_item = AlignmentItem(a.rname,
+                               b.rname,
+                               int(not a.flag & 2304),  # Is primary
+                               int(not b.flag & 2304),
+                               1 if a.flag & 64 else 2,
+                               1 if b.flag & 64 else 2,
+                               a.pos, a.reference_end,
+                               b.pos, b.reference_end,
+                               3 if a.flag & 16 == 0 else 5,
+                               3 if b.flag & 16 == 0 else 5,
+                               left_clip_a, right_clip_a,
+                               left_clip_b, right_clip_b,
+                               a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,
+                               read_overlaps_mate,
+                               a, b,
+                               a_node_info, b_node_info
+                               )
+        if v_item.left_clipA and v_item.right_clipA:
+            if a_ct[0][1] >= a_ct[-1][1]:
+                v_item.right_clipA = 0
+            else:
+                v_item.left_clipA = 0
+        if v_item.left_clipB and v_item.right_clipB:
+            if b_ct[0][1] >= b_ct[-1][1]:
+                v_item.right_clipB = 0
+            else:
+                v_item.left_clipB = 0
+        classify_d(v_item)
+        informative.append(v_item)
     if not informative:
         return []
 
@@ -1356,10 +1386,10 @@ cdef call_from_reads(u_reads, v_reads, int insert_size, int insert_stdev, float 
             svtypes_counts[2].append(i)
         elif i.svtype == "TRA":
             svtypes_counts[3].append(i)
-    svtypes_res = sorted(svtypes_counts, key=sort_by_length, reverse=True)
+    svtypes_counts.sort(key=sort_by_length, reverse=True)
     results = []
     cdef EventResult_t er
-    for sub_informative in svtypes_res:
+    for sub_informative in svtypes_counts:
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
             if svtype == "INV" or svtype == "TRA":
@@ -1436,7 +1466,7 @@ cdef filter_single_partitions(u_reads, v_reads):
 
 
 cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
-                   int min_support, int block_edge, int assemble, info, bint paired_end):
+            int min_support, int block_edge, int assemble, info, bint paired_end):
     spanning_alignments = []
     u_reads = []
     v_reads = []
@@ -1555,7 +1585,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         return [er]
 
     else:
-        results = call_from_reads(u_reads, v_reads, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, info, paired_end)
+        results = call_from_reads(u_reads_info, v_reads_info, insert_size, insert_stdev, insert_ppf, min_support, block_edge, assemble, info, paired_end)
         return results
 
 
@@ -1571,15 +1601,24 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
     aligns = []
     fpos = []
     site_info = []
+
+    # Sometimes seeking into the bam file doesnt find the read. This can be addressed by instead
+    # using the index and looping through the file, but this adds significant overhead
+    # todo see if missing reads are an issue for long reads
+    # regions = []
+    # hash_names = {}
+    # has_index = infile.has_index()
+
     for int_node in nodes_info:
         if sites_index and int_node in sites_index:
             continue
         n = n2n[int_node]
-        if int_node in buffered_reads:
+        if buffered_reads and int_node in buffered_reads:
             aligns.append((n, buffered_reads[int_node]))
             continue
         fpos.append((n, int_node))
-    for node, int_node in sorted(fpos, key=fpos_srt):
+    fpos.sort(key=fpos_srt)
+    for node, int_node in fpos:
         infile.seek(node.tell)
         try:
             a = next(infile)
@@ -1605,6 +1644,23 @@ cdef get_reads(infile, nodes_info, buffered_reads, n2n, bint add_to_buffer, site
                     if add_to_buffer:
                         buffered_reads[int_node] = a
                     break
+            # else:
+    #             if has_index:
+    #                 nn = n2n[int_node]
+    #                 hash_names[(nn.hash_name, nn.flag, nn.pos, nn.chrom)] = nn
+    #                 regions.append((infile.get_reference_name(nn.chrom), nn.pos, nn.pos + 200))
+    #
+    # if regions:
+    #     regions = merge_intervals(regions)
+    #     for rgn in regions:
+    #         for a in infile.fetch(*rgn):
+    #             v = xxhasher(bam_get_qname(a._delegate), len(a.qname), 42)
+    #             nm = (v, a.flag, a.pos, a.rname)
+    #             if nm in hash_names:
+    #                 aligns.append((hash_names[nm], a))
+    #
+    # if len(aligns) < len(nodes_info):
+    #     echo(len(aligns), len(nodes_info))
 
     return aligns
 
@@ -1614,65 +1670,68 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
-    n2n = data["n2n"]
-    seen = set(range(len(data['parts'])))
+    n2n = data.n2n
+    seen = set(range(len(data.parts))) if data.parts else {}
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     cdef int buffered_reads = 0
     cdef bint add_to_buffer = 1
     cdef int int_node
     cdef unsigned long[:] partition
     events = []
-    if info:
-        sites_info = list(info.values())
-    else:
-        sites_info = []
-    # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
-    for (u, v), d in data["s_between"].items():
-        rd_u = get_reads(bam, d[0], data["reads"], data["n2n"], add_to_buffer, info)   # [(Nodeinfo, alignment)..]
-        rd_v = get_reads(bam, d[1], data["reads"], data["n2n"], add_to_buffer, info)
-        total_reads = len(rd_u) + len(rd_v)
-        buffered_reads += total_reads
-        if add_to_buffer and buffered_reads > 50000:
-            add_to_buffer = 0
-        out_counts[u] += len(rd_u)
-        out_counts[v] += len(rd_v)
-        if len(rd_u) == 0 or len(rd_v) == 0:
-            continue
-        if u in seen:
-            seen.remove(u)
-        if v in seen:
-            seen.remove(v)
+    sites_info = list(info.values()) if info else []
 
-        # finds reads that should be a single partition
-        u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
-        if len(u_reads) > 0 and len(v_reads) > 0:
-            events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
+    if data.s_between:
+        # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
+        for (u, v), d in data.s_between: #.items():
+            rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
+            rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
+            total_reads = len(rd_u) + len(rd_v)
+            buffered_reads += total_reads
+            if add_to_buffer and buffered_reads > 50000:
+                add_to_buffer = 0
+            out_counts[u] += len(rd_u)
+            out_counts[v] += len(rd_v)
+            if len(rd_u) == 0 or len(rd_v) == 0:
+                continue
+            if u in seen:
+                seen.remove(u)
+            if v in seen:
+                seen.remove(v)
+
+            events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1,
+                               assemble_contigs,
                                sites_info, paired_end)
-        if u_single:
-            res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end, length_extend, divergence)
-            if res:
-                if isinstance(res, EventResult):
-                    events.append(res)
-                else:
-                    events += res
-        if v_single:
-            res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end, length_extend, divergence)
-            if res:
-                if isinstance(res, EventResult):
-                    events.append(res)
-                else:
-                    events += res
+
+            # finds reads that should be a single partition
+            # u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
+            # if len(u_reads) > 0 and len(v_reads) > 0:
+            #     events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
+            #                        sites_info, paired_end)
+            # if u_single:
+            #     res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+            #                  sites_info, paired_end, length_extend, divergence)
+            #     if res:
+            #         if isinstance(res, EventResult):
+            #             events.append(res)
+            #         else:
+            #             events += res
+            # if v_single:
+            #     res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+            #                  sites_info, paired_end, length_extend, divergence)
+            #     if res:
+            #         if isinstance(res, EventResult):
+            #             events.append(res)
+            #         else:
+            #             events += res
 
     # Process any singles / unconnected blocks
     if seen:
         for part_key in seen:
-            d = data["parts"][part_key]
+            d = data.parts[part_key]
             lb = lower_bound_support if len(sites_info) == 0 else 1
             if max_single_size > len(d) >= lb:
                 # Call single block, only collect local reads to the block
-                rds = get_reads(bam, d, data["reads"], data["n2n"], 0, info)
+                rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
                 if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
                     continue
                 res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
@@ -1684,46 +1743,43 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                         events += res
 
     # Check for events within clustered nodes
-    for k, d in data["s_within"].items():
-        o_count = out_counts[k]
-        i_counts = len(d)
-        if i_counts > max_single_size:
-            continue
-        if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
-            rds = get_reads(bam, d, data["reads"], data["n2n"], 0, info)
-            if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
-                    continue
-            res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                         sites_info, paired_end, length_extend, divergence)
-            if res:
-                if isinstance(res, EventResult):
-                    events.append(res)
-                else:
-                    events += res
+    if data.s_within:
+        for k, d in data.s_within:  #.items():
+            o_count = out_counts[k]
+            i_counts = len(d)
+            if i_counts > max_single_size:
+                continue
+            if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
+                rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
+                if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+                        continue
+                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                             sites_info, paired_end, length_extend, divergence)
+                if res:
+                    if isinstance(res, EventResult):
+                        events.append(res)
+                    else:
+                        events += res
     return events
 
 
 cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_stdev, insert_ppf, min_support, lower_bound_support,
                                  assemble_contigs, max_single_size, sites_index, bint paired_end, int length_extend, float divergence):
-    n_parts = len(data["parts"])
+    n_parts = len(data.parts) if data.parts else 0
     events = []
-    if "info" in data:
-        info = data["info"]
-    else:
-        info = None
+    info = data.info
+    if data.reads is None:
+        data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
     cdef EventResult_t e
     if n_parts >= 1:
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
                         assemble_contigs, max_single_size, info, paired_end, length_extend, divergence)
     elif n_parts == 0:
-        if len(data["n2n"]) > max_single_size:
+        if len(data.n2n) > max_single_size:
             return []
-        rds = get_reads(bam, data["n2n"].keys(), data["reads"], data["n2n"], 0, info)
-        if info:
-            sites_info = list(info.values())
-        else:
-            sites_info = []
+        rds = get_reads(bam, data.n2n.keys(), data.reads, data.n2n, 0, info)
+        sites_info = list(info.values()) if info else []
         if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
             return []
         ev = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs, sites_info, paired_end, length_extend, divergence)

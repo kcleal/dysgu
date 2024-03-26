@@ -65,7 +65,7 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             continue
         if ignore_sample and sample_name in r.samples and "GT" in r.samples[sample_name]:
             this_gt = r.samples[sample_name]['GT']
-            if not (this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
+            if not (this_gt == (0, 0) or this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
                 continue
         if "CHROM2" in r.info:
             chrom2_info = r.info["CHROM2"]
@@ -103,6 +103,11 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
         if chrom == -1 or chrom2 == -1:
             logging.warning(f"Chromosome from record in --sites not found in input file header CHROM={r.chrom}, POS={r.start}, CHROM2={chrom2_info}, END={r.stop}")
 
+        if isinstance(chrom, str):
+            raise ValueError(f"Could not find {chrom} in bam file header")
+        if isinstance(chrom2, str):
+            chrom2 = chrom
+
         start = r.start  # note pysam converts to zero-based index like bam
         stop = r.stop
         if chrom == chrom2 and stop < start:
@@ -119,7 +124,7 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             else:
                 svlen = int(r.info["SVLEN"])
         else:
-            svlen = None
+            svlen = -1
 
         # is_dysgu = False
         # if "SVMETHOD" in r.info and "DYSGU" in r.info["SVMETHOD"]:
@@ -144,7 +149,6 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             raise ValueError("PROB or MeanPROB must be in a float in range 0-1, error at CHROM {}, POS {}".format(chrom, start))
 
         recs[chrom].append(Site(chrom, start, chrom2, stop, svt, idx, r.id, svlen, pval))
-
     if not_parsed:
         logging.warning("Some records had incompatible SVTYPE: {}".format(
             str({k: v for k, v in Counter(not_parsed).items()})))
@@ -152,7 +156,8 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
 
 
 def append_uncalled(df, site_adder, infile, parse_probs):
-
+    if site_adder is None:
+        raise ValueError("Sites was None type")
     # add 0/0 genotype to uncalled variants in --sites
     found_sites = set([i for i in df["site_info"] if i])
     uncalled = []

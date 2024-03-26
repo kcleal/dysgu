@@ -14,6 +14,22 @@
 #include <htslib/hfile.h>
 
 
+void remove_extraneous_tags(bam1_t* src, int remove_extra_tags) {
+    // needed NM, AS, SA, XS, but remove some of the large offenders to save a bit of disk space
+    int i=0;
+    for (auto &t : {"ML", "MM", "MD"}) {
+        uint8_t* data = bam_aux_get(src, t);
+        if (data != nullptr) {
+            bam_aux_del(src, data);
+        }
+        i += 1;
+        if (i >= remove_extra_tags) {
+            break;
+        }
+    }
+}
+
+
 class CoverageTrack
 {
     public:
@@ -107,7 +123,7 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
                        robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
                        const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
                        sam_hdr_t **samHdr, htsFile **f_out,
-                       std::string& temp_folder, const bool write_all, long *n_aligned_bases) {
+                       std::string& temp_folder, const bool write_all, long *n_aligned_bases, int remove_extra_tags) {
 
     int result;
     bam1_t* aln;
@@ -128,6 +144,9 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     // Check if write queue is full
     if (write_queue.size() > max_write_queue) {
         for (const auto& val: write_queue) {
+            if (remove_extra_tags) {
+                remove_extraneous_tags(val, remove_extra_tags);
+            }
             result = sam_write1(*f_out, *samHdr, val);
             if (result < 0) { return -1; }
             total += 1;
@@ -317,7 +336,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     std::string region_string = region;
 
     long n_aligned_bases = 0;
-
+    int remove_extra_tags = 0;
     // iterate through regions
     if (region_string != ".,") {
 
@@ -342,12 +361,21 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
 
             // Read alignment into the back of scope queue
             while ( sam_itr_next(fp_in, iter, scope.back().second) >= 0 ) {
-
+                if (total == 0) {
+                    for (auto &t : {"ML", "MM", "MD"}) {
+                        uint8_t* data = bam_aux_get(scope.back().second, t);
+                        if (data != nullptr) {
+                            remove_extra_tags += 1;
+                        } else {
+                            break;
+                        }
+                    }
+                }
                 int success = process_alignment(current_tid, scope, write_queue,
                            max_scope, max_write_queue, clip_length,
                            read_names, cov_track, total,
                            n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                           &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases);
+                           &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags);
                 if (success < 0) {
                     std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                     break;
@@ -357,12 +385,21 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     } else {
         // iterate whole alignment file (no index needed)
         while (sam_read1(fp_in, samHdr, scope.back().second) >= 0) {
-
+            if (total == 0) {
+                for (auto &t : {"ML", "MM", "MD"}) {
+                    uint8_t* data = bam_aux_get(scope.back().second, t);
+                    if (data != nullptr) {
+                        remove_extra_tags += 1;
+                    } else {
+                        break;
+                    }
+                }
+            }
             int success = process_alignment(current_tid, scope, write_queue,
                        max_scope, max_write_queue, clip_length,
                        read_names, cov_track, total,
                        n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                       &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases);
+                       &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags);
             if (success < 0) {
                 std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                 break;
@@ -384,6 +421,9 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     }
 
     for (const auto& val: write_queue) {
+        if (remove_extra_tags) {
+            remove_extraneous_tags(val, remove_extra_tags);
+        }
         result = sam_write1(f_out, samHdr, val);
         if (result < 0) { return -1; }
         total += 1;

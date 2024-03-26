@@ -58,7 +58,7 @@ def get_extra_args():
 
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
-                             "-Wno-deprecated-declarations",
+                             "-Wno-deprecated-declarations", "-fpermissive"
                              ]
 
 ext_modules = list()
@@ -128,22 +128,23 @@ print("Extras compiler args", extras)
 
 # Scikit-bio module
 ssw_extra_compile_args = ["-Wno-deprecated-declarations", '-std=c99', '-I.']
-# if icc or sysconfig.get_config_vars()['CC'] == 'icc':
-#     ssw_extra_compile_args.extend(['-qopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
-# elif not (clang or sysconfig.get_config_vars()['CC'] == 'clang'):
-#     ssw_extra_compile_args.extend(['-fopenmp-simd', '-DSIMDE_ENABLE_OPENMP'])
+
 
 ext_modules.append(Extension(f"dysgu.scikitbio._ssw_wrapper",
                              [f"dysgu/scikitbio/_ssw_wrapper.pyx", f"dysgu/scikitbio/ssw.c"],
                              include_dirs=[f"{root}/dysgu/scikitbio", numpy.get_include()],
                              extra_compile_args=ssw_extra_compile_args,
-                             # define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
                              language="c"))
 
+ext_modules.append(Extension(f"dysgu.edlib.edlib",
+                             [f"dysgu/edlib/edlib.pyx", f"dysgu/edlib/src/edlib.cpp"],
+                             include_dirs=[f"{root}/dysgu/edlib", numpy.get_include()],
+                             extra_compile_args=["-O3", "-std=c++11"],
+                             language="c++"))
 
 # Dysgu modules
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
-             "map_set_utils", "cluster", "sv_category", "extra_metrics"]:  # "post_call_metrics",
+             "map_set_utils", "cluster", "sv_category", "extra_metrics"]:
 
     ext_modules.append(Extension(f"dysgu.{item}",
                                  [f"dysgu/{item}.pyx"],
@@ -164,8 +165,8 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.6.2',
-    python_requires='>=3.7',
+    version='1.6.3',
+    python_requires='>=3.10',
     install_requires=[  # runtime requires
             'setuptools>=63.0',
             'cython',
@@ -173,12 +174,11 @@ setup(
             'numpy>=1.18',
             'scipy',
             'pandas',
-            'pysam==0.21.0',
+            'pysam==0.22.0',
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            'edlib',
         ],
     setup_requires=[
             'setuptools>=63.0',
@@ -187,14 +187,13 @@ setup(
             'numpy>=1.18',
             'scipy',
             'pandas',
-            'pysam==0.21.0',
+            'pysam==0.22.0',
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
             'lightgbm',
-            'edlib'
         ],
-    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio"],
+    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"],
     ext_modules=cythonize(ext_modules),
     include_package_data=True,
     zip_safe=False,

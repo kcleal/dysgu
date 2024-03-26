@@ -13,6 +13,8 @@ import multiprocessing
 import gzip
 import pysam
 import numpy as np
+from scipy.spatial.distance import cosine
+import networkx as nx
 from sys import stdout
 from heapq import heappop, heappush
 import resource
@@ -373,7 +375,7 @@ def get_names_list(file_list, ignore_csv=True):
     return seen_names, names_list
 
 
-def process_file_list(args, file_list, seen_names, names_list, log_messages):
+def process_file_list(args, file_list, seen_names, names_list, log_messages, show_progress=False, job_id=None):
     dfs = []
     header = None
     contig_names = None
@@ -398,10 +400,14 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages):
         df = mung_df(df, args)
         if args["merge_within"] == "True":
             l_before = len(df)
+            if show_progress and job_id:
+                logging.info("{} started, records {}".format(job_id, l_before))
             df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
                           aggressive=args['collapse_nearby'] == "True", log_messages=log_messages)
             if log_messages:
                 logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
+            elif show_progress and job_id:
+                logging.info("{} rows before merge-within {}, rows after {}".format(job_id, l_before, len(df)))
         if "partners" in df:
             del df["partners"]
         dfs.append(df)
@@ -416,10 +422,15 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages):
 
     outfile = open_outfile(args, names_list, log_messages=log_messages)
     if args["out_format"] == "vcf":
+        lens_before = list(map(len, dfs))
+        if show_progress and job_id:
+            logging.info("{} started, records {}".format(job_id, lens_before))
         count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
                                 contig_names=contig_names, show_names=log_messages)
         if log_messages:
-            logging.info("Sample rows before merge {}, rows after {}".format(list(map(len, dfs)), count))
+            logging.info("Sample rows before merge {}, rows after {}".format(lens_before, count))
+        elif show_progress and job_id:
+            logging.info("{} rows after {}".format(job_id, count))
     else:
         to_csv(df, args, outfile, small_output=False)
 
@@ -444,7 +455,7 @@ class VcfWriter(object):
         self.vcf.write(str(r))
 
 
-def shard_job(wd, item_path, name, Global):
+def shard_job(wd, item_path, name, Global, show_progress):
     shards = {}
     vcf = pysam.VariantFile(item_path, 'r')
     contigs = len(vcf.header.contigs)
@@ -473,6 +484,8 @@ def shard_job(wd, item_path, name, Global):
     for v in shards.values():
         v.close()
     vcf.close()
+    if show_progress:
+        logging.info(f"Finished splitting {item_path}")
     return list(shards.keys()), rows, name
 
 
@@ -545,7 +558,7 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
     return written
 
 
-def shard_data(args, input_files, Global):
+def shard_data(args, input_files, Global, show_progress):
     logging.info(f"Merge distance: {args['merge_dist']} bp")
     out_f = args['svs_out'] if args['svs_out'] else '-'
     logging.info("SVs output to {}".format(out_f if out_f != '-' else 'stdout'))
@@ -554,9 +567,11 @@ def shard_data(args, input_files, Global):
     seen_names, names_list = get_names_list(input_files, ignore_csv=False)
 
     # Split files into shards
+    if show_progress:
+        logging.info("Splitting files into shards")
     job_args = []
     for name, item in zip(names_list, input_files):
-        job_args.append((args['wd'], item, name, Global))
+        job_args.append((args['wd'], item, name, Global, show_progress))
     pool = multiprocessing.Pool(args['procs'])
     results = pool.starmap(shard_job, job_args)
     input_rows = {}
@@ -572,6 +587,8 @@ def shard_data(args, input_files, Global):
     resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, max(Global.soft, soft) * len(input_files)), hard))
 
     # Process shards
+    if show_progress:
+        logging.info("Processing shards")
     job_args2 = []
     needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind"]}
     merged_outputs = []
@@ -584,7 +601,7 @@ def shard_data(args, input_files, Global):
         fout = os.path.join(args['wd'], block_id + '_merged.vcf')
         merged_outputs.append(fout)
         target_args["svs_out"] = fout
-        job_args2.append((target_args, file_targets, seen_names, names, False))
+        job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id))
 
     if args['procs'] > 1:
         pool.starmap(process_file_list, job_args2)
@@ -616,6 +633,191 @@ def shard_data(args, input_files, Global):
             os.remove(item)
 
 
+def get_cosine_similarity(r_format_array, candidates, samp, target_keys):
+    res = []
+    for index, c in candidates:
+        fmt = c.samples[samp]
+        vals2 = np.array([fmt[k] if k in fmt and fmt[k] is not None else 0 for k in target_keys]) + 1e-4
+        cs = 1 - abs(cosine(r_format_array, vals2))
+        res.append((index, c, cs))
+    return res
+
+
+def find_similar_candidates(current_cohort_file, variant_table, samp):
+    tot = 0
+    G = nx.Graph()
+    cached = {}
+    cohort_index = 0
+    for r in current_cohort_file.fetch():
+        tot += 1
+        if not r.chrom in variant_table:
+            cohort_index += 1
+            continue
+        if not r.samples[samp]:
+            cohort_index += 1
+            continue
+        t_idx = variant_table[r.chrom].bisect_left(r)
+        if t_idx >= len(variant_table[r.chrom]):
+            t_idx = 0 if t_idx == 0 else t_idx - 1
+        while t_idx > 0 and variant_table[r.chrom][t_idx].pos > r.pos - 150:
+            t_idx -= 1
+        candidates = []
+        for i in range(t_idx, len(variant_table[r.chrom])):
+            vr = variant_table[r.chrom][i]
+            if abs(vr.pos - r.pos) > 250 and vr.pos > r.pos:
+                break
+            if vr.info["SVTYPE"] != r.info["SVTYPE"]:
+                continue
+            elif vr.info["SVTYPE"] == "TRA":
+                if vr.info["CHR2"] != r.info["CHR2"]:
+                    continue
+                if abs(vr.info["CHR2_POS"] < r.info["CHR2_POS"]) > 250:
+                    continue
+
+            candidates.append((i, vr))
+
+        if len(candidates):
+            # NMB is skipped for older versions of dysgu
+            numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB"}
+            target_keys = numeric.keys()
+            r_format_array = np.array(list(numeric.values())) + 1e-4
+            candidates = get_cosine_similarity(r_format_array, candidates, samp, target_keys)
+            for index, c, cs_similarity in candidates:
+                cached[(index, r.chrom)] = c
+                G.add_edge(cohort_index, (index, r.chrom), weight=cs_similarity)
+
+        cohort_index += 1
+
+    # Find single best u out-edge and single best v out-edge
+    matching_edges_u = {}
+    matching_edges_v = {}
+    for u in G.nodes():
+        if isinstance(u, tuple):
+            continue
+        best = None
+        for v in G.neighbors(u):
+            if not isinstance(v, tuple):
+                continue
+            w = G[u][v]["weight"]
+            if not best or w > best[1]:
+                best = v, w
+        if best:
+            if best[0] not in matching_edges_v:
+                matching_edges_v[best[0]] = (u, best[1])
+            elif best[1] >= matching_edges_v[best[0]][1]:
+                del matching_edges_u[ matching_edges_v[best[0]][0] ]
+                matching_edges_v[best[0]] = (u, best[1])
+            else:
+                continue
+            if u not in matching_edges_u:
+                matching_edges_u[u] = best
+            elif best[1] >= matching_edges_u[u][1]:  # update u edge
+                del matching_edges_v[ matching_edges_u[u][0] ]
+                matching_edges_u[u] = best
+
+    matches = {}
+    for u, (v, w) in matching_edges_u.items():
+        if w != 1:
+            matches[u] = cached[v]
+
+    return tot, matches
+
+
+def update_cohort_only(args):
+
+    cohort = pysam.VariantFile(args["cohort_update"])
+    cohort_samples = set(cohort.header.samples)
+    header = cohort.header
+    input_command = ' '.join(sys.argv)
+    header.add_line(f'##command="{input_command}"')
+    if args["svs_out"] == "-" or args["svs_out"] is None:
+        logging.info("SVs output to stdout")
+        args["svs_out"] = "-"
+    else:
+        logging.info("SVs output to {}".format(args["svs_out"]))
+    outfile = pysam.VariantFile(args["svs_out"], "w", header=header)
+
+    samples = {}
+    samps_counts = defaultdict(int)
+    for pth in args["input_files"]:
+        v = pysam.VariantFile(pth)
+        samps = list(v.header.samples)
+        if len(samps) > 1:
+            raise ValueError(f"Only one sample supported per input file but {pth} has {list(samps)}")
+        samp = samps[0]
+        samps_counts[samp] += 1
+        if samp in samples:
+            logging.warning(f"{samp} already in samples list, {samp} is assumed to be {samp}_{samps_counts[samp]} in cohort file")
+            samp = f"{samp}_{samps_counts[samp]}"
+        if samp not in cohort_samples:
+            raise ValueError(f"Input file has sample name {samp}, but this was not found in the cohort file {args['cohort_update']}")
+        samples[samp] = v
+
+    # Go through each input sample and add to cohort
+    sample_index = 0
+    current_cohort_file = cohort
+    for samp, samp_file in samples.items():
+        variant_table = defaultdict(lambda: sortedcontainers.SortedKeyList([], key=lambda x: x.pos - 25))
+        if sample_index == len(samples) - 1:
+            current_out_file = outfile
+        else:
+            current_out_file = pysam.VariantFile(f"{args['wd']}/merge_sample_idx_{sample_index}.vcf", "w", header=header)
+        if sample_index > 0:
+            try:
+                os.remove(f"{args['wd']}/merge_sample_idx_{sample_index - 1}.vcf")
+            except OSError:
+                pass
+        for r in samp_file.fetch():
+            variant_table[r.chrom].add(r)
+
+        n_updated = 0
+        # First pass, find matching SVs
+        tot, matchings = find_similar_candidates(current_cohort_file, variant_table, samp)
+
+        # Second pass update matching SVs
+        cohort_index = 0
+        for r in current_cohort_file.fetch():
+            if cohort_index not in matchings:
+                current_out_file.write(r)
+                cohort_index += 1
+                continue
+            vr = matchings[cohort_index]
+            cohort_index += 1
+            updated = False
+            ch_fmt = dict(r.samples[samp].items())
+            for k, v in vr.samples[samp].items():
+                if k not in ch_fmt or ch_fmt[k] is None:
+                    continue
+                elif isinstance(v, float):
+                    if int(v * 100) != int(ch_fmt[k] * 100):
+                        ch_fmt[k] = v
+                        updated = True
+                elif v != r.samples[samp][k]:
+                    ch_fmt[k] = v
+                    updated = True
+            if updated:
+                for k, v in ch_fmt.items():
+                    r.samples[samp][k] = v
+                probs = []
+                for s in cohort_samples:
+                    probs.append(r.samples[s]["PROB"])
+                mean = sum(probs) / len(probs)
+                max_prob = max(probs)
+                r.info["MeanPROB"] = mean
+                r.info["MaxPROB"] = max_prob
+                n_updated += 1
+
+            current_out_file.write(r)
+
+        logging.info(f"{sample_index + 1}/{len(samples)} - {samp}, updated: {n_updated}/{tot}")
+        current_out_file.close()
+        if sample_index != len(samples) - 1:
+            current_cohort_file = pysam.VariantFile(f"{args['wd']}/merge_sample_idx_{sample_index}.vcf")
+            sample_index += 1
+
+    return
+
+
 def view_file(args):
 
     t0 = time.time()
@@ -630,22 +832,31 @@ def view_file(args):
         if not all(os.path.splitext(i)[1] == ".csv" for i in args["input_files"]):
             raise ValueError("All input files must have .csv extension")
 
-    args["metrics"] = False  # only option supported so far
-    args["contigs"] = False
+    if args["cohort_update"]:
+        for opt, v in (("out_format", "vcf"), ("merge_within", "False"), ("merge_across", "True"), ("add_kind", "False"), ("separate", "False")):
+            if args[opt] != v:
+                raise ValueError(f"{opt}={v} fot supported with --cohort-update")
+        if args["wd"] is None:
+            raise ValueError("Need a working directory --wd")
+        update_cohort_only(args)
 
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    manager = multiprocessing.Manager()
-    Global = manager.Namespace()
-    Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
-    Global.soft = soft
-
-    if not args["wd"]:
-        seen_names, names_list = get_names_list(args["input_files"])
-        process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
     else:
-        shard_data(args, args["input_files"], Global=Global)
-        if args['clean']:
-            os.rmdir(args['wd'])
+        args["metrics"] = False  # only option supported so far
+        args["contigs"] = False
+
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+        manager = multiprocessing.Manager()
+        Global = manager.Namespace()
+        Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
+        Global.soft = soft
+
+        if not args["wd"]:
+            seen_names, names_list = get_names_list(args["input_files"])
+            process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
+        else:
+            shard_data(args, args["input_files"], Global=Global, show_progress=args['progress'])
+            if args['clean']:
+                os.rmdir(args['wd'])
 
     logging.info("dysgu merge complete h:m:s, {}".format(str(datetime.timedelta(seconds=int(time.time() - t0))),
                                                     time.time() - t0))

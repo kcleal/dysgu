@@ -129,7 +129,7 @@ cpdef list col_names(small_output):
 
     if small_output:
         return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
-          ["GT", "GQ", "MAPQpri", "su", "spanning", "pe", "supp", "sc", "bnd",
+          ["GT", "GQ", "MAPQpri", "MAPQsupp", "su", "spanning", "pe", "supp", "sc", "bnd", "NMbase",
          "raw_reads_10kb", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed", "bad_clip_count", "fcc", "inner_cn", "outer_cn", "prob"]
             ]
@@ -264,7 +264,7 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
         info_extras += [f"MeanPROB={round(mean_prob, 3)}", f"MaxPROB={round(max_prob, 3)}"]
 
     if small_output:
-        fmt_keys = "GT:GQ:MAPQP:SU:WR:PE:SR:SC:BND:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
+        fmt_keys = "GT:GQ:MAPQP:MAPQS:SU:WR:PE:SR:SC:BND:NMB:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
     else:
         fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
@@ -309,7 +309,7 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
 
 def get_fmt(r, small_output):
     if small_output:
-        v = [r["GT"], r["GQ"], r['MAPQpri'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'],
+        v = [r["GT"], r["GQ"], r['MAPQpri'], r['MAPQsupp'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'], r['NMbase'],
              r['raw_reads_10kb'], r['neigh10kb'], r["plus"], r["minus"], r["remap_score"], r["remap_ed"],
              r["bad_clip_count"], round(r["fcc"], 3), round(r["inner_cn"], 3), round(r["outer_cn"], 3), r['prob']
              ]

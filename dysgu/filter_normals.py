@@ -1,5 +1,7 @@
 import random
 from sys import stderr, argv
+
+import numpy as np
 import pysam
 from pysam import CSOFT_CLIP, CHARD_CLIP, CDEL, CINS, CDIFF, CMATCH
 import time
@@ -7,13 +9,16 @@ import datetime
 import os
 from dysgu.map_set_utils import Py_BasicIntervalTree, is_overlapping
 from dysgu.graph import AlignmentsSA
+from dysgu.extra_metrics import gap_size_upper_bound
+from dysgu.call_component import n_aligned_bases
 import logging
 from collections import defaultdict
 from enum import Enum
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import zlib
-import edlib
+from dysgu.edlib import edlib
 import glob
+from dysgu.map_set_utils import echo
 
 
 random.seed(42)
@@ -113,8 +118,11 @@ def load_samples(args, pths):
 def output_vcf(args, template_vcf):
     hdr = template_vcf.header
     input_command = ' '.join(argv)
-    hdr.add_line('##FILTER=<ID=normal,Description="SV has read support in a normal vcf or alignment file">')
+    hdr.add_line('##FILTER=<ID=normalOverlap,Description="SV overlap in a normal vcf">')
+    hdr.add_line('##FILTER=<ID=normal,Description="SV has read support in a normal alignment file">')
     hdr.add_line('##FILTER=<ID=lowSupport,Description="Not enough supporting evidence / too many nuisance reads">')
+    hdr.add_line('##FILTER=<ID=lowMapQ,Description="Mean MapQ below threshold">')
+    hdr.add_line('##FILTER=<ID=highDivergence,Description="Too many mismatches or small gaps in reads">')
     hdr.add_line(f'##command="{input_command}"')
     return pysam.VariantFile("-" if not args['svs_out'] else args['svs_out'], "w", header=hdr)
 
@@ -181,7 +189,7 @@ def get_sv_type(r, chrom, chrom2):
 def make_interval_tree(args, infile, sample_name, normal_vcfs):
     if not normal_vcfs:
         return None
-    intervals = defaultdict(lambda: Py_BasicIntervalTree())
+    intervals = defaultdict(lambda: defaultdict(lambda: Py_BasicIntervalTree()))  # chrom : SVTYPE : interval
     ignored = defaultdict(int)
     added = 0
     for normal_vcf in normal_vcfs:
@@ -211,18 +219,20 @@ def make_interval_tree(args, infile, sample_name, normal_vcfs):
                 continue
             start = r.start  # note pysam converts to zero-based index like bam
             stop = r.stop
+            svlen = r.info["SVLEN"] if "SVLEN" in r.info else 1000000
             if chrom == chrom2 and stop < start:
                 start = r.stop - 1
                 stop = r.start - 1
             if chrom == chrom2 and abs(stop - start) <= distance:
-                intervals[chrom].add(min(start, stop) - distance, max(start, stop) + distance, idx)
+                intervals[chrom][r.info["SVTYPE"]].add(min(start, stop) - distance, max(start, stop) + distance, svlen)
             else:
                 posB = get_posB(r)
-                intervals[chrom].add(start - distance, start + distance, idx)
-                intervals[chrom2].add(posB - distance, posB + distance, idx)
+                intervals[chrom][r.info["SVTYPE"]].add(start - distance, start + distance, svlen)
+                intervals[chrom2][r.info["SVTYPE"]].add(posB - distance, posB + distance, svlen)
             added += 1
-    for tree in intervals.values():
-        tree.index()
+    for tree_v in intervals.values():
+        for tree in tree_v.values():
+            tree.index()
     if ignored:
         logging.warning(f'Ignored SV types: {ignored}')
     if added == 0:
@@ -392,38 +402,90 @@ def matching_supplementary(aln, infile, posA, posB):
     return False
 
 
-def matching_gap(posA, posB, r, svtype, is_insertion, svlen, pos_threshold=100, span_threshold=0.1):
+def within_read_end_position(event_pos, svtype, cigartuples, cigar_index):
+    if svtype == 1:  # insertion (or other e.g. duplication/inversion within read)
+        return event_pos + 1
+    else:  # deletion type
+        end = event_pos + cigartuples[cigar_index][1]
+        return end
+
+def matching_gap(posA, posB, r, svtype, is_insertion, svlen, pos_threshold=100, span_threshold=0.1, paired_end=True, cipos95=0):
     ct = r.cigartuples
     pos = r.pos
     min_length = svlen * 0.2  # 0.25
     max_distance = svlen * 10
     ins_like = svtype == "DUP" or svtype == "INV"
+    debug = False
+    # debug = True
+    cigar_index = 0
+    # echo(span_threshold)
     for k, l in ct:
         if k == CHARD_CLIP or k == CSOFT_CLIP:
+            cigar_index += 1
             continue
         if k == CMATCH or k == CDIFF:
             pos += l
+            cigar_index += 1
             continue
         if is_insertion and k == CDEL:
             pos += l
+            cigar_index += 1
             continue
         elif not is_insertion and k == CINS:
-            if l > 250 and ins_like:
+
+            span_similarity = min(l, svlen) / max(l, svlen)
+            if l > 250 and ins_like and span_similarity > 0.85 and abs(posA - pos) < max(l, svlen):
+                if debug: echo("ret0", svlen, f"{posA}-{posA + svlen}", f"{pos}-{pos + l}", (k, l))
                 return True
             elif svlen * 2 < l and (abs(posA - pos) < max_distance or (abs(posB - pos + l) < max_distance)):
+                if debug: echo("ret1")
                 return True
+
+            # if l > 100:
+            #     pos_original = pos
+            #     l, pos, _ = gap_size_upper_bound(r, cigar_index, pos, pos+1)
+            #     span_similarity = min(l, svlen) / max(l, svlen)
+            #     if l > 250 and ins_like and span_similarity > 0.85 and abs(posA - pos) < max(l, svlen):
+            #         if debug: echo("ret0b", svlen, f"{posA}-{posA + svlen}", f"{pos}-{pos + l}", (k, l))
+            #         return True
+            #     elif svlen * 2 < l and (abs(posA - pos) < max_distance or (abs(posB - pos + l) < max_distance)):
+            #         if debug: echo("ret1b")
+            #         return True
+            #     if pos_original is not None:
+            #         pos = pos_original
+            #         pos_original = None
+
+            cigar_index += 1
             continue
+
         end = pos + l
         if l > min_length and abs(posA - pos) < max_distance:
             if is_insertion:
-                if span_position_distance(posA, posA + svlen, pos, end, pos_threshold, span_threshold):
+                if min(svlen, l) / max(svlen, l) > span_threshold:
+                    if debug: echo("ret2", f"{posA}-{posA + svlen}", f"{pos}-{end}")
                     return True
             elif span_position_distance(posA, posB, pos, end, pos_threshold, span_threshold):
+                if debug: echo("ret3")
                 return True
+
+        if not paired_end and l > 20 and ((k == CINS and is_insertion) or (k == CDEL and svtype == "DEL")):
+            this_l, this_pos, this_end = gap_size_upper_bound(r, cigar_index, pos, pos + 1)
+            if this_l > min_length and abs(posA - this_pos) < max_distance:
+                if is_insertion:
+                    if min(svlen, this_l) / max(svlen, this_l) > span_threshold:
+                        if debug: echo("ret2b", f"{posA}-{posA + svlen}", f"{this_pos}-{this_end}")
+                        return True
+                    elif cipos95 and min(svlen + cipos95, this_l) / max(svlen + cipos95, this_l) > span_threshold:
+                        return True
+                elif span_position_distance(posA, posB, this_pos, this_end, pos_threshold, span_threshold):
+                    if debug: echo("ret3b")
+                    return True
+
         if k == CDEL:
             pos += l
         if pos > posB + svlen:
             break
+        cigar_index += 1
     return False
 
 
@@ -533,7 +595,7 @@ def cache_nearby_soft_clip(posA, posB, align, join_type, svtype, cached, distanc
 
 def any_nearby_soft_clip(posA, posB, align, join_type, svtype, distance=30, clip_length=3):
     ct = align.cigartuples
-    if svtype == "BND" or svtype == "INV" or svtype == "DUP":  # respect join orientation
+    if svtype == "BND" or svtype == "DUP":  # respect join orientation
         if join_type[0] == "3":
             if clip_position_matches(ct[-1], clip_length, posA, align.reference_end, distance):
                 return True
@@ -549,7 +611,7 @@ def any_nearby_soft_clip(posA, posB, align, join_type, svtype, distance=30, clip
             return True
         if clip_position_matches(ct[0], clip_length, posB, align.pos, distance):
             return True
-    elif svtype == "INS" or svtype == "TRA":  # check all clips
+    elif svtype == "INS" or svtype == "TRA" or svtype == "INV":  # check all clips
         if clip_position_matches(ct[-1], clip_length, posA, align.reference_end, distance):
             return True
         if clip_position_matches(ct[-1], clip_length, posB, align.reference_end, distance):
@@ -567,13 +629,16 @@ def has_clip(r):
     return False
 
 
-def clip_align_matches(seq1, seq2, clip_side, paired_end):
+def clip_align_matches(seq1, seq2, clip_side, paired_end, is_alt_seq=False):
     if not seq1 or not seq2:
         return False
-    min_seq = min(len(seq1), len(seq2))
+    if not is_alt_seq:
+        min_seq = min(len(seq1), len(seq2))
+    else:
+        min_seq = len(seq2)
     if min_seq < 8:
-        if min_seq == len(seq2):
-            return False
+        # if min_seq == len(seq2):
+        #     return False
         if clip_side == SeqType.RIGHT_CLIP:
             seq2_clipped = seq2[int(len(seq2) / 2) + (1 if len(seq2) % 2 == 0 else 0):]
             if seq2_clipped.startswith(seq1):
@@ -588,13 +653,15 @@ def clip_align_matches(seq1, seq2, clip_side, paired_end):
         a = aln(seq2)
         score = a.optimal_alignment_score
         pct = score / (min_seq * 2)
+        # echo(pct, "1")
         if pct > 0.7:
             return True
     else:
         el = edlib.align(seq1, seq2, mode="HW", task="locations")
         if el and el['locations']:
-            pct = el['locations'][0][1] - el['locations'][0][0] / min_seq
-            if pct > 0.7:
+            pct = 1 - (el['editDistance'] / min_seq)
+            # echo(pct, "2", min(len(seq1), len(seq2)), el['editDistance'])
+            if pct > 0.7 and (el['locations'][0][1] - el['locations'][0][0]) / min_seq > 0.7:
                 return True
     if paired_end:
         seq1_e = seq1.encode("ascii")
@@ -611,36 +678,41 @@ def matching_soft_clips(r, reads_with_nearby_soft_clips, pe):
     if not break_seqs.any_seqs:
         return False
     for clip_side, align, target_side in reads_with_nearby_soft_clips:
-        checked = False
         ct = align.cigartuples
+        if break_seqs.alt_seq:
+            if clip_align_matches(get_left_clip(align), break_seqs.alt_seq, SeqType.LEFT_CLIP, pe, True):
+                return True
+            if clip_align_matches(get_right_clip(align), break_seqs.alt_seq, SeqType.RIGHT_CLIP, pe, True):
+                return True
         if target_side == "A":
             if clip_side == SeqType.LEFT_CLIP and break_seqs.left_clip_A:
-                checked = True
                 if clip_align_matches(get_left_clip(align), break_seqs.left_clip_A, SeqType.LEFT_CLIP, pe) or (pe and ct[0][0] == CHARD_CLIP):
                     return True
             elif clip_side == SeqType.RIGHT_CLIP and break_seqs.right_clip_A:
-                checked = True
                 if clip_align_matches(get_right_clip(align), break_seqs.right_clip_A, SeqType.RIGHT_CLIP, pe) or (pe and ct[-1][0] == CHARD_CLIP):
                     return True
         else:
             if clip_side == SeqType.LEFT_CLIP and break_seqs.left_clip_B:
-                checked = True
                 if clip_align_matches(get_left_clip(align), break_seqs.left_clip_B, SeqType.LEFT_CLIP, pe) or (pe and ct[0][0] == CHARD_CLIP):
                     return True
             elif clip_side == SeqType.RIGHT_CLIP and break_seqs.right_clip_B:
-                checked = True
                 if clip_align_matches(get_right_clip(align), break_seqs.right_clip_B, SeqType.RIGHT_CLIP, pe) or (pe and ct[-1][0] == CHARD_CLIP):
                     return True
-        if not checked and break_seqs.alt_seq:
-            if clip_align_matches(get_left_clip(align), break_seqs.alt_seq, SeqType.LEFT_CLIP, pe):
-                return True
-            if clip_align_matches(get_right_clip(align), break_seqs.alt_seq, SeqType.RIGHT_CLIP, pe):
-                return True
+
     return False
 
 
 def has_low_support(r, sample, support_fraction):
-    cov = r.samples[sample]['COV']
+    d = r.samples[sample]
+    if "SVLEN" in r.info and "RPOLY" in r.info and r.info['RPOLY'] > r.info["SVLEN"]:
+        support_fraction *= 2
+    m = max(d['ICN'], d['OCN'])
+    if m == 0:
+        cov = d['COV']
+        if cov == 0:
+            return False
+    else:
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     min_support = round(1.5 + support_fraction * cov)
     if r.info['SU'] < min_support:
         return True
@@ -649,7 +721,14 @@ def has_low_support(r, sample, support_fraction):
 
 def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     sf = support_fraction / 2
-    cov = r.samples[sample]['COV']
+    d = r.samples[sample]
+    m = max(d['ICN'], d['OCN'])
+    if m == 0:
+        cov = d['COV']
+        if cov == 0:
+            return False
+    else:
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     if n_mapq0 / n_overlapping > 0.3:
         cov = max(cov, n_overlapping)
     min_support = min(4, round(1.5 + sf * cov))
@@ -658,17 +737,40 @@ def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     return False
 
 
+def has_low_covering_support(covering_reads, n_mapq0):
+    if covering_reads - n_mapq0 <= 2:
+        return True
+
+
 def too_many_clipped_reads(r, clipped_reads, support_fraction):
     sf = support_fraction / 2
-    cov = r.samples[r.samples.keys()[0]]['COV']
-    max_nearby_clipped_reads = round(3 + sf * cov)
-    if clipped_reads > max_nearby_clipped_reads:
+    d = r.samples[r.samples.keys()[0]]
+    # cov = r.samples[r.samples.keys()[0]]['COV']
+    m = max(d['ICN'], d['OCN'])
+    if m == 0:
+        cov = d['COV']
+        if cov == 0:
+            return False
+    else:
+        cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
+    # max_nearby_clipped_reads = round(3 + sf * cov)
+    max_nearby_clipped_reads = round(1 + sf * cov)
+    if clipped_reads >= max_nearby_clipped_reads:
         return True
     return False
 
 
-def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad, keep_all, sample,
-                          support_fraction):
+def poorly_aligned_region(sum_edit_distance, sum_n_small_gap, NMbase, n_aligns, fmt, max_divergence=0.08):
+    # Normal-reads error
+    if sum_edit_distance/n_aligns > max_divergence or sum_n_small_gap/n_aligns > max_divergence / 2:
+        return True
+    # Variant error rate > 4 times the normal-reads error rate
+    NMbase = (NMbase / n_aligns) * 100
+    if "NMB" in fmt and fmt["NMB"] > 4 * NMbase:
+        return True
+
+def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad, sample,
+                          support_fraction, max_divergence):
     ct = r.info["CT"]
     chromA = r.chrom
     posA = r.pos
@@ -681,6 +783,14 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
     has_contig = 'CONTIG' in r.info or 'CONTIG2' in r.info or r.alts[0][0] != "<"
     is_paired_end = False
     good_step = good_step_translocation(r, sample)
+    sum_edit_distance = 0
+    sum_n_small_gap = 0
+    n_aligns = 0
+    NMbase = 0
+    # debug = True
+
+    debug = False
+    # debug = True
     for is_paired_end, aln in iterate_bams_single_region(bams, chromA, posA, pad, bam_is_paired_end):
         if is_paired_end:
             distance = 50
@@ -688,36 +798,38 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
             if aln.flag & 12 or (aln.flag & 2 and not has_clip(aln)):
                 continue
             if chromB == infile.get_reference_name(aln.rnext) and is_overlapping(next_start, next_end, aln.pnext - pad, aln.pnext + pad):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                return "normal"
             if matching_supplementary(aln, infile, posA, posB):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                return "normal"
             if has_contig:
                 cache_nearby_soft_clip(posA, posB, aln, ct, "TRA", cached, distance, clip_length)
         else:
+            n_aligns += 1
+            a_bases, large_gaps, n_small_gaps = n_aligned_bases(aln)
+            if a_bases > 0:
+                sum_n_small_gap += n_small_gaps / a_bases
+            if aln.has_tag("NM"):
+                if a_bases:
+                    nm = float(aln.get_tag("NM"))
+                    sum_edit_distance += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             distance = 500
             clip_length = 50
             if aln.flag & 4 or not has_clip(aln):
                 continue
             if matching_supplementary(aln, infile, posA, posB):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("tra0")
+                return "normal"
             if not good_step and matching_ins_translocation(posA, aln):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("tra1")
+                return "normal"
             if has_contig:
                 cache_nearby_soft_clip(posA, posB, aln, ct, "TRA", cached, distance, clip_length)
                 if any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=50):
                     nearby_soft_clips += 1
             elif any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=250):
-                if keep_all:
-                    r.filter.add("lowSupport")
-                return False
+                if debug: echo("tra2")
+                return "lowSupport"
 
     for is_paired_end, aln in iterate_bams_single_region(bams, chromB, posB, pad, bam_is_paired_end):
         if is_paired_end:
@@ -726,51 +838,55 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
             if aln.flag & 12 or (aln.flag & 2 and not has_clip(aln)):
                 continue
             if r.chrom == infile.get_reference_name(aln.rnext) and is_overlapping(current_start, current_end, aln.pnext - pad, aln.pnext + pad):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                return "normal"
             if matching_supplementary(aln, infile, posB, posA):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                return "normal"
             if has_contig:
                 cache_nearby_soft_clip(r.pos, posB, aln, ct, "TRA", cached, distance, clip_length)
         else:
+            n_aligns += 1
+            a_bases, large_gaps, n_small_gaps = n_aligned_bases(aln)
+            if a_bases > 0:
+                sum_n_small_gap += n_small_gaps / a_bases
+            if aln.has_tag("NM"):
+                if a_bases:
+                    nm = float(aln.get_tag("NM"))
+                    sum_edit_distance += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             distance = 500
             clip_length = 50
             if aln.flag & 4 or not has_clip(aln):
                 continue
             if matching_supplementary(aln, infile, posB, posA):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("tra3")
+                return "normal"
             if not good_step and matching_ins_translocation(posB, aln):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("tra4")
+                return "normal"
             if has_contig:
                 cache_nearby_soft_clip(posA, posB, aln, ct, "TRA", cached, distance, clip_length)
                 if any_nearby_soft_clip(r.pos, posB, aln, ct, "TRA", 30, clip_length=50):
                     nearby_soft_clips += 1
             elif any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=250):
-                if keep_all:
-                    r.filter.add("lowSupport")
-                return False
+                if debug: echo("tra5")
+                return "lowSupport"
 
     if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
-        if keep_all:
-            r.filter.add("lowSupport")
-        return False
+        if debug: echo("tra6")
+        return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
-        if keep_all:
-            r.filter.add("normal")
-        return False
-    return True
+        if debug: echo("tra7")
+        return "normal"
+
+    if not is_paired_end and poorly_aligned_region(sum_edit_distance, sum_n_small_gap, NMbase, n_aligns, r.samples[sample], max_divergence):
+        return "highDivergence"
+    return None
 
 
-def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad, sample, keep_all):
+def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad, sample, max_divergence):
     svlen = r.info["SVLEN"]
     svtype = r.info["SVTYPE"]
+    any_contigs = ("CONTIGA" in r.info and r.info["CONTIGA"]) or ("CONTIGB" in r.info and r.info["CONTIGB"])
     is_insertion = svtype == "INS"
     posA = r.pos
     ct = r.info["CT"]
@@ -780,7 +896,24 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
     is_paired_end = False
     n_mapq_0 = 0
     n_overlpapping = 0
+    n_aligns = 0
+    sum_edit_distance = 0
+    sum_n_small_gap = 0
+    NMbase = 0
+
+    debug = False
+    # debug = True
     for is_paired_end, aln in iterate_bams(bams, r.chrom, posA, r.chrom, posB, pad, bam_is_paired_end):
+        n_aligns += 1
+        a_bases, large_gaps, n_small_gaps = n_aligned_bases(aln)
+        if a_bases > 0:
+            sum_n_small_gap += n_small_gaps / a_bases
+        if aln.has_tag("NM"):
+            if a_bases:
+                nm = float(aln.get_tag("NM"))
+                sum_edit_distance += nm / a_bases
+                NMbase += (nm - large_gaps) / a_bases
+
         if is_paired_end:
             a_posA = min(aln.pos, aln.pnext)
             a_posB = max(aln.pos, aln.pnext)
@@ -788,37 +921,32 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 continue
             if aln.rname != aln.rnext:
                 if matching_supplementary(aln, infile, posA, posB):
-                    if keep_all:
-                        r.filter.add("normal")
-                    return False
+                    if debug: echo("1")
+                    return "normal"
                 cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached)
                 continue
             if abs(a_posA - posA) > pad or abs(a_posB - posB) > pad:
                 continue
             if not is_insertion and not aln.flag & 10:  # proper pair, mate unmapped
-                if span_position_distance(posA, posB, a_posA, a_posB, pos_threshold=20, span_threshold=0.5):
-                    if keep_all:
-                        r.filter.add("normal")
-                    return False
+                if span_position_distance(posA, posB, a_posA, a_posB, pos_threshold=20, span_threshold=0.75):
+                    if debug: echo("2")
+                    return "normal"
             if not is_insertion and matching_supplementary(aln, infile, posA, posB):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
-            if svlen < 80 and matching_gap(posA, posB, aln, svtype, is_insertion, svlen):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("3")
+                return "normal"
+            if svlen < 80 and matching_gap(posA, posB, aln, svtype, is_insertion, svlen, span_threshold=0.75):
+                if debug: echo("4")
+                return "normal"
             cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=50, clip_length=3)
 
         else:
-            if matching_gap(posA, posB, aln, svtype, is_insertion, svlen, pos_threshold=30, span_threshold=0.7):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+            cipos95 = r.info["CIPOS95"] if "CIPOS95" in r.info else 0
+            if matching_gap(posA, posB, aln, svtype, is_insertion, svlen, pos_threshold=30, span_threshold=0.75, paired_end=False, cipos95=cipos95):
+                if debug: echo("5", svlen, aln.qname)
+                return "normal"
             if matching_supplementary(aln, infile, posA, posB):
-                if keep_all:
-                    r.filter.add("normal")
-                return False
+                if debug: echo("6")
+                return "normal"
             if is_overlapping(posA, posA + 1, aln.pos, aln.reference_end):
                 n_overlpapping += 1
                 if aln.mapq == 0:
@@ -830,23 +958,22 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 nearby_soft_clips += 1
             cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=min(500, svlen * 0.5), clip_length=50)
 
-    if not is_paired_end and not covered:
-        if keep_all:
-            r.filter.add("lowSupport")
-        return False
+    if not is_paired_end and not covered or has_low_covering_support(covered, n_mapq_0):
+        if debug: echo("7")
+        return "lowSupport"
     if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
-        if keep_all:
-            r.filter.add("lowSupport")
-        return False
-    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
-        if keep_all:
-            r.filter.add("lowSupport")
-        return False
+        if debug: echo("8")
+        return "lowSupport"
+    if (not is_paired_end or (svtype in "INVTRA" and not any_contigs)) and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
+        if debug: echo("9")
+        return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
-        if keep_all:
-            r.filter.add("normal")
-        return False
-    return True
+        if debug: echo("10")
+        return "normal"
+    if not is_paired_end and poorly_aligned_region(sum_edit_distance, sum_n_small_gap, NMbase, n_aligns, r.samples[sample], max_divergence):
+        return "highDivergence"
+
+    return None
 
 
 def update_filter_value(r, sample_name, old_filter_values, pass_prob, new_value=""):
@@ -863,6 +990,28 @@ def update_filter_value(r, sample_name, old_filter_values, pass_prob, new_value=
                 r.filter.add(v)
 
 
+def check_for_interval_overlap(intervals, r, chrom_tid, chrom2_tid, posB, filter_results):
+    if not intervals:
+        return False
+
+    svtype = r.info["SVTYPE"]
+    if chrom_tid in intervals and svtype in intervals[chrom_tid]:
+        posA_overlaps = set(intervals[chrom_tid][svtype].allOverlappingIntervals(r.pos, r.pos + 1))
+        if chrom2_tid in intervals and svtype in intervals[chrom2_tid]:
+            posB_overlaps = set(intervals[chrom2_tid][svtype].allOverlappingIntervals(posB, posB + 1))
+            matching_svlens = posA_overlaps.intersection(posB_overlaps)
+            if matching_svlens:
+                for other_svlen in matching_svlens:
+                    if "SVLEN" in r.info:
+                        if r.info["SVLEN"] > 500 or r.info["SVLEN"] < 100:
+                            t = 0.8
+                        else:
+                            t = 0.5
+                        if min(other_svlen, r.info["SVLEN"]) / max(other_svlen, r.info["SVLEN"]) > t:
+                            filter_results['normal'] += 1
+                            return True
+
+
 def run_filtering(args):
     t0 = time.time()
     pths = get_bam_paths(args)
@@ -875,23 +1024,37 @@ def run_filtering(args):
     pad = args["interval_size"]
     keep_all = args["keep_all"]
     min_prob = args['min_prob']
+    min_mapq = args['min_mapq']
     pass_prob = args['pass_prob']
     support_fraction = args['support_fraction']
+    max_divergence = args['max_divergence']
     filter_results = defaultdict(int)
     written = 0
+    samp = list(vcf.header.samples)[0]
+
     for idx, r in enumerate(vcf):
-        # if r.id != "25979":
+        # if r.id != "207736":
         #     continue
+        # echo(dict(r.info))
+        # echo(dict(r.samples[sample_name]))
         old_filter_value = list(r.filter.keys())
         r.filter.clear()
+        mq_pri = r.samples[samp]["MAPQP"]
+        mq_sup = r.samples[samp]["MAPQS"] if "MAPQS" in r.samples[samp] else 0
+        if mq_pri < min_mapq and mq_sup < min_mapq:
+            filter_results['lowMapQ'] += 1
+            if keep_all:
+                update_filter_value(r, old_filter_value, pass_prob, new_value="lowMapQ")
+                out_vcf.write(r)
+            continue
         if min_prob != 0 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] < min_prob:
-            filter_results['dropped, lowProb'] += 1
+            filter_results['lowProb'] += 1
             if keep_all:
                 update_filter_value(r, old_filter_value, pass_prob, new_value="lowProb")
                 out_vcf.write(r)
             continue
         if has_low_support(r, sample_name, support_fraction):
-            filter_results['dropped, low support'] += 1
+            filter_results['lowSupport'] += 1
             if keep_all:
                 update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowSupport")
                 out_vcf.write(r)
@@ -900,17 +1063,13 @@ def run_filtering(args):
         posB = get_posB(r)
         if chrom_tid == -1:
             logging.exception(f'Chromosome name {r.chrom} not found in bam file header')
-        if intervals:
-            if chrom_tid in intervals:
-                posA_overlaps = set(intervals[chrom_tid].allOverlappingIntervals(r.pos, r.pos+1))
-                if chrom2_tid in intervals:
-                    posB_overlaps = set(intervals[chrom2_tid].allOverlappingIntervals(posB, posB + 1))
-                    if posA_overlaps.intersection(posB_overlaps):
-                        filter_results['dropped, normal SV overlap'] += 1
-                        if keep_all:
-                            update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="normal")
-                            out_vcf.write(r)
-                        continue
+
+        if check_for_interval_overlap(intervals, r, chrom_tid, chrom2_tid, posB, filter_results):
+            if keep_all:
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="normalOverlap")
+                out_vcf.write(r)
+            continue
+
         if not bams:
             update_filter_value(r, sample_name, old_filter_value, pass_prob)
             out_vcf.write(r)
@@ -918,18 +1077,19 @@ def run_filtering(args):
             continue
         sv_type = get_sv_type(r, chrom_tid, chrom2_tid)
         if sv_type == "TRA" or sv_type == "BND":
-            good = process_translocation(r, r.info["CHR2"], posB, bams, infile, bam_is_paired_end, pad=pad, keep_all=keep_all, sample=sample_name, support_fraction=support_fraction)
+            reason = process_translocation(r, r.info["CHR2"], posB, bams, infile, bam_is_paired_end, pad=pad, sample=sample_name, support_fraction=support_fraction, max_divergence=max_divergence)
         else:
-            good = process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad=pad, sample=sample_name, keep_all=keep_all)
-        if good:
+            reason = process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pad=pad, sample=sample_name, max_divergence=max_divergence)
+        if reason is None:
             update_filter_value(r, sample_name, old_filter_value, pass_prob)
             out_vcf.write(r)
             written += 1
         else:
             if keep_all:
-                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="normal")
+                r.filter.add(reason)
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value=reason)
                 out_vcf.write(r)
-            filter_results['dropped, normal read support'] += 1
+            filter_results[f'{reason}'] += 1
     out_vcf.close()
     logging.info(f'Filter results: {dict(sorted(filter_results.items()))}')
     logging.info("dysgu filter {} complete, n={}, h:m:s, {}".format(args['input_vcf'],
