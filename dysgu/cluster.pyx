@@ -1160,6 +1160,31 @@ def cluster_reads(args):
             raise ValueError("--ibam must be a .bam/cam/sam file")
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
                                    reference_filename=None if kind2 != "cram" else args["reference"])
+    
+    # Double check if bam file is sorted
+    # first check SO tag in HD
+    if "HD" in infile.header:
+        hd = infile.header["HD"]
+        if "SO" in hd:
+            if hd["SO"] == "unsorted":
+                # raise ValueError for SO:unsorted
+                raise ValueError("Input bam file must be sorted")
+    # directly check bam just check the first 1000 alignment for speed
+    max_alignment_check = 10**3
+    alignment_count = 0
+    prev_alignment = None
+    for aln in infile:
+        alignment_count += 1
+        if alignment_count > max_alignment_check:
+            break
+        if prev_alignment and prev_alignment.reference_id > aln.reference_id:
+            raise ValueError("Input bam file must be sorted")
+        prev_alignment = aln
+    logging.info("Check PASS : Input BAM file is sorted")
+    # reopen infile
+    infile = pysam.AlignmentFile(args["sv_aligns"], bam_mode, threads=args["procs"],
+                                 reference_filename=None if kind != "cram" else args["reference"])     
+                                          
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
