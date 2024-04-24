@@ -3,6 +3,7 @@ import os
 import sys
 import pandas as pd
 import sortedcontainers
+from sortedintersect import IntervalSet
 import logging
 import time
 import datetime
@@ -757,7 +758,8 @@ def update_cohort_only(args):
     sample_index = 0
     current_cohort_file = cohort
     for samp, samp_file in samples.items():
-        variant_table = defaultdict(lambda: sortedcontainers.SortedKeyList([], key=lambda x: x.pos - 25))
+        #variant_table = defaultdict(lambda: sortedcontainers.SortedKeyList([], key=lambda x: x.pos - 25))
+        variant_table = {}
         if sample_index == len(samples) - 1:
             current_out_file = outfile
         else:
@@ -768,7 +770,9 @@ def update_cohort_only(args):
             except OSError:
                 pass
         for r in samp_file.fetch():
-            variant_table[r.chrom].add(r)
+            if r.chrom not in variant_table:
+                variant_table[r.chrom] = IntervalSet(True)
+            variant_table[r.chrom].add(r.pos - 25, r.pos + 25, r)
 
         n_updated = 0
         # First pass, find matching SVs
