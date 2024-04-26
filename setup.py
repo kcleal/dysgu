@@ -59,7 +59,7 @@ def get_extra_args():
 extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
                              "-Wno-unused-result", '-Wno-ignored-qualifiers',
                              "-Wno-deprecated-declarations", "-fpermissive",
-                             "-Wno-unreachable-code-fallthrough", "-Wdeprecated-builtins"
+                             "-Wno-unreachable-code-fallthrough",
                              ]
 
 ext_modules = list()
@@ -166,7 +166,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.6.3',
+    version='1.6.4',
     python_requires='>=3.10',
     install_requires=[  # runtime requires
             'setuptools>=63.0',
@@ -179,6 +179,7 @@ setup(
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
+            'sortedintersect',
             'lightgbm',
         ],
     setup_requires=[
@@ -192,6 +193,7 @@ setup(
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
+            'sortedintersect',
             'lightgbm',
         ],
     packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"],

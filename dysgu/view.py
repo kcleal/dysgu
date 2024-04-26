@@ -390,7 +390,7 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages, sho
 
         name = list(set(df["sample"]))
         if len(name) > 1:
-            msg = f"More than one sample in {item}"
+            msg = f"More than one sample in {item}: {name}"
             raise ValueError(msg)
 
         df["sample"] = [bname] * len(df)
@@ -470,6 +470,9 @@ def shard_job(wd, item_path, name, Global, show_progress):
 
     rows = 0
     for r in vcf.fetch():
+        # if r.pos != 39095237:
+        #     continue
+
         svtype = r.info['SVTYPE']
         svtype = 'INSDUP' if (svtype == "INS" or svtype == "DUP") else svtype
         chrom = r.chrom
@@ -598,12 +601,14 @@ def shard_data(args, input_files, Global, show_progress):
         to_delete += job_files
         srt_keys = {os.path.basename(i).split("~")[0]: i for i in job_files}
         file_targets = tuple(srt_keys[n] for n in names)
+        total_size = sum(os.path.getsize(f) for f in file_targets)
         target_args = deepcopy(needed_args)
         fout = os.path.join(args['wd'], block_id + '_merged.vcf')
         merged_outputs.append(fout)
         target_args["svs_out"] = fout
-        job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id))
-
+        job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id, total_size))
+    job_args2.sort(key=lambda x: x[-1], reverse=True)  # Biggest jobs first
+    job_args2 = [args[:-1] for args in job_args2]
     if args['procs'] > 1:
         pool.starmap(process_file_list, job_args2)
     else:
@@ -637,11 +642,26 @@ def shard_data(args, input_files, Global, show_progress):
 def get_cosine_similarity(r_format_array, candidates, samp, target_keys):
     res = []
     for index, c in candidates:
-        fmt = c.samples[samp]
+        try:
+            fmt = c.samples[samp]
+        except KeyError:
+            # dysgu may have added a _INT to the samp name to make it unique
+            dup_key = '_'.join(samp.split('_')[:-1])
+            if dup_key in c.samples:
+                fmt = c.samples[dup_key]
+            else:
+                raise KeyError(f'Sample {samp} not in {c.samples}')
         vals2 = np.array([fmt[k] if k in fmt and fmt[k] is not None else 0 for k in target_keys]) + 1e-4
         cs = 1 - abs(cosine(r_format_array, vals2))
-        res.append((index, c, cs))
+        if cs > 0.8:
+            res.append((index, c, cs))
     return res
+
+
+def get_variant_key(r):
+    if r.info['SVTYPE'] != 'TRA':
+        return r.chrom, r.info['SVTYPE']
+    return r.chrom, r.info['CHR2']
 
 
 def find_similar_candidates(current_cohort_file, variant_table, samp):
@@ -651,32 +671,12 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
     cohort_index = 0
     for r in current_cohort_file.fetch():
         tot += 1
-        if not r.chrom in variant_table:
+        key = get_variant_key(r)
+        if key not in variant_table:
             cohort_index += 1
             continue
-        if not r.samples[samp]:
-            cohort_index += 1
-            continue
-        t_idx = variant_table[r.chrom].bisect_left(r)
-        if t_idx >= len(variant_table[r.chrom]):
-            t_idx = 0 if t_idx == 0 else t_idx - 1
-        while t_idx > 0 and variant_table[r.chrom][t_idx].pos > r.pos - 150:
-            t_idx -= 1
-        candidates = []
-        for i in range(t_idx, len(variant_table[r.chrom])):
-            vr = variant_table[r.chrom][i]
-            if abs(vr.pos - r.pos) > 250 and vr.pos > r.pos:
-                break
-            if vr.info["SVTYPE"] != r.info["SVTYPE"]:
-                continue
-            elif vr.info["SVTYPE"] == "TRA":
-                if vr.info["CHR2"] != r.info["CHR2"]:
-                    continue
-                if abs(vr.info["CHR2_POS"] < r.info["CHR2_POS"]) > 250:
-                    continue
 
-            candidates.append((i, vr))
-
+        candidates = [i[2] for i in variant_table[key].search_point(r.pos)]
         if len(candidates):
             # NMB is skipped for older versions of dysgu
             numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB"}
@@ -706,14 +706,14 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
             if best[0] not in matching_edges_v:
                 matching_edges_v[best[0]] = (u, best[1])
             elif best[1] >= matching_edges_v[best[0]][1]:
-                del matching_edges_u[ matching_edges_v[best[0]][0] ]
+                del matching_edges_u[matching_edges_v[best[0]][0]]
                 matching_edges_v[best[0]] = (u, best[1])
             else:
                 continue
             if u not in matching_edges_u:
                 matching_edges_u[u] = best
             elif best[1] >= matching_edges_u[u][1]:  # update u edge
-                del matching_edges_v[ matching_edges_u[u][0] ]
+                del matching_edges_v[matching_edges_u[u][0]]
                 matching_edges_u[u] = best
 
     matches = {}
@@ -724,6 +724,111 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
     return tot, matches
 
 
+def recreate_header_with_sample(input_vcf, sample_to_keep):
+    # Add only the desired samples to the new header
+    new_header = pysam.VariantHeader()
+    for record in input_vcf.header.records:
+        if record.type != 'SAMPLE':
+            new_header.add_record(record)
+    for sample in input_vcf.header.samples:
+        if sample == sample_to_keep:
+            new_header.add_sample(sample)
+    return new_header
+
+
+def copy_samp_from_cohort(samp, cohort_path, new_cohort_path):
+    cohort = pysam.VariantFile(cohort_path)
+    header = recreate_header_with_sample(cohort, samp)
+    temp_c = pysam.VariantFile(new_cohort_path, 'w', header=header)
+    for record in cohort.fetch():
+        new_record = temp_c.new_record()
+        new_record.chrom = record.chrom
+        new_record.pos = record.pos
+        new_record.id = record.id
+        new_record.ref = record.ref
+        new_record.alts = record.alts
+        for key, value in record.info.items():
+            new_record.info[key] = value
+        for key, value in record.samples[samp].items():
+            new_record.samples[samp][key] = value
+        temp_c.write(new_record)
+    cohort.close()
+    temp_c.close()
+
+
+def split_cohort_into_target_samples(samples, args):
+    job_args = []
+    for samp, samp_file in samples.items():
+        temp_cohort_path = f"{args['wd']}/temp_cohort_{samp}.vcf"
+        job_args.append((samp, args["cohort_update"], temp_cohort_path))
+    with multiprocessing.Pool(args['procs']) as pool:
+        pool.starmap(copy_samp_from_cohort, job_args)
+    return dict((i[0], i[2]) for i in job_args)
+
+
+def update_target_using_matchings(current_cohort_file, current_out_file, matchings, samp):
+    # Second pass update matching SVs
+    cohort_index = 0
+    for r in current_cohort_file.fetch():
+        if cohort_index not in matchings:
+            current_out_file.write(r)
+            cohort_index += 1
+            continue
+        vr = matchings[cohort_index]
+        cohort_index += 1
+        updated = False
+        ch_fmt = dict(r.samples[samp].items())
+        try:
+            items = vr.samples[samp]
+        except KeyError:
+            # dysgu may have added a _INT to the samp name to make it unique
+            dup_key = '_'.join(samp.split('_')[:-1])
+            if dup_key in vr.samples:
+                items = vr.samples[dup_key]
+            else:
+                raise KeyError(f'Sample {samp} not in cohort samples {vr.samples}')
+        for k, v in items.items():
+            if k not in ch_fmt or ch_fmt[k] is None:
+                continue
+            elif isinstance(v, float):
+                if int(v * 100) != int(ch_fmt[k] * 100):
+                    ch_fmt[k] = v
+                    updated = True
+            elif v != r.samples[samp][k]:
+                ch_fmt[k] = v
+                updated = True
+        if updated:
+            for k, v in ch_fmt.items():
+                r.samples[samp][k] = v
+
+        current_out_file.write(r)
+
+
+def make_updated_sample_level_vcfs(samp, samp_split_path, samp_file_path, updated_file_path):
+    variant_table = {}
+    samp_file = pysam.VariantFile(samp_file_path)
+    for i, r in enumerate(samp_file.fetch()):
+        key = get_variant_key(r)
+        if key not in variant_table:
+            variant_table[key] = IntervalSet(with_data=True, distance_threshold=10_000_000)
+        variant_table[key].add(r.pos - 500, r.pos + 500, (i, r))
+        # variant_table[key].add(r.pos - 25, r.pos + 25, (i, r))
+    samp_file.close()
+
+    # First pass, find matching SVs between cohort vcf and input vcf
+    current_cohort_file = pysam.VariantFile(samp_split_path)
+    tot, matchings = find_similar_candidates(current_cohort_file, variant_table, samp)
+    assert samp in samp_split_path
+
+    # Update matched records, save to new file
+    current_out_file = pysam.VariantFile(updated_file_path, "w",
+                                         header=current_cohort_file.header)
+    update_target_using_matchings(current_cohort_file, current_out_file, matchings, samp)
+    current_cohort_file.close()
+    current_out_file.close()
+    os.remove(samp_split_path)
+
+
 def update_cohort_only(args):
 
     cohort = pysam.VariantFile(args["cohort_update"])
@@ -732,11 +837,8 @@ def update_cohort_only(args):
     input_command = ' '.join(sys.argv)
     header.add_line(f'##command="{input_command}"')
     if args["svs_out"] == "-" or args["svs_out"] is None:
-        logging.info("SVs output to stdout")
         args["svs_out"] = "-"
-    else:
-        logging.info("SVs output to {}".format(args["svs_out"]))
-    outfile = pysam.VariantFile(args["svs_out"], "w", header=header)
+    outfile = pysam.VariantFile(args["svs_out"] , "w", header=header)
 
     samples = {}
     samps_counts = defaultdict(int)
@@ -752,72 +854,52 @@ def update_cohort_only(args):
             samp = f"{samp}_{samps_counts[samp]}"
         if samp not in cohort_samples:
             raise ValueError(f"Input file has sample name {samp}, but this was not found in the cohort file {args['cohort_update']}")
-        samples[samp] = v
+        samples[samp] = pth
 
-    # Go through each input sample and add to cohort
-    sample_index = 0
-    current_cohort_file = cohort
-    for samp, samp_file in samples.items():
-        #variant_table = defaultdict(lambda: sortedcontainers.SortedKeyList([], key=lambda x: x.pos - 25))
-        variant_table = {}
-        if sample_index == len(samples) - 1:
-            current_out_file = outfile
-        else:
-            current_out_file = pysam.VariantFile(f"{args['wd']}/merge_sample_idx_{sample_index}.vcf", "w", header=header)
-        if sample_index > 0:
-            try:
-                os.remove(f"{args['wd']}/merge_sample_idx_{sample_index - 1}.vcf")
-            except OSError:
-                pass
-        for r in samp_file.fetch():
-            if r.chrom not in variant_table:
-                variant_table[r.chrom] = IntervalSet(True)
-            variant_table[r.chrom].add(r.pos - 25, r.pos + 25, r)
+    logging.info("Separating target samples from cohort")
+    samp_split_paths = split_cohort_into_target_samples(samples, args)
 
-        n_updated = 0
-        # First pass, find matching SVs
-        tot, matchings = find_similar_candidates(current_cohort_file, variant_table, samp)
+    logging.info("Processing input samples")
+    job_args = []
+    for samp, samp_file_path in samples.items():
+        job_args.append((samp, samp_split_paths[samp], samp_file_path, f"{args['wd']}/temp_updated_sample_{samp}.vcf"))
 
-        # Second pass update matching SVs
-        cohort_index = 0
-        for r in current_cohort_file.fetch():
-            if cohort_index not in matchings:
-                current_out_file.write(r)
-                cohort_index += 1
-                continue
-            vr = matchings[cohort_index]
-            cohort_index += 1
-            updated = False
-            ch_fmt = dict(r.samples[samp].items())
-            for k, v in vr.samples[samp].items():
-                if k not in ch_fmt or ch_fmt[k] is None:
-                    continue
-                elif isinstance(v, float):
-                    if int(v * 100) != int(ch_fmt[k] * 100):
-                        ch_fmt[k] = v
-                        updated = True
-                elif v != r.samples[samp][k]:
-                    ch_fmt[k] = v
+    with multiprocessing.Pool(args['procs']) as pool:
+        pool.starmap(make_updated_sample_level_vcfs, job_args)
+
+    # Finally write all the cohort shards to output file
+    updated_vcfs = {samp: pysam.VariantFile(f"{args['wd']}/temp_updated_sample_{samp}.vcf") for samp in samples.keys()}
+    if args["svs_out"] == "-":
+        logging.info("SVs output to stdout")
+    else:
+        logging.info("SVs output to {}".format(args["svs_out"]))
+
+    for cohort_r in cohort:
+        updated = False
+        for samp, vcf in updated_vcfs.items():
+            samp_r = next(vcf)
+            cohort_samp = cohort_r.samples[samp]
+            for k, v in samp_r.samples[samp].items():
+                if v != cohort_samp[k]:
                     updated = True
-            if updated:
-                for k, v in ch_fmt.items():
-                    r.samples[samp][k] = v
-                probs = []
-                for s in cohort_samples:
-                    probs.append(r.samples[s]["PROB"])
-                mean = sum(probs) / len(probs)
-                max_prob = max(probs)
-                r.info["MeanPROB"] = mean
-                r.info["MaxPROB"] = max_prob
-                n_updated += 1
+                    cohort_samp[k] = v
+        if updated:
+            probs = []
+            for s in cohort_samples:
+                probs.append(cohort_r.samples[s]["PROB"])
+            mean = sum(probs) / len(probs)
+            max_prob = max(probs)
+            cohort_r.info["MeanPROB"] = mean
+            cohort_r.info["MaxPROB"] = max_prob
+        outfile.write(cohort_r)
 
-            current_out_file.write(r)
+    outfile.close()
+    cohort.close()
 
-        logging.info(f"{sample_index + 1}/{len(samples)} - {samp}, updated: {n_updated}/{tot}")
-        current_out_file.close()
-        if sample_index != len(samples) - 1:
-            current_cohort_file = pysam.VariantFile(f"{args['wd']}/merge_sample_idx_{sample_index}.vcf")
-            sample_index += 1
+    for samp in samples.keys():
+        tmp_file = f"{args['wd']}/temp_updated_sample_{samp}.vcf"
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
 
     return
 
