@@ -1178,7 +1178,8 @@ def cluster_reads(args):
         if kind2 == "stdin" or kind2 == "-" or kind2 not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
-                                   reference_filename=None if kind2 != "cram" else args["reference"])
+                                   reference_filename=None if kind2 != "cram" else args["reference"])        
+                                          
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
