@@ -1234,6 +1234,7 @@ def cluster_reads(args):
                             sort_output=False)
     else:
         outfile.write(io_funcs.get_header() + "\n")
+
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],
                len(df),
