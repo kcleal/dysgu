@@ -621,7 +621,7 @@ cdef get_query_pos_from_cigarstring(cigar, pos):
     return start, end, pos, ref_end
 
 
-cdef void parse_cigar(str cigar, int &start, int &end, int &ref_end):
+cdef void parse_cigar(str cigar, int *start, int *end, int *ref_end):
     cdef:
         int in_lead = 1
         int num = 0  # To accumulate the number as we parse through the string
@@ -635,15 +635,15 @@ cdef void parse_cigar(str cigar, int &start, int &end, int &ref_end):
         else:
             op = dereference(c_cigar)
             if in_lead and (op == b'S' or op == b'H'):
-                start += num
-                end += num
+                start[0] += num
+                end[0] += num
             elif op == b'D':
-                ref_end += num
+                ref_end[0] += num
             elif op == b'I':
-                end += num
+                end[0] += num
             elif op == b'M' or op == b'=' or op == b'X':
-                end += num
-                ref_end += num
+                end[0] += num
+                ref_end[0] += num
             num = 0
             in_lead = 0
         c_cigar += 1
@@ -698,7 +698,7 @@ class AlignmentsSA:
             sa = sa_block.split(",", 5)
             ref_start = int(sa[1])
             ref_end = ref_start
-            parse_cigar(sa[3], query_start, query_end, ref_end)
+            parse_cigar(sa[3], &query_start, &query_end, &ref_end)
             if this_aln.strand != sa[2]:
                 start_temp = query_length - query_end
                 query_end = start_temp + query_end - query_start
