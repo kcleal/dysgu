@@ -1233,6 +1233,7 @@ def cluster_reads(args):
             df = sites_utils.append_uncalled(df, site_adder, infile, parse_probs=args["parse_probs"] == "True")
 
     if len(df) > 0:
+
         df = df.sort_values(["chrA", "posA", "event_id"])
         df["sample"] = [sample_name] * len(df)
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
