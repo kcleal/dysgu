@@ -156,9 +156,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
     pad = 100
     disjoint_nodes = set([])  # if a component has more than one disjoint nodes it needs to be broken apart
     node_counts = defaultdict(int)
+    out_edges = defaultdict(int)
     for ei, ej, idx, jdx in event_iter:
         i_id = ei.event_id
         j_id = ej.event_id
+        if out_edges[idx] > 10 and out_edges[jdx] > 10:
+            continue
+
         if not same_sample:
             if ei.sample == ej.sample:
                 continue
@@ -187,6 +191,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             continue
         # Force merging of translocations that have similar loci
         if not intra:
+            out_edges[idx] += 1
+            out_edges[jdx] += 1
             G.add_edge(i_id, j_id, loci_same=loci_same)  #, w=0)
             continue
 
@@ -269,6 +275,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if not any_contigs_to_check:
             if ml > 0:
                 if l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3):
+                    out_edges[idx] += 1
+                    out_edges[jdx] += 1
                     G.add_edge(i_id, j_id, loci_same=loci_same)
         else:
             v = None
@@ -288,6 +296,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             # also long-reads will normally have remap_score == 0
             if ei.remap_score == 0 or ej.remap_score == 0:
                 if (v[0][0].islower() and v[1][-1].islower()) or (v[0][-1].islower() and v[1][0].islower()):
+                    out_edges[idx] += 1
+                    out_edges[jdx] += 1
                     G.add_edge(i_id, j_id, loci_same=loci_same)
                     continue
             if assembler.check_contig_match(v[0], v[1], return_int=True):
@@ -300,20 +310,29 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                         # continue
                 if ci_alt and cj:
                     if assembler.check_contig_match(ci_alt, cj, return_int=True):
+                        out_edges[idx] += 1
+                        out_edges[jdx] += 1
                         G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if ci_alt and cj2:
                     if assembler.check_contig_match(ci_alt, cj2, return_int=True):
+                        out_edges[idx] += 1
+                        out_edges[jdx] += 1
                         G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if cj_alt and ci:
                     if assembler.check_contig_match(cj_alt, ci, return_int=True):
+                        out_edges[idx] += 1
+                        out_edges[jdx] += 1
                         G.add_edge(i_id, j_id, loci_same=True)
                         continue
                 if cj_alt and ci2:
                     if assembler.check_contig_match(cj_alt, ci2, return_int=True):
+                        out_edges[idx] += 1
+                        out_edges[jdx] += 1
                         G.add_edge(i_id, j_id, loci_same=True)
                         continue
+
     return G, disjoint_nodes
 
 
@@ -1159,7 +1178,8 @@ def cluster_reads(args):
         if kind2 == "stdin" or kind2 == "-" or kind2 not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
-                                   reference_filename=None if kind2 != "cram" else args["reference"])
+                                   reference_filename=None if kind2 != "cram" else args["reference"])        
+                                          
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
