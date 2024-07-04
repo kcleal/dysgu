@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import sortedcontainers
-from sortedintersect import IntervalSet
+from dysgu.sortedintersect import IntervalSet
 import logging
 import time
 import datetime

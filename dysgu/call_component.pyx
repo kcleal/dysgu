@@ -1327,13 +1327,9 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
     for qname in [k for k in grp_u if k in grp_v]:  # Qname found on both sides
         u = grp_u[qname]
         v = grp_v[qname]
-        pair = informative_pair(u, v) #, paired_end)
+        pair = informative_pair(u, v)
         if not pair:
             continue
-        # if len(u) == 1 and len(v) == 1:
-        #     pair = (u[0], v[0])
-        # else:
-        #     pair = informative_pair(u, v, paired_end)
         a_node_info, a, b_node_info, b, = pair[0][0], pair[0][1], pair[1][0], pair[1][1]
         a_ct = a.cigartuples
         b_ct = b.cigartuples

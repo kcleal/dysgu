@@ -549,7 +549,7 @@ def test_command(ctx, **kwargs):
                 click.echo(line.strip(), err=True)
         process.wait()
         if process.returncode != 0:
-            logging.warning(f"WARNING: Command failed with return code {process.returncode}")
+            logging.warning(f"WARNING: Command failed with return code {process.returncode}\n{c}")
         else:
             click.echo("PASS: " + c + "\n", err=True)
 

@@ -653,7 +653,6 @@ def clip_align_matches(seq1, seq2, clip_side, paired_end, is_alt_seq=False):
         a = aln(seq2)
         score = a.optimal_alignment_score
         pct = score / (min_seq * 2)
-        # echo(pct, "1")
         if pct > 0.7:
             return True
     else:
@@ -721,6 +720,7 @@ def has_low_support(r, sample, support_fraction):
 
 def has_low_WR_support(r, sample, support_fraction, n_overlapping, n_mapq0):
     sf = support_fraction / 2
+    # cov = r.samples[sample]['COV']
     d = r.samples[sample]
     m = max(d['ICN'], d['OCN'])
     if m == 0:
@@ -755,6 +755,7 @@ def too_many_clipped_reads(r, clipped_reads, support_fraction):
         cov = d['COV'] * ((min(d['ICN'], d['OCN']) / m))
     # max_nearby_clipped_reads = round(3 + sf * cov)
     max_nearby_clipped_reads = round(1 + sf * cov)
+    # echo("max", clipped_reads,  max_nearby_clipped_reads, support_fraction)
     if clipped_reads >= max_nearby_clipped_reads:
         return True
     return False
@@ -792,6 +793,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
     debug = False
     # debug = True
     for is_paired_end, aln in iterate_bams_single_region(bams, chromA, posA, pad, bam_is_paired_end):
+
         if is_paired_end:
             distance = 50
             clip_length = 3
