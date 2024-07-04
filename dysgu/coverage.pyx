@@ -326,7 +326,24 @@ cdef class GenomeScanner:
         cdef uint32_t *cigar_p
         cdef int i
         cdef int non_match_count, matched_bases
+        
+        # first check SO tag in HD
+        if "HD" in file_iter.header:
+            hd = file_iter.header["HD"]
+            if "SO" in hd:
+                if hd["SO"] == "unsorted":
+                    # raise ValueError for SO:unsorted
+                    raise ValueError("Input bam file must be sorted")
+                else:
+                    logging.info("Check PASS : Input BAM file has sorted header")
+                
+        prev_alignment = None
         for a in file_iter:
+            # double check with index
+            if prev_alignment and prev_alignment.reference_id > a.reference_id:
+                raise ValueError("Input bam file must be sorted")
+            prev_alignment = a
+            
             if ibam is None:
                 if a.flag & 1284 or a.mapq < self.mapq_threshold or a.cigartuples is None:
                     continue

@@ -1178,7 +1178,8 @@ def cluster_reads(args):
         if kind2 == "stdin" or kind2 == "-" or kind2 not in opts:
             raise ValueError("--ibam must be a .bam/cam/sam file")
         ibam = pysam.AlignmentFile(args["ibam"], opts[kind2], threads=1,
-                                   reference_filename=None if kind2 != "cram" else args["reference"])
+                                   reference_filename=None if kind2 != "cram" else args["reference"])        
+                                          
     if "RG" in infile.header:
         rg = infile.header["RG"]
         if "SM" in rg[0]:
@@ -1219,6 +1220,7 @@ def cluster_reads(args):
     events, site_adder = pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name)
     if not events:
         logging.critical("No events found")
+        outfile.write(io_funcs.get_header() + "\n")
         return
 
     df = pd.DataFrame.from_records([to_dict(e) for e in events])
@@ -1231,6 +1233,7 @@ def cluster_reads(args):
             df = sites_utils.append_uncalled(df, site_adder, infile, parse_probs=args["parse_probs"] == "True")
 
     if len(df) > 0:
+
         df = df.sort_values(["chrA", "posA", "event_id"])
         df["sample"] = [sample_name] * len(df)
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
@@ -1250,6 +1253,9 @@ def cluster_reads(args):
             args["sample_name"] = sample_name
             io_funcs.to_vcf(df, args, {sample_name}, outfile, show_names=False, contig_names=contig_header_lines,
                             sort_output=False)
+    else:
+        outfile.write(io_funcs.get_header() + "\n")
+
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],
                len(df),
