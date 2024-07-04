@@ -501,6 +501,7 @@ def test_command(ctx, **kwargs):
     logging.info("[dysgu-test] Version: {}".format(dysgu_version))
     tests_path = os.path.dirname(__file__) + "/tests"
     tests = list()
+
     tests.append(["dysgu fetch",
                   "-x ",
                   pwd + '/wd_test',
