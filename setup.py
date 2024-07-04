@@ -171,7 +171,7 @@ setup(
     url="https://github.com/kcleal/dysgu",
     description="Structural variant calling",
     license="MIT",
-    version='1.6.4',
+    version='1.6.5',
     python_requires='>=3.10',
     install_requires=[  # runtime requires
             'setuptools>=63.0',
