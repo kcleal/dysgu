@@ -822,7 +822,7 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
         template_edges.add(r.qname, flag, node_name, query_pos)
 
     # Debug:
-    # if r.qname == "cfa54189-601a-4a98-aeca-60ea41d0b931":
+    # if r.qname == "1e05ec04-cb97-4df6-b3d2-59b8d126d0aa":
     #     echo("---", r.qname, read_enum, node_name, (event_pos, pos2), length_from_cigar, list(other_nodes))
     # look = {129,128 }
     # if node_name == 25:

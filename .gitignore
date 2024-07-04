@@ -31,3 +31,4 @@ docs/build/
 docs/source/_templates/
 dev
 /dysgu/edlib/edlib.cpp
+/dysgu/sortedintersect/sintersect.cpp

@@ -501,6 +501,7 @@ def test_command(ctx, **kwargs):
     logging.info("[dysgu-test] Version: {}".format(dysgu_version))
     tests_path = os.path.dirname(__file__) + "/tests"
     tests = list()
+
     tests.append(["dysgu fetch",
                   "-x ",
                   pwd + '/wd_test',
@@ -549,7 +550,7 @@ def test_command(ctx, **kwargs):
                 click.echo(line.strip(), err=True)
         process.wait()
         if process.returncode != 0:
-            logging.warning(f"WARNING: Command failed with return code {process.returncode}")
+            logging.warning(f"WARNING: Command failed with return code {process.returncode}\n{c}")
         else:
             click.echo("PASS: " + c + "\n", err=True)
 

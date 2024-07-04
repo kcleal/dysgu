@@ -143,6 +143,11 @@ ext_modules.append(Extension(f"dysgu.edlib.edlib",
                              extra_compile_args=["-O3", "-std=c++11"],
                              language="c++"))
 
+ext_modules.append(Extension(f"dysgu.sortedintersect.sintersect",
+                             [f"dysgu/sortedintersect/sintersect.pyx"],
+                             extra_compile_args=["-O3", "-std=c++11"],
+                             language="c++"))
+
 # Dysgu modules
 for item in ["sv2bam", "io_funcs", "graph", "coverage", "assembler", "call_component",
              "map_set_utils", "cluster", "sv_category", "extra_metrics"]:
@@ -179,7 +184,6 @@ setup(
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
-            'sortedintersect',
             'lightgbm',
         ],
     setup_requires=[
@@ -193,10 +197,9 @@ setup(
             'networkx>=2.4',
             'scikit-learn>=0.22',
             'sortedcontainers',
-            'sortedintersect',
             'lightgbm',
         ],
-    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"],
+    packages=["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib", "dysgu.sortedintersect"],
     ext_modules=cythonize(ext_modules),
     include_package_data=True,
     zip_safe=False,
