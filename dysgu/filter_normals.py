@@ -1046,13 +1046,13 @@ def run_filtering(args):
         if mq_pri < min_mapq and mq_sup < min_mapq:
             filter_results['lowMapQ'] += 1
             if keep_all:
-                update_filter_value(r, old_filter_value, pass_prob, new_value="lowMapQ")
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowMapQ")
                 out_vcf.write(r)
             continue
         if min_prob != 0 and 'PROB' in r.samples[sample_name] and r.samples[sample_name]['PROB'] < min_prob:
             filter_results['lowProb'] += 1
             if keep_all:
-                update_filter_value(r, old_filter_value, pass_prob, new_value="lowProb")
+                update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowProb")
                 out_vcf.write(r)
             continue
         if has_low_support(r, sample_name, support_fraction):
