@@ -939,12 +939,14 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 nearby_soft_clips += 1
             cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=min(500, svlen * 0.5), clip_length=50)
 
-    if not is_paired_end and not covered or has_low_covering_support(covered, n_mapq_0):
+    if not is_paired_end and (not covered or has_low_covering_support(covered, n_mapq_0)):
         return "lowSupport"
     if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
         return "lowSupport"
-    if (not is_paired_end or (svtype in "INVTRA" and not any_contigs)) and too_many_clipped_reads(r, nearby_soft_clips,
-                                                                                                  support_fraction):
+    # if (not is_paired_end or (svtype in "INVTRA" and not any_contigs)) and too_many_clipped_reads(r, nearby_soft_clips,
+    #                                                                                               support_fraction):
+    #     return "lowSupport"
+    if svtype in "INVTRA" and not any_contigs and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
         return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
         return "normal"
