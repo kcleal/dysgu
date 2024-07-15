@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools >= 61.0", "cython", "pysam", "numpy<2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="dysgu"
+
+# All the rest of the usual stuff from pyproject.toml is actually in setup.py.
+# But, for pip install to work nicely from source (also python3 -m  build etc),
+# you need to have the above build-requires in pyproject.toml to avoid circular
+# dependencies.
