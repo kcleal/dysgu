@@ -1,0 +1,7 @@
+
+[build-system]
+requires = ["setuptools >= 61.0", "cython", "pysam", "numpy<2", "pysam >= 0.22"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name="dysgu"
