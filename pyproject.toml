@@ -1,7 +1,35 @@
 
 [build-system]
-requires = ["setuptools >= 61.0", "cython", "pysam", "numpy<2", "pysam >= 0.22"]
+requires = [
+    "setuptools >= 61.0",
+    "cython",
+    "pysam",
+    "numpy<2",
+    "pysam >= 0.22"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name="dysgu"
+version = "1.6.6"  # Replace with your actual version
+description = "Tools for calling SVs using short or long reads"
+authors = [
+    {name = "Kez Cleal", email = "clealk@cardiff.ac.uk"}
+]
+license = {text = "MIT"}
+dependencies = [
+    "setuptools>=61.0",
+    "cython",
+    "click>=8.0",
+    "numpy<2",
+    "scipy",
+    "pandas",
+    "pysam>=0.22",
+    "networkx>=2.4",
+    "scikit-learn>=0.22",
+    "sortedcontainers",
+    "lightgbm"
+]
+
+[project.urls]
+Homepage = "https://github.com/kcleal/dysgu"
