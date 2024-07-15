@@ -4,12 +4,22 @@
 echo "STARTING MANYLINUX-DEPS"
 
 yum -y install gcc gcc-c++ wget autoconf openssl-devel libffi libffi-devel zlib-devel \
-    bzip2-devel bzip2-libs xz-devel xz-libs libffi atlas-devel libjpeg-devel libssh2 curl-devel curl \
-    cmake libs3
+    xz-devel xz-libs libffi atlas-devel libjpeg-devel libssh2 curl-devel curl cmake libs3
 
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git && \
     cd libdeflate && CFLAGS+=' -fPIC -O3 ' cmake -B build && CFLAGS+=' -fPIC -O3 ' cmake --build build && \
     cp build/libdeflate.a /usr/local/lib && cp libdeflate.h /usr/local/include && cd ../
+
+
+curl -L 'http://bzip.org/1.0.8/bzip2-1.0.8.tar.gz' > bzip2-1.0.8.tar.gz
+tar xvzf bzip2-1.0.8.tar.gz
+cd bzip2-1.0.8
+make -f Makefile-libbz2_so
+ar rcs libbz2.a *.o
+ln -sf libbz2.so.1.0 libbz2.so
+cp -avf bzlib.h /usr/local/include
+cp -avf libbz2.so* /usr/local/lib
+cp -avf libbz2.a /usr/local/lib
 
 cd ./dysgu
 curl -L -o htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
@@ -20,7 +30,7 @@ cd htslib
 
 #autoheader
 #autoconf
-./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
+./configure CPPFLAGS=-I/usr/local/include LDFLAGS="-L/usr/local/lib -Wl,-R/usr/local/lib" --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate --prefix=/usr/local
 make && make install
 cd ../../
 
