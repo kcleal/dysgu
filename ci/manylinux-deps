@@ -27,10 +27,11 @@ ls -lh
 tar -xvf htslib.tar.bz2
 mv htslib-1.20 htslib && rm htslib.tar.bz2
 cd htslib
+ls /usr/local/include
 
 #autoheader
 #autoconf
-./configure CPPFLAGS=-I/usr/local/include LDFLAGS="-L/usr/local/lib -Wl,-R/usr/local/lib" --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate --prefix=/usr/local
+#./configure CPPFLAGS='-I/usr/local/include' LDFLAGS="-L/usr/local/lib -Wl,-R/usr/local/lib" --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate --prefix=/usr/local
 make && make install
 cd ../../
 
