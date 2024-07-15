@@ -153,6 +153,31 @@ uses < 6 GB memory. Also note that when `fetch` is utilized (or using run comman
 
 🚦Filtering SVs
 ----------------
+The filtering command is quite flexible and can be used to filter a single sample,
+or filter against a normal sample, or a panel of normals/cohort.
+If the filter command is used with a single input vcf (no normals or cohort), filtering will remove lower quality events::
+
+    dysgu filter input.vcf > output.vcf
+
+Filtering is recommended after any merging has been performed, or if you are analysing only a single sample.
+
+If a normal vcf is supplied, then input calls will be removed if they overlap with events in the normal vcf::
+
+    dysgu filter --normal-vcf normal.vcf input.vcf > output.vcf
+
+Additionally, you can provide bam files to filter against. This will make the filtering much more stringent as each
+alignment file you provide will be checked for reads that match your input calls. If supporting reads are found then
+the input call will be removed. Note, this also makes filtering much slower. For large cohorts a random sample of
+bams can be used for filtering using the `--random-bam-sample Int` option::
+
+    dysgu filter input.vcf normal.bam > output.vcf  # normal bam only
+    dysgu filter --normal-vcf normal.vcf  input.vcf normal.bam > output.vcf
+
+Dysgu will understand the sample-name in vcf and bam files, so if you use "*.bam" syntax, then the input sample will
+not be used for filtering.
+
+Other filtering option are detailed below.
+
 Remove events with low probability::
 
     dysgu filter --min-prob 0.2 input.vcf > output.vcf
@@ -167,7 +192,6 @@ Re-label events with probability >= 0.3 as PASS::
 
 Use normal bams to filter common/germline structural variants::
 
-    dysgu filter input.vcf normal.bam > output.vcf
     dysgu filter input.vcf normals/*.bam > output.vcf
     dysgu filter input.vcf list_of_normals.txt > output.vcf
 
