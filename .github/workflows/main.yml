@@ -13,6 +13,8 @@ jobs:
         os: [ubuntu-20.04, macOS-11]
 
     steps:
+      - name: Install C/C++ deps
+        run: sudo apt-get install -y zlib1g-dev libbz2-dev  # for htslib
       - uses: actions/checkout@v4
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
@@ -31,8 +33,6 @@ jobs:
           CIBW_TEST_SKIP: "*-macosx_arm64"
           CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
           CIBW_TEST_COMMAND: dysgu test --verbose
-
-
 
       - uses: actions/upload-artifact@v4
         with:
