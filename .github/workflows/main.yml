@@ -15,6 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Install project dependencies
+        run: which python; python -m pip install -r requirements.txt
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.2
         env:
@@ -26,15 +28,15 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: bash ci/manylinux-deps
           CIBW_BEFORE_BUILD_MACOS: |
             ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
-            pip install -r requirements.txt
+            which python3
+            python3 -m pip install -r requirements.txt
           CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel} --require-target-macos-version 13.0
           CIBW_TEST_SKIP: "*-macosx_arm64"
           CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
           CIBW_TEST_COMMAND: dysgu test --verbose
 
-
-
       - uses: actions/upload-artifact@v4
         with:
+          name: wheelhouse-${{ matrix.os }}-${{ github.run_id }}
           path: ./wheelhouse/*.whl
