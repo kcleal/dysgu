@@ -34,13 +34,6 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/kcleal/dysgu"
 
-[project.optional-dependencies]
-test = [
-    "pytest",
-    "pytest-cov",
-    "pytest-mock",
-]
-
 [project.scripts]
 dysgu = "dysgu.main:cli"
 
