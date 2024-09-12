@@ -1100,6 +1100,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     cdef EventResult_t d
     for d in merged:
         d.type = args["pl"]
+        if d.posA > d.posB and d.chrA == d.chrB:
+            t = d.posA
+            d.posA = d.posB
+            d.posB = t
 
     coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
