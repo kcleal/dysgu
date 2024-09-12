@@ -289,7 +289,9 @@ def ref_repetitiveness(events, ref_genome):
                 e.ref_rep = compute_rep(ref_seq)
             except (ValueError, KeyError, IndexError) as errors:
                 # Might be different reference genome version, compared to bam genome
-                logging.warning("Error fetching reference chromosome: {}".format(e.chrA), errors)
+                logging.warning(
+                    f"Error fetching reference chromosome: chrA={e.chrA}, posA={e.posA}, chrB={e.chrB}, posB={e.posB}. Error: {str(errors)}"
+                )
                 e.ref_seq = 0
     return events
 
