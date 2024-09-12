@@ -1,5 +1,5 @@
 setuptools>=63.0
-cython
+Cython
 click>=8.0
 numpy
 scipy
