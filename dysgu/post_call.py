@@ -3,7 +3,7 @@ import numpy as np
 from dysgu.map_set_utils import echo
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter
-from dysgu.assembler import compute_rep
+from dysgu.consensus import compute_rep
 import zlib
 import math
 import pickle

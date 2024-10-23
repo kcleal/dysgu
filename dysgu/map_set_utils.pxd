@@ -321,5 +321,5 @@ cdef class EventResult:
     cdef public np.float32_t jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
-    cdef public object contig, contig2, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
+    cdef public object contig, contig2, contig_cigar, contig2_cigar, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
         partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info

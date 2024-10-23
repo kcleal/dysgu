@@ -332,10 +332,7 @@ cdef class GenomeScanner:
             hd = file_iter.header["HD"]
             if "SO" in hd:
                 if hd["SO"] == "unsorted":
-                    # raise ValueError for SO:unsorted
                     raise ValueError("Input bam file must be sorted")
-                else:
-                    logging.info("Check PASS : Input BAM file has sorted header")
                 
         prev_alignment = None
         for a in file_iter:

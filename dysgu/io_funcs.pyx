@@ -351,8 +351,9 @@ def gen_format_fields(r, df, names, n_fields, small_output):
     return format_fields, cols
 
 
-def get_header():
-    header = """##fileformat=VCFv4.2
+def get_header(contig_names=""):
+    input_command = ' '.join(sys.argv)
+    header = f"""##fileformat=VCFv4.2
 ##source=DYSGU
 ##FILTER=<ID=PASS,Description="All filters passed">
 ##FILTER=<ID=lowProb,Description="Probability below threshold set with --thresholds">
@@ -450,11 +451,8 @@ def get_header():
 def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=None,
            small_output_f=True, sort_output=True, n_fields=None):
 
-    header = get_header()
-    input_command = ' '.join(sys.argv)
-    outfile.write(
-        header.format(input_command=input_command,
-                      contig_names=contig_names) + "\t" + "\t".join(names) + "\n")
+
+    outfile.write(get_header(contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
         logging.info("Samples: {}".format(str(list(names))))

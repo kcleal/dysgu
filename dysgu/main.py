@@ -40,7 +40,8 @@ defaults = {
             "pl": "pe",
             "remap": "True",
             "drop_gaps": "True",
-            "trust_ins_len": "True"
+            "trust_ins_len": "True",
+            "symbolic_sv_size": -1
             }
 
 
@@ -51,8 +52,22 @@ presets = {"nanopore": {"mq": 1,
                         "pl": "nanopore",
                         "remap": "False",
                         "clip_length": -1,
-                        "trust_ins_len": "False"
+                        "trust_ins_len": "False",
+                        "sd": 0.6,
+                        "symbolic_sv_size": 50000
                         },
+            "nanopore-hac": {"mq": 1,
+                        "min_support": "auto",
+                        "dist_norm": 900,
+                        "max_cov": 150,
+                        "pl": "nanopore",
+                        "remap": "False",
+                        "clip_length": -1,
+                        "trust_ins_len": "False",
+                        "sd": 0.6,
+                        "thresholds": "0.3,0.3,0.3,0.3,0.3",
+                        "symbolic_sv_size": 50000
+                             },
            "pacbio": {"mq": 1,
                       "min_support": "auto",
                       "dist_norm": 600,
@@ -60,15 +75,30 @@ presets = {"nanopore": {"mq": 1,
                       "pl": "pacbio",
                       "remap": "False",
                       "clip_length": -1,
-                      "trust_ins_len": "True"
+                      "trust_ins_len": "True",
+                      "sd": 0.45,
+                      "symbolic_sv_size": 50000
                       },
+           "pacbio-revio": {"mq": 1,
+                      "min_support": "auto",
+                      "dist_norm": 600,
+                      "max_cov": 150,
+                      "pl": "pacbio",
+                      "remap": "False",
+                      "clip_length": -1,
+                      "trust_ins_len": "True",
+                      "sd": 0.45,
+                      "thresholds": "0.25,0.25,0.25,0.25,0.25",
+                      "symbolic_sv_size": 50000
+                            },
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
                   "dist_norm": defaults["dist_norm"],
                   "max_cov": defaults["max_cov"],
                   "pl": defaults["pl"],
                   "remap": defaults["remap"],
-                  "trust_ins_len": defaults["trust_ins_len"]
+                  "trust_ins_len": defaults["trust_ins_len"],
+                  "symbolic_sv_size": defaults["symbolic_sv_size"]
                   },
            }
 
@@ -84,7 +114,7 @@ def show_params():
 
 
 def apply_preset(kwargs):
-    if kwargs["mode"] == "nanopore" or kwargs["mode"] == "pacbio":
+    if kwargs["mode"] != "pe":
         kwargs["paired"] = "False"
     for k, v in presets[kwargs["mode"]].items():
         if k in new_options_set and new_options_set[k] is not None:
@@ -170,9 +200,11 @@ def cli():
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
-                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
-                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
-              default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True --symbolic-sv-size {presets['pacbio']['symbolic_sv_size']}. "
+                             f"pacbio-revio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --symbolic-sv-size {presets['pacbio-revio']['symbolic_sv_size']}. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore']['symbolic_sv_size']}"
+                             f"nanopore-hac: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-hac']['thresholds']} --symbolic-sv-size {presets['nanopore-hac']['symbolic_sv_size']}",
+              default="pe", type=click.Choice(["pe", "pacbio", "pacbio-revio", "nanopore", "nanopore-hac"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],
@@ -225,7 +257,7 @@ def cli():
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--no-gt", help="Skip adding genotype to SVs", is_flag=True, flag_value=False, show_default=False, default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
-@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore", default=-1, type=int, show_default=False)
+@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore", default=defaults["symbolic_sv_size"], type=int, show_default=False)
 @click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-c", "--clean", help="Remove temp files and working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
@@ -250,6 +282,8 @@ def run_pipeline(ctx, **kwargs):
     tmp_file_name = f"{dest}/{bname if bname != '-' else os.path.basename(kwargs['working_directory'])}.{pfix}.bam"
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
+    echo(ctx.obj)
+
     max_cov_value = sv2bam.process(ctx.obj)
     ctx.obj["max_cov"] = max_cov_value
     if kwargs["bam"] != "-":
@@ -331,9 +365,11 @@ def get_reads(ctx, **kwargs):
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
 @click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
-                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True. "
-                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False",
-              default="pe", type=click.Choice(["pe", "pacbio", "nanopore"]), show_default=True)
+                             f"pacbio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True --symbolic-sv-size {presets['pacbio']['symbolic_sv_size']}. "
+                             f"pacbio-revio: --mq {presets['pacbio']['mq']} --paired False --min-support '{presets['pacbio']['min_support']}' --max-cov {presets['pacbio']['max_cov']} --dist-norm {presets['pacbio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --symbolic-sv-size {presets['pacbio-revio']['symbolic_sv_size']}. "
+                             f"nanopore: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore']['symbolic_sv_size']}"
+                             f"nanopore-hac: --mq {presets['nanopore']['mq']} --paired False --min-support '{presets['nanopore']['min_support']}' --max-cov {presets['nanopore']['max_cov']} --dist-norm {presets['nanopore']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-hac']['thresholds']} --symbolic-sv-size {presets['nanopore-hac']['symbolic_sv_size']}",
+              default="pe", type=click.Choice(["pe", "pacbio", "pacbio-revio", "nanopore", "nanopore-hac"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", default=defaults["clip_length"],

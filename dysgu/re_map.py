@@ -1,8 +1,7 @@
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
-# from skbio.alignment import StripedSmithWaterman
 from dysgu.map_set_utils import is_overlapping, echo
 from dysgu.coverage import merge_intervals
-from dysgu.assembler import compute_rep
+from dysgu.consensus import compute_rep
 import math
 import dysgu.edlib as edlib
 import logging
@@ -128,219 +127,232 @@ def switch_sides(e):
     return e
 
 
+def matches_adjacent_ref_seq(clip_side, clip_seq, clip_length, ref_seq_big, break_position, gstart):
+    # Check for weaker match to adjacent ref seq (as a check for a poor soft-clip alignment)
+    if clip_side == 0:
+        adjacent_seq = ref_seq_big[break_position - gstart - clip_length:break_position - gstart]
+    else:
+        adjacent_seq = ref_seq_big[break_position - gstart:break_position - gstart + clip_length]
+    adj_align = edlib.align(clip_seq.upper(), adjacent_seq.upper(), mode="HW", task="locations")
+    if adj_align['locations'] and \
+       adj_align['editDistance'] / len(clip_seq) < 0.19 and \
+       adj_align['locations'][0][1] - adj_align['locations'][0][0] > clip_length * 0.85:
+        return True
+
+
 def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     to_add = False
     skip_event = False
     clip_length = 0
     high_quality_clip = False
 
-    if cont:
+    if not cont or not clip_res:
+        return to_add, skip_event, high_quality_clip, clip_length
 
-        if not clip_res:
-            return to_add, skip_event, high_quality_clip, clip_length
+    clip_seq, clip_side, length_other_clip = clip_res
+    if length_other_clip > 3 and e.ref_bases < 50:
+        return to_add, skip_event, high_quality_clip, clip_length
 
-        clip_seq, clip_side, length_other_clip = clip_res
-        if length_other_clip > 3 and e.ref_bases < 50:
-            return to_add, skip_event, high_quality_clip, clip_length
+    clip_length = len(clip_seq)
 
-        clip_length = len(clip_seq)
-
-        if clip_side == 0:
-            if idx == "A":
-                w = e.contig_left_weight
-            else:
-                w = e.contig2_left_weight
-
-            if not w > 10:  # todo set as a parameter option
-                return to_add, skip_event, high_quality_clip, clip_length
-
+    if clip_side == 0:
+        if idx == "A":
+            w = e.contig_left_weight
         else:
-            if idx == "A":
-                w = e.contig_right_weight
+            w = e.contig2_left_weight
+
+        if not w > 10:
+            return to_add, skip_event, high_quality_clip, clip_length
+
+    else:
+        if idx == "A":
+            w = e.contig_right_weight
+        else:
+            w = e.contig2_right_weight
+        if not w > 10:
+            return to_add, skip_event, high_quality_clip, clip_length
+
+    avg_w = w / len(clip_seq)
+    if avg_w > 1 or len(clip_seq) > 35 or w > 400:
+        high_quality_clip = True
+
+    ref_start = break_position - 500
+    ref_end = break_position + 500
+
+    start_idx = ref_start - gstart
+    start_idx = 0 if start_idx < 0 else start_idx
+    end_idx = ref_end - gstart
+
+    ref_seq_clipped = ref_seq_big[start_idx:end_idx]
+    ref_seq_start = gstart + start_idx
+
+    if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
+        return to_add, True, high_quality_clip, clip_length
+
+    if matches_adjacent_ref_seq(clip_side, clip_seq, clip_length, ref_seq_big, break_position, gstart):
+        return to_add, True, high_quality_clip, clip_length
+
+    # Large alignment region
+    el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="locations")
+    locs = merge_align_regions(el['locations'])
+
+    if not locs:
+        return to_add, True, high_quality_clip, clip_length
+
+    l_start, l_end = locs[0]
+    ref_start2 = ref_seq_start + l_start
+    ref_seq2 = ref_seq_clipped[l_start:l_end + 1]
+
+    # note query is ref seq, target is the event seq
+    aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=6,
+                               gap_extend_penalty=1)
+
+    a = aln(clip_seq)
+
+    score = a.optimal_alignment_score
+    aln_q_end = a.query_end
+    aln_q_begin = a.query_begin
+    aln_t_begin = a.target_begin
+    target_end_optimal = a.target_end_optimal
+    aln_t_end_unmapped = len(clip_seq) - target_end_optimal
+    q_begin = ref_start2 + aln_q_begin
+    q_end = ref_start2 + aln_q_end
+    edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position)
+
+    # notes
+    # -----
+    # for ins seqs, we could be re-mapping a duplicated sequence, or the 'other side' of the reference sequence
+    # so the novel sequence remains un-mappped. for a duplicated seq, the 'insertion' plus the reference might be
+    # remapped, or just part of the duplicated seq. A duplicated seq can also have additional novel bases at either
+    # end.
+    var_seq = None
+    left_ins_seq = None
+    right_ins_seq = None
+    if not edit_dist < 0:
+
+        pos = break_position
+        if clip_side == 0:
+            if q_end + 1 >= pos:
+                # insertion might be tandem (continuous) or be novel sequence (gap in alignment)
+                kind = "INS"
+                break_point = pos
+                break_point2 = pos
+
+                overlap = 0
+                if q_end > pos:
+                    overlap = q_end - pos  # duplicated sequence
+
+                svlen = overlap + aln_t_end_unmapped
+
+                if svlen <= len(clip_seq):
+                    var_seq = clip_seq[-svlen:]
+                else:
+                    left_ins_seq = clip_seq
+
+                e.ref_seq = ref_seq_clipped[500 - 1]
+
             else:
-                w = e.contig2_right_weight
-            if not w > 10:
+                ref_gap = pos - q_end
+                target_gap = len(clip_seq) - target_end_optimal
+
+                if target_gap > ref_gap:
+                    # assume we have mapped the other part of the reference seq, i.e. insertion was unmapped
+                    kind = "INS"
+                    break_point = pos
+                    break_point2 = pos
+                    svlen = target_gap - ref_gap
+                    var_seq = clip_seq[target_end_optimal: target_end_optimal + svlen]
+
+                else:
+                    kind = "DEL"
+                    break_point = pos
+                    break_point2 = q_end
+                    svlen = ref_gap
+
+            # discard alignments with large unmapped overhang (rarely happens)
+            if aln_t_begin > svlen:
                 return to_add, skip_event, high_quality_clip, clip_length
 
-        avg_w = w / len(clip_seq)
-        if avg_w > 1 or len(clip_seq) > 35 or w > 400:
-            high_quality_clip = True
+        # clip on right-hand-side
+        else:
 
-        ref_start = break_position - 500  # todo set as parameter
-        ref_end = break_position + 500
+            if q_begin - 1 <= pos:
+                kind = "INS"
+                break_point = pos
+                break_point2 = pos
 
-        start_idx = ref_start - gstart
-        start_idx = 0 if start_idx < 0 else start_idx
-        end_idx = ref_end - gstart
+                overlap_left = pos - q_begin
+                svlen = overlap_left + aln_t_begin
 
-        ref_seq_clipped = ref_seq_big[start_idx:end_idx]
-        ref_seq_start = gstart + start_idx
-
-        if not ref_seq_clipped or ref_seq_clipped[0] in "nN" or ref_seq_clipped[-1] in "nN":
-            skip_event = True
-            return to_add, skip_event, high_quality_clip, clip_length
-
-        # Large alignment region
-        el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="locations")
-        locs = merge_align_regions(el['locations'])
-
-        if not locs:
-            return to_add, skip_event, high_quality_clip, clip_length
-
-        l_start, l_end = locs[0]
-        ref_start2 = ref_seq_start + l_start
-        ref_seq2 = ref_seq_clipped[l_start:l_end + 1]
-
-        # note query is ref seq, target is the event seq
-        aln = StripedSmithWaterman(ref_seq2, match_score=2, mismatch_score=-8, gap_open_penalty=6,
-                                   gap_extend_penalty=1)
-
-        a = aln(clip_seq)
-
-        score = a.optimal_alignment_score
-        aln_q_end = a.query_end
-        aln_q_begin = a.query_begin
-        aln_t_begin = a.target_begin
-        target_end_optimal = a.target_end_optimal
-        aln_t_end_unmapped = len(clip_seq) - target_end_optimal
-        q_begin = ref_start2 + aln_q_begin
-        q_end = ref_start2 + aln_q_end
-        edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position)
-
-        # notes
-        # -----
-        # for ins seqs, we could be re-mapping a duplicated sequence, or the 'other side' of the reference sequence
-        # so the novel sequence remains un-mappped. for a duplicated seq, the 'insertion' plus the reference might be
-        # remapped, or just part of the duplicated seq. A duplicated seq can also have additional novel bases at either
-        # end.
-        var_seq = None
-        left_ins_seq = None
-        right_ins_seq = None
-        if not edit_dist < 0:
-
-            pos = break_position
-            if clip_side == 0:
-                if q_end + 1 >= pos:
-                    # insertion might be tandem (continuous) or be novel sequence (gap in alignment)
-                    kind = "INS"
-                    break_point = pos
-                    break_point2 = pos
-
-                    overlap = 0
-                    if q_end > pos:
-                        overlap = q_end - pos  # duplicated sequence
-
-                    svlen = overlap + aln_t_end_unmapped
-
-                    if svlen <= len(clip_seq):
-                        var_seq = clip_seq[-svlen:]
-                    else:
-                        left_ins_seq = clip_seq
-
-                    e.ref_seq = ref_seq_clipped[500 - 1]
-
+                if svlen <= len(clip_seq):
+                    var_seq = clip_seq[:svlen]
                 else:
-                    ref_gap = pos - q_end
-                    target_gap = len(clip_seq) - target_end_optimal
+                    right_ins_seq = clip_seq
+                e.ref_seq = ref_seq_clipped[500 - 1]
 
-                    if target_gap > ref_gap:
-                        # assume we have mapped the other part of the reference seq, i.e. insertion was unmapped
-                        kind = "INS"
-                        break_point = pos
-                        break_point2 = pos
-                        svlen = target_gap - ref_gap
-                        var_seq = clip_seq[target_end_optimal: target_end_optimal + svlen]
-
-                    else:
-                        kind = "DEL"
-                        break_point = pos
-                        break_point2 = q_end
-                        svlen = ref_gap
-
-                # discard alignments with large unmapped overhang (rarely happens)
-                if aln_t_begin > svlen:
-                    return to_add, skip_event, high_quality_clip, clip_length
-
-            # clip on right-hand-side
             else:
-
-                if q_begin - 1 <= pos:
+                ref_gap = q_begin - pos
+                target_gap = aln_t_begin
+                if target_gap > ref_gap:
                     kind = "INS"
                     break_point = pos
                     break_point2 = pos
-
-                    overlap_left = pos - q_begin
-                    svlen = overlap_left + aln_t_begin
-
-                    if svlen <= len(clip_seq):
-                        var_seq = clip_seq[:svlen]
-                    else:
-                        right_ins_seq = clip_seq
-                    e.ref_seq = ref_seq_clipped[500 - 1]
+                    svlen = target_gap
 
                 else:
-                    ref_gap = q_begin - pos
-                    target_gap = aln_t_begin
-                    if target_gap > ref_gap:
-                        kind = "INS"
-                        break_point = pos
-                        break_point2 = pos
-                        svlen = target_gap
+                    kind = "DEL"
+                    break_point = pos
+                    break_point2 = q_begin
+                    svlen = abs(break_point2 - break_point)
 
-                    else:
-                        kind = "DEL"
-                        break_point = pos
-                        break_point2 = q_begin
-                        svlen = abs(break_point2 - break_point)
+            if len(clip_seq) - target_end_optimal > svlen:
+                return to_add, skip_event, high_quality_clip, clip_length
 
-                if len(clip_seq) - target_end_optimal > svlen:
-                    return to_add, skip_event, high_quality_clip, clip_length
+        if kind == "DEL":
+            span = a.query_end - a.query_begin + 1
 
-            if kind == "DEL":
-                span = a.query_end - a.query_begin + 1
+            if span < len(clip_seq) * 0.4 and span < 50:
+                return to_add, skip_event, high_quality_clip, clip_length
 
-                if span < len(clip_seq) * 0.4 and span < 50:
-                    return to_add, skip_event, high_quality_clip, clip_length
+        if not e.svlen_precise or abs(svlen - e.svlen) > 20:
+            e.remap_ed = edit_dist
+            e.remapped = 1
+            e.remap_score = score
+            e.svtype = kind
+            e.svlen = svlen
 
-            if not e.svlen_precise or abs(svlen - e.svlen) > 20:  # todo use True?
-                e.remap_ed = edit_dist
-                e.remapped = 1
-                e.remap_score = score
-                e.svtype = kind
-                e.svlen = svlen
+            if idx == "A":
+                e.posA = break_point
+                e.posB = break_point2
+            else:
+                e.posA = break_point2
+                e.posB = break_point
 
-                if idx == "A":
-                    e.posA = break_point
-                    e.posB = break_point2
+            e.cipos95A = 0
+            e.cipos95B = 0
+
+            # switch if nessasary
+            if e.posA > e.posB:
+                e = switch_sides(e)
+
+            if e.svtype == "DEL":
+                ref_start = e.posA
+                ref_end = e.posB
+
+                start_idx = ref_start - gstart
+                start_idx = 0 if start_idx < 0 else start_idx
+                end_idx = ref_end - gstart
+
+                ref_seq_clipped2 = ref_seq_big[start_idx:end_idx]
+                e.ref_rep = compute_rep(ref_seq_clipped2)
+
+            else:
+                if var_seq: e.variant_seq = var_seq
                 else:
-                    e.posA = break_point2
-                    e.posB = break_point
+                    if left_ins_seq: e.left_ins_seq = left_ins_seq
+                    if right_ins_seq: e.right_ins_seq = right_ins_seq
 
-                e.cipos95A = 0
-                e.cipos95B = 0
-
-                # switch if nessasary
-                if e.posA > e.posB:
-                    e = switch_sides(e)
-
-                if e.svtype == "DEL":
-                    ref_start = e.posA
-                    ref_end = e.posB
-
-                    start_idx = ref_start - gstart
-                    start_idx = 0 if start_idx < 0 else start_idx
-                    end_idx = ref_end - gstart
-
-                    ref_seq_clipped2 = ref_seq_big[start_idx:end_idx]
-                    e.ref_rep = compute_rep(ref_seq_clipped2)
-
-                else:
-                    if var_seq: e.variant_seq = var_seq
-                    else:
-                        if left_ins_seq: e.left_ins_seq = left_ins_seq
-                        if right_ins_seq: e.right_ins_seq = right_ins_seq
-
-                to_add = True
+            to_add = True
 
     return to_add, skip_event, high_quality_clip, clip_length
 
@@ -441,7 +453,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                     break
                 if clip_length > max_clip_length:
                     max_clip_length = clip_length
-            # echo(e.posA, e.site_info, not to_add, not skip_event, high_quality_clip, keep_unmapped, max_clip_length >= 18, e.su)
+
             if not to_add and not skip_event and high_quality_clip and keep_unmapped and max_clip_length >= 18:
                 # basic filter
                 support_thresh = min_support + 4 if not e.site_info else 1

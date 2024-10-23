@@ -2,12 +2,15 @@
 import numpy as np
 cimport numpy as np
 from dysgu.map_set_utils cimport unordered_map, EventResult
+from dysgu.map_set_utils import merge_intervals
+from dysgu.io_funcs import intersecter, iitree
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 from libc.math cimport fabs as c_fabs
 from libc.stdint cimport uint32_t
 from libcpp.vector cimport vector as cpp_vector
 from dysgu.map_set_utils import echo
 import array
+from collections import defaultdict
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_get_cigar
 import pandas as pd
@@ -220,7 +223,7 @@ cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
     cdef AlignedSegment alignment
     rates = []
     for item in spanning_alignments:
-        alignment = item[5]
+        alignment = item.align
         if alignment.flag & 2048:
             continue
         cigar_l = alignment._delegate.core.n_cigar
@@ -233,14 +236,15 @@ cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
     else:
         mean = 0
         std = 0
+
     multiplier = 3
     threshold = min(divergence, max(0.008, multiplier*mean, mean + (std*3)))
     spanning = []
     for item in spanning_alignments:
-        alignment = item[5]
+        alignment = item.align
         cigar_l = alignment._delegate.core.n_cigar
         cigar_p = bam_get_cigar(alignment._delegate)
-        cigar_index = item[6]
+        cigar_index = item.cigar_index
         index_begin = 0
         for i in range(cigar_l):
             window_rate(&window_r, cigar_l, cigar_p, i, 2000, <bint>False)
@@ -268,6 +272,7 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l = alignment._delegate.core.n_cigar
     cdef uint32_t *cigar_p = bam_get_cigar(alignment._delegate)
+
     pos = pos_input
     end = end_input
     extent_left = pos
@@ -280,7 +285,8 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
     i = cigarindex + 1
     dist = 0
     last_seen_size = candidate_len
-    while i < cigar_l:
+
+    while i < cigar_l:  # extent rightwards
         cigar_value = cigar_p[i]
         opp = <int> cigar_value & BAM_CIGAR_MASK
         l = <int> cigar_value >> BAM_CIGAR_SHIFT
@@ -314,7 +320,7 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
 
     i = cigarindex - 1
     dist = 0
-    while i > -1:
+    while i > -1:  # extend leftwards
         cigar_value = cigar_p[i]
         opp = <int> cigar_value & BAM_CIGAR_MASK
         l = <int> cigar_value >> BAM_CIGAR_SHIFT
@@ -346,14 +352,173 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
             dist = 0
         i -= 1
 
-    if extent_right > extent_left and (extent_left != pos_input or extent_right != end_input):
-        middle = extent_left + <int>((extent_right - extent_left) / 2)
-        if candidate_type == CDEL:
-            pos = middle - int(candidate_len * 0.5)
-            end = middle + int(candidate_len * 0.5)
-        else:
-            pos = pos_input
-            end = end_input
-        return candidate_len, pos, end
+    if extent_right > extent_left and (extent_left != pos_input or extent_right != end_input):  # has been extended
+        # middle = extent_left + <int>((extent_right - extent_left) / 2)
+        # if candidate_type == CDEL:
+        #     pos = middle - int(candidate_len * 0.5)
+        #     end = middle + int(candidate_len * 0.5)
+        # else:
+        #     pos = pos_input
+        #     end = end_input
+        # return candidate_len, pos, end
+        return candidate_len, extent_left, extent_right
 
     return len_input, pos_input, end_input
+
+
+def sample_level_density(potential, regions, max_dist=50):
+    tmp_list = defaultdict(list)
+    cdef EventResult_t ei
+    for idx in range(len(potential)):
+        ei = potential[idx]
+        # Only find density for non-region calls, otherwise too dense to be meaningful
+        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+            tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
+        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+            tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
+    nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
+    cdef int vv
+    for idx in range(len(potential)):
+        ei = potential[idx]
+        neighbors = 0.
+        count = 0.
+        if ei.chrA == ei.chrB and abs(ei.posB - ei.posA) < 2:
+            expected = 2
+        else:
+            expected = 1
+        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+            vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
+            neighbors += vv - expected
+            count += 1
+        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+            vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
+            neighbors += vv - expected
+            count += 1
+        neighbors_10kb = 0.
+        count_10kb = 0
+        large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
+        for c, s, e in large_itv:
+            if not intersecter(regions, c, s, e):
+                vv = nc2[c].countOverlappingIntervals(s, e)
+                neighbors_10kb += vv - len(large_itv)
+                count_10kb += 1
+        if neighbors < 0:
+            neighbors = 0
+        if count > 0:
+            ei.neigh = neighbors / count
+        else:
+            ei.neigh = 0
+        if count_10kb > 0:
+            ei.neigh10kb = neighbors_10kb / count_10kb
+        else:
+            ei.neigh10kb = 0
+    return potential
+
+
+cdef bint same_k(int start1, int start2, int n, const unsigned char[:] seq):
+    cdef int j
+    for j in range(n):
+        if seq[start1 + j] != seq[start2 + j]:
+            return False
+    return True
+
+
+cpdef dict search_ssr_kc(ori):
+    seq = ori.upper()
+    cdef const unsigned char[:] string_view = bytes(seq.encode("ascii"))  # use for indexing
+    cdef int str_len = len(seq)
+    cdef int rep_len = min(7, str_len)
+    cdef int i = 0
+    cdef int t, start, count, mm, good_i, successive_bad, size, finish
+    cdef int n_ref_repeat_bases = 0
+    cdef int n_expansion = 0
+    cdef int stride = 0
+    expansion_seq = ""
+    cdef unsigned char starting_base
+    while i < str_len:
+        if seq[i] == b"N":
+            i += 1
+            continue
+        for t in range(1, rep_len):
+            start = i
+            if start + t >= str_len:
+                break
+            starting_base = string_view[i]
+            starting_kmer_idx = start
+            count = 1
+            mm = 0
+            good_i = 0
+            successive_bad = 0
+            finish = 0
+            while start + t < str_len and (starting_base == string_view[start+t] or mm < 2):
+                start += t
+                if start + t + 1 > str_len:
+                    break
+                if not same_k(start, starting_kmer_idx, t, string_view):
+                    successive_bad += 1
+                    mm += 1
+                    if mm > 3 or successive_bad > 1 or count < 2:
+                        finish = good_i
+                        break
+                else:
+                    good_i = start
+                    finish = good_i
+                    successive_bad = 0
+                    count += 1
+            if count >= 3 and (finish - i) + t > 10:
+                # check for lowercase to uppercase transition; determines repeat expansion length
+                lowercase = []
+                uppercase = []
+                expansion_index = -1
+                for j in range(i, finish, t):
+                    if ori[j].islower():
+                        if not lowercase:  # finds first block of repeats
+                            lowercase.append([j, j + t])
+                            if uppercase and abs(uppercase[-1][1] - j) < 3:
+                                expansion_index = 0
+                        elif lowercase[-1][1] == j:
+                            lowercase[-1][1] += t
+                    else:  # finds all reference blocks
+                        if not uppercase:  # finds first block of repeats
+                            uppercase.append([j, j + t])
+                            if lowercase and abs(lowercase[-1][1] - j) < 3:
+                                expansion_index = len(lowercase) - 1
+                        elif uppercase[-1][1] == j:
+                            uppercase[-1][1] += t
+                        else:
+                            uppercase.append([j, j + t])
+                if expansion_index != -1:
+                    e = lowercase[expansion_index]
+                    size = e[1] - e[0]
+                    if size >= 10:
+                        n_expansion = size
+                        expansion_seq = ori[e[0]:e[1]]
+                        stride = t
+                for begin, end in uppercase:
+                    n_ref_repeat_bases += end - begin
+                i = finish + t
+        i += 1
+    return {"n_expansion": n_expansion, "stride": stride, "exp_seq": expansion_seq, "ref_poly_bases": n_ref_repeat_bases}
+
+
+def find_repeat_expansions(events, insert_stdev):
+    cdef EventResult_t e
+    for e in events:
+        e.n_expansion = 0
+        e.stride = 0
+        e.exp_seq = ""
+        e.ref_poly_bases = 0
+        if e.contig:
+            r = search_ssr_kc(e.contig)
+            e.n_expansion = r["n_expansion"]
+            e.stride = r["stride"]
+            e.exp_seq = r["exp_seq"]
+            e.ref_poly_bases += r["ref_poly_bases"]
+        if e.contig2:
+            r = search_ssr_kc(e.contig2)
+            if e.n_expansion < r["n_expansion"]:
+                e.n_expansion = r["n_expansion"]
+                e.stride = r["stride"]
+                e.exp_seq = r["exp_seq"]
+                e.ref_poly_bases += r["ref_poly_bases"]
+    return events
