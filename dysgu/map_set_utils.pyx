@@ -1,23 +1,16 @@
 #cython: language_level=3
-
 import click
 import numpy as np
 cimport numpy as np
 import cython
 import time
 import logging
+import gzip
 from libcpp.vector cimport vector as cpp_vector
 from libcpp.pair cimport pair as cpp_pair
-
 from libc.stdlib cimport abs as c_abs
 from libc.math cimport fabs as c_fabs
-
-# from pysam.libcalignmentfile cimport AlignmentFile
-# from pysam.libcalignedsegment cimport AlignedSegment
-# from pysam.libchtslib cimport bam1_t, BAM_CIGAR_SHIFT, BAM_CIGAR_MASK
 from libc.stdint cimport uint32_t, uint16_t, int16_t, int32_t
-
-import math
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
@@ -99,6 +92,40 @@ def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
                 else:
                     merged.append(list(higher)[:3] + [[higher[3]]])
     return merged
+
+def load_bed(filepath):
+    """
+    Load the first 3 columns of a BED file into a list of tuples.
+    Handles both regular and gzip compressed files.
+
+    Args:
+        filepath (str): Path to the BED file
+
+    Returns:
+        list: List of tuples in format [(chrom, start, end), ...]
+    """
+    # Determine if file is gzip compressed based on extension
+    is_gzip = filepath.endswith('.gz')
+    bed_regions = []
+    open_func = gzip.open if is_gzip else open
+    mode = 'rt' if is_gzip else 'r'
+    with open_func(filepath, mode) as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            if not line.strip():
+                continue
+            fields = line.strip().split('\t')
+            if len(fields) >= 3:  # Ensure we have at least 3 columns
+                try:
+                    chrom = fields[0]
+                    start = int(fields[1])
+                    end = int(fields[2])
+                    bed_regions.append((chrom, start, end))
+                except ValueError:
+                    continue
+
+    return bed_regions
 
 
 cdef class Py_BasicIntervalTree:

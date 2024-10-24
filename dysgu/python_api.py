@@ -8,7 +8,7 @@ import pysam
 from dysgu import post_call as post_call_metrics
 from dysgu.cluster import pipe1
 from dysgu.io_funcs import to_vcf
-from dysgu.map_set_utils import to_dict
+from dysgu.map_set_utils import to_dict, merge_intervals, load_bed
 from dysgu.merge_svs import merge_events
 from dysgu.view import dotdict, set_numeric, vcf_to_df
 
