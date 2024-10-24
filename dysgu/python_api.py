@@ -1,18 +1,16 @@
-import os
-import pysam
-import time
 import tempfile
-import pandas as pd
-import numpy as np
 from collections import defaultdict
 
-from dysgu.cluster import pipe1
-from dysgu.merge_svs import merge_events
+import numpy as np
+import pandas as pd
+import pysam
+
 from dysgu import post_call as post_call_metrics
-from dysgu.map_set_utils import to_dict, merge_intervals
+from dysgu.cluster import pipe1
 from dysgu.io_funcs import to_vcf
-from dysgu.io_funcs import get_bed_regions as load_bed
-from dysgu.view import vcf_to_df, dotdict, set_numeric
+from dysgu.map_set_utils import to_dict
+from dysgu.merge_svs import merge_events
+from dysgu.view import dotdict, set_numeric, vcf_to_df
 
 
 def dysgu_default_args():
@@ -21,17 +19,63 @@ def dysgu_default_args():
     :return: A dict of available arguments
     :rtype: dict
     """
-    args = {'clip_length': 15, 'max_cov': 200, 'buffer_size': 10_000, 'min_support': 3,
-            'min_size': 30, 'model': None, 'max_tlen': 1000, 'z_depth': 2, 'z_breadth': 2, 'dist_norm': 100, 'mq': 1,
-            'regions_only': False, 'pl': 'pe', 'remap': True,
-            'drop_gaps': True, 'trust_ins_len': True, 'overwrite': True,
-            'reference': None, 'working_directory': 'tempfile',
-            'sv_aligns': None, 'ibam': None, 'sites': None, 'sites_prob': 0.6,
-            'sites_pass_only': True, 'parse_probs': False, 'all_sites': False, 'pfix': 'dysgu_reads', 'mode': 'pe',
-            'spd': 0.3, 'template_size': '', 'regions': None, 'regions_mm_only': False, 'procs': 1, 'merge_within': True,
-            'merge_dist': None, 'paired': True, 'contigs': True, 'diploid': True, 'metrics': True,
-            'add_gt': True, 'keep_small': False, 'low_mem': False, 'clean': False, 'add_kind': True, 'verbosity': 2,
-            'thresholds': {'DEL': 0.45, 'INS': 0.45, 'INV': 0.45, 'DUP': 0.45, 'TRA': 0.45},
+    args = {
+                'add_gt': True,
+                'add_kind': True,
+                'all_sites': False,
+                'buffer_size': 10000,
+                'clean': False,
+                'clip_length': 15,
+                'contigs': True,
+                'diploid': True,
+                'dist_norm': 100,
+                'divergence': 0.02,
+                'drop_gaps': True,
+                'ibam': None,
+                'ignore_sample_sites': True,
+                'keep_small': False,
+                'length_extend': 15,
+                'low_mem': False,
+                'max_cov': 200,
+                'max_tlen': 1000,
+                'merge_dist': None,
+                'merge_within': True,
+                'metrics': True,
+                'min_size': 30,
+                'min_support': 3,
+                'mode': 'pe',
+                'model': None,
+                'mq': 1,
+                'overwrite': True,
+                'paired': True,
+                'parse_probs': False,
+                'pfix': 'dysgu_reads',
+                'pl': 'pe',
+                'procs': 1,
+                'reference': None,
+                'regions': None,
+                'regions_mm_only': False,
+                'regions_only': False,
+                'remap': True,
+                'sd': 0.8,
+                'search_depth': 20,
+                'sites': None,
+                'sites_pass_only': True,
+                'sites_prob': 0.6,
+                'spd': 0.3,
+                'sv_aligns': None,
+                'symbolic_sv_size': -1,
+                'template_size': '',
+                'thresholds': {'DEL': 0.45,
+                'INS': 0.45,
+                'INV': 0.45,
+                'DUP': 0.45,
+                'TRA': 0.45},
+                'trust_ins_len': True,
+                'verbosity': 2,
+                'working_directory': 'tempfile',
+                'z_breadth': 2,
+                'z_depth': 2
             }
     return args
 
@@ -114,9 +158,7 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
 
             for item in f["partners"]:  # Only merge with one row per sample
                 t_name = df.loc[item]["table_name"]
-                if t_name != current and t_name not in targets and len(targets) < n_samples:
-                    targets.add(t_name)
-                elif aggressive_ins_merge:
+                if (t_name != current and t_name not in targets and len(targets) < n_samples) or aggressive_ins_merge:
                     targets.add(t_name)
                 else:
                     # Merged with self event. Can happen with clusters of SVs with small spacing
@@ -135,13 +177,12 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
         if add_partners:
             df["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df.index]
         return DysguSV._mung_df(df)
+    df2 = pd.DataFrame.from_records(found)
+    if add_partners:
+        df2["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df2.index]
     else:
-        df2 = pd.DataFrame.from_records(found)
-        if add_partners:
-            df2["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df2.index]
-        else:
-            df2["partners"] = [None] * len(df2)
-        return DysguSV._mung_df(df2)
+        df2["partners"] = [None] * len(df2)
+    return DysguSV._mung_df(df2)
 
 
 
@@ -334,15 +375,14 @@ class DysguSV:
             df = dysgu(bam.fetch("chr1", 0, 500000))
 
         """
-
         if isinstance(region, str):
             iterable = self.bam.fetch(region=region)
         else:
             iterable = region
 
         regions = None
-        events, site_adder = pipe1(self.args, self.bam, self.kind, regions,
-                                                  self.args['ibam'], self.ref_genome, bam_iter=iterable)
+        events, site_adder = pipe1(self.args, self.bam, self.kind, regions, self.args['ibam'],
+                                                   self.ref_genome, self.sample_name, bam_iter=iterable)
         if len(events) == 0:
             return None
         unused = {"contig2_lc", "contig2_left_weight", "contig2_rc", "contig2_ref_end", "contig2_ref_start",
@@ -359,7 +399,7 @@ class DysguSV:
                                                         default_prob=args["sites_prob"])
             df["site_id"] = ["." if not s else s.id for s in df["site_info"]]
             if args["all_sites"] == "True":
-                raise NotImplemented("all-sites is not supported using the python-api currently")
+                raise NotImplementedError("all-sites is not supported using the python-api currently")
 
         if sort_df:
             df = df.sort_values(["chrA", "posA", "event_id"])
@@ -367,7 +407,7 @@ class DysguSV:
         df["sample"] = [self.sample_name] * len(df)
 
         # fix variant seq column
-        df["variant_seq"] = [i.upper() if svt == "INS" and i is not None and len(i) > 0 else f"<{svt}>" for i, svt in zip(df["variant_seq"], df["svtype"])]
+        df["variant_seq"] = [i.upper() if svt == "INS" and i is not None and len(i) > 0 else f"<{svt}>" for i, svt in zip(df["variant_seq"], df["svtype"], strict=False)]
         return self._mung_df(df)
 
     def to_vcf(self, dataframe, output_file):

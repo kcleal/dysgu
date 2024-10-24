@@ -50,7 +50,7 @@ To install::
 
 Or, from conda::
 
-    conda install -c bioconda -c conda-forge dysgu
+    conda install -c conda-forge -c bioconda dysgu
 
 
 To build from source, run the install script: ``bash INSTALL.sh``.
