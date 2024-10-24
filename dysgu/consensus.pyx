@@ -515,7 +515,6 @@ cdef dict get_consensus(rd, int position, int max_distance):
         vec.assign(vec.size(), 0)
 
         count += 1
-    echo(cigar)
     seq = sequence
 
     # Trim off bad sequence

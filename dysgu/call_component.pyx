@@ -562,7 +562,6 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
         er.sqc = -1
     if site:
         er.site_info = site
-    echo("make_single_call", er.posA, er.posB, er.svlen, er.svtype)
     return er
 
 
@@ -921,7 +920,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 
     # Use spanning if available, otherwise informative, otherwise generic
     spanning_alignments, informative, generic_insertions = group_read_subsets(rds, insert_ppf, insert_size, insert_stdev)
-    echo("n spanning etc", len(spanning_alignments), len(informative), len(generic_insertions))
     if len(spanning_alignments) > 0:
         if not paired_end:
             candidates = []
@@ -1839,10 +1837,9 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events += ev
             else:
                 events.append(ev)
-    echo(f"n events={len(events)}, nparts={n_parts}" )
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
-    for e in events:
-        echo("call_component svlen", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}")
-        if e.svlen_precise:
-            set_ins_seq(e)
+    #for e in events:
+    #    echo("call_component svlen", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}")
+    #    if e.svlen_precise:
+    #        set_ins_seq(e)
     return events

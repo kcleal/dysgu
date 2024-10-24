@@ -129,7 +129,7 @@ def consistent_alignment_and_cigars(ei, ej, l_ratio):
     if ei.contig_ref_end > 0 and ej.contig_ref_end > 0:
         ref_overlap = min(ei.contig_ref_end, ej.contig_ref_end) - max(ei.contig_ref_start, ej.contig_ref_start)
         if ref_overlap < 0:
-            echo("no ref overlap", (ei.contig_ref_start, ej.contig_ref_start), (ei.contig_ref_end, ej.contig_ref_end))
+            #echo("no ref overlap", (ei.contig_ref_start, ej.contig_ref_start), (ei.contig_ref_end, ej.contig_ref_end))
             return False
     else:
         return True
@@ -147,12 +147,12 @@ def consistent_alignment_and_cigars(ei, ej, l_ratio):
     if ej.svtype == "DEL":
         diff_i = sum(l for op, l in ei.contig_cigar if op == 2 and l > 10)
         diff_j = sum(l for op, l in ej.contig_cigar if op == 2 and l > 10)
-    echo(ei.contig_cigar)
-    echo(ej.contig_cigar)
+    #echo(ei.contig_cigar)
+    #echo(ej.contig_cigar)
     tot_non_ref = diff_i + diff_j
     tot_sv_len = ei.svlen + ej.svlen
     ratio = tot_non_ref / tot_sv_len
-    echo("RATIO", ratio, tot_non_ref, tot_sv_len)
+    #echo("RATIO", ratio, tot_non_ref, tot_sv_len)
     if ratio > 1.8: # or ratio < 0.25:
         return False
     return True
@@ -246,7 +246,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
     seen, disjoint_nodes = set(), set()
     out_edges = defaultdict(int)
-    echo("LEN potential", len(potential), paired_end)
+    #echo("LEN potential", len(potential), paired_end)
     for ei, ej, idx, jdx in event_iter:
 
         i_id, j_id = ei.event_id, ej.event_id
@@ -271,17 +271,17 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if paired_end:
             loci_similar = similar_locations(intra, ei, ej)
             if not loci_similar:
-                echo("loci not similar")
+                #echo("loci not similar")
                 continue
 
         if not intra:
             out_edges[idx] += 1
             out_edges[jdx] += 1
             G.add_edge(i_id, j_id)
-            echo("not intra added")
+            #echo("not intra added")
             continue
 
-        echo("merge candidate", ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype)
+        #echo("merge candidate", ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype)
 
         one_is_imprecise = (not ei.preciseA or not ei.preciseB or ei.svlen_precise or
                             not ej.preciseA or not ej.preciseB or ej.svlen_precise)
@@ -293,17 +293,17 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if ei.spanning > 0 and ej.spanning > 0 and overlap == 0 and ei.svtype != "INS":
                 disjoint_nodes.add(i_id)
                 disjoint_nodes.add(j_id)
-                echo("filetered disjoint")
+                #echo("filetered disjoint")
                 continue
 
         if (same_sample and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and
                 not any_contigs_to_check and ei.spanning == 0 and ej.spanning == 0 and ei.sc == 0 and ej.sc == 0):
-            echo("other1")
+            #echo("other1")
             continue
 
         ml = max(int(ei.svlen), int(ej.svlen))
         if ml == 0 and ei.svtype != 'TRA':
-            echo("other2")
+            #echo("other2")
             continue
 
         l_ratio = min(int(ei.svlen), int(ej.svlen)) / ml if ml else 1
@@ -328,11 +328,11 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
 
         if not merge_conditions_met:
-            echo("merge conditions not met", i_id, j_id, ei.svlen, ej.svlen)
+            #echo("merge conditions not met", i_id, j_id, ei.svlen, ej.svlen)
             continue
 
         if same_sample and not paired_end and not consistent_alignment_and_cigars(ei, ej, l_ratio):
-            echo("inconsistent cigars")
+            #echo("inconsistent cigars")
             continue
 
         # Loci are similar, check contig match or reciprocal overlap
@@ -341,26 +341,26 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 out_edges[idx] += 1
                 out_edges[jdx] += 1
                 G.add_edge(i_id, j_id, loci_same=False)
-                echo("MERGED2", ei.svlen, ej.svlen, ei.svtype)
+                #echo("MERGED2", ei.svlen, ej.svlen, ei.svtype)
                 continue
-            echo("no contigs to check fail")
+            #echo("no contigs to check fail")
         else:
-            echo("processing contig pairs", ci, ci2, ci_alt, cj, cj2, cj_alt)
+            #echo("processing contig pairs", ci, ci2, ci_alt, cj, cj2, cj_alt)
             for v in contig_pairs_iter(ci, ci2, ci_alt, cj, cj2, cj_alt):
-                echo(v)
+            #    echo(v)
                 if same_sample:
                     res = consensus.check_contig_match(v[0], v[1], return_int=False)
                     if bad_alignment(res, ei, ej, v):
                         continue
 
                     G.add_edge(i_id, j_id, loci_same=True)
-                    echo("MERGED3", ei.svlen, ej.svlen, ei.svtype)
+                    #echo("MERGED3", ei.svlen, ej.svlen, ei.svtype)
 
                 elif consensus.check_contig_match(v[0], v[1], return_int=True):
                     G.add_edge(i_id, j_id, loci_same=True)
                 else:
                     continue
-                echo("no align", v[0], v[1])
+                #echo("no align", v[0], v[1])
                 break
 
 
@@ -472,16 +472,16 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
     node_to_event = {i.event_id: i for i in potential}
     cdef int k
     for grp in components:
-        echo(grp)
+        #echo(grp)
 
         best = [node_to_event[n] for n in grp]
 
         best.sort(key=srt_func, reverse=True)
         w0 = best[0]
 
-        echo(w0.contig, w0.contig2)
-        echo([b.svtype for b in best])
-        echo([b.svlen for b in best], w0.svlen, w0.posA, w0.svtype, w0.rep)
+        #echo(w0.contig, w0.contig2)
+        #echo([b.svtype for b in best])
+        #echo([b.svlen for b in best], w0.svlen, w0.posA, w0.svtype, w0.rep)
         if not pick_best:
             weight = w0.pe + w0.supp + w0.spanning
             spanned = bool(w0.spanning)
@@ -523,7 +523,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                             w0.variant_seq = item.variant_seq
                         # elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:
                         elif min_size > w0.svlen < item.svlen:
-                            echo("best var seq", best_var_seq)
+                            #echo("best var seq", best_var_seq)
                             # if best_var_seq == -1:
                             w0.svlen = item.svlen
                             w0.svtype = item.svtype

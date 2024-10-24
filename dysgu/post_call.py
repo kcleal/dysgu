@@ -411,7 +411,7 @@ def bayes_gt(ref, alt, is_dup):
     return lp_homref, lp_het, lp_homalt
 
 
-def get_gt_metric(events, add_gt=False):
+def get_gt_metric(events, add_gt=True):
     if add_gt:
         logging.info("Adding genotype")
     else:

@@ -125,7 +125,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     low_mem = args['low_mem']
     tdir = args["working_directory"]
     regions_only = False if args["regions_only"] == "False" else True
-    echo("clster:", args["paired"])
     paired_end = int(args["paired"] == "True")
     assemble_contigs = int(args["contigs"] == "True")
     if args["max_cov"] == "auto":
@@ -447,7 +446,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     block_edge_events = consensus.contig_info(block_edge_events)  # GC info, repetitiveness
 
     # Merge across calls
-    echo("cluster:", paired_end)
     if args["merge_within"] == "True":
         merged = merge_svs.merge_events(block_edge_events, args["merge_dist"], regions, bool(paired_end), try_rev=False, pick_best=False,
                                          debug=True, min_size=args["min_size"],
@@ -491,7 +489,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     # preliminaries = consensus.contig_info(preliminaries)  # GC info, repetitiveness
     preliminaries = extra_metrics.find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call.compressability(preliminaries)
-    preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], args["no_gt"])
+    preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], True)
     preliminaries = post_call.get_ref_base(preliminaries, ref_genome, args["symbolic_sv_size"])
 
     preliminaries = extra_metrics.sample_level_density(preliminaries, regions)
