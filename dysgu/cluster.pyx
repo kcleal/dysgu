@@ -156,6 +156,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             paired_end=paired_end,
                                             bam_iter=bam_iter)
     insert_median, insert_stdev, read_len = -1, -1, -1
+    max_dist = None
     if args["template_size"] != "":
         try:
             insert_median, insert_stdev, read_len = list(map(int, args["template_size"].split(",")))
@@ -180,7 +181,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         else:
             args["divergence"] = float(args["divergence"])
             logging.info(f"Sequence divergence upper bound {args['divergence']}")
-        if args["mode"] == "pacbio":
+        if args["mode"] == "pacbio-sequel2":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
                 args["merge_dist"] = 700
@@ -188,7 +189,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             max_dist, max_clust_dist = 50, 500000
             if args["merge_dist"] is None:
                 args["merge_dist"] = 700
-        elif args["mode"] == "nanopore" or args["mode"] == "nanopore-hac":
+        elif args["mode"] == "nanopore-r9" or args["mode"] == "nanopore-r10":
             max_dist, max_clust_dist = 100, 500000
             if args["merge_dist"] is None:
                 args["merge_dist"] = 700

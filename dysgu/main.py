@@ -23,11 +23,9 @@ cpu_range = click.IntRange(min=1, max=cpu_count())
 
 defaults = {
             "clip_length": 15,
-            "output": "-",
-            "svs_out": "-",
             "max_cov": 200,
             "buffer_size": 0,
-            "min_support": "3",
+            "min_support": 3,
             "min_size": 30,
             "model": None,
             "max_tlen": 1000,
@@ -306,12 +304,12 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
-              type=str)
+              type=click.Path(), required=False)
 @click.option("--compression", help="Set output bam compression level. Default is uncompressed",
               show_default=True, default="wb0", type=str)
 @click.option("-a", "--write_all", help="Write all alignments from SV-read template to temp file", is_flag=True, flag_value=True,
               show_default=True, default=False)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {deafults['clip_length']}]", type=int, callback=add_option_set)
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore", type=int, default=15, show_default=True)
 @click.option('--mq', help="Minimum map quality < threshold are discarded", default=1,
               type=int, show_default=True)
 @click.option('--min-size', help="Minimum size of SV to report",
@@ -324,8 +322,8 @@ def run_pipeline(ctx, **kwargs):
 @click.option('--exclude', help=".bed file, do not search/call SVs within regions. Takes precedence over --search",
               default=None, type=click.Path(exists=True))
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=True, default=False)
-@click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
-              type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
+@click.option('--pl', help=f"Type of input reads",
+              type=click.Choice(["pe", "pacbio", "nanopore"]), default="pe", show_default=True)
 @click.pass_context
 def get_reads(ctx, **kwargs):
     """Filters input bam/cram for read-pairs that are discordant or have a soft-clip of length > '--clip-length',
@@ -529,6 +527,8 @@ def test_command(ctx, **kwargs):
     """Run dysgu tests"""
     pwd = os.getcwd()
     logging.info("[dysgu-test] Version: {}".format(dysgu_version))
+    if kwargs["verbose"]:
+        logging.info(f"Current directory: {pwd}") 
     tests_path = os.path.dirname(__file__) + "/tests"
     tests = list()
 

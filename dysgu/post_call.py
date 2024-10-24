@@ -14,6 +14,9 @@ import warnings
 pd.options.mode.chained_assignment = None
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import os
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings(action='ignore', category=InconsistentVersionWarning)
 
 
 def get_badclip_metric(events, bad_clip_counter, bam, regions):
