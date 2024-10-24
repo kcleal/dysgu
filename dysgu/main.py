@@ -124,7 +124,6 @@ def apply_preset(kwargs):
     elif kwargs == ["nanopore"]:
         logging.warning("Using --mode nanopore is deprecated. Use 'nanopore-r9' or 'nanopore-r10' instead. Mode will be set as 'nanopore-r10'")
         kwargs["mode"] = "nanopore-r10"
-
     if kwargs["mode"] != "pe":
         kwargs["paired"] = "False"
     p = presets[kwargs["mode"]]
@@ -214,6 +213,7 @@ def cli():
                              f"nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore-r9']['symbolic_sv_size']} --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']}."
                              f"nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --symbolic-sv-size {presets['nanopore-r10']['symbolic_sv_size']} --sd {presets['nanopore-r10']['sd']}",
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
+
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {deafults['clip_length']}]", type=int, callback=add_option_set)
@@ -373,6 +373,7 @@ def get_reads(ctx, **kwargs):
                              f"nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore-r9']['symbolic_sv_size']} --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']}."
                              f"nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --symbolic-sv-size {presets['nanopore-r10']['symbolic_sv_size']} --sd {presets['nanopore-r10']['sd']}",
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
+
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
 @click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {deafults['clip_length']}]", type=int, callback=add_option_set)
