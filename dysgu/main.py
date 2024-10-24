@@ -282,7 +282,6 @@ def run_pipeline(ctx, **kwargs):
     tmp_file_name = f"{dest}/{bname if bname != '-' else os.path.basename(kwargs['working_directory'])}.{pfix}.bam"
     ctx.obj["output"] = tmp_file_name
     ctx.obj["reads"] = "None"
-    #echo(ctx.obj)
 
     max_cov_value = sv2bam.process(ctx.obj)
     ctx.obj["max_cov"] = max_cov_value
