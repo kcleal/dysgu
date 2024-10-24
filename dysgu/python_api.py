@@ -67,10 +67,10 @@ def dysgu_default_args():
                 'symbolic_sv_size': -1,
                 'template_size': '',
                 'thresholds': {'DEL': 0.45,
-                'INS': 0.45,
-                'INV': 0.45,
-                'DUP': 0.45,
-                'TRA': 0.45},
+                                'INS': 0.45,
+                                'INV': 0.45,
+                                'DUP': 0.45,
+                                'TRA': 0.45},
                 'trust_ins_len': True,
                 'verbosity': 2,
                 'working_directory': 'tempfile',
@@ -78,6 +78,91 @@ def dysgu_default_args():
                 'z_depth': 2
             }
     return args
+
+
+def dysgu_preset_args(mode):
+    """
+    Returns the default arguments used by dysgu
+
+    :param mode: Choose the 'mode', one of pe | pacbio-sequel2 | nanopore-r9 | nanopore-r10
+    :type path: str
+
+    :return: A dict of available arguments
+    :rtype: dict
+    
+    Load a vcf file from dysgu
+
+    :param path: The path to the vcf file
+    :type path: str
+    :param drop_na_columns: Drop columns that are all NAN
+    :type drop_na_columns: bool
+    :return: A dataframe of SVs
+    :rty
+    """
+    args = dysgu_default_args()
+    presets = {"nanopore-r9": {"mq": 1,
+                        "min_support": "auto",
+                        "dist_norm": 900,
+                        "max_cov": 150,
+                        "pl": "nanopore",
+                        "remap": "False",
+                        "clip_length": -1,
+                        "trust_ins_len": "False",
+                        "sd": 0.6,
+                        "symbolic_sv_size": 50000,
+                        "divergence": "auto"
+                        },
+                "nanopore-r10": {"mq": 1,
+                        "min_support": "auto",
+                        "dist_norm": 600,
+                        "max_cov": 150,
+                        "pl": "nanopore",
+                        "remap": "False",
+                        "clip_length": -1,
+                        "trust_ins_len": "False",
+                        "sd": 0.35,
+                        'thresholds': {'DEL': 0.35,
+                                'INS': 0.35,
+                                'INV': 0.35,
+                                'DUP': 0.35,
+                                'TRA': 0.35},
+                        "symbolic_sv_size": 50000
+                        },
+               "pacbio-sequel2": {"mq": 1,
+                      "min_support": "auto",
+                      "dist_norm": 600,
+                      "max_cov": 150,
+                      "pl": "pacbio",
+                      "remap": "False",
+                      "clip_length": -1,
+                      "trust_ins_len": "True",
+                      "sd": 0.45,
+                      "symbolic_sv_size": 50000
+                      },
+               "pacbio-revio": {"mq": 1,
+                      "min_support": "auto",
+                      "dist_norm": 600,
+                      "max_cov": 150,
+                      "pl": "pacbio",
+                      "remap": "False",
+                      "clip_length": -1,
+                      "trust_ins_len": "True",
+                      "sd": 0.4,
+                      'thresholds': {'DEL': 0.25,
+                                'INS': 0.25,
+                                'INV': 0.25,
+                                'DUP': 0.25,
+                                'TRA': 0.25},
+                      "symbolic_sv_size": 50000
+                      },
+           }
+    if mode in presets:
+        for k, v in presets[mode].items():
+            args[k] = v
+    elif mode != "pe":
+        raise ValueError("mode must be either: pe | pacbio-sequel2 | nanopore-r9 | nanopore-r10")
+    return args
+
 
 
 def load_dysgu_vcf(path, drop_na_columns=True):
