@@ -8,7 +8,7 @@ import logging
 import time
 import datetime
 from collections import defaultdict
-from dysgu import io_funcs, cluster
+from dysgu import io_funcs, cluster, merge_svs
 from dysgu.map_set_utils import echo, merge_intervals
 import multiprocessing
 import gzip
@@ -82,7 +82,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
     df["preciseB"] = [1] * len(df)
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
     if not merge_within_sample:
-        found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
+        found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
                                      aggressive_ins_merge=True,
                                      same_sample=False)
         ff = defaultdict(set)
@@ -114,7 +114,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
         df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
         return df
     else:
-        found = cluster.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
+        found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
                                      same_sample=True, aggressive_ins_merge=True)
         return pd.DataFrame.from_records(found)
 

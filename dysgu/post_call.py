@@ -3,7 +3,7 @@ import numpy as np
 from dysgu.map_set_utils import echo
 from dysgu import re_map
 from dysgu.io_funcs import reverse_complement, intersecter
-from dysgu.assembler import compute_rep
+from dysgu.consensus import compute_rep
 import zlib
 import math
 import pickle
@@ -14,6 +14,9 @@ import warnings
 pd.options.mode.chained_assignment = None
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 import os
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings(action='ignore', category=InconsistentVersionWarning)
 
 
 def get_badclip_metric(events, bad_clip_counter, bam, regions):
@@ -411,7 +414,7 @@ def bayes_gt(ref, alt, is_dup):
     return lp_homref, lp_het, lp_homalt
 
 
-def get_gt_metric(events, add_gt=False):
+def get_gt_metric(events, add_gt=True):
     if add_gt:
         logging.info("Adding genotype")
     else:

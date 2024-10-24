@@ -60,18 +60,17 @@ lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.'
 cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
     cdef int seq_index = 0
     cdef int seq_start = 0
+    cdef int seq_end = 0
     cdef int index = 0
     cdef int start_index = 0
-    cdef uint32_t cigar_value
     cdef int start_pos = pos
     cdef int end_index = cigar_l - 1
     cdef bint started = False
     cdef int opp, length
-    aligned, large_gaps, n_small_gaps = 0, 0, 0
+
     for i in range(cigar_l):
-        cigar_value = cigar_p[i]
-        opp = <int> cigar_value & 15
-        length = <int> cigar_value >> 4
+        opp = <int> cigar_p[i] & 15
+        length = <int> cigar_p[i] >> 4
         if opp == 4 and index == 0:
             seq_index += length
         if opp == 1:
@@ -99,7 +98,21 @@ cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
                     pos += length
                     seq_index += length
         index += 1
-    return start_index, end_index, start_pos, seq_start
+
+    return start_index, end_index, start_pos, seq_start, seq_index
+
+
+cpdef trim_read_to_event(AlignedSegment r, int approx_position):
+    cdef uint32_t cigar_l = r._delegate.core.n_cigar
+    cdef uint32_t *cigar_p = bam_get_cigar(r._delegate)
+    return trim_cigar(cigar_l, cigar_p, r.pos, approx_position)
+
+
+
+DEF LEFT_CLIPPED = 0
+DEF RIGHT_CLIPPED = 1
+DEF INSERTION = 2
+DEF MATCHED = 4
 
 
 cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, TwoWayMap& ndict_r2,
@@ -124,6 +137,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
     cdef int ref_bases = 0
 
     cdef int target_bases = 2*max_distance
+
     cdef str seq
     cdef tuple k
     cdef bint done = 0
@@ -139,13 +153,17 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
     cdef int cigar_start = 0
     cdef int cigar_end = cigar_l
     if approx_position - pos > 500:
-        cigar_start, cigar_end, current_pos, i = trim_cigar(cigar_l, cigar_p, pos, approx_position)
+        cigar_start, cigar_end, current_pos, i, i_end = trim_cigar(cigar_l, cigar_p, pos, approx_position)
+
     cdef int cigar_index
 
     for cigar_index in range(cigar_start, cigar_end):
         cigar_value = cigar_p[cigar_index]
         opp = <int> cigar_value & 15
         length = <int> cigar_value >> 4
+        if opp == 4 and length > 250:
+            i = length - 250
+            length = 250
         if done:
             break
         if opp == 4:
@@ -155,7 +173,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
                     # 0 = left soft clip
-                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>0)
+                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>LEFT_CLIPPED)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
                     else:
@@ -169,12 +187,12 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                     prev_node = n
 
             else:
-                for o in range(1, length + 1, 1):
+                for o in range(1, min(250, length + 1), 1):
                     qual = quals[i]
                     base = bam_seqi(char_ptr_rseq, i)
                     i += 1
                     # 1 = right soft clip
-                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>1)
+                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>RIGHT_CLIPPED)
                     if ndict_r2.has_tuple_key(key):
                         n = ndict_r2.get_index_prev()
                     else:
@@ -199,7 +217,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                 base = bam_seqi(char_ptr_rseq, i)
                 i += 1
                 # 2 = insertion
-                key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>2)
+                key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>INSERTION)
                 if ndict_r2.has_tuple_key(key):
                     n = ndict_r2.get_index_prev()
                 else:
@@ -236,7 +254,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                 qual = quals[i]
                 base = bam_seqi(char_ptr_rseq, i)
                 i += 1
-                key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>4)
+                key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>MATCHED)
                 if ndict_r2.has_tuple_key(key):
                     n = ndict_r2.get_index_prev()
                 else:
@@ -436,6 +454,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef int item
 
     cdef str sequence = ""
+    cigar = []
     cdef int m, u, w
 
     cdef int count = 0
@@ -443,6 +462,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
     cdef cpp_vector[float] path_qual = [1] * path2.size()
 
+    last_pos = -1
     for item in path2:
 
         ndict_r2.idx_2_vec(item, vec)
@@ -458,9 +478,20 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
         path_qual[count] = G.node_path_quality(u, item, w)
 
-        if vec[3] != 4:
+        if vec[3] != MATCHED:
             m = vec[0]
             sequence += lowermap[m]
+            if vec[3] == INSERTION:
+                if len(cigar) == 0 or cigar[-1][0] != 1:
+                    cigar.append([1, 1])
+                else:
+                    cigar[-1][1] += 1
+            else:  # clipped
+                if len(cigar) == 0 or cigar[-1][0] != 4:
+                    cigar.append([4, 1])
+                else:
+                    cigar[-1][1] += 1
+            last_pos = -1
         else:
             m = vec[0]
             if ref_start == -1:
@@ -469,12 +500,21 @@ cdef dict get_consensus(rd, int position, int max_distance):
             elif vec[1] > ref_end:
                 ref_end = vec[1]
 
+            if last_pos == -1:
+                cigar.append([0, 1])
+                last_pos = vec[1]
+            elif vec[1] - last_pos == 1:
+                cigar[-1][1] += 1
+                last_pos = vec[1]
+            else:
+                cigar.append([2, vec[1] - last_pos - 1])
+                last_pos = -1
+
             sequence += basemap[m]
 
         vec.assign(vec.size(), 0)
 
         count += 1
-
     seq = sequence
 
     # Trim off bad sequence
@@ -511,7 +551,10 @@ cdef dict get_consensus(rd, int position, int max_distance):
         right_clip_weight = right_clip_weight / longest_right_sc
 
     if start_seq != 0 or end_seq != len(seq):
+        cigar = []
         seq = seq[start_seq:end_seq]
+    else:
+        cigar = [tuple(ct) for ct in cigar]
 
     return {"contig": seq,
             "left_clips": longest_left_sc,
@@ -521,7 +564,8 @@ cdef dict get_consensus(rd, int position, int max_distance):
             "ref_end": ref_end,
             "bamrname": rd[0].rname,
             "left_weight": left_clip_weight,
-            "right_weight": right_clip_weight}
+            "right_weight": right_clip_weight,
+            "cigar": cigar}
 
 
 cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
@@ -606,7 +650,8 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
             "ref_end": r.reference_end,
             "bamrname": r.rname,
             "left_weight": 0,
-            "right_weight": 0}
+            "right_weight": 0,
+            "cigar": []}
 
 
 cpdef dict base_assemble(rd, int position, int max_distance):
@@ -643,7 +688,8 @@ cpdef dict base_assemble(rd, int position, int max_distance):
                     "ref_end": r.reference_end,
                     "bamrname": r.rname,
                     "left_weight": 0,
-                    "right_weight": 0}
+                    "right_weight": 0,
+                    "cigar": []}
     return get_consensus(rd, position, max_distance)
 
 
@@ -778,8 +824,11 @@ def contig_info(events):
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
     if not a or not b or len(a) > 5000 or len(b) > 5000:
         return 0
+
     query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
     alignment = query(str(b))
+    if not return_int:
+        return alignment
 
     qs, qe = alignment.query_begin, alignment.query_end
     als, ale = alignment.target_begin, alignment.target_end_optimal
@@ -791,6 +840,10 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
     aln_s = alignment.optimal_alignment_score
     expected = (qe - qs) * 2  # +2 is the score for a match
 
+    # if not return_int:
+    #     return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
+    #             alignment.aligned_target_sequence)
+
     if expected < 2 * ol_length:  # Match score * Minimum clip length
         return 0
 
@@ -799,19 +852,11 @@ def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq
 
     if aln_s > 100 and total_overhangs < qe - qs:
         if rel_diff > 0.7:
-            if return_int:
-                return 1
-            return (qs, qe, als, ale, alignment.cigar, alignment.aligned_query_sequence,
-                    alignment.aligned_target_sequence)
-        return 0
-
-    if diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits
-        return 0
-    else:
-        if return_int:
             return 1
-        return (qs, qe, als, ale,
-                alignment.cigar,
-                alignment.aligned_query_sequence,
-                alignment.aligned_target_sequence)
+
+    if not diff > diffs:  # e.g. 2 mis-matches + 2 unaligned overhanging bits
+        return 1
+
+    return 0
+
 

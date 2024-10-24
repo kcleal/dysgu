@@ -365,10 +365,10 @@ class TwoWayMap
 
         uint64_t key_2_64(char seq, uint64_t current_pos, uint64_t offset, uint64_t code) {
             uint64_t packed_data = 0;
-            packed_data |= seq;  // Max 4 bits set per htslib
-            packed_data |= current_pos << 4;  // 32 bits
-            packed_data |= offset << 36;  // 23 bits
-            packed_data |= code << 59;  // 4 bits
+            packed_data |= seq;  // Max 4 bits set per htslib base
+            packed_data |= current_pos << 4;  // 32 bits for ref position
+            packed_data |= offset << 36;  // 23 bits for offset into cigar block
+            packed_data |= code << 59;  // 4 bits 0/1/2 for left clip, other clip, insertion
             return packed_data;
         }
 
@@ -400,10 +400,10 @@ class TwoWayMap
 
         void idx_2_vec(int index, std::vector<int>& v) {
             uint64_t packed_data = index_key_map[index];
-            v[0] = packed_data & 15;  // 4 bits set to 1
-            v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits
-            v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits
-            v[3] = (packed_data >> 59) & 15;
+            v[0] = packed_data & 15;  // 4 bits set to 1 - BASE
+            v[1] = (packed_data >> 4) & 4294967295;  // 1 x 32 bits - POS
+            v[2] = (packed_data >> 36) & 8388607;  // 1 x 23 bits - OFFSET
+            v[3] = (packed_data >> 59) & 15;  // CLIP_SIDE
         }
 
     private:

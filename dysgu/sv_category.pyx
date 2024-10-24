@@ -48,56 +48,6 @@ cdef class AlignmentItem:
         self.inferred_sv_len = -1
         self.size_inferred = 0  # set to 1 if insertion size was inferred
 
-# cdef void from_node_info(AlignmentItem v):
-#     a_info = v.a_node_info
-#     b_info = v.b_node_info
-#
-#     v.breakA = v.a_node_info.event_pos
-#     v.breakA_precise = 1 if v.a_node_info.read_enum == 1 else 0
-#     v.breakB = v.b_node_info.event_pos
-#     v.breakB_precise = 1 if v.b_node_info.read_enum == 1 else 0
-#
-#     v.join_type = f"{v.strandA}to{v.strandB}"
-#
-#     cdef int query_gap = 0
-#     cdef int query_overlap = 0
-#     if v.rA == v.rB:  # same read
-#         if v.b_qstart < v.a_qstart:  # B is first on query
-#             query_gap = v.a_qstart - v.b_qend
-#         else:
-#             query_gap = v.b_qstart - v.a_qend
-#         if query_gap < 0:
-#             query_overlap = abs(query_gap)
-#             query_gap = 0
-#
-#     v.query_gap = query_gap
-#     v.query_overlap = query_overlap
-#
-#     if a_info.chrom != b_info.chrom:
-#         v.svtype = "TRA"
-#     else:
-#         if a_info.event_pos < b_info.event_pos:
-#             if a_info.connect_right:
-#                 if not b_info.connect_right:
-#                     v.svtype = "DEL"
-#                 else:
-#                     v.svtype = "INV"
-#             else:
-#                 if not b_info.connect_right:
-#                     v.svtype = "INV"
-#                 else:
-#                     v.svtype = "DUP"
-#         else:
-#             if a_info.connect_right:
-#                 if not b_info.connect_right:
-#                     v.svtype = "DUP"
-#                 else:
-#                     v.svtype = "INV"
-#             else:
-#                 if not b_info.connect_right:
-#                     v.svtype = "INV"
-#                 else:
-#                     v.svtype = "DEL"
 
 cdef void two_primary(AlignmentItem v):
 

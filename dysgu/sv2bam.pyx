@@ -193,7 +193,6 @@ def process(args):
 
     max_cov_ignore = ".,"
     max_cov_ignore_bytes = max_cov_ignore.encode("ascii")
-
     count = search_hts_alignments(infile_string_b,
                                   outfile_string_b,
                                   args["min_size"],

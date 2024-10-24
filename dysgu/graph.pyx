@@ -355,28 +355,29 @@ cdef class PairedEndScoper:
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
                         continue
                     node_name2 = vitem.second.node_name
-                    if node_name2 != node_name:  # Can happen due to within-read events
-                        if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
-                            sep = c_abs(vitem.first - pos2)
-                            if sep >= self.max_dist:
-                                break
-                            sep2 = c_abs(vitem.second.pos2 - current_pos)
-                            if vitem.second.chrom2 == chrom2 and sep2 < self.max_dist:
-                                if sep < 150:#35:
-                                    if length_from_cigar > 0 and vitem.second.length_from_cigar > 0:
-                                        max_span = max(length_from_cigar, vitem.second.length_from_cigar)
-                                        span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
-                                        if span_distance < self.position_distance_thresh:
-                                            found_exact.push_back(node_name2)
-                                    else:
+                    if node_name2 == node_name:  # Can happen due to within-read events
+                        continue
+
+                    if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
+                        sep = c_abs(vitem.first - pos2)
+                        if sep >= self.max_dist:
+                            break
+                        sep2 = c_abs(vitem.second.pos2 - current_pos)
+                        if vitem.second.chrom2 == chrom2 and sep2 < self.max_dist:
+                            if sep < 150:
+                                if length_from_cigar > 0 and vitem.second.length_from_cigar > 0:
+                                    max_span = max(length_from_cigar, vitem.second.length_from_cigar)
+                                    span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
+                                    if span_distance < self.position_distance_thresh:
                                         found_exact.push_back(node_name2)
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
-                                    found2.push_back(node_name2)
+                                else:
+                                    found_exact.push_back(node_name2)
                             elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                 found2.push_back(node_name2)
                         elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                             found2.push_back(node_name2)
-
+                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
+                        found2.push_back(node_name2)
             if not found_exact.empty():
                 return found_exact
 
@@ -392,27 +393,28 @@ cdef class PairedEndScoper:
                     if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or (read_enum == INSERTION and vitem.second.read_enum == DELETION):
                         continue
                     node_name2 = vitem.second.node_name
-                    if node_name2 != node_name:
-                        if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
-                            sep = c_abs(vitem.first - pos2)
-                            if sep >= self.max_dist:
-                                break
-                            sep2 = c_abs(vitem.second.pos2 - current_pos)
-                            if vitem.second.chrom2 == chrom2 and sep2 < self.max_dist:
-                                if sep < 150:#35:
-                                    if length_from_cigar > 0 and vitem.second.length_from_cigar > 0:
-                                        max_span = max(length_from_cigar, vitem.second.length_from_cigar)
-                                        span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
-                                        if span_distance < self.position_distance_thresh:
-                                            found_exact.push_back(node_name2)
-                                    else:
+                    if node_name2 == node_name:
+                        continue
+                    if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
+                        sep = c_abs(vitem.first - pos2)
+                        if sep >= self.max_dist:
+                            break
+                        sep2 = c_abs(vitem.second.pos2 - current_pos)
+                        if vitem.second.chrom2 == chrom2 and sep2 < self.max_dist:
+                            if sep < 150:
+                                if length_from_cigar > 0 and vitem.second.length_from_cigar > 0:
+                                    max_span = max(length_from_cigar, vitem.second.length_from_cigar)
+                                    span_distance = <float>c_abs(length_from_cigar - vitem.second.length_from_cigar) / max_span
+                                    if span_distance < self.position_distance_thresh:
                                         found_exact.push_back(node_name2)
-                                elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
-                                    found2.push_back(node_name2)
+                                else:
+                                    found_exact.push_back(node_name2)
                             elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                                 found2.push_back(node_name2)
                         elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
                             found2.push_back(node_name2)
+                    elif span_position_distance(current_pos, pos2, vitem.first, vitem.second.pos2, self.norm, self.thresh, read_enum, self.paired_end, length_from_cigar, vitem.second.length_from_cigar, trust_ins_len):
+                        found2.push_back(node_name2)
 
         if not found_exact.empty():
             return found_exact
@@ -793,6 +795,9 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
     cdef uint64_t v = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)  # Hash qname to save mem
     cdef int bnd_site_node, bnd_site_node2
     cdef int q_start
+
+    # if r.cigartuples[cigar_index][1] == 288 and event_pos > 159764: #r.qname =="m84039_230928_213653_s3/70715399/ccs":
+    #     echo("GRAPH", r.qname, node_name, r.pos, chrom, tell, cigar_index, event_pos, r.cigartuples[cigar_index])
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
     genome_scanner.add_to_buffer(r, node_name, tell)  # Add read to buffer
 
@@ -804,6 +809,8 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
                 continue
             if not G.hasEdge(node_name, other_node):
                 G.addEdge(node_name, other_node, 2)  # 'black' edge
+                # if r.cigartuples[cigar_index][1] == 288 and event_pos > 159764:
+                #     echo("be", node_name, other_node)
 
     elif chrom != chrom2 and clip_l != -1:  # Note all paired-end reads have BREAKENDS where chrom != chrom2, but also includes translocations
         cluster_clipped(G, r, clip_scope, chrom, event_pos, node_name)
@@ -1182,7 +1189,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     overlap_regions = genome_scanner.overlap_regions  # Get overlapper, intersect reads with intervals
     gettid = infile.gettid
     cdef long tell
-    cdef int pos2
+    cdef int pos2  #, last_length
     cdef bint added
     cdef ReadEnum_t read_enum
     cdef bint clipped
@@ -1194,7 +1201,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
     cdef long n_aligned_bases = 0
-
+    cdef int elide_threshold = 150
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
             if r.mapq < mapq_thresh:
@@ -1221,18 +1228,27 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     opp = <int> cigar_value & 15
                     length = <int> cigar_value >> 4
 
-                    if find_n_aligned_bases and (opp == 0 or opp == 7 or opp == 8):
-                        n_aligned_bases += length
+                    if opp == 0 or opp == 7 or opp == 8:
+                        if find_n_aligned_bases:
+                            n_aligned_bases += length
+                        event_pos += length
+                        continue
 
                     if opp == 1:
                         if length >= min_sv_size:
                             # Insertion type
                             pos2 = event_pos + length
+                            # if not events_to_add.empty() and event_pos - events_to_add.back().event_pos < elide_threshold and events_to_add.back().read_enum == ReadEnum_t.INSERTION:
+                            #     continue
+                            # else:
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.INSERTION))
                             added = True
                     elif opp == 2:
                         if length >= min_sv_size:
                             pos2 = event_pos + length
+                            # if not events_to_add.empty() and event_pos - events_to_add.back().event_pos < elide_threshold and events_to_add.back().read_enum == ReadEnum_t.DELETION:
+                            #     continue
+                            # else:
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
                             added = True
                         event_pos += length

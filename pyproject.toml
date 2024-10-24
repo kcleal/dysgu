@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dysgu"
-version = "1.6.7"
+version = "1.6.8"
 description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }
