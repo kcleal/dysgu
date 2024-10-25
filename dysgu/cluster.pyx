@@ -180,7 +180,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             args["divergence"] = divergence
         else:
             args["divergence"] = float(args["divergence"])
-            logging.info(f"Sequence divergence upper bound {args['divergence']}")
+            logging.info(f"Sequence divergence {args['divergence']}")
         if args["mode"] == "pacbio-sequel2":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
@@ -204,6 +204,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     min_size = args["min_size"]
     length_extend = args["length_extend"]
     divergence = args["divergence"]
+    max_divergence = divergence * 13
+
     read_buffer = genome_scanner.read_buffer
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["parse_probs"], sample_name, args["ignore_sample_sites"] == "True", args["sites_prob"], args["sites_pass_only"] == "True")
 
@@ -234,7 +236,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             temp_dir=tdir,
                                             find_n_aligned_bases=find_n_aligned_bases,
                                             position_distance_thresh=args['sd'],
-                                            max_search_depth=args['search_depth']
+                                            max_search_depth=args['search_depth'],
+                                            max_divergence=max_divergence
     )
     sites_index = None
     if sites_adder:

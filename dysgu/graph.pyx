@@ -1163,14 +1163,34 @@ class SiteAdder:
                 break
 
 
+cdef bint edit_distance_too_high(uint32_t *cigar_p, uint32_t cigar_l, float max_rate, int edit_distance):
+    # ignore large gaps when counting edit distance rate
+    cdef uint32_t cigar_value, opp, l, i
+    cdef uint32_t aligned = 0
+    for i in range(cigar_l):
+        cigar_value = cigar_p[i]
+        opp = cigar_value & 15
+        l = cigar_value >> 4
+        if opp == 0 or opp == 7 or opp == 8:
+            aligned += l
+        elif l < 30 and (opp == 1 or opp == 2):
+            aligned += l
+    cdef int max_edit = <int> ( <float>aligned * max_rate )
+    if max_edit > edit_distance:
+        return <bint>False
+    return <bint>True
+
+
 cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering_dist, int k=16, int m=7, int clip_l=21,
                             int min_sv_size=30,
                             int minimizer_support_thresh=2, int minimizer_breadth=3,
-                            int minimizer_dist=10, int mapq_thresh=1, debug=None, procs=1,
+                            int minimizer_dist=10, int mapq_thresh=1, debug=None, int procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir=".",
-                            find_n_aligned_bases=True, position_distance_thresh=0.8, max_search_depth=20):
+                            sites=None, bint trust_ins_len=True, bint low_mem=False, temp_dir=".",
+                            bint find_n_aligned_bases=True, float position_distance_thresh=0.8,
+                            int max_search_depth=20, float max_divergence=0.2):
+
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
     cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
     cdef int event_pos, cigar_index, opp, length
@@ -1213,6 +1233,10 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             events_to_add.clear()
             cigar_l = r._delegate.core.n_cigar
             cigar_p = bam_get_cigar(r._delegate)
+            
+            if not paired_end and r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
+                continue
+
             if cigar_l > 1:
                 if r.has_tag("SA"):
                     # Set cigar-index to -1 means it is unset, will be determined during SA parsing
