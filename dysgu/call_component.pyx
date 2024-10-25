@@ -10,7 +10,7 @@ import itertools
 from dysgu import consensus
 from dysgu.map_set_utils import echo
 from dysgu.map_set_utils cimport hash as xxhasher
-from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes, min_fractional_overlapping
+from dysgu.map_set_utils cimport is_overlapping, clip_sizes_hard, EventResult, clip_sizes
 from dysgu.sv_category cimport AlignmentItem, classify_d
 from dysgu.extra_metrics cimport soft_clip_qual_corr
 from dysgu.extra_metrics import filter_poorly_aligned_ends, gap_size_upper_bound
@@ -49,7 +49,7 @@ cpdef n_aligned_bases(AlignedSegment aln):
         cigar_value = cigar_p[i]
         opp = <int> cigar_value & 15
         l = <int> cigar_value >> 4
-        if opp == 0:
+        if opp == 0 or opp == 7 or opp == 8:
             aligned += l
         elif opp == 1 or opp == 2:
             if l >= 30:
@@ -761,15 +761,18 @@ def bicluster_spanning_lr(spanning, informative):
     return [(part_a, []), (part_b, [])]
 
 
+
 def process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                      generic_insertions, insert_ppf, to_assemble):
     cdef int min_found_support = 0
     cdef str svtype, jointype
     cdef bint passed
     cdef EventResult_t er
+    cdef AlignmentItem align
     # todo
     if not paired_end:
         spanning_alignments, rate_poor_ends = filter_poorly_aligned_ends(spanning_alignments, divergence)
+
         if not spanning_alignments or rate_poor_ends > 0.7:
             return None
 
@@ -964,22 +967,6 @@ cdef tuple informative_pair(u, v):
     if pri_u is not None and pri_v is not None:
         return pri_u, pri_v
     return None
-
-# cdef tuple informative_pair(u, v, bint paired_end):
-#     # fetch either a split read or pair1 and pair2
-#     for i in u:
-#         i_info = i[0]
-#         for j in v:
-#             j_info = j[0]
-#             if j_info.hash_name == i_info.hash_name:
-#                 continue
-#             if not paired_end:
-#                 if i_info.read_enum == 1 and j_info.read_enum == 1:
-#                     return i, j
-#             elif i_info.read_enum == j_info.read_enum:
-#                 return i, j
-#     return None
-
 
 
 cdef tuple break_ops(positions, precise, int limit, float median_pos):

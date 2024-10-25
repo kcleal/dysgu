@@ -172,12 +172,7 @@ cdef int log2_32(uint32_t value):
     return tab32[<uint32_t>(value*0x07C4ACDD) >> 27]
 
 
-cdef struct WindowRate:
-    float rate
-    int index
-
-
-cdef void window_rate(WindowRate *result, uint32_t cigar_l, uint32_t *cigar_p, int index, int window_size, bint reverse=False):
+cdef void window_rate(WindowRate *result, uint32_t cigar_l, uint32_t *cigar_p, int index, int window_size, bint reverse):
     cdef int n = 0
     cdef int matches = 0
     cdef int covered = 0
