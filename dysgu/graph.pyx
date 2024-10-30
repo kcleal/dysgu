@@ -548,7 +548,8 @@ cdef class NodeName:
     cdef public uint32_t event_pos
     cdef public uint16_t flag
     cdef public uint16_t chrom
-    def __init__(self, h, f, p, c, t, cigar_index, event_pos):
+    cdef public uint8_t haplotag
+    def __init__(self, h, f, p, c, t, cigar_index, event_pos, haplotag):
         self.hash_name = h
         self.flag = f
         self.pos = p
@@ -556,6 +557,7 @@ cdef class NodeName:
         self.tell = t
         self.cigar_index = cigar_index
         self.event_pos = event_pos
+        self.haplotag = haplotag
     def as_dict(self):
         return {"hash_name": self.hash_name,
                 "flag": self.flag,
@@ -565,6 +567,7 @@ cdef class NodeName:
                 "cigar_index": self.cigar_index,
                 "event_pos": self.event_pos,
                 "read_enum": self.read_enum,
+                "haplotag": self.haplotag
                 }
 
 
@@ -575,27 +578,82 @@ cdef struct NodeNameItem:
     uint16_t flag, chrom
 
 
+cdef struct NodeNameItemHaplo:
+    uint64_t hash_val, tell
+    uint32_t pos, event_pos
+    int32_t cigar_index
+    uint16_t flag, chrom
+    uint8_t haplotag
+
+
 cdef class NodeToName:
     # Index these vectors to get the unique 'template_name'
     # node names have the form (hash qname, flag, pos, chrom, tell, cigar index, event pos)
+    # or (hash qname, flag, pos, chrom, tell, cigar index, event pos, haplotag)
+
     cdef vector[NodeNameItem] stored_nodes
-    def __cinit__(self):
-        pass
+    cdef vector[NodeNameItemHaplo] stored_nodes_haplo
+    cdef bint is_haplotagged
+    def __cinit__(self, bint is_haplotagged):
+        self.is_haplotagged = is_haplotagged
+
+    cpdef bint haplotagged(self):
+        return self.is_haplotagged
+
     cdef void append(self, long hash_val, int flag, int pos, int chrom, long tell, int cigar_index, int event_pos):
-        self.stored_nodes.resize(self.stored_nodes.size() + 1);
-        cdef NodeNameItem *nd = &self.stored_nodes.back();
-        nd.hash_val = hash_val
-        nd.flag = flag
-        nd.pos = pos
-        nd.chrom = chrom
-        if tell == -1: # means to look in read buffer instead
+        cdef NodeNameItem node
+        node.hash_val = hash_val
+        node.flag = flag
+        node.pos = pos
+        node.chrom = chrom
+        if tell == -1:  # means to look in read buffer instead
             tell = 0
-        nd.tell = tell
-        nd.cigar_index = cigar_index
-        nd.event_pos = event_pos
-    def __getitem__(self, idx):
-        cdef NodeNameItem *nd = &self.stored_nodes[idx]
-        return NodeName(nd.hash_val, nd.flag, nd.pos, nd.chrom, nd.tell, nd.cigar_index, nd.event_pos)
+        node.tell = tell
+        node.cigar_index = cigar_index
+        node.event_pos = event_pos
+
+        self.stored_nodes.push_back(node)
+
+
+        #self.stored_nodes.resize(self.stored_nodes.size() + 1);
+        #cdef NodeNameItem *nd = &self.stored_nodes.back();
+        #nd.hash_val = hash_val
+        #nd.flag = flag
+        #nd.pos = pos
+        #nd.chrom = chrom
+        #if tell == -1: # means to look in read buffer instead
+        #    tell = 0
+        #nd.tell = tell
+        #nd.cigar_index = cigar_index
+        #nd.event_pos = event_pos
+
+    cdef void append_haplo(self, long hash_val, int flag, int pos, int chrom, long tell, int cigar_index, int event_pos, int haplotag):
+
+        cdef NodeNameItemHaplo node
+        node.hash_val = hash_val
+        node.flag = flag
+        node.pos = pos
+        node.chrom = chrom
+        if tell == -1:  # means to look in read buffer instead
+            tell = 0
+        node.tell = tell
+        node.cigar_index = cigar_index
+        node.event_pos = event_pos
+        node.haplotag = haplotag
+
+        self.stored_nodes_haplo.push_back(node)
+
+    cpdef NodeName getitem(self, idx):
+        cdef NodeNameItem *nd
+        cdef NodeNameItemHaplo *ndh
+        if self.is_haplotagged:
+            ndh = &self.stored_nodes_haplo[idx]
+            return NodeName(ndh.hash_val, ndh.flag, ndh.pos, ndh.chrom, ndh.tell, ndh.cigar_index, ndh.event_pos, ndh.haplotag)
+        nd = &self.stored_nodes[idx]
+        # 255 means no haplotag here
+        return NodeName(nd.hash_val, nd.flag, nd.pos, nd.chrom, nd.tell, nd.cigar_index, nd.event_pos, 255)
+
+
     cdef bint same_template(self, int query_node, int target_node):
         if self.stored_nodes[query_node].hash_val == self.stored_nodes[target_node].hash_val:
             return True
@@ -787,7 +845,7 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
                        int flag, int chrom, tell, int cigar_index, int event_pos, int query_pos,
                        int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
                        bint p1_overlaps, bint p2_overlaps, bint mm_only, int clip_l, site_adder,
-                       int length_from_cigar, bint trust_ins_len, bint paired_end):
+                       int length_from_cigar, bint trust_ins_len, bint paired_end, bint haplotagged):
     # Adds relevant information to graph and other data structures for further processing
     cdef int other_node
     cdef vector[int] other_nodes  # Other alignments to add edges between
@@ -796,9 +854,15 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
     cdef int bnd_site_node, bnd_site_node2
     cdef int q_start
 
-    # if r.cigartuples[cigar_index][1] == 288 and event_pos > 159764: #r.qname =="m84039_230928_213653_s3/70715399/ccs":
-    #     echo("GRAPH", r.qname, node_name, r.pos, chrom, tell, cigar_index, event_pos, r.cigartuples[cigar_index])
-    node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
+    if haplotagged:
+        if r.has_tag('HP'):
+            hp = r.get_tag('HP')
+        else:
+            hp = 255
+        node_to_name.append_haplo(v, flag, r.pos, chrom, tell, cigar_index, event_pos, hp)
+    else:
+        node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
+
     genome_scanner.add_to_buffer(r, node_name, tell)  # Add read to buffer
 
     both_overlap = p1_overlaps and p2_overlaps
@@ -919,7 +983,7 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                             TemplateEdges_t template_edges, NodeToName node_to_name,
                             int cigar_pos2, int mapq_thresh, ClipScoper_t clip_scope,
                             ReadEnum_t read_enum, bad_clip_counter, bint mm_only, site_adder,
-                            int length_from_cigar, bint trust_ins_len):
+                            int length_from_cigar, bint trust_ins_len, bint haplotagged):
     cdef int other_node, clip_left, clip_right
     cdef bint current_overlaps_roi, next_overlaps_roi
     cdef bint add_primark_link, add_insertion_link
@@ -987,7 +1051,7 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                     add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
                                  tell, cigar_index, event_pos, query_pos, chrom2, pos2, clip_scope, read_enum,
                                  current_overlaps_roi, next_overlaps_roi,
-                                 mm_only, clip_l, site_adder, 0, trust_ins_len, paired_end)
+                                 mm_only, clip_l, site_adder, 0, trust_ins_len, paired_end, haplotagged)
                 return
 
         if read_enum == BREAKEND:
@@ -1006,11 +1070,11 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                 pos2 = event_pos
 
         add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                     tell, cigar_index, event_pos,
-                     1,
+                     tell, cigar_index, event_pos, 1,
                      chrom2, pos2, clip_scope, read_enum,
                      current_overlaps_roi, next_overlaps_roi,
-                     mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
+                     mm_only, clip_l, site_adder, length_from_cigar,
+                     trust_ins_len, paired_end, haplotagged)
     ###
     else:  # Single end
         current_overlaps_roi, next_overlaps_roi = False, False  # not supported
@@ -1026,9 +1090,8 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                                  j.query_pos,
                                  j.chrom2, j.pos2, clip_scope, j.read_enum,
                                  current_overlaps_roi, next_overlaps_roi,
-                                 mm_only, clip_l, site_adder,
-                                 0,
-                                 trust_ins_len, paired_end)
+                                 mm_only, clip_l, site_adder, 0,
+                                 trust_ins_len, paired_end, haplotagged)
         elif read_enum >= 2:  # Sv within read or breakend
             if read_enum == BREAKEND:
                return
@@ -1039,10 +1102,11 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                 pos2 = event_pos
 
             add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                         tell, cigar_index, event_pos,
-                          1,
+                         tell, cigar_index, event_pos, 1,
                          chrom2, pos2, clip_scope, read_enum,
-                         current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
+                         current_overlaps_roi, next_overlaps_roi,
+                         mm_only, clip_l, site_adder, length_from_cigar,
+                         trust_ins_len, paired_end, haplotagged)
 
 
 cdef struct CigarEvent:
@@ -1056,7 +1120,7 @@ cdef struct CigarEvent:
 
 
 cdef CigarEvent make_cigar_event(int opp, int cigar_index, int event_pos, int pos2, int length,
-                                 ReadEnum_t read_enum) nogil:
+                                 ReadEnum_t read_enum) noexcept nogil:
     cdef CigarEvent item
     item.opp = opp
     item.cigar_index = cigar_index
@@ -1187,22 +1251,32 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int minimizer_dist=10, int mapq_thresh=1, debug=None, int procs=1,
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
-                            sites=None, bint trust_ins_len=True, bint low_mem=False, temp_dir=".",
-                            bint find_n_aligned_bases=True, float position_distance_thresh=0.8,
-                            int max_search_depth=20, float max_divergence=0.2):
-
+                            sites=None, bint trust_ins_len=True, low_mem=False, temp_dir=".",
+                            bint find_n_aligned_bases=True, float position_distance_thresh=0.8, int max_search_depth=20,
+                            float max_divergence=0.2, bint haplotagged=False):
     logging.info("Building graph with clustering {} bp".format(clustering_dist))
-    cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
+
+    # Edges are added between alignments from same template, after building main graph
+    cdef TemplateEdges_t template_edges = TemplateEdges()
     cdef int event_pos, cigar_index, opp, length
-    node_to_name = NodeToName()  # Map of nodes -> read ids
-    cdef ClipScoper_t clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
+
+    # Map of nodes -> read ids
+    cdef NodeToName node_to_name = NodeToName(haplotagged)
+
+    # Keeps track of local reads
+    cdef ClipScoper_t clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth, read_length=read_length)
+
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh, max_search_depth)
 
+    # Counts poor quality soft-clips
     bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
+
+    # The main graph for clustering variant information
     cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
+
     site_adder = None
     if sites:
         site_adder = SiteAdder(sites)
@@ -1233,7 +1307,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             events_to_add.clear()
             cigar_l = r._delegate.core.n_cigar
             cigar_p = bam_get_cigar(r._delegate)
-            
+
             if not paired_end and r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
                 continue
 
@@ -1245,7 +1319,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
-                                      bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
+                                      bad_clip_counter, mm_only, site_adder, 0, trust_ins_len, haplotagged)
                     added = True
                 for cigar_index in range(cigar_l):
                     cigar_value = cigar_p[cigar_index]
@@ -1297,7 +1371,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
-                                          mm_only, site_adder, 0, trust_ins_len)
+                                          mm_only, site_adder, 0, trust_ins_len, haplotagged)
                 else:
                     # Use whole read, could be normal or discordant
                     if not paired_end:
@@ -1310,7 +1384,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                               cigar_index, event_pos, paired_end, tell, genome_scanner,
                                               template_edges, node_to_name,
                                               pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                              mm_only, site_adder, 0, trust_ins_len)
+                                              mm_only, site_adder, 0, trust_ins_len, haplotagged)
 
                     else:
                         if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
@@ -1328,7 +1402,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                          mm_only, site_adder, 0, trust_ins_len)
+                                          mm_only, site_adder, 0, trust_ins_len, haplotagged)
             # process within-read events
             if not events_to_add.empty():
                 itr_events = events_to_add.begin()
@@ -1343,7 +1417,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter,
-                                      mm_only, site_adder, v.length, trust_ins_len)
+                                      mm_only, site_adder, v.length, trust_ins_len, haplotagged)
                     preincrement(itr_events)
 
     add_template_edges(G, template_edges)
@@ -1535,6 +1609,8 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     info = None
     if min_support >= 3 and len(component) == 1 and not sites_index:
         return
+
+    cdef NodeName key
     for v in component:
         # Add information from --sites, keep any read found that link to --sites variants
         if sites_index and v in sites_index:
@@ -1546,7 +1622,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             continue
         if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
-        key = node_to_name[v]
+        key = node_to_name.getitem(v)
         if key.cigar_index != -1:
             support_estimate += 2
         else:

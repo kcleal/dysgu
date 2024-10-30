@@ -185,7 +185,7 @@ cdef class Py_SimpleGraph:
 cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass Int2IntMap:
         Int2IntMap() nogil
-        void insert(int, int) nogil
+        void insert(int, int) noexcept nogil
         void erase(int) nogil
         int has_key(int) nogil
         int get(int) nogil
@@ -197,7 +197,7 @@ cdef class Py_Int2IntMap:
     """Fast integer to integer unordered map using tsl::robin-map"""
     cdef Int2IntMap *thisptr
 
-    cdef void insert(self, int key, int value) nogil
+    cdef void insert(self, int key, int value) noexcept nogil
     cdef void erase(self, int key) nogil
     cdef int has_key(self, int key) nogil
     cdef int get(self, int key) nogil
@@ -297,16 +297,16 @@ cdef tuple clip_sizes_hard(r)
 
 cdef int cigar_clip(r, int clip_length)
 
-cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
+cpdef int is_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
 
 cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2)
 
-cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) noexcept nogil
 
-cdef float position_distance(int x1, int x2, int y1, int y2) nogil
+cdef float position_distance(int x1, int x2, int y1, int y2) noexcept nogil
 
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""
