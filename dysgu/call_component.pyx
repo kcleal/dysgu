@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from collections import Counter, defaultdict, namedtuple
 import logging
+import math
 import numpy as np
 cimport numpy as np
 from numpy.random import normal
@@ -23,6 +24,12 @@ from scipy.cluster.hierarchy import fcluster
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
+
+
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings('ignore', category=ConvergenceWarning)
+
 
 np.random.seed(1)
 
@@ -60,11 +67,12 @@ cpdef n_aligned_bases(AlignedSegment aln):
 
 
 cdef base_quals_aligned_clipped(AlignedSegment a):
-    cdef int left_clip, right_clip
     cdef float aligned_base_quals = 0
     cdef float aligned_bases = 0
     cdef float clipped_base_quals = 0
-    left_clip, right_clip = clip_sizes(a)
+    cdef int left_clip = 0
+    cdef int right_clip = 0
+    clip_sizes(a, left_clip, right_clip)
     clipped_bases = left_clip + right_clip
     cdef const unsigned char[:] quals = a.query_qualities
     cdef int i
@@ -95,6 +103,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     cdef float clipped_base_quals = 0
     cdef float clipped_bases = 0
     cdef int abq, ab, cbq, cb
+    cdef int left_clip, right_clip
     paired_end = set([])
     seen = set([])
     er.spanning = len(spanning)
@@ -110,7 +119,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.n_small_tlen += 1
         if paired_end_reads and paired_end and flag & 8:
             er.n_unmapped_mates += 1
-        left_clip, right_clip = clip_sizes_hard(a)
+        left_clip = 0
+        right_clip = 0
+        clip_sizes_hard(a, left_clip, right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         has_sa = a.has_tag("SA")
@@ -150,8 +161,11 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.minus += 1
         else:
             er.plus += 1
-        ct = a.cigartuples
-        if ct[0][0] == 4 or ct[-1][0] == 4:
+
+        left_clip = 0
+        right_clip = 0
+        clip_sizes(a, left_clip, right_clip)
+        if left_clip or right_clip:
             er.sc += 1
         if a.flag & 1:  # paired read
             abq, ab, cbq, cb = base_quals_aligned_clipped(a)
@@ -164,7 +178,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
         flag = a.flag
         if flag & 2:
             er.NP += 1
-        left_clip, right_clip = clip_sizes_hard(a)
+        left_clip = 0
+        right_clip = 0
+        clip_sizes_hard(a, left_clip, right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         if a.has_tag("SA"):
@@ -403,11 +419,15 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     v_item.svtype = "INS"
     aln_span = aln.reference_end - aln.pos
     v_item.size_inferred = 1
+    cdef int left_clip, right_clip
     if insert_std > 0:
         rand_insert_pos = abs(insert_size - aln_span + int(normal(0, insert_std)))
     else:  # single read mode
         v_item.svtype = "BND"
-        clip_s = max(clip_sizes(aln))
+        left_clip = 0
+        right_clip = 0
+        clip_sizes(aln, left_clip, right_clip)
+        clip_s = max(left_clip, right_clip)
         rand_insert_pos = 100 if not clip_s else clip_s
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
     return v_item
@@ -417,20 +437,19 @@ def consensus_matches_gap(target_gap, target_svlen, cigar, threshold=0.9):
     if not cigar or target_svlen < 20:
         return True
     for op, l in cigar:
-        if l < 20:
-            continue
         if op == 1 and target_gap == "INS" and min(l, target_svlen) / max(l, target_svlen) > threshold:
             return True
         if op == 2 and target_gap == "DEL" and min(l, target_svlen) / max(l, target_svlen) > threshold:
             return True
     return False
 
+
 cpdef int assign_contig_to_break(asmb, EventResult_t er, side, spanning):
     if not asmb:
         return 0
     cdef int ref_bases = 0
     if spanning:
-        if not consensus_matches_gap(er.svtype, er.svlen, asmb["cigar"]):
+        if "cigar" in asmb and not consensus_matches_gap(er.svtype, er.svlen, asmb["cigar"]):
             return 0
         er.contig = asmb["contig"]
         er.contig_cigar = asmb["cigar"]
@@ -543,6 +562,7 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     as2 = None
     ref_bases = 0
     if to_assemble or len(spanning_alignments) > 0:
+        # echo('MAKE SINGLE CALL')
         if er.preciseA:
             as1 = consensus.base_assemble(u_reads, er.posA, 500)
             if as1 and (er.svtype != "TRA" or (as1['contig'] and (as1['contig'][0].islower() or as1['contig'][-1].islower()))):
@@ -638,6 +658,7 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
                 idx += 1
     sub_cluster_calls = []
     cdef EventResult_t er
+
     if try_cluster:
         try:
             Z = linkage(coords, 'single')
@@ -685,6 +706,7 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
         er = make_single_call(informative, insert_size, insert_stdev, insert_ppf, min_support, to_assemble,
                               spanning_alignments, 1, generic_insertions, st, paired_end)
         sub_cluster_calls.append(er)
+
     return sub_cluster_calls
 
 
@@ -738,32 +760,37 @@ cdef group_read_subsets(rds, insert_ppf, insert_size, insert_stdev):
     return spanning_alignments, informative, generic_insertions
 
 
-def bicluster_spanning_lr(spanning, informative):
-    if len(spanning) <= 2:
+def dbscan_spanning(spanning, informative):
+    if len(spanning) <= 3:
         return [(spanning, informative)]
-    srt = sorted(spanning, key=lambda x: x.len)
-    if srt[0].len / srt[-1].len > 0.5:
-        return [(spanning, informative)]
-    part_a = [srt[0]]
-    sum_a = srt[0].len
-    part_b = [srt[-1]]
-    sum_b = srt[-1].len
-    for i in range(1, len(srt) - 2):
-        avg_a = sum_a / len(part_a)
-        avg_b = sum_b / len(part_b)
-        t = srt[i]
-        if abs(t.len - avg_a) < abs(t.len - avg_b):
-            part_a.append(t)
-            sum_a += t.len
-        else:
-            part_b.append(t)
-            sum_b += t.len
-    return [(part_a, []), (part_b, [])]
 
+    X = np.array([s.len for s in spanning]).reshape(-1, 1)
+    X_max = X.max()
+    if X.min() == X_max:
+        return [(spanning, informative)]
+
+    eps = min(int(X_max * 0.03), int(math.pow(X_max, 0.45)))
+    eps = max(1, eps)
+
+    cl = DBSCAN(eps=eps, min_samples=2)
+    labels = cl.fit_predict(X)
+
+    m = int(max(labels))
+    if len(labels) == 0 or m == -1:
+        return [(spanning, informative)]
+
+    result = [[[], []] for i in range(m + 1)]
+    for idx, l in enumerate(labels):
+        if l == -1:
+            continue
+        result[l][0].append(spanning[idx])
+
+    return result
 
 
 def process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                      generic_insertions, insert_ppf, to_assemble):
+    # echo("PROCESS SPANNING")
     cdef int min_found_support = 0
     cdef str svtype, jointype
     cdef bint passed
@@ -818,7 +845,7 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
         # 1.6.8
         posA_95 = abs(posA - posA_adjusted)
         posB_95 = abs(posB - posB_adjusted)
-
+        # echo([sp.len for sp in spanning_alignments], "pos adjusted:", [b[0] for b in size_pos_bounded])
         svlen = int(np.median([sp.len for sp in spanning_alignments]))
         posA = spanning_alignments[best_index].pos
         posB = spanning_alignments[best_index].end
@@ -831,6 +858,10 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
         posB = spanning_alignments[best_index].end
         er.preciseA = True
         er.preciseB = True
+
+    er.qnames = set([])
+    for item in spanning_alignments:
+        er.qnames.add(hash(item.align.qname))
 
     ab = abs(posB - posA)
     if svlen > 0:
@@ -851,7 +882,7 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
     er.query_overlap = 0
     er.jitter = jitter
     u_reads = [i.align for i in spanning_alignments]
-    v_reads = []
+
     min_found_support = len(spanning_alignments)
     if len(generic_insertions) > 0:
         min_found_support += len(generic_insertions)
@@ -874,19 +905,21 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
     as1 = None
     as2 = None
     ref_bases = 0
-    if to_assemble:
-        if er.preciseA:
+    if to_assemble and er.preciseA:
+
+        if not paired_end and er.svtype == "INS" and er.svlen > 50:
+            # echo('Making contig from', best_align.qname, spanning_alignments[best_index].cigar_index)
+            as1 = consensus.contig_from_read_cigar(best_align, spanning_alignments[best_index].cigar_index)
+            # as1 = consensus.base_assemble([best_align.align], er.posA, 500)
+        else:
             as1 = consensus.base_assemble(u_reads, er.posA, 500)
-            if as1:
-                ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
-        if er.preciseB:
-            as2 = consensus.base_assemble(v_reads, er.posB, 500)
-            if as2:
-                ref_bases += assign_contig_to_break(as2, er, "B", 0)
-        if not as1 and len(generic_insertions) > 0:
-            as1 = consensus.base_assemble([item.read_a for item in generic_insertions], er.posA, 500)
-            if as1:
-                ref_bases += assign_contig_to_break(as1, er, "A", 0)
+
+        if as1:
+            ref_bases += assign_contig_to_break(as1, er, "A", spanning_alignments)
+        # elif len(generic_insertions) > 0:
+        #     as1 = consensus.base_assemble([item.read_a for item in generic_insertions], er.posA, 500)
+        #     if as1:
+        #         ref_bases += assign_contig_to_break(as1, er, "A", 0)
     er.linked = 0
     er.block_edge = 0
     er.ref_bases = ref_bases
@@ -895,15 +928,12 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
         start_ins = 0
         ct = best_align.cigartuples
         target_len = svlen
-        # if er.preciseA:
-        #     target_len = svlen
-        # else:
-        #     target_len = ct[cigar_index][1]
         for i in range(spanning_alignments[best_index].cigar_index):
             if ct[i][0] in {0, 1, 4, 7, 8}:
                 start_ins += ct[i][1]
         er.variant_seq = best_align.seq[start_ins:start_ins + target_len]
         er.ref_seq = best_align.seq[start_ins - 1]
+    # echo("contig is ", er.contig)
     return er
 
 
@@ -923,17 +953,24 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
 
     # Use spanning if available, otherwise informative, otherwise generic
     spanning_alignments, informative, generic_insertions = group_read_subsets(rds, insert_ppf, insert_size, insert_stdev)
+    n_spanning = len(spanning_alignments)
+
+    if n_spanning and len(generic_insertions) > n_spanning * 10:
+        generic_insertions = []
+    if n_spanning and len(informative) > n_spanning * 20:
+        informative = []
+
     if len(spanning_alignments) > 0:
-        if not paired_end:
+        # if not paired_end:
             candidates = []
-            for spanning_alignments, informative in bicluster_spanning_lr(spanning_alignments, informative):
+            for spanning_alignments, informative in dbscan_spanning(spanning_alignments, informative):
                 candidates.append(process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                      generic_insertions, insert_ppf, to_assemble))
             return candidates
-        else:
+        # else:
             # single event
-            return process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
-                         generic_insertions, insert_ppf, to_assemble)
+            # return process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
+            #              generic_insertions, insert_ppf, to_assemble)
 
 
     elif len(informative) > 0:
@@ -1291,29 +1328,83 @@ cdef tuple mask_soft_clips(int aflag, int bflag, a_ct, b_ct):
     return left_clipA, right_clipA, left_clipB, right_clipB
 
 
-cdef query_start_end_from_cigartuples(r):
-    cdef int end = 0
-    cdef int start = 0
-    cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
-    end = query_length
-    if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
-        start += r.cigartuples[0][1]
-    if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
-        end -= r.cigartuples[-1][1]
-    return start, end, query_length
+# cdef query_start_end_from_cigartuples(r):
+#     cdef int end = 0
+#     cdef int start = 0
+#     cdef int query_length = r.infer_read_length()  # Note, this also counts hard-clips
+#     end = query_length
+#     if r.cigartuples[0][0] == 4 or r.cigartuples[0][0] == 5:
+#         start += r.cigartuples[0][1]
+#     if r.cigartuples[-1][0] == 4 or r.cigartuples[-1][0] == 5:
+#         end -= r.cigartuples[-1][1]
+#     return start, end, query_length
+#
+#
+# cdef start_end_query_pair(r1, r2):
+#     cdef int query_length, s1, e1, s2, e2, start_temp, r1l, r2l
+#     # r1 and r2 might be on same read, if this is case infer the query position on the read
+#     s1, e1, r1l = query_start_end_from_cigartuples(r1)
+#     s2, e2, r2l = query_start_end_from_cigartuples(r2)
+#     if r1.flag & 64 == r2.flag & 64:  # same read
+#         if r2.flag & 16 != r1.flag & 16:  # different strand, count from end
+#             query_length = r1l  # Note, this also counts hard-clips
+#             start_temp = query_length - e2
+#             e2 = start_temp + e2 - s2
+#             s2 = start_temp
+#     return s1, e1, s2, e2, r1l, r2l
 
 
-cdef start_end_query_pair(r1, r2):
-    cdef int query_length, s1, e1, s2, e2, start_temp, r1l, r2l
-    # r1 and r2 might be on same read, if this is case infer the query position on the read
-    s1, e1, r1l = query_start_end_from_cigartuples(r1)
-    s2, e2, r2l = query_start_end_from_cigartuples(r2)
+cdef int query_start_end_from_cigar(AlignedSegment r, int *start, int *end):
+    cdef uint32_t cigar_value
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef int opp, length
+    cdef int query_length = 0
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+    if cigar_l == 0:
+        return 0
+
+    # Calculate query length and handle starting clip
+    start[0] = 0
+    for i in range(cigar_l):
+        cigar_value = cigar_p[i]
+        opp = <int> cigar_value & 15  # Get operation
+        length = <int> cigar_value >> 4  # Get length
+
+        if opp in (0, 1, 4, 7, 8):  # M, I, S, =, X
+            query_length += length
+        elif opp == 5:  # H
+            query_length += length
+
+        if i == 0 and (opp == 4 or opp == 5):  # S or H
+            start[0] = length
+
+    # Set initial end position
+    end[0] = query_length
+
+    # Handle ending clip
+    cigar_value = cigar_p[cigar_l - 1]
+    opp = <int> cigar_value & 15
+    length = <int> cigar_value >> 4
+    if opp == 4 or opp == 5:  # S or H
+        end[0] -= length
+
+    return query_length
+
+
+cdef start_end_query_pair(AlignedSegment r1, AlignedSegment r2):
+    cdef int s1 = 0, e1 = 0, s2 = 0, e2 = 0
+    cdef int r1l, r2l, start_temp
+    r1l = query_start_end_from_cigar(r1, &s1, &e1)
+    r2l = query_start_end_from_cigar(r2, &s2, &e2)
+
     if r1.flag & 64 == r2.flag & 64:  # same read
-        if r2.flag & 16 != r1.flag & 16:  # different strand, count from end
-            query_length = r1l  # Note, this also counts hard-clips
-            start_temp = query_length - e2
+        if r2.flag & 16 != r1.flag & 16:  # different strand
+            start_temp = r1l - e2
             e2 = start_temp + e2 - s2
             s2 = start_temp
+
     return s1, e1, s2, e2, r1l, r2l
 
 
@@ -1324,17 +1415,18 @@ def sort_by_length(x):
 cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int block_edge, int assemble):
     as1 = None
     as2 = None
-    if assemble:
-        if er.preciseA:
-            as1 = consensus.base_assemble(u_reads, er.posA, 500)
-            if as1:
-                if er.spanning == 0 and not (as1['left_clips'] or as1['right_clips']):
-                    as1 = None
-        if (er.spanning == 0 or as1 is None) and er.preciseB:
-            as2 = consensus.base_assemble(v_reads, er.posB, 500)
-            if as2 :
-                if not (as2['left_clips'] or as2['right_clips']):
-                    as2 = None
+    # todo
+    # if assemble:
+    #     if er.preciseA:
+    #         as1 = consensus.base_assemble(u_reads, er.posA, 500)
+    #         if as1:
+    #             if er.spanning == 0 and not (as1['left_clips'] or as1['right_clips']):
+    #                 as1 = None
+    #     if (er.spanning == 0 or as1 is None) and er.preciseB:
+    #         as2 = consensus.base_assemble(v_reads, er.posB, 500)
+    #         if as2 :
+    #             if not (as2['left_clips'] or as2['right_clips']):
+    #                 as2 = None
     er.linked = 0
     er.block_edge = block_edge
     er.contig = None
@@ -1720,7 +1812,8 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         for (u, v), d in data.s_between: #.items():
             rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
             rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
-
+            # echo("rd_u", [rr[1].qname for rr in rd_u])
+            # echo("rd_v", [rr[1].qname for rr in rd_v])
             total_reads = len(rd_u) + len(rd_v)
             buffered_reads += total_reads
             if add_to_buffer and buffered_reads > 50000:
@@ -1804,6 +1897,9 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     n_parts = len(data.parts) if data.parts else 0
     events = []
     info = data.info
+    # echo(data.parts)
+    # echo(data.s_between)
+    # echo(data.s_within)
     if data.reads is None:
         data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
@@ -1825,8 +1921,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
             else:
                 events.append(ev)
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
-    #for e in events:
-    #    echo("call_component svlen", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}")
-    #    if e.svlen_precise:
-    #        set_ins_seq(e)
+    for e in events:
+       # echo("call_component svlen", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}")
+       if e.svlen_precise:
+           set_ins_seq(e)
     return events

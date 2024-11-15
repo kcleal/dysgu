@@ -15,6 +15,7 @@ from libc.stdint cimport uint32_t
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_get_cigar
 
+
 def index_stats(f, rl=None):
     if rl is None:
         rl = []
@@ -147,7 +148,9 @@ cdef class GenomeScanner:
             # when 'run' command is invoked, run this block. cov track already exists from find-reads
             if self.cov_track_path is None and self.bam_iter is None:
                 for aln in self.input_bam:
-                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:  # not primary, duplicate or unmapped?
+                    cigar_l = aln._delegate.core.n_cigar
+
+                    if aln.flag & 1284 or aln.mapq < mq_thresh or cigar_l == 0:  # not primary, duplicate or unmapped?
                         continue
                     self._add_to_bin_buffer(aln, tell)
                     tell = 0 if self.no_tell else self.input_bam.tell()
@@ -248,7 +251,9 @@ cdef class GenomeScanner:
                     name = aln.qname.__hash__(), aln.flag, aln.pos
                     if name in seen_reads:
                         continue
-                    if aln.flag & 1284 or aln.mapq < mq_thresh or aln.cigartuples is None:
+
+                    cigar_l = aln._delegate.core.n_cigar
+                    if aln.flag & 1284 or aln.mapq < mq_thresh or cigar_l == 0:
                         continue
                     if aln.rname != self.current_tid:
                         if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
@@ -342,7 +347,8 @@ cdef class GenomeScanner:
             prev_alignment = a
             
             if ibam is None:
-                if a.flag & 1284 or a.mapq < self.mapq_threshold or a.cigartuples is None:
+                cigar_l = a._delegate.core.n_cigar
+                if a.flag & 1284 or a.mapq < self.mapq_threshold or cigar_l == 0:
                     continue
                 tell = 0 if self.no_tell else self.input_bam.tell()
                 if self.no_tell:
@@ -458,10 +464,11 @@ cdef class GenomeScanner:
         elif self.no_tell:
             raise BufferError("Read buffer has overflowed, increase --buffer-size")
 
-    def _add_to_bin_buffer(self, a, tell):
+    def _add_to_bin_buffer(self, AlignedSegment a, tell):
         # Calculates coverage information on fly, drops high coverage regions, buffers reads
         cdef int flag = a.flag
-        if flag & 1540 or a.cigartuples is None or a.seq is None:
+        cdef uint32_t cigar_l = a._delegate.core.n_cigar
+        if flag & 1540 or cigar_l == 0: # or a.seq is None:
             return
         cdef int rname = a.rname
         cdef int apos = a.pos

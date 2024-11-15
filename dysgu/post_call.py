@@ -13,6 +13,9 @@ import pandas as pd
 import warnings
 pd.options.mode.chained_assignment = None
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
+from dysgu.io_funcs import iitree
+from dysgu.consensus import compute_rep
+from collections import defaultdict
 import os
 import warnings
 from sklearn.exceptions import InconsistentVersionWarning
@@ -352,7 +355,7 @@ def strand_binom_t(events):
 
 def get_ref_base(events, ref_genome, symbolic_sv_size):
     for e in events:
-        if not e.ref_seq:
+        if not e.ref_seq and not e.svtype == "BND":
             if symbolic_sv_size == -1 or e.svtype == "INS" or e.svtype == "TRA":
                 if e.posA == 0:
                     e.posA = 1
@@ -655,6 +658,43 @@ def get_gt_metric2(events, mode, add_gt=True):
             e.GT = './.'
 
     return events
+
+
+def filter_microsatellite_non_diploid(potential):
+    tmp_list = defaultdict(list)
+    max_dist = 50
+    half_d = (max_dist * 0.5)
+    candidates = []
+    for idx in range(len(potential)):
+        ei = potential[idx]
+        if (ei.svtype != "DEL" and ei.svtype != "INS") or not ei.variant_seq:
+            continue
+        rep = compute_rep(ei.variant_seq)
+        if rep < 0.4:
+            continue
+        candidates.append(idx)
+        tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
+        if ei.chrA == ei.chrB and ei.svlen > half_d:
+            tmp_list[ei.chrA].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
+
+    nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
+    seen = set([])
+    to_drop = set([])
+    for idx in candidates:
+        if idx in seen:
+            continue
+        ei = potential[idx]
+        ols = set(nc2[ei.chrA].allOverlappingIntervals(ei.posA, ei.posA + 1))
+        ols2 = set(nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1))
+        ols |= ols2
+        ols.add(idx)
+        if len(ols) <= 2:
+            continue
+        bad = sorted([(i, potential[i]) for i in ols], key=lambda x: x[1].su, reverse=True)[2:]
+        for jdx, p in bad:
+            to_drop.add(jdx)
+        seen |= ols
+    return [p for i, p in enumerate(potential) if i not in to_drop]
 
 
 def compressability(events):

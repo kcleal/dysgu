@@ -1,3 +1,5 @@
+# cython: language_level=3
+
 from __future__ import absolute_import
 import click
 import os
@@ -126,10 +128,11 @@ def apply_preset(kwargs):
         kwargs["mode"] = "nanopore-r10"
     if kwargs["mode"] != "pe":
         kwargs["paired"] = "False"
-    p = presets[kwargs["mode"]]
     options = new_options_set
     options = {k: v for k, v in options.items() if v is not None}
-    kwargs.update(defaults)
+    for k, v in defaults.items():
+        if kwargs.get(k) is None:
+            kwargs[k] = v
     kwargs.update(presets[kwargs["mode"]].items())
     kwargs.update(options)
 
@@ -250,7 +253,7 @@ def cli():
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
-@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired reads, or 700 bp for single-end reads",
+@click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold. Default for paired-end data is (insert-median + 5*insert_std) for paired reads, or 1000 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True", show_default=True,
               type=click.Choice(["True", "False"]))
@@ -412,7 +415,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--drop-gaps", help="Drop SVs near gaps +/- 250 bp of Ns in reference",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--merge-dist", help="Attempt merging of SVs below this distance threshold, default is (insert-median + 5*insert_std) for paired"
-                                   "reads, or 700 bp for single-end reads",
+                                   "reads, or 1000 bp for single-end reads",
               default=None, type=int, show_default=False)
 @click.option("--paired", help="Paired-end reads or single", default="True", show_default=True,
               type=click.Choice(["True", "False"]))
@@ -594,3 +597,7 @@ def test_command(ctx, **kwargs):
             click.echo("PASS: " + c + "\n", err=True)
 
     logging.info("Run test complete")
+
+
+if __name__ == "__main__":
+    cli()
