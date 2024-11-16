@@ -22,7 +22,6 @@ jobs:
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
-          brew install xz
       - name: Install project dependencies
         run: which python; python -m pip install -r requirements.txt
       - name: Build wheels
