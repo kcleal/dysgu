@@ -1,5 +1,7 @@
 #!/bin/bash
 
+brew reinstall xz
+
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git && \
     cd libdeflate && CFLAGS+=' -fPIC -O3 ' cmake -B build && CFLAGS+=' -fPIC -O3 ' cmake --build build && \
     cp build/libdeflate.a /usr/local/lib && cp libdeflate.h /usr/local/include && cd ../
