@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set correct paths for Homebrew on macOS
-        if: matrix.os == 'macOS-13'
+        if: matrix.os == 'macOS-11'
         run: |
           BREW_PREFIX=$(brew --prefix)
           export PATH="$BREW_PREFIX/bin:$PATH"
