@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BREW_PREFIX=$(brew --prefix)"
+BREW_PREFIX="$(brew --prefix)"
 
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git
 cd libdeflate
