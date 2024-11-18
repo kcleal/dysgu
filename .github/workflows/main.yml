@@ -36,7 +36,7 @@ jobs:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_LINUX: "auto"
           CIBW_BEFORE_ALL_MACOS: |
-            bash ci/osx-deps
+            sudo bash ci/osx-deps
           CIBW_BEFORE_ALL_LINUX: |
             bash ci/manylinux-deps
           CIBW_BEFORE_BUILD_MACOS: |
