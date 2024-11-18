@@ -18,10 +18,13 @@ jobs:
       - name: Set correct paths for Homebrew on macOS
         if: matrix.os == 'macOS-14'
         run: |
-          BREW_PREFIX=$(brew --prefix)
+          export BREW_PREFIX=$(brew --prefix)
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+          # Set minimum deployment target to 10.13 to resolve futimens warning
+          export MACOSX_DEPLOYMENT_TARGET=10.13
+          echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> $GITHUB_ENV
       - name: Install project dependencies
         run: which python; python -m pip install -r requirements.txt
       - name: Build wheels
@@ -33,15 +36,18 @@ jobs:
           CIBW_ARCHS_LINUX: "auto"
           CIBW_BEFORE_ALL_MACOS: |
             bash ci/osx-deps
-          CIBW_BEFORE_ALL_LINUX: bash ci/manylinux-deps
+          CIBW_BEFORE_ALL_LINUX: |
+            bash ci/manylinux-deps
           CIBW_BEFORE_BUILD_MACOS: |
             ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
             which python3
             python3 -m pip install -r requirements.txt
           CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel} --require-target-macos-version 13.0
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
+            delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel} --require-target-macos-version 13.0
           CIBW_TEST_SKIP: "*-macosx_arm64"
-          CIBW_TEST_REQUIRES: cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
+          CIBW_TEST_REQUIRES: |
+            cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
           CIBW_TEST_COMMAND: dysgu test --verbose
 
       - uses: actions/upload-artifact@v4
