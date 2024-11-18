@@ -18,7 +18,8 @@ jobs:
       - name: Set correct paths for Homebrew on macOS
         if: matrix.os == 'macOS-14'
         run: |
-          export BREW_PREFIX=$(brew --prefix)
+          export BREW_PREFIX="$(brew --prefix)"
+          export PREFIX="$(brew --prefix)"
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
