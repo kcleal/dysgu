@@ -22,6 +22,5 @@ CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" ./config
  --enable-s3 \
  --enable-lzma \
  --enable-bz2 \
- --with-libdeflate \
- --prefix ${BREW_PREFIX}
-make && make install
+ --with-libdeflate
+sudo make && make install
