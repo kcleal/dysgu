@@ -17,5 +17,5 @@ tar -xvf htslib.tar.bz2
 mv htslib-1.21 htslib && rm htslib.tar.bz2
 cd htslib
 
-./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate --prefix=${BREW_PREFIX}
+CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" ./configure --enable-libcurl --enable-s3 --enable-lzma --enable-bz2 --with-libdeflate
 make && make install
