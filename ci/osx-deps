@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export MACOSX_DEPLOYMENT_TARGET=13.0
+
 BREW_PREFIX="$(brew --prefix)"
 
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git
@@ -17,7 +19,7 @@ tar -xvf htslib.tar.bz2
 mv htslib-1.21 htslib && rm htslib.tar.bz2
 cd htslib
 
-MACOSX_DEPLOYMENT_TARGET=13 CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" \
+CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" \
   ./configure \
  --enable-libcurl \
  --enable-s3 \

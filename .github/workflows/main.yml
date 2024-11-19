@@ -23,9 +23,8 @@ jobs:
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
-          # Set minimum deployment target to 10.13 to resolve futimens warning
-          export MACOSX_DEPLOYMENT_TARGET=10.13
-          echo "MACOSX_DEPLOYMENT_TARGET=10.13" >> $GITHUB_ENV
+          export MACOSX_DEPLOYMENT_TARGET=13.0
+          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
       - name: Install project dependencies
         run: which python; python -m pip install -r requirements.txt
       - name: Build wheels
