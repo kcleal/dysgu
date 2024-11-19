@@ -6,8 +6,8 @@ BREW_PREFIX="$(brew --prefix)"
 
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git
 cd libdeflate
-CFLAGS+=' -fPIC -O3 ' cmake -B build
-CFLAGS+=' -fPIC -O3 ' cmake --build build
+CFLAGS+=' -fPIC -O3 -mmacosx-version-min=13.0 ' cmake -B build
+CFLAGS+=' -fPIC -O3 -mmacosx-version-min=13.0 ' cmake --build build
 cp build/libdeflate.a ${BREW_PREFIX}/lib
 cp libdeflate.h ${BREW_PREFIX}/include
 cd ../
@@ -19,7 +19,7 @@ tar -xvf htslib.tar.bz2
 mv htslib-1.21 htslib && rm htslib.tar.bz2
 cd htslib
 
-CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" \
+CFLAGS+=" -mmacosx-version-min=13.0 " CPPFLAGS+=" -I${BREW_PREFIX}/include " LDFLAGS+=" -L${BREW_PREFIX}/lib" \
   ./configure \
  --enable-libcurl \
  --enable-s3 \
