@@ -94,8 +94,18 @@ def merge_align_regions(locations):
         if abs(s - last[0]) < merge_dist and abs(e - last[1]) < merge_dist:
             new_l[-1][1] = e
         else:
-            break
+            new_l.append([s, e])
+            # break
             # return None
+    # Choose block closest to break point
+    best_i = 0
+    dist = 100_000
+    for i, (s, e) in enumerate(new_l):
+        mid = e - s
+        if abs(mid - 500) < dist:
+            best_i = i
+    new_l = [new_l[best_i]]
+
     return new_l
 
 

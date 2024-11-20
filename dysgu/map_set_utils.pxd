@@ -9,6 +9,9 @@ cimport numpy as np
 
 from libc.stdint cimport uint64_t, int32_t, int8_t
 
+from pysam.libcalignedsegment cimport AlignedSegment
+from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_cigar
+
 ctypedef cpp_vector[int] int_vec_t
 ctypedef cpp_pair[int, int] get_val_result
 
@@ -291,9 +294,9 @@ cdef extern from "<map>" namespace "std" nogil:
 
 cdef int cigar_exists(r)
 
-cdef tuple clip_sizes(r)
+cdef void clip_sizes(AlignedSegment r, int& left, int& right)
 
-cdef tuple clip_sizes_hard(r)
+cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right)
 
 cdef int cigar_clip(r, int clip_length)
 
@@ -322,4 +325,4 @@ cdef class EventResult:
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, contig_cigar, contig2_cigar, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
-        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info
+        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info, qnames

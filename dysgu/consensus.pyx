@@ -1,11 +1,12 @@
-#distutils: language = c++
-#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+# cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+
 """
-A basic assembler/consensus sequence generator. Takes an overlap graph and merges reads in-place in a POA style.
+A basic consensus sequence generator. Takes an overlap graph and merges reads in-place in a POA style.
 """
 
 import warnings
 import array
+from re import match
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -140,7 +141,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
     cdef str seq
     cdef tuple k
-    cdef bint done = 0
+
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
     cdef int r_end = r.reference_end
@@ -164,8 +165,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
         if opp == 4 and length > 250:
             i = length - 250
             length = 250
-        if done:
-            break
+
         if opp == 4:
             if start:
                 for o in range(length, 0, -1):
@@ -245,12 +245,11 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                 if current_pos < approx_position and approx_position - current_pos > max_distance:
                     i += 1
                     continue
-                elif current_pos > approx_position and current_pos - approx_position > max_distance:
-                    break
+                # elif current_pos > approx_position and current_pos - approx_position > max_distance:
+                #     break
                 ref_bases += 1
                 if ref_bases > target_bases:
-                    done = 1
-                    break
+                    return
                 qual = quals[i]
                 base = bam_seqi(char_ptr_rseq, i)
                 i += 1
@@ -556,6 +555,11 @@ cdef dict get_consensus(rd, int position, int max_distance):
     else:
         cigar = [tuple(ct) for ct in cigar]
 
+    # if len(seq) < len(rd[0].seq) and longest_left_sc > 10 and longest_right_sc > 10:
+    #     return {}
+        # Not a good consensus, use first read instead
+        # return trim_sequence_from_cigar(rd[0], position, max_distance)
+
     return {"contig": seq,
             "left_clips": longest_left_sc,
             "right_clips": longest_right_sc,
@@ -582,13 +586,17 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
     cdef int pos = start_pos  # current genome position
     cdef int end_index = len(ct) - 1
     cdef bint started = False
-    cdef int opp, length
+    cdef int opp, length, keep_start, keep_end
 
     cdef int longest_left_sc = 0
     cdef int longest_right_sc = 0
+    cdef int ref_bases = 0
 
     parts = []
+    pos_index = -1
     for opp, length in ct:
+        if ref_bases > 300 and pos > approx_pos + 150:
+            break
 
         if opp == 4 and index == 0:
             if abs(pos - approx_pos) < 50:
@@ -616,29 +624,30 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
 
         elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
 
-            if not started:
-                if abs(pos + length - approx_pos) < 300:
-                    parts.append(r.seq[seq_index:seq_index + length])  # upper implied
+            op_end = pos + length
 
-                    started = True
-                    start_pos = pos
-                    pos += length
-                    start_index = index
-                    seq_start = seq_index
-
-                else:
-                    pos += length
-
+            # If we're completely before the region of interest
+            if op_end < approx_pos - 250:
+                pos += length
                 seq_index += length
+                continue
 
-            else:
-                if abs(pos + length - approx_pos) > 300:
-                    end_index = index + 1
-                    break
-                else:
-                    parts.append(r.seq[seq_index:seq_index + length])
-                    pos += length
-                    seq_index += length
+            # If we're completely after the region of interest
+            if pos > approx_pos + 250:
+                break
+
+            # Calculate which portion of this match we want to keep
+            keep_start = max(0, approx_pos - 250 - pos)
+            keep_end = min(length, approx_pos + 250 - pos)
+
+            # If this match overlaps our region of interest
+            if keep_end > keep_start:
+                started = True
+                ref_bases += keep_end - keep_start
+                parts.append(seq[seq_index + keep_start:seq_index + keep_end])
+
+            pos += length
+            seq_index += length
 
         index += 1
 
@@ -693,6 +702,103 @@ cpdef dict base_assemble(rd, int position, int max_distance):
     return get_consensus(rd, position, max_distance)
 
 
+cpdef contig_from_read_cigar(r, int cigar_index):
+    ct = r.cigartuples
+    seq = r.seq
+    query_pos = 0  # Position in query sequence
+    ref_pos = r.pos  # Position in reference
+    window_size = 500  # Size of sequence context to include
+
+    # First pass: find the target position in query coordinates
+    target_query_start = 0
+    for i in range(cigar_index):
+        op, length = ct[i]
+        if op in {0, 1, 4, 7, 8}:  # Operations that consume query sequence
+            target_query_start += length
+
+    # Calculate window boundaries in query coordinates
+    target_length = ct[cigar_index][1]
+    window_start = max(0, target_query_start - window_size)
+    window_end = min(len(seq), target_query_start + target_length + window_size)
+
+    parts = []
+    query_pos = 0
+    ref_pos = r.pos
+    longest_left_sc = 0
+    longest_right_sc = 0
+    ref_bases = 0
+
+    cigar_blocks = []
+    started = False
+    # Second pass: build the sequence
+    for i, (op, length) in enumerate(ct):
+        if query_pos > window_end:
+            break
+
+        if op == 0 or op == 7 or op == 8:  # Match/mismatch
+            if query_pos + length > window_start:
+                start_idx = max(0, window_start - query_pos)
+                end_idx = min(length, window_end - query_pos)
+                match_seq = seq[query_pos + start_idx:query_pos + end_idx]
+                parts.append(match_seq.upper())
+                started = True
+                ref_bases += len(match_seq)
+                if cigar_blocks and cigar_blocks[-1][0] == 0:  # elide 7 and 8 ops
+                    cigar_blocks[-1][1] += len(match_seq)
+                else:
+                    cigar_blocks.append([0, len(match_seq)])
+            query_pos += length
+            ref_pos += length
+
+        elif op == 4:  # Soft clip
+            clip_length = min(length, 250)
+            if query_pos < window_end and query_pos + length > window_start:
+                start_idx = max(0, window_start - query_pos)
+                end_idx = min(clip_length, window_end - query_pos)
+                clip_seq = seq[query_pos + start_idx:query_pos + end_idx].lower()
+                parts.append(clip_seq)
+                cigar_blocks.append([4, len(clip_seq)])
+                if query_pos < target_query_start:  # Left clip
+                    longest_left_sc = len(clip_seq)
+                else:  # Right clip
+                    longest_right_sc = len(clip_seq)
+            query_pos += length
+
+        elif op == 1:  # Insertion
+            if query_pos + length > window_start and query_pos < window_end:
+                if i < cigar_index:
+                    parts.append(seq[max(window_start, query_pos):query_pos + length].lower())
+                if i == cigar_index:
+                    # Full insertion if it's the target
+                    parts.append(seq[query_pos:query_pos + length].lower())
+                elif i > cigar_index:
+                    parts.append(seq[query_pos:min(window_end, query_pos + length)].lower())
+                cigar_blocks.append([1, len(parts[-1])])
+                if query_pos + length >= window_end:
+                    break
+            query_pos += length
+
+        elif op == 2:  # Deletion
+            ref_pos += length
+            if started:
+                cigar_blocks.append([length, 2])
+
+    contig = "".join(parts)
+
+    return {
+        "contig": contig,
+        "cigar": cigar_blocks,
+        "left_clips": longest_left_sc,
+        "right_clips": longest_right_sc,
+        "ref_bases": ref_bases,
+        "ref_start": r.pos,
+        "ref_end": r.reference_end,
+        "bamrname": r.rname,
+        "left_weight": 0,
+        "right_weight": 0,
+    }
+
+
 cpdef float compute_rep(seq):
 
     cdef unordered_map[float, int] last_visited
@@ -730,6 +836,7 @@ cpdef float compute_rep(seq):
         return 0
 
     return tot_amount / total_seen
+
 
 cdef tuple get_rep(contig_seq):
 
@@ -822,10 +929,17 @@ def contig_info(events):
 
 
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):
-    if not a or not b or len(a) > 5000 or len(b) > 5000:
+    if not a or not b:
         return 0
+    if len(a) > 10000:
+        a = a[:10000]
+    if len(b) > 10000:
+        b = b[:10000]
 
-    query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq)
+    query = StripedSmithWaterman(str(a), suppress_sequences=supress_seq,
+                                 match_score=2, mismatch_score=-3, gap_open_penalty=10,
+                                 gap_extend_penalty=1
+                                 )
     alignment = query(str(b))
     if not return_int:
         return alignment

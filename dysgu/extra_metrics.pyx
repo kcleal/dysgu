@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=True, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+#cython: language_level=3, c_string_type=unicode, c_string_encoding=utf8
 import numpy as np
 cimport numpy as np
 from dysgu.map_set_utils cimport unordered_map, EventResult

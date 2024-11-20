@@ -1,4 +1,5 @@
 # cython: language_level=3
+
 from __future__ import absolute_import
 import datetime
 import time
@@ -184,15 +185,15 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         if args["mode"] == "pacbio-sequel2":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 700
+                args["merge_dist"] = 1000
         elif args["mode"] == "pacbio-revio":
             max_dist, max_clust_dist = 50, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 700
+                args["merge_dist"] = 1000
         elif args["mode"] == "nanopore-r9" or args["mode"] == "nanopore-r10":
             max_dist, max_clust_dist = 100, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 700
+                args["merge_dist"] = 1000
 
     # set upper bound on single-partition size
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
@@ -436,6 +437,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             os.remove(f"{tdir}/job_{p}.done.pkl")
     if len(block_edge_events) == 0:
         return [], None
+
+    # for item1 in block_edge_events:
+    #     echo(item1.svtype, item1.su, item1.svlen)
+
     logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
     keeps = len([i for i in block_edge_events if i.site_info])
     if keeps:
@@ -452,12 +457,17 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     # Merge across calls
     if args["merge_within"] == "True":
         merged = merge_svs.merge_events(block_edge_events, args["merge_dist"], regions, bool(paired_end), try_rev=False, pick_best=False,
-                                         debug=True, min_size=args["min_size"],
-                              max_comparisons=args["max_comparisons"] if "max_comparisons" in args else 100)
+                                        debug=True, min_size=args["min_size"],
+                                        max_comparisons=args["max_comparisons"] if "max_comparisons" in args else 100,
+                                        procs=args['procs'])
     else:
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
+
+    # echo("no--->")
+    # for item1 in merged:
+    #     echo(item1.svtype, item1.su, item1.svlen)
     before = len(merged)
 
     if auto_support:
@@ -490,11 +500,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     preliminaries = re_map.drop_svs_near_reference_gaps(preliminaries, paired_end, ref_genome, args["drop_gaps"] == "True")
     preliminaries = post_call.ref_repetitiveness(preliminaries, ref_genome)
     preliminaries = post_call.strand_binom_t(preliminaries)
-    # preliminaries = consensus.contig_info(preliminaries)  # GC info, repetitiveness
+
     preliminaries = extra_metrics.find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call.compressability(preliminaries)
     preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], True)
+
     preliminaries = post_call.get_ref_base(preliminaries, ref_genome, args["symbolic_sv_size"])
+
+    # preliminaries = post_call.filter_microsatellite_non_diploid(preliminaries)
 
     preliminaries = extra_metrics.sample_level_density(preliminaries, regions)
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)

@@ -1,10 +1,9 @@
-#cython: language_level=2, boundscheck=True, wraparound=True
-#distutils: language=c++
+#cython: language_level=3
 
 import numpy as np
 cimport numpy as np
 import logging
-from map_set_utils import merge_intervals, echo
+from dysgu.map_set_utils import merge_intervals, Py_BasicIntervalTree, echo
 from collections import defaultdict
 from importlib.metadata import version
 import sortedcontainers
@@ -12,37 +11,33 @@ import pandas as pd
 import os
 import sys
 import gzip
-from dysgu.map_set_utils import Py_BasicIntervalTree
 import random
 
 from libc.stdlib cimport malloc
 
 
-cdef char *basemap = [ '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0',  'T', '\0',  'G', '\0', '\0', '\0',  'C', '\0', '\0', '\0', '\0', '\0', '\0',  'N', '\0',
-                       '\0', '\0', '\0', '\0',  'A',  'A', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0',  't', '\0',  'g', '\0', '\0', '\0',  'c', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0',
-                       '\0', '\0', '\0', '\0',  'a',  'a' ]
+cdef char *basemap = [ b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b'T', b'\0',  b'G', b'\0', b'\0', b'\0',  b'C', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',  b'N', b'\0',
+                       b'\0', b'\0', b'\0', b'\0',  b'A',  b'A', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b't', b'\0',  b'g', b'\0', b'\0', b'\0',  b'c', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b'\0', b'\0', b'\0',  b'a',  b'a' ]
 
 np.random.seed(0)
 random.seed(0)
 
 cpdef str reverse_complement(str seq, int seq_len):
-    """https://bioinformatics.stackexchange.com/questions/3583/\
-    what-is-the-fastest-way-to-get-the-reverse-complement-of-a-dna-sequence-in-pytho/3595#3595"""
-
     cdef char *seq_dest = <char *>malloc(seq_len + 1)
-    seq_dest[seq_len] = '\0'
+    seq_dest[seq_len] = b'\0'
 
-    cdef bytes py_bytes = seq.encode('UTF-8')
+    cdef bytes py_bytes = seq.encode('ascii')
     cdef char *seq_src = py_bytes
     cdef int i = 0
     for i in range(seq_len):
         seq_dest[seq_len - i - 1] = basemap[<int>seq_src[i]]
-    return seq_dest[:seq_len].decode('UTF-8')
+    return seq_dest[:seq_len].decode('ascii')
 
 
 def bed_iter(path):

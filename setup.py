@@ -115,7 +115,9 @@ def get_extension_modules():
                                      include_dirs=include_dirs,
                                      runtime_library_dirs=runtime_dirs,
                                      extra_compile_args=extras,
-                                     define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
+                                     define_macros=[
+                                         ("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION"),
+                                     ],
                                      language="c++"))
 
     return cythonize(ext_modules)

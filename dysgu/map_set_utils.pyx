@@ -1,7 +1,5 @@
 #cython: language_level=3
 import click
-import numpy as np
-cimport numpy as np
 import cython
 import time
 import logging
@@ -11,6 +9,9 @@ from libcpp.pair cimport pair as cpp_pair
 from libc.stdlib cimport abs as c_abs
 from libc.math cimport fabs as c_fabs
 from libc.stdint cimport uint32_t, uint16_t, int16_t, int32_t
+
+from pysam.libcalignedsegment cimport AlignedSegment
+from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_cigar
 
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
@@ -245,35 +246,70 @@ cdef int cigar_exists(r):
     return 0
 
 
-cdef tuple clip_sizes(r):
-    c = r.cigartuples
-    if not c:
-        return 0, 0
+cdef void clip_sizes(AlignedSegment r, int& left, int& right):
+    cdef uint32_t cigar_value
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef int opp, length
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+    if cigar_l == 0:
+        return
+    cigar_value = cigar_p[0]
+    opp = <int> cigar_value & 15
+    if opp == 4:
+        left = <int> cigar_value >> 4
+    cigar_value = cigar_p[cigar_l - 1]
+    opp = <int> cigar_value & 15
+    if opp == 4:
+        right = <int> cigar_value >> 4
 
-    cdef int left = 0
-    cdef int right = 0
+    # c = r.cigartuples
+    # if not c:
+    #     return 0, 0
+    #
+    # cdef int left = 0
+    # cdef int right = 0
+    #
+    # if c[0][0] == 4:
+    #     left = c[0][1]
+    # if c[-1][0] == 4:
+    #     right = c[-1][1]
+    # return left, right
 
-    if c[0][0] == 4:
-        left = c[0][1]
-    if c[-1][0] == 4:
-        right = c[-1][1]
-    return left, right
 
+cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right):
+    cdef uint32_t cigar_value
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef int opp, length
 
-cdef tuple clip_sizes_hard(r):
-    c = r.cigartuples
-    if not c:
-        return 0, 0
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+    if cigar_l == 0:
+        return
+    cigar_value = cigar_p[0]
+    opp = <int> cigar_value & 15
+    if opp == 4 or opp == 5:
+        left = <int> cigar_value >> 4
+    cigar_value = cigar_p[cigar_l - 1]
+    opp = <int> cigar_value & 15
+    if opp == 4 or opp == 5:
+        right = <int> cigar_value >> 4
 
-    cdef int left = 0
-    cdef int right = 0
-    c1 = c[0][0]
-    if c1 == 4 or c1 == 5:
-        left = c[0][1]
-    c1 = c[-1][0]
-    if c1 == 4 or c1 == 5:
-        right = c[-1][1]
-    return left, right
+    # c = r.cigartuples
+    # if not c:
+    #     return 0, 0
+    #
+    # cdef int left = 0
+    # cdef int right = 0
+    # c1 = c[0][0]
+    # if c1 == 4 or c1 == 5:
+    #     left = c[0][1]
+    # c1 = c[-1][0]
+    # if c1 == 4 or c1 == 5:
+    #     right = c[-1][1]
+    # return left, right
 
 
 cdef int cigar_clip(r, int clip_length):
@@ -447,6 +483,7 @@ cdef class EventResult:
         self.n_sa = 0
         self.n_gaps = 0
         self.compress = 0
+        self.qnames = set([])
 
     def __repr__(self):
         return str(to_dict(self))

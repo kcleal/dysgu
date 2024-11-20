@@ -1,4 +1,4 @@
-#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
+#cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8
 
 from libc.stdint cimport uint32_t
 

@@ -38,7 +38,7 @@ class CoverageTrack
         ~CoverageTrack() {}
 
         std::vector<int32_t> cov_array;  // Assume coverage never overflows int32
-        int max_coverage;
+        int max_coverage = 250;
         int index = 0;
 
         void set_max_cov(int m) {
