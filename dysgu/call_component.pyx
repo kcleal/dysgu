@@ -72,7 +72,7 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
     cdef float clipped_base_quals = 0
     cdef int left_clip = 0
     cdef int right_clip = 0
-    clip_sizes(a, left_clip, right_clip)
+    clip_sizes(a, &left_clip, &right_clip)
     clipped_bases = left_clip + right_clip
     cdef const unsigned char[:] quals = a.query_qualities
     cdef int i
@@ -121,7 +121,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.n_unmapped_mates += 1
         left_clip = 0
         right_clip = 0
-        clip_sizes_hard(a, left_clip, right_clip)
+        clip_sizes_hard(a, &left_clip, &right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         has_sa = a.has_tag("SA")
@@ -164,7 +164,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
         left_clip = 0
         right_clip = 0
-        clip_sizes(a, left_clip, right_clip)
+        clip_sizes(a, &left_clip, &right_clip)
         if left_clip or right_clip:
             er.sc += 1
         if a.flag & 1:  # paired read
@@ -180,7 +180,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.NP += 1
         left_clip = 0
         right_clip = 0
-        clip_sizes_hard(a, left_clip, right_clip)
+        clip_sizes_hard(a, &left_clip, &right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         if a.has_tag("SA"):
@@ -426,7 +426,7 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
         v_item.svtype = "BND"
         left_clip = 0
         right_clip = 0
-        clip_sizes(aln, left_clip, right_clip)
+        clip_sizes(aln, &left_clip, &right_clip)
         clip_s = max(left_clip, right_clip)
         rand_insert_pos = 100 if not clip_s else clip_s
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos

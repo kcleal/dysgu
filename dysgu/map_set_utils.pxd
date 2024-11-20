@@ -294,9 +294,9 @@ cdef extern from "<map>" namespace "std" nogil:
 
 cdef int cigar_exists(r)
 
-cdef void clip_sizes(AlignedSegment r, int& left, int& right)
+cdef void clip_sizes(AlignedSegment r, int* left, int* right)
 
-cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right)
+cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right)
 
 cdef int cigar_clip(r, int clip_length)
 

@@ -251,7 +251,7 @@ cdef class ClipScoper:
                unordered_set[int]& clustered_nodes):
         cdef int clip_left = 0
         cdef int clip_right = 0
-        clip_sizes(r, clip_left, clip_right)
+        clip_sizes(r, &clip_left, &clip_right)
         if chrom != self.current_chrom:
             self.scope_left.clear()
             self.scope_right.clear()
@@ -1336,7 +1336,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                 pos2 = -1
                 left_clip_size = 0
                 right_clip_size = 0
-                clip_sizes_hard(r, left_clip_size, right_clip_size)  # soft and hard-clips
+                clip_sizes_hard(r, &left_clip_size, &right_clip_size)  # soft and hard-clips
                 if r.flag & 8 and clipped:  # paired by inference
                     # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
                     # if not (left_clip_size and right_clip_size) and ((paired_end and good_quality_clip(r, 20)) or (not paired_end and) ):
