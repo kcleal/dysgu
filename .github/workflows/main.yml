@@ -44,7 +44,7 @@ jobs:
             python3 -m pip install -r requirements.txt
           CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
-            delocate-wheel --require-archs x86_64 -w {dest_dir} -v {wheel} --require-target-macos-version 13.0
+            delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 13.0
           CIBW_TEST_SKIP: "*-macosx_arm64"
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 numpy scipy pandas pysam>=0.22.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
