@@ -833,6 +833,7 @@ def linear_scan_clustering(spanning, informative):
 #     return result
 
 
+
 def process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                      generic_insertions, insert_ppf, to_assemble):
     # echo("PROCESS SPANNING")
