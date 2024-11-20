@@ -26,9 +26,9 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
-from sklearn.cluster import KMeans, DBSCAN
-from sklearn.exceptions import ConvergenceWarning
-warnings.filterwarnings('ignore', category=ConvergenceWarning)
+# from sklearn.cluster import KMeans, DBSCAN
+# from sklearn.exceptions import ConvergenceWarning
+# warnings.filterwarnings('ignore', category=ConvergenceWarning)
 
 
 np.random.seed(1)
@@ -760,32 +760,77 @@ cdef group_read_subsets(rds, insert_ppf, insert_size, insert_stdev):
     return spanning_alignments, informative, generic_insertions
 
 
-def dbscan_spanning(spanning, informative):
+def linear_scan_clustering(spanning, informative):
+    # This is essentially a 1D-DBSCAN
     if len(spanning) <= 3:
         return [(spanning, informative)]
 
-    X = np.array([s.len for s in spanning]).reshape(-1, 1)
-    X_max = X.max()
-    if X.min() == X_max:
+    lengths = [s.len for s in spanning]
+    cdef float X_max = max(lengths)
+    if <float>min(lengths) == X_max:
         return [(spanning, informative)]
 
-    eps = min(int(X_max * 0.03), int(math.pow(X_max, 0.45)))
+    # Eps is the clustering distance to use
+    cdef int eps = min(int(X_max * 0.03), int(math.pow(X_max, 0.45)))
     eps = max(1, eps)
 
-    cl = DBSCAN(eps=eps, min_samples=2)
-    labels = cl.fit_predict(X)
+    indices = sorted(range(len(lengths)), key=lambda k: lengths[k])
 
-    m = int(max(labels))
-    if len(labels) == 0 or m == -1:
+    clusters = []
+    current_cluster = [spanning[indices[0]]]
+    cdef int last_length = spanning[indices[0]].len
+    cdef int i, idx, current_length
+    for i in range(1, len(indices)):
+        idx = indices[i]
+        current_length = spanning[idx].len
+        if current_length - last_length <= eps:
+            current_cluster.append(spanning[idx])
+        else:
+            if len(current_cluster) >= 2:
+                clusters.append([current_cluster, []])
+            current_cluster = [spanning[idx]]
+        last_length = current_length
+    if len(current_cluster) >= 2:
+        clusters.append([current_cluster, []])
+
+    if not clusters:
         return [(spanning, informative)]
 
-    result = [[[], []] for i in range(m + 1)]
-    for idx, l in enumerate(labels):
-        if l == -1:
-            continue
-        result[l][0].append(spanning[idx])
+    return clusters
 
-    return result
+
+# def dbscan_spanning(spanning, informative):
+#     if len(spanning) <= 3:
+#         return [(spanning, informative)]
+#
+#     X = np.array([s.len for s in spanning]).reshape(-1, 1)
+#     X_max = X.max()
+#     if X.min() == X_max:
+#         return [(spanning, informative)]
+#
+#     eps = min(int(X_max * 0.03), int(math.pow(X_max, 0.45)))
+#     eps = max(1, eps)
+#
+#     cl = DBSCAN(eps=eps, min_samples=2)
+#     labels = cl.fit_predict(X)
+#
+#     m = int(max(labels))
+#     if len(labels) == 0 or m == -1:
+#         return [(spanning, informative)]
+#
+#     result = [[[], []] for i in range(m + 1)]
+#     for idx, l in enumerate(labels):
+#         if l == -1:
+#             continue
+#         result[l][0].append(spanning[idx])
+#
+#     # result2 = linear_scan_clustering(spanning, informative)
+#     #
+#     # echo([[i.len for i in clst[0] if i] for clst in result])
+#     # echo([[i.len for i in clst[0] if i] for clst in result2])
+#     # echo()
+#
+#     return result
 
 
 def process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
@@ -963,7 +1008,9 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     if len(spanning_alignments) > 0:
         # if not paired_end:
             candidates = []
-            for spanning_alignments, informative in dbscan_spanning(spanning_alignments, informative):
+
+            # for spanning_alignments, informative in dbscan_spanning(spanning_alignments, informative):
+            for spanning_alignments, informative in linear_scan_clustering(spanning_alignments, informative):
                 candidates.append(process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                      generic_insertions, insert_ppf, to_assemble))
             return candidates
