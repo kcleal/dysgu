@@ -890,7 +890,7 @@ def process_spanning(paired_end, spanning_alignments, divergence, length_extend,
         # 1.6.8
         posA_95 = abs(posA - posA_adjusted)
         posB_95 = abs(posB - posB_adjusted)
-        # echo([sp.len for sp in spanning_alignments], "pos adjusted:", [b[0] for b in size_pos_bounded])
+
         svlen = int(np.median([sp.len for sp in spanning_alignments]))
         posA = spanning_alignments[best_index].pos
         posB = spanning_alignments[best_index].end
@@ -1859,8 +1859,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         for (u, v), d in data.s_between: #.items():
             rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
             rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
-            # echo("rd_u", [rr[1].qname for rr in rd_u])
-            # echo("rd_v", [rr[1].qname for rr in rd_v])
+
             total_reads = len(rd_u) + len(rd_v)
             buffered_reads += total_reads
             if add_to_buffer and buffered_reads > 50000:
@@ -1944,9 +1943,6 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     n_parts = len(data.parts) if data.parts else 0
     events = []
     info = data.info
-    # echo(data.parts)
-    # echo(data.s_between)
-    # echo(data.s_within)
     if data.reads is None:
         data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
