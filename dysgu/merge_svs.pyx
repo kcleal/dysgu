@@ -159,6 +159,8 @@ def consistent_alignment_and_cigars(ei, ej, l_ratio):
 
 
 def jaccard_similarity(set1, set2):
+    if not set1 or not set2:
+        return 0
     intersection = len(set1.intersection(set2))
     union = len(set1.union(set2))
     return intersection / union if union != 0 else 0
@@ -648,7 +650,8 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             best_var_seq = w0.variant_seq
             for k in range(1, len(best)):
                 item = best[k]
-                w0.qnames |= item.qnames
+                if w0.qnames is not None and item.qnames is not None:
+                    w0.qnames |= item.qnames
                 w0.pe += item.pe
                 w0.supp += item.supp
                 w0.sc += item.sc
