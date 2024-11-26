@@ -267,6 +267,7 @@ def cli():
 @click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
+@click.option("--phase", help="Use HP haplotagged reads to phase variants", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
 @click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
@@ -428,6 +429,7 @@ def get_reads(ctx, **kwargs):
 @click.option("--diploid", help="Use diploid model for scoring variants. Use 'False' for non-diploid or poly clonal samples", default="True",
               type=click.Choice(["True", "False"]), show_default=True)
 @click.option("--remap", help=f"Try and remap anomalous contigs to find additional small SVs  [default: {defaults['remap']}]", type=str, callback=add_option_set)
+@click.option("--phase", help="Use HP haplotagged reads to phase variants", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
 @click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
