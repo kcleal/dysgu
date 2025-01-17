@@ -7,7 +7,8 @@ from pysam import CSOFT_CLIP, CHARD_CLIP, CDEL, CINS, CDIFF, CMATCH
 import time
 import datetime
 import os
-from dysgu.map_set_utils import Py_BasicIntervalTree, is_overlapping
+from dysgu.map_set_utils import is_overlapping
+from superintervals import IntervalSet
 from dysgu.graph import AlignmentsSA
 from dysgu.extra_metrics import gap_size_upper_bound
 from dysgu.call_component import n_aligned_bases
@@ -193,7 +194,7 @@ def get_sv_type(r, chrom, chrom2):
 def make_interval_tree(args, infile, sample_name, normal_vcfs):
     if not normal_vcfs:
         return None
-    intervals = defaultdict(lambda: defaultdict(lambda: Py_BasicIntervalTree()))  # chrom : SVTYPE : interval
+    intervals = defaultdict(lambda: defaultdict(lambda: IntervalSet(with_data=True)))  # chrom : SVTYPE : interval
     ignored = defaultdict(int)
     added = 0
     for normal_vcf in normal_vcfs:
@@ -932,7 +933,6 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
                 n_overlpapping += 1
                 if aln.mapq == 0:
                     n_mapq_0 += 1
-            #     covered += 1
             if pos_covered(posA, aln):
                 covered += 1
             if any_nearby_soft_clip(posA, posB, aln, ct, svtype, 30, clip_length=50):
@@ -943,9 +943,6 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
         return "lowSupport"
     if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
         return "lowSupport"
-    # if (not is_paired_end or (svtype in "INVTRA" and not any_contigs)) and too_many_clipped_reads(r, nearby_soft_clips,
-    #                                                                                               support_fraction):
-    #     return "lowSupport"
     if svtype in "INVTRA" and not any_contigs and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
         return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
@@ -977,9 +974,9 @@ def check_for_interval_overlap(intervals, r, chrom_tid, chrom2_tid, posB, filter
 
     svtype = r.info["SVTYPE"]
     if chrom_tid in intervals and svtype in intervals[chrom_tid]:
-        posA_overlaps = set(intervals[chrom_tid][svtype].allOverlappingIntervals(r.pos, r.pos + 1))
+        posA_overlaps = set(intervals[chrom_tid][svtype].find_overlaps(r.pos, r.pos + 1))
         if chrom2_tid in intervals and svtype in intervals[chrom2_tid]:
-            posB_overlaps = set(intervals[chrom2_tid][svtype].allOverlappingIntervals(posB, posB + 1))
+            posB_overlaps = set(intervals[chrom2_tid][svtype].find_overlaps(posB, posB + 1))
             matching_svlens = posA_overlaps.intersection(posB_overlaps)
             if matching_svlens:
                 for other_svlen in matching_svlens:

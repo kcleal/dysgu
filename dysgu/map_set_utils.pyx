@@ -94,6 +94,7 @@ def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
                     merged.append(list(higher)[:3] + [[higher[3]]])
     return merged
 
+
 def load_bed(filepath):
     """
     Load the first 3 columns of a BED file into a list of tuples.
@@ -127,31 +128,6 @@ def load_bed(filepath):
                     continue
 
     return bed_regions
-
-
-cdef class Py_BasicIntervalTree:
-    def __cinit__(self):
-        self.thisptr = new BasicIntervalTree()
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef void add(self, int start, int end, int index):
-        self.thisptr.add(start, end, index)
-    cpdef bint searchInterval(self, int pos, int pos2):
-        return self.thisptr.searchInterval(pos, pos2)
-    cpdef overlappingInterval(self, int pos, int pos2):
-        cdef Interval* res = self.thisptr.overlappingInterval(pos, pos2)
-        if res[0] is None:  # [0] dereferences pointer
-            return None
-        else:
-            return res[0].low, res[0].high
-    cpdef void index(self):
-        self.thisptr.index()
-    cpdef allOverlappingIntervals(self, int start, int end):
-        cdef cpp_vector[int] res
-        self.thisptr.allOverlappingIntervals(start, end, res)
-        return list(res)
-    cpdef int countOverlappingIntervals(self, int pos, int pos2):
-        return self.thisptr.countOverlappingIntervals(pos, pos2)
 
 
 cdef class Py_DiGraph:
@@ -240,9 +216,10 @@ cdef class Py_IntSet:
         return self.thisptr.size()
 
 
-cdef int cigar_exists(r):
-    if r.cigartuples:
-        return 1
+cdef int cigar_exists(AlignedSegment r):
+    cigar_l = r._delegate.core.n_cigar
+    if cigar_l > 0:
+        return 0
     return 0
 
 
@@ -264,19 +241,6 @@ cdef void clip_sizes(AlignedSegment r, int& left, int& right):
     if opp == 4:
         right = <int> cigar_value >> 4
 
-    # c = r.cigartuples
-    # if not c:
-    #     return 0, 0
-    #
-    # cdef int left = 0
-    # cdef int right = 0
-    #
-    # if c[0][0] == 4:
-    #     left = c[0][1]
-    # if c[-1][0] == 4:
-    #     right = c[-1][1]
-    # return left, right
-
 
 cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right):
     cdef uint32_t cigar_value
@@ -297,27 +261,16 @@ cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right):
     if opp == 4 or opp == 5:
         right = <int> cigar_value >> 4
 
-    # c = r.cigartuples
-    # if not c:
-    #     return 0, 0
-    #
-    # cdef int left = 0
-    # cdef int right = 0
-    # c1 = c[0][0]
-    # if c1 == 4 or c1 == 5:
-    #     left = c[0][1]
-    # c1 = c[-1][0]
-    # if c1 == 4 or c1 == 5:
-    #     right = c[-1][1]
-    # return left, right
 
-
-cdef int cigar_clip(r, int clip_length):
-
-    c = r.cigartuples
-    if not c:
+cdef int cigar_clip(AlignedSegment r, int clip_length):
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+    if cigar_l == 0:
         return 0
-    if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
+    cdef int left = 0
+    cdef int right = 0
+    clip_sizes(r, left, right)
+    if left >= clip_length or right >= clip_length:
         return 1
     return 0
 

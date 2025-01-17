@@ -106,11 +106,12 @@ Long reads
 **********
 Dysgy is designed to work with long reads aligned using minimap2 or ngmlr. Use the 'call' pipeline if starting with a bam file, or 'run' if starting with a cram::
 
-    dysgu call --mode pacbio reference.fa temp_dir input.bam > svs.vcf
+    dysgu call --mode pacbio-revio reference.fa temp_dir input.bam > svs.vcf
 
-    dysgu call --mode nanopore reference.fa temp_dir input.bam > svs.vcf
+    dysgu call --mode nanopore-r10 reference.fa temp_dir input.bam > svs.vcf
 
-Using '--mode' will apply preset options that work well with reads from Oxford Nanopore 'V14 kit' (>99% accuracy), or HiFi reads from PacBio Sequel II (or higher platforms). If you are using using reads with higher error rates, or are unsure of the accuracy, it is recommended to set '--divergence auto', to infer a more conservative sequence divergence. The default is set at 0.02 which can be too stringent for lower accuracy reads and will result in more reads being filtered and lower sensitivity::
+Presets are available using the `--mode` option for PacBio `pacbio-sequel2 | pacbio-revio`, and ONT `nanopore-r9 | nanopore-r10`
+If you are using using reads with higher error rates, or are unsure of the read-accuracy, it is recommended to set '--divergence auto', to infer a more conservative sequence divergence. The default is set at 0.02 which can be too stringent for lower accuracy reads and will result in more reads being filtered and lower sensitivity::
 
     dysgu call --divergence auto --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
@@ -159,7 +160,7 @@ If the filter command is used with a single input vcf (no normals or cohort), fi
 
     dysgu filter input.vcf > output.vcf
 
-Filtering is recommended after any merging has been performed, or if you are analysing only a single sample.
+Filtering is generally recommended after any merging has been performed, or if you are analysing only a single sample.
 
 If a normal vcf is supplied, then input calls will be removed if they overlap with events in the normal vcf::
 

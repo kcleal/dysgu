@@ -102,11 +102,6 @@ def get_extension_modules():
                                  extra_compile_args=["-O3", "-std=c++11"],
                                  language="c++"))
 
-    ext_modules.append(Extension("dysgu.sortedintersect.sintersect",
-                                 ["dysgu/sortedintersect/sintersect.pyx"],
-                                 extra_compile_args=["-O3", "-std=c++11"],
-                                 language="c++"))
-
     for item in ["sv2bam", "io_funcs", "graph", "coverage", "consensus", "call_component",
                  "map_set_utils", "cluster", "sv_category", "extra_metrics", "merge_svs"]:
         ext_modules.append(Extension(f"dysgu.{item}",

@@ -2,20 +2,19 @@ import logging
 import numpy as np
 from dysgu.map_set_utils import echo
 from dysgu import re_map
-from dysgu.io_funcs import reverse_complement, intersecter
-from dysgu.consensus import compute_rep
+from dysgu.io_funcs import reverse_complement, intersecter #, iitree
 import zlib
 import math
 import pickle
 import glob
 import gzip
 import pandas as pd
-import warnings
+# import networkx as nx
+# from itertools import combinations
 pd.options.mode.chained_assignment = None
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
-from dysgu.io_funcs import iitree
 from dysgu.consensus import compute_rep
-from collections import defaultdict
+from collections import defaultdict, Counter
 import os
 import warnings
 from sklearn.exceptions import InconsistentVersionWarning
@@ -417,60 +416,6 @@ def bayes_gt(ref, alt, is_dup):
     return lp_homref, lp_het, lp_homalt
 
 
-def get_gt_metric(events, add_gt=True):
-    if add_gt:
-        logging.info("Adding genotype")
-    else:
-        for e in events:
-            e.GQ = '.'
-            e.GT = './.'
-        return events
-
-    for e in events:
-        sup = e.su - e.spanning  # spanning are counted twice
-        ocn = e.outer_cn
-        icn = e.inner_cn
-        if any((ocn < 0, icn < 0, sup < 0)):
-            e.GQ = '.'
-            e.GT = './.'
-            continue
-
-        higher_cn = max(ocn, icn)
-        lower_cn = min(icn, ocn)
-        support_reads = max(int((higher_cn - lower_cn)), sup)
-        ref = int(lower_cn)
-        if e.svtype == "INS":
-            ref = int(higher_cn - sup)
-            if ref < 0:
-                ref = 0
-
-        gt_lplist = bayes_gt(ref, support_reads, e.svtype == "DUP")
-        best, second_best = sorted([(i, j) for i, j in enumerate(gt_lplist)], key=lambda x: x[1], reverse=True)[0:2]
-        gt_idx = best[0]
-        gt_sum = 0
-        for gt in gt_lplist:
-            try:
-                gt_sum += 10**gt
-            except OverflowError:
-                gt_sum += 0
-        if gt_sum > 0:
-            # gt_sum_log = math.log(gt_sum, 10)
-            # sample_qual = abs(-10 * (gt_lplist[0] - gt_sum_log)) # phred-scaled probability site is non-reference in this sample
-            phred_gq = min(-10 * (second_best[1] - best[1]), 200)
-            e.GQ = int(phred_gq)
-            if gt_idx == 1:
-                e.GT = '0/1'
-            elif gt_idx == 2:
-                e.GT = '1/1'
-            elif gt_idx == 0:
-                e.GT = '0/0'
-        else:
-            e.GQ = '.'
-            e.GT = './.'
-
-    return events
-
-
 def del_like(r):
     ocn = r.outer_cn
     icn = r.inner_cn
@@ -605,6 +550,78 @@ def bayes_gt2(ref, alt, is_dup, a, b):
     return lp_het, lp_homalt
 
 
+def fix_inconsistent_gt(events):
+
+    def is_reciprocal_overlapping(x1,x2, y1,y2):
+        if x1 == x2 or y1 == y2:
+            return True
+        if x2 < x1:
+            temp_v = x2
+            x2 = x1
+            x1 = temp_v
+        if y2 < y1:
+            temp_v = y2
+            y2 = y1
+            y1 = temp_v
+        overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
+        if overlap == 0:
+            return False
+        if (overlap / float(abs(x2 - x1))) > 0.8 and (overlap / float(abs(y2 - y1))) > 0.8:
+            return True
+        return False
+
+    events = sorted(events, key=lambda x: (x.chrA, x.posA))
+
+    for i in range(1, len(events)):
+        e1 = events[i-1]
+        e2 = events[i]
+
+        if e1.posA == e2.posA and e1.svtype == "INS" and e2.svtype == "INS":
+            if e1.GT in '1/1':
+                e1.GT = "0/1"
+            if e2.GT in '1/1':
+                e2.GT = "0/1"
+            continue
+
+        if e1.svtype not in 'DELDUPINV' or e1.svtype not in 'DELDUPINV':
+            continue
+
+        if is_reciprocal_overlapping(e1.posA, e1.posB, e2.posA, e2.posB):
+            if e1.GT in '1/1':
+                e1.GT = "0/1"
+            if e2.GT in '1/1':
+                e2.GT = "0/1"
+
+
+# def phase_haplotypes(events):
+#     qname_2_eventidx = defaultdict(set)
+#     for idx, e in enumerate(events):
+#         if e.qnames and e.GT.replace('/', '|') != '1|1' and e.GT[0] != '.':
+#             for qname in e.qnames:
+#                 qname_2_eventidx[qname].add(idx)
+#
+#     G = nx.Graph()
+#     for qname, idxs in qname_2_eventidx.items():
+#         for u, v in combinations(idxs, 2):
+#             if G.has_edge(u, v):
+#                 G[u][v]['weight'] += 1
+#             else:
+#                 G.add_edge(u, v, weight=1)
+#     bad_edges = []
+#     for e in G.edges(data=True):
+#         if e[2]['weight'] < 2:
+#             bad_edges.append(e)
+#     G.remove_edges_from(bad_edges)
+#     echo('G', len(G.edges()))
+#     for component in nx.connected_components(G):
+#         echo('component', component)
+#         gts = [events[idx].GT for idx in component]
+#         echo('gts', gts)
+#         echo(list(f'{e.chrA}:{e.posA}({e.svlen})' for e in [events[idx] for idx in component]))
+#         sub = G.subgraph(component)
+#         echo(sub.edges(data=True))
+
+
 def get_gt_metric2(events, mode, add_gt=True):
     params = {"DEL,TRA": [[0.5, 0.9], [0.2, 1 / 3.0]],
               "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
@@ -622,6 +639,7 @@ def get_gt_metric2(events, mode, add_gt=True):
         return events
 
     for e in events:
+
         a_params, b_params = pp[e.svtype]
         if e.svtype == "DEL" or e.svtype == "TRA":
             ref, support_reads = del_like(e)
@@ -657,44 +675,68 @@ def get_gt_metric2(events, mode, add_gt=True):
             e.GQ = '.'
             e.GT = './.'
 
+    fix_inconsistent_gt(events)
+
+    # any_haps = False
+    for e in events:
+        if e.haplotypes:
+            # any_haps = True
+            n_haps = len(e.haplotypes)
+            if n_haps >= 2:
+                if e.GT == "1/1":
+                    e.GT = "1|1"
+                else:
+                    best_hap = max(e.haplotypes, key=e.haplotypes.get)
+                    if best_hap == 1:
+                        e.GT = "1|0"
+                    else:
+                        e.GT = "0|1"
+            elif n_haps == 1:
+                if 1 in e.haplotypes:
+                    e.GT = "1|0"
+                else:
+                    e.GT = "0|1"
+
+    # phase_haplotypes(events)
+
     return events
 
 
-def filter_microsatellite_non_diploid(potential):
-    tmp_list = defaultdict(list)
-    max_dist = 50
-    half_d = (max_dist * 0.5)
-    candidates = []
-    for idx in range(len(potential)):
-        ei = potential[idx]
-        if (ei.svtype != "DEL" and ei.svtype != "INS") or not ei.variant_seq:
-            continue
-        rep = compute_rep(ei.variant_seq)
-        if rep < 0.4:
-            continue
-        candidates.append(idx)
-        tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
-        if ei.chrA == ei.chrB and ei.svlen > half_d:
-            tmp_list[ei.chrA].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
-
-    nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
-    seen = set([])
-    to_drop = set([])
-    for idx in candidates:
-        if idx in seen:
-            continue
-        ei = potential[idx]
-        ols = set(nc2[ei.chrA].allOverlappingIntervals(ei.posA, ei.posA + 1))
-        ols2 = set(nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1))
-        ols |= ols2
-        ols.add(idx)
-        if len(ols) <= 2:
-            continue
-        bad = sorted([(i, potential[i]) for i in ols], key=lambda x: x[1].su, reverse=True)[2:]
-        for jdx, p in bad:
-            to_drop.add(jdx)
-        seen |= ols
-    return [p for i, p in enumerate(potential) if i not in to_drop]
+# def filter_microsatellite_non_diploid(potential):
+#     tmp_list = defaultdict(list)
+#     max_dist = 50
+#     half_d = (max_dist * 0.5)
+#     candidates = []
+#     for idx in range(len(potential)):
+#         ei = potential[idx]
+#         if (ei.svtype != "DEL" and ei.svtype != "INS") or not ei.variant_seq:
+#             continue
+#         rep = compute_rep(ei.variant_seq)
+#         if rep < 0.4:
+#             continue
+#         candidates.append(idx)
+#         tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
+#         if ei.chrA == ei.chrB and ei.svlen > half_d:
+#             tmp_list[ei.chrA].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
+#
+#     nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
+#     seen = set([])
+#     to_drop = set([])
+#     for idx in candidates:
+#         if idx in seen:
+#             continue
+#         ei = potential[idx]
+#         ols = set(nc2[ei.chrA].allOverlappingIntervals(ei.posA, ei.posA + 1))
+#         ols2 = set(nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1))
+#         ols |= ols2
+#         ols.add(idx)
+#         if len(ols) <= 2:
+#             continue
+#         bad = sorted([(i, potential[i]) for i in ols], key=lambda x: x[1].su, reverse=True)[2:]
+#         for jdx, p in bad:
+#             to_drop.add(jdx)
+#         seen |= ols
+#     return [p for i, p in enumerate(potential) if i not in to_drop]
 
 
 def compressability(events):

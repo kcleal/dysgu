@@ -15,9 +15,9 @@
 
 
 void remove_extraneous_tags(bam1_t* src, int remove_extra_tags) {
-    // needed NM, AS, SA, XS, but remove some of the large offenders to save a bit of disk space
+    // needed NM, AS, SA, XS, HP, but remove some of the large offenders to save a bit of disk space
     int i=0;
-    for (auto &t : {"ML", "MM", "MD"}) {
+    for (auto &t : {"ML", "MM", "MD", "RG", "f5", "st", "sn", "sv"}) {
         uint8_t* data = bam_aux_get(src, t);
         if (data != nullptr) {
             bam_aux_del(src, data);
@@ -26,6 +26,10 @@ void remove_extraneous_tags(bam1_t* src, int remove_extra_tags) {
         if (i >= remove_extra_tags) {
             break;
         }
+    }
+    uint8_t* qual = bam_get_qual(src);
+    for (int i = 0; i < src->core.l_qseq; i++) {
+        qual[i] = 60;
     }
 }
 

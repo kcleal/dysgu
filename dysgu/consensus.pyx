@@ -126,7 +126,6 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
     cdef const unsigned char[:] quals = r.query_qualities
 
-    cdef list cigar = r.cigartuples
     cdef int pos = r.pos
     cdef uint64_t current_pos = pos + 1
     cdef uint64_t o, key
@@ -322,6 +321,7 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
                     new_nodes.push_back(n)
 
             if new_nodes.size() > 0:  # Add new_nodes to fringe
+                fringe.reserve(fringe.size() + new_nodes.size())
                 fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
 
             else:  # No new nodes so w is fully explored
@@ -572,9 +572,16 @@ cdef dict get_consensus(rd, int position, int max_distance):
             "cigar": cigar}
 
 
-cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
+cdef trim_sequence_from_cigar(AlignedSegment r, int approx_pos, int max_distance):
 
-    ct = r.cigartuples
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef int cigar_value
+    cdef int i
+
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+
     seq = r.seq
     cdef int seq_index = 0
     cdef int seq_start = 0
@@ -584,7 +591,7 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
 
     cdef int start_pos = r.pos  # starting genome position of cigar at start_index
     cdef int pos = start_pos  # current genome position
-    cdef int end_index = len(ct) - 1
+    cdef int end_index = cigar_l - 1
     cdef bint started = False
     cdef int opp, length, keep_start, keep_end
 
@@ -593,8 +600,13 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
     cdef int ref_bases = 0
 
     parts = []
-    pos_index = -1
-    for opp, length in ct:
+    cdef int pos_index = -1
+
+    for i in range(cigar_l):
+        cigar_value = <int> cigar_p[i]
+        opp = <int> cigar_value & 15
+        length = <int> cigar_value >> 4
+
         if ref_bases > 300 and pos > approx_pos + 150:
             break
 
@@ -664,11 +676,18 @@ cdef trim_sequence_from_cigar(r, int approx_pos, int max_distance):
 
 
 cpdef dict base_assemble(rd, int position, int max_distance):
+    cdef AlignedSegment r
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef uint32_t opp, cigar_value, length
+    cdef uint32_t i
     if len(rd) == 1:
         r = rd[0]
         rseq = r.seq
-        ct = r.cigartuples
-        if rseq is None or ct is None:
+        cigar_l = r._delegate.core.n_cigar
+        cigar_p = bam_get_cigar(r._delegate)
+
+        if cigar_l == 0 or len(rseq) == 0:
             return {}
         if len(rseq) > 250:
             return trim_sequence_from_cigar(r, position, max_distance)
@@ -677,7 +696,12 @@ cpdef dict base_assemble(rd, int position, int max_distance):
             longest_right_sc = 0
             seq = ""
             begin = 0
-            for opp, length in ct:
+
+            for i in range(cigar_l):
+                cigar_value = cigar_p[i]
+                opp = cigar_value & 15
+                length = cigar_value >> 4
+
                 if opp == 4 or opp == 1:
                     seq += rseq[begin:begin + length].lower()
                     if opp == 4:
@@ -702,36 +726,52 @@ cpdef dict base_assemble(rd, int position, int max_distance):
     return get_consensus(rd, position, max_distance)
 
 
-cpdef contig_from_read_cigar(r, int cigar_index):
-    ct = r.cigartuples
+cpdef contig_from_read_cigar(AlignedSegment r, int cigar_index):
+
     seq = r.seq
-    query_pos = 0  # Position in query sequence
-    ref_pos = r.pos  # Position in reference
-    window_size = 500  # Size of sequence context to include
+
+    cdef int window_size = 500  # Size of sequence context to include
 
     # First pass: find the target position in query coordinates
-    target_query_start = 0
+    cdef int target_query_start = 0
+
+    cdef uint32_t cigar_l
+    cdef uint32_t *cigar_p
+    cdef int op, cigar_value, length
+    cdef int i
+
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+
     for i in range(cigar_index):
-        op, length = ct[i]
-        if op in {0, 1, 4, 7, 8}:  # Operations that consume query sequence
+        cigar_value = <int>cigar_p[i]
+        op = <int>cigar_value & 15
+        length = <int>cigar_value >> 4
+
+        if op == 0 or op == 1 or op == 4 or op == 7 or op == 8:  # Operations that consume query sequence
             target_query_start += length
 
     # Calculate window boundaries in query coordinates
-    target_length = ct[cigar_index][1]
-    window_start = max(0, target_query_start - window_size)
-    window_end = min(len(seq), target_query_start + target_length + window_size)
+    cdef int target_length = <int>cigar_p[cigar_index] >> 4
+    cdef int window_start = max(0, target_query_start - window_size)
+    cdef int window_end = min(len(seq), target_query_start + target_length + window_size)
 
     parts = []
-    query_pos = 0
-    ref_pos = r.pos
-    longest_left_sc = 0
-    longest_right_sc = 0
-    ref_bases = 0
+
+    cdef int query_pos = 0  # Position in query sequence
+    cdef int ref_pos = r.pos  # Position in reference
+    cdef int longest_left_sc = 0
+    cdef int longest_right_sc = 0
+    cdef int ref_bases = 0
 
     cigar_blocks = []
     started = False
     # Second pass: build the sequence
-    for i, (op, length) in enumerate(ct):
+    for i in range(cigar_l):
+        cigar_value = cigar_p[i]
+        op = <int>cigar_value & 15
+        length = <int>cigar_value >> 4
+
         if query_pos > window_end:
             break
 
@@ -781,10 +821,11 @@ cpdef contig_from_read_cigar(r, int cigar_index):
         elif op == 2:  # Deletion
             ref_pos += length
             if started:
-                cigar_blocks.append([length, 2])
+                cigar_blocks.append([2, length])
 
     contig = "".join(parts)
-
+    # echo(r.qname, ct[cigar_index])
+    # echo(contig, ref_bases)
     return {
         "contig": contig,
         "cigar": cigar_blocks,
