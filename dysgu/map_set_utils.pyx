@@ -269,7 +269,7 @@ cdef int cigar_clip(AlignedSegment r, int clip_length):
         return 0
     cdef int left = 0
     cdef int right = 0
-    clip_sizes(r, left, right)
+    clip_sizes(r, &left, &right)
     if left >= clip_length or right >= clip_length:
         return 1
     return 0
