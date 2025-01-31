@@ -322,7 +322,8 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
                     new_nodes.push_back(n)
 
             if new_nodes.size() > 0:  # Add new_nodes to fringe
-                fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
+                for n in new_nodes:
+                    fringe.push_back(n)
 
             else:  # No new nodes so w is fully explored
                 explored.insert(w)
