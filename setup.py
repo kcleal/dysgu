@@ -51,7 +51,8 @@ extras = get_extra_args() + ["-Wno-sign-compare", "-Wno-unused-function",
 def get_extension_modules():
     ext_modules = []
 
-    root = os.path.abspath(os.path.dirname(__file__))
+    # root = os.path.abspath(os.path.dirname(__file__))
+    root = os.path.dirname(__file__)
     libraries, library_dirs, include_dirs, runtime_dirs = [], [], [], []
 
     if "--conda-prefix" in sys.argv or os.getenv('PREFIX'):
@@ -67,7 +68,7 @@ def get_extension_modules():
             raise ValueError("prefix path does not exists")
         libraries = ["hts"]
         library_dirs = [f"{prefix}/lib", numpy.get_include()] + pysam.get_include()
-        include_dirs = [numpy.get_include(), root,
+        include_dirs = [numpy.get_include(), ".",
                         f"{prefix}/include/htslib", f"{prefix}/include"] + pysam.get_include()
         runtime_dirs = [f"{prefix}/lib"]
     else:
@@ -84,7 +85,7 @@ def get_extension_modules():
             htslib = os.path.join(root, "dysgu/htslib")
         libraries = ["hts"]
         library_dirs = [htslib, numpy.get_include(), f"{htslib}/htslib"] + pysam.get_include()
-        include_dirs = [numpy.get_include(), root,
+        include_dirs = [numpy.get_include(), ".",
                         f"{htslib}/htslib", f"{htslib}/cram"] + pysam.get_include()
         runtime_dirs = [htslib]
 
@@ -97,11 +98,6 @@ def get_extension_modules():
     ext_modules.append(Extension("dysgu.edlib.edlib",
                                  ["dysgu/edlib/edlib.pyx", "dysgu/edlib/src/edlib.cpp"],
                                  include_dirs=["dysgu/edlib", numpy.get_include()],
-                                 extra_compile_args=["-O3", "-std=c++11"],
-                                 language="c++"))
-
-    ext_modules.append(Extension("dysgu.sortedintersect.sintersect",
-                                 ["dysgu/sortedintersect/sintersect.pyx"],
                                  extra_compile_args=["-O3", "-std=c++11"],
                                  language="c++"))
 

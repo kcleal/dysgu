@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dysgu"
-version = "1.7.0"
+version = "1.8.0"
 description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }
@@ -38,7 +38,7 @@ Homepage = "https://github.com/kcleal/dysgu"
 dysgu = "dysgu.main:cli"
 
 [tool.setuptools]
-packages = ["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib", "dysgu.sortedintersect"]
+packages = ["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"]
 
 [tool.setuptools.package-data]
 "dysgu" = ["*.pxd", "*.pyx"]

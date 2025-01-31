@@ -8,12 +8,12 @@ import numpy as np
 import random
 from collections import defaultdict, deque
 import networkx as nx
-from dysgu import consensus, io_funcs
+from dysgu import consensus
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import echo
-from dysgu.io_funcs import intersecter
 from cython.operator import dereference
 from functools import cmp_to_key
+from superintervals import IntervalSet
 
 
 ctypedef EventResult EventResult_t
@@ -27,9 +27,9 @@ def get_chrom_key(ei):
     return ei.chrA
 
 
-def compare_subset(potential, int max_dist, int max_comparisons):
+def compare_subset(potential, max_dist, max_comparisons, same_sample):
     tmp_list = defaultdict(list)
-    cdef int idx, jdx, dist1, ci_a
+    cdef int idx, jdx, dist1, ci_a, start, stop
     cdef int half_d = <int>(max_dist * 0.5)
     for idx in range(len(potential)):
         ei = potential[idx]
@@ -39,10 +39,19 @@ def compare_subset(potential, int max_dist, int max_comparisons):
             tmp_list[chrom_key].append(
                 (ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
 
-    nc2 = {k: io_funcs.iitree(v, add_value=True) for k, v in tmp_list.items()}
+    si_sets = {}
+    for k, v in tmp_list.items():
+        iset = IntervalSet(with_data=True)
+        for start, stop, idx in v:
+            iset.add_int_value(start, stop, idx)
+        iset.index()
+        si_sets[k] = iset
+
     for idx in range(len(potential)):
         ei = potential[idx]
-        ols = nc2[get_chrom_key(ei)].allOverlappingIntervals(ei.posA, ei.posA + 1)
+        # ols = nc2[get_chrom_key(ei)].allOverlappingIntervals(ei.posA, ei.posA + 1)
+        ols = si_sets[get_chrom_key(ei)].find_overlaps(ei.posA, ei.posA + 1)
+        # echo(ols, ols2)
         ols = [i for i in set(ols) if i != idx]
         if len(ols) > max_comparisons:
             random.shuffle(ols)
@@ -80,7 +89,7 @@ cdef span_position_distance(ei, ej):
 
 cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_precise, bint j_a_precise,
                      bint j_b_precise, int min_svlen, bint intra=True):
-    cdef int temp, dist_a, dist_b, precise_thresh, mprecise_thresh, same_thresh
+    cdef int temp, dist_a, dist_b, precise_thresh, imprecise_thresh, same_thresh
     cdef bint dist_a_same, dist_a_close, dist_b_same, dist_b_close
     if intra:
         if i_b < i_a:
@@ -113,7 +122,7 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
     return dist_a_close and dist_b_close, dist_a_same and dist_b_same
 
 
-def similar_locations(intra, ei, ej):
+cpdef similar_locations(intra, ei, ej):
     if intra:
         loci_similar, loci_same = break_distances(ei.posA, ei.posB, ej.posA, ej.posB, ei.preciseA, ei.preciseB,
                                                   ej.preciseA, ej.preciseB, min(ei.svlen, ej.svlen))
@@ -158,7 +167,7 @@ def consistent_alignment_and_cigars(ei, ej, l_ratio):
     return True
 
 
-def jaccard_similarity(set1, set2):
+cdef float jaccard_similarity(set1, set2):
     if not set1 or not set2:
         return 0
     intersection = len(set1.intersection(set2))
@@ -166,7 +175,7 @@ def jaccard_similarity(set1, set2):
     return intersection / union if union != 0 else 0
 
 
-def get_consensus_seqs(ei, ej):
+cpdef get_consensus_seqs(ei, ej):
     ci = ei.contig
     ci2 = ei.contig2
     ci_alt = ei.variant_seq
@@ -205,7 +214,7 @@ def contig_pairs_iter(ci, ci2, ci_alt, cj, cj2, cj_alt):
         yield ci_alt, cj_alt
 
 
-cdef int matches_with_max_gap(char *c_cigar, int max_gap):
+cdef int matches_with_max_gap(char *c_cigar, int max_gap, float gaps_tol ):
     # get matching bases, and filter large alignment gaps
     cdef:
         int matches = 0
@@ -221,18 +230,20 @@ cdef int matches_with_max_gap(char *c_cigar, int max_gap):
             op = dereference(c_cigar)
             if op == b'D' or op == b'I':
                 if num > max_gap:
+                    # echo('max gap', num)
                     return 0
                 gaps += num
             if op == b'M':
                 matches += num
             num = 0
         c_cigar += 1
-    if matches and <float>gaps / <float>matches > 0.05:  #todo
+    if matches and <float>gaps / <float>matches > gaps_tol:
+        # echo('gaps vs matches', gaps / matches)
         return 0
     return matches
 
 
-cdef bint bad_insertion_coverage(char *c_cigar, seq, bint is_query):
+cdef bint bad_insertion_coverage(char *c_cigar, seq, bint is_query, float ins_gap_tol):
     # Count the matching bases over the lowercase 'insertion' seq only
     cdef:
         int seq_index = 0
@@ -241,6 +252,7 @@ cdef bint bad_insertion_coverage(char *c_cigar, seq, bint is_query):
         int num = 0
         int i
         char op
+
     while dereference(c_cigar):
         if b'0' <= dereference(c_cigar) <= b'9':
             num = num * 10 + (dereference(c_cigar) - 48)
@@ -258,12 +270,16 @@ cdef bint bad_insertion_coverage(char *c_cigar, seq, bint is_query):
                 seq_index += num
             num = 0
         c_cigar += 1
-    if not matches or <float> gaps / <float> matches > 0.05:  #todo
+    if not matches or <float> gaps / <float> matches > ins_gap_tol:
+        # echo('ins cov', gaps, matches)
         return <bint>True
     return <bint>False
 
 
-cdef bint bad_alignment(alignment, ei, ej, v, paired_end):
+cdef bint bad_alignment(alignment, ei, ej, v, paired_end,
+                        float soft_clip_tol, float ins_gap_tol, float gaps_tol,
+                        int max_gap):
+    # Check if alignment is consistent. ej is optional
     if not alignment:
         return True
 
@@ -278,43 +294,43 @@ cdef bint bad_alignment(alignment, ei, ej, v, paired_end):
     t_right_clip = tlen - te
 
     if not paired_end:
-        soft_clip_tolerance = max(10, min(qlen, tlen) * 0.04)
+        soft_clip_tolerance = max(10, min(qlen, tlen) * soft_clip_tol)
         matches_threshold = min(qlen, tlen) * 0.6
-        max_gap = 15
         ins_cov = 0.8
     else:
         soft_clip_tolerance = 10
         matches_threshold = min(qlen, tlen) * 0.5
-        max_gap = 5
         ins_cov = 0.9
 
     cdef bytes t = alignment.cigar.encode('utf8')
     cdef char *c_cigar = t
 
     # Skip alignments with larger gaps or not many matching bases
-    cdef int matches = matches_with_max_gap(c_cigar, max_gap)
+    cdef int matches = matches_with_max_gap(c_cigar, max_gap, gaps_tol)
     if matches == 0 or matches < matches_threshold:
+        # echo('no match threshold', matches)
         return True
 
     # Keep if aligned inserted bases ~ svlen
-    if (ei.svtype == "INS" and ei.spanning > 0) or (ej.svtype == "INS" and ej.spanning > 0):
+    if (ei.svtype == "INS" and ei.spanning > 0) or (ej and ej.svtype == "INS" and ej.spanning > 0):
         a_into_b = True
         b_into_a = True
         if ei.svtype == "INS" and ei.spanning > 0:
             ei_ins_count = len([i for i in v[0][qs:qe] if i.islower()])
             if ei_ins_count / ei.svlen < ins_cov:
                 a_into_b = False
-            elif bad_insertion_coverage(c_cigar, v[0][qs:qe], <bint>True):
+            elif bad_insertion_coverage(c_cigar, v[0][qs:qe], <bint>True, ins_gap_tol):
                 a_into_b = False
-
-        if ej.svtype == "INS" and ej.spanning > 0:
-            ej_ins_count = len([i for i in v[1][ts:te] if i.islower()])
-            if bad_insertion_coverage(c_cigar, v[1][ts:te], <bint>False):
-                b_into_a = False
-            elif ej_ins_count / ej.svlen < ins_cov:
-                b_into_a = False
-        if not a_into_b and not b_into_a:
-            return True
+        if ej:
+            if ej.svtype == "INS" and ej.spanning > 0:
+                ej_ins_count = len([i for i in v[1][ts:te] if i.islower()])
+                if bad_insertion_coverage(c_cigar, v[1][ts:te], <bint>False, ins_gap_tol):
+                    b_into_a = False
+                elif ej_ins_count / ej.svlen < ins_cov:
+                    b_into_a = False
+            if not a_into_b and not b_into_a:
+                # echo('not a into b')
+                return True
 
     # Keep, if one sequence is more or less completely aligned to the other
     if qs < soft_clip_tolerance and q_right_clip < soft_clip_tolerance:
@@ -324,49 +340,95 @@ cdef bint bad_alignment(alignment, ei, ej, v, paired_end):
 
     if qs > soft_clip_tolerance:
         if q_right_clip > soft_clip_tolerance:
+            # echo('tol 1')
             return True
         if ts > soft_clip_tolerance:
+            # echo('tol 1b', ts, soft_clip_tolerance)
             return True
 
     if ts > soft_clip_tolerance:
         if t_right_clip > soft_clip_tolerance:
+            # echo('tol 3')
             return True
         if qs > soft_clip_tolerance:
+            # echo('tol 4')
             return True
 
     if q_right_clip > soft_clip_tolerance:
         if qs > soft_clip_tolerance:
+            # echo('tol 5')
             return True
         if t_right_clip > soft_clip_tolerance:
+            # echo('tol 6')
             return True
 
     if t_right_clip > soft_clip_tolerance:
         if ts > soft_clip_tolerance:
+            # echo('tol 7')
             return True
         if q_right_clip > soft_clip_tolerance:
+            # echo('tol 8')
             return True
 
     return False  # ok
 
 
 def process_contig_aignments(ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_end, idx, jdx, same_sample):
+    cdef float soft_clip_tol, ins_gaps_tol, gaps_tol
+    cdef int max_gap
+    if ei.type == "nanopore" or ej.type == "nanopore":
+        soft_clip_tol = 0.05
+        ins_gaps_tol = 0.08
+        gaps_tol = 0.07
+        max_gap = 14
+    else:
+        soft_clip_tol = 0.04
+        ins_gaps_tol = 0.05
+        gaps_tol = 0.05
+        max_gap = 12
+
     for v in contig_pairs_iter(ci, ci2, ci_alt, cj, cj2, cj_alt):
         if not v[0] or not v[1]:
             continue
         if same_sample:
             res = consensus.check_contig_match(v[0], v[1], return_int=False)
-            if bad_alignment(res, ei, ej, v, paired_end):
+            # echo(res)
+            if bad_alignment(res, ei, ej, v, paired_end, soft_clip_tol, ins_gaps_tol, gaps_tol, max_gap):
+                # echo('bad alignment')
                 break
-            return idx, jdx
             # echo("---->MERGED3", ei.svlen, ej.svlen, ei.svtype, (idx, jdx))
+            return idx, jdx
 
         elif consensus.check_contig_match(v[0], v[1], return_int=True):
             return idx, jdx
 
 
+# def consistent_break_pattern(ei, ej, ci, ci2, cj, cj2):  # for paired-end reads only
+#     return True
+#     if ei.svtype == ej.svtype:
+#         return True
+#     if ei.svtype in 'INSTRABND' or ei.svtype in 'INSTRABND':
+#         if ei.svtype in 'INSTRABND':
+#             if ej.svtype == 'DUP':  # Make sure merging SV has clip on left-hand-side
+#                 if ej.posA <= ei.posA and ci and ci[0].islower():
+#                     return True
+#             if ej.svtype == 'DEL':
+#                 if ej.posA >= ei.posA and ci and ci[-1].islower():
+#                     return True
+#
+#         elif ej.svtype in 'INSTRABND':
+#             if ei.svtype == 'DUP':
+#                 if ei.posA <= ej.posA and cj and cj[0].islower():
+#                     return True
+#             if ei.svtype == 'DEL':
+#                 if ei.posA >= ej.posA and cj and cj[-1].islower():
+#                     return True
+#     return False  # No merging between other SV types
+
+
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False, max_comparisons=20, procs=1):
-    event_iter = compare_subset(potential, max_dist, max_comparisons)
+    event_iter = compare_subset(potential, max_dist, max_comparisons, same_sample)
 
     seen, disjoint_edges = set(), set()
     out_edges = defaultdict(int)
@@ -386,37 +448,62 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     if not edge:
                         continue
                     else:
+                        out_edges[edge[0]] += 1
+                        out_edges[edge[1]] += 1
                         G.add_edge(edge[0], edge[1], loci_same=True)
             else:
                 for edge in pool.starmap(process_contig_aignments, job):
                     if not edge:
                         continue
                     else:
+                        out_edges[edge[0]] += 1
+                        out_edges[edge[1]] += 1
                         G.add_edge(edge[0], edge[1], loci_same=True)
             job = []
 
         i_id, j_id = ei.event_id, ej.event_id
 
         id_key = (min(idx, jdx), max(idx, jdx))
+        idx, jdx = id_key
 
-        # if id_key not in seen:
-        #     echo("merge candidate", ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype, 'SU=', ei.su, ej.su)
+        if id_key in seen:
+            continue
 
-        if ei.su > avg_su_thresh and ej.su > avg_su_thresh and ei.spanning > 0 and ej.spanning > 0:
+        if not same_sample and ((ei.svtype in {"INS", "DUP"} and ej.svtype not in {"INS", "DUP"}) or ei.svtype != ej.svtype):
+            seen.add(id_key)
+            continue
+        #todo
+        if same_sample and \
+            ei.su > avg_su_thresh and ej.su > avg_su_thresh and \
+            ei.spanning > 0 and ej.spanning > 0 and \
+            ei.svlen != ej.svlen:  # <-- todo THIS
+            seen.add(id_key)
             disjoint_edges.add(id_key)
+            # echo('disjoin added here', ei.su, ej.su, avg_su_thresh)
+            continue
+
+        if not same_sample and ei.sample == ej.sample:
+            seen.add(id_key)
+            disjoint_edges.add(id_key)
+            continue
 
         if (same_sample and i_id == j_id) or \
             (not same_sample and ei.sample == ej.sample) or \
-            id_key in seen or \
             out_edges[idx] > 10 or out_edges[jdx] > 10:
                 # or
                 # (ej.svtype == "DEL" and ei.svtype != "DEL") or
                 # (ei.svtype == "DEL" and ej.svtype != "DEL")):
                 # (ei.svtype in {"INS", "DUP"} and ej.svtype not in {"INS", "DUP"}) or
                 # ei.svtype != ej.svtype):
+                seen.add(id_key)
                 continue
 
         seen.add(id_key)
+
+
+        # if ei.posA == 136934:
+        # if id_key not in seen:
+        # echo("merge candidate", (id_key), ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype, 'SU=', ei.su, ej.su, ei.haplotypes, ej.haplotypes)
 
 
         intra = ei.chrA == ej.chrA and ei.chrB == ej.chrB
@@ -433,17 +520,38 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             G.add_edge(idx, jdx)
             continue
 
-        if ei.spanning > 0 and ej.spanning > 0 and jaccard_similarity(ei.qnames, ej.qnames) > 0.1:
+        if ei.type != ej.type and (ei.type == 'pe' or ej.type == 'pe'):
+            out_edges[idx] += 1
+            out_edges[jdx] += 1
+            G.add_edge(idx, jdx)
+            continue
+
+        if ei.spanning > 0 and ej.spanning > 0 and jaccard_similarity(ei.qnames, ej.qnames) > 0.1: #0.1:
+            # echo('qnames!', ei.qnames, ej.qnames, jaccard_similarity(ei.qnames, ej.qnames))
             disjoint_edges.add(id_key)
             continue
+
+        if ei.posA == ej.posA and ei.svtype == ej.svtype and ei.svlen == ej.svlen:
+            out_edges[idx] += 1
+            out_edges[jdx] += 1
+            G.add_edge(idx, jdx, loci_same=True)
 
         any_contigs_to_check, ci, ci2, ci_alt, cj, cj2, cj_alt = get_consensus_seqs(ei, ej)
 
         if paired_end:
+
+            # Make sure patterns are consistent between different SV calls
+            # if not consistent_break_pattern(ei, ej, ci, ci2, cj, cj2):
+            #     continue
+            # if paired_end and ei.svtype != ej.svtype:
+            #     echo("merge candidate", (id_key), ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype,
+            #          ej.svtype, 'SU=', ei.su, ej.su, ei.haplotypes, ej.haplotypes)
+            #     seen.add(id_key)
+            #     continue
+
             overlap = max(0, min(ei.posA, ej.posA) - max(ei.posB, ej.posB))
             if ei.spanning > 0 and ej.spanning > 0 and overlap == 0 and ei.svtype != "INS":
                 disjoint_edges.add(id_key)
-                # disjoint_nodes.add(j_id)
                 continue
 
         if (same_sample and ei.svtype == "DEL" and ei.su < 3 and ej.su < 3 and
@@ -461,9 +569,13 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             ej_ins_like = ej.svtype in "INSDUPTRA"
             recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
             if ei_ins_like and ej_ins_like and abs(ei.posA - ej.posA) < 50 and (ei.spanning == 0 and ej.spanning == 0 and ei.remap_score == 0 and ej.remap_score == 0):
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
                 G.add_edge(idx, jdx, loci_same=False)
                 continue
             elif recpi_overlap and ei.svtype == "DEL" and ej.svtype == "DEL" and ei.remap_score > 0 and ej.remap_score > 0:
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
                 G.add_edge(idx, jdx, loci_same=False)
                 continue
 
@@ -494,6 +606,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         #     echo("inconsistent cigars")
         #     continue
 
+        # echo('hi', ei.type, ej.type)
+
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             one_is_imprecise = (not ei.preciseA or not ei.preciseB or ei.svlen_precise or
@@ -504,6 +618,10 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 G.add_edge(idx, jdx, loci_same=False)
                 # echo("MERGED2", ei.svlen, ej.svlen, ei.svtype)
                 continue
+            elif ei.svtype == 'TRA' or ei.svtype == 'TRA':
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
+                G.add_edge(idx, jdx, loci_same=False)
         elif procs > 1:
             job.append(
                 (ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_end, idx, jdx, same_sample)
@@ -513,6 +631,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if not edge:
                 continue
             else:
+                # echo("MERGED3", ei.svlen, ej.svlen, ei.svtype)
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
                 G.add_edge(edge[0], edge[1], loci_same=True)
 
     if job:
@@ -520,6 +641,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if not edge:
                 continue
             else:
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
                 G.add_edge(edge[0], edge[1], loci_same=True)
 
     return G, disjoint_edges
@@ -544,15 +667,15 @@ def split_graph_by_forbidden_edges(G, forbidden_pairs, potential):
         return False
 
     work_graph = G.copy()
-
     node_component_size = {}
     components = nx.connected_components(work_graph)
-    for component in components:
+
+    for idx, component in enumerate(components):
         component_size = len(component)
-        max_degree = max(work_graph.degree(u) for u in component)
-        # If one node connects all others, don't cut
-        if max_degree == len(component) - 1:
-            continue
+        if len(component) > 3:  # If one node connects all others, don't cut
+            max_degree = max(work_graph.degree(u) for u in component)
+            if max_degree == len(component) - 1:
+                continue
         for node in component:
             node_component_size[node] = component_size
 
@@ -561,32 +684,30 @@ def split_graph_by_forbidden_edges(G, forbidden_pairs, potential):
             continue
         # For n=3, assume nodes really should be merged. This can arise when
         # one large INDEL matches two smaller INDELS that are adjacent on the same read
-        # if node_component_size.get(node1, 0) <= 3 or node_component_size.get(node2, 0) <= 3:
-        #     continue
+        # Don't cut if graph is triangle, do otherwise
+        component_size = node_component_size.get(node1, 0)
+        if component_size > 50:
+            continue
+        # echo('component size', node1, node2, component_size, work_graph.edges(node1), work_graph.edges(node2))
+        if node_component_size.get(node1, 0) == 3:
+            # if len(work_graph.edges(node1)) == 2 and len(work_graph.edges(node2)) == 2:
+                continue
+        # echo('n out edges', (node1, node2), node_component_size.get(node1, 0), len(work_graph.edges(node1)), len(work_graph.edges(node2)))
         bfs_find_and_cut(node1, node2, work_graph, potential)
 
     final_components = [work_graph.subgraph(c).copy() for c in nx.connected_components(work_graph)]
     return final_components
 
-    # # Splits a graph into components ensuring that specified pairs of nodes are not in the same component
-    # work_graph = G.copy()
-    # for node1, node2 in forbidden_pairs:
-    #     if node1 not in work_graph or node2 not in work_graph:
-    #         continue
-    #     if nx.has_path(work_graph, node1, node2):
-    #         path = nx.shortest_path(work_graph, node1, node2)
-    #         # Remove the middle edge from the path to disconnect them
-    #         middle_idx = len(path) // 2
-    #         work_graph.remove_edge(path[middle_idx-1], path[middle_idx])
-    # components = [work_graph.subgraph(c).copy() for c in nx.connected_components(work_graph)]
-    # return components
-
 
 def srt_func(item1, item2):
-    # if item1.type != "pe" and item1.type != "":
-    #     return 100 + item1.su
     support1 = item1.su + (3 * item1.spanning)
     support2 = item2.su + (3 * item2.spanning)
+    if item1.svtype != item2.svtype:
+        # INS types for paired-end data are often incorrect compared to e.g. DUP/DEL calls, so down weight them
+        if item1.svtype in 'INSTRABND' and item1.type == 'pe':
+            support1 /= 2
+        elif item2.svtype in 'INSTRABND' and item2.type == 'pe':
+            support2 /= 2
     if support1 > support2:
         return -1
     elif support2 > support1:
@@ -712,7 +833,10 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
             if add_contig_b and new_b:
                 w0.contig2 = new_b
         if add_partners:
-            w0.partners = [i.event_id for i in best[1:]]
+            if not w0.partners:
+                w0.partners = [i.event_id for i in best[1:]]
+            else:
+                w0.partners += [i.event_id for i in best[1:]]
         found.append(w0)
 
     return found

@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import sortedcontainers
-from dysgu.sortedintersect import IntervalSet
+from superintervals import IntervalSet
 import logging
 import time
 import datetime
@@ -70,22 +70,57 @@ def mung_df(df, args):
     return df
 
 
-def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, aggressive=False, log_messages=True):
-    if log_messages:
-        logging.info("Merge distance: {} bp".format(merge_dist))
-    df.reset_index(inplace=True)
-    df["event_id"] = df.index
-    df["contig"] = df["contigA"]
-    df["contig2"] = df["contigB"]
-    # Assume:
-    df["preciseA"] = [1] * len(df)
-    df["preciseB"] = [1] * len(df)
-    potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
-    if not merge_within_sample:
-        found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
-                                     aggressive_ins_merge=True,
-                                     same_sample=False)
+def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, progressive):
+
+    samples = list(samples)
+    # logging.info(f"{samples[0]}")
+
+    if progressive:
+
+        d1 = [e for e in potential if e.sample == samples[0]]
         ff = defaultdict(set)
+        for idx, samp in enumerate(samples[1:], start=1):
+            d2 = [e for e in potential if e.sample == samp]
+            pot = d1 + d2
+
+            found = merge_svs.merge_events(pot, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
+                                           aggressive_ins_merge=True, same_sample=False, procs=1)
+
+            for f in found:
+                if f.partners is None:
+                    ff[f.event_id] = set([])
+                else:
+                    # Remove partners from same sample
+                    current = f["table_name"]
+                    targets = set([])
+                    passed = True
+                    for item in f["partners"]:  # Only merge with one row per sample
+                        t_name = df.loc[item]["table_name"]
+                        if t_name != current:
+                            targets.add(t_name)
+                        # if t_name != current and t_name not in targets and len(targets) < len(samples):
+                        #     targets.add(t_name)
+
+                        # elif not aggressive:
+                            # Merged with self event. Can happen with clusters of SVs with small spacing
+                            # e.g. a is merged with b and c, where a is from sample1 and b and c are from sample2
+                            # safer not to merge? otherwise variants can be lost
+                            # passed = False
+                    if passed:  # enumerate support between components
+                        g = f["partners"] + [f["event_id"]]
+                        for t1 in g:
+                            for t2 in g:
+                                if t2 != t1:
+                                    ff[t1].add(t2)
+
+            d1 = found
+            # logging.info(f"Merged {samp} ({idx}/{len(samples)}), cohort SV sites: {len(found)}")
+
+    else:
+        found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
+                                       aggressive_ins_merge=True, same_sample=False)
+        ff = defaultdict(set)
+
         for f in found:
             if f.partners is None:
                 ff[f.event_id] = set([])
@@ -96,7 +131,7 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                 passed = True
                 for item in f["partners"]:  # Only merge with one row per sample
                     t_name = df.loc[item]["table_name"]
-                    if t_name != current and t_name not in targets and len(targets) < n_samples:
+                    if t_name != current and t_name not in targets and len(targets) < len(samples):
                         targets.add(t_name)
 
                     elif not aggressive:
@@ -111,8 +146,24 @@ def merge_df(df, n_samples, merge_dist, tree=None, merge_within_sample=False, ag
                             if t2 != t1:
                                 ff[t1].add(t2)
 
-        df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
-        return df
+    df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
+    return df
+
+
+def merge_df(df, samples, merge_dist, tree=None, merge_within_sample=False, aggressive=False, log_messages=True,
+             progressive=False):
+    if log_messages:
+        logging.info("Merge distance: {} bp".format(merge_dist))
+    df.reset_index(inplace=True)
+    df["event_id"] = df.index
+    df["contig"] = df["contigA"]
+    df["contig2"] = df["contigB"]
+    # Assume:
+    df["preciseA"] = [1] * len(df)
+    df["preciseB"] = [1] * len(df)
+    potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
+    if not merge_within_sample:
+        return merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, progressive)
     else:
         found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=True, add_partners=False,
                                      same_sample=True, aggressive_ins_merge=True)
@@ -312,7 +363,7 @@ def vcf_to_df(path):
                "LEFT_SVINSSEQ": ("left_ins_seq", str),
                "RIGHT_SVINSSEQ": ("right_ins_seq", str),
                }
-
+    # df = df[df.posA == 110156314]
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
     for value_name, value_type in col_map.values():
         if value_name != "posB_tra" and value_name not in df:
@@ -404,7 +455,7 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages, sho
             if show_progress and job_id:
                 logging.info("{} started, records {}".format(job_id, l_before))
             df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
-                          aggressive=args['collapse_nearby'] == "True", log_messages=log_messages)
+                          aggressive=args['collapse_nearby'] == "True", log_messages=log_messages, progressive=args['progressive'])
             if log_messages:
                 logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
             elif show_progress and job_id:
@@ -414,10 +465,9 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages, sho
         dfs.append(df)
 
     df = pd.concat(dfs)
-    if args["merge_across"] == "True":
-        if len(seen_names) > 1:
-            df = merge_df(df, len(seen_names), args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True",
-                          log_messages=log_messages)
+    if args["merge_across"] == "True" and len(seen_names) > 1:
+        df = merge_df(df, seen_names, args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True",
+                      log_messages=log_messages, progressive=args['progressive'])
 
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
 
@@ -457,6 +507,7 @@ class VcfWriter(object):
 
 
 def shard_job(wd, item_path, name, Global, show_progress):
+    # shards are SVTYPE+chromosome
     shards = {}
     vcf = pysam.VariantFile(item_path, 'r')
     contigs = len(vcf.header.contigs)
@@ -594,7 +645,7 @@ def shard_data(args, input_files, Global, show_progress):
     if show_progress:
         logging.info("Processing shards")
     job_args2 = []
-    needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind"]}
+    needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind", "progressive"]}
     merged_outputs = []
     for block_id, names in job_blocks.items():
         job_files = glob.glob(os.path.join(args['wd'], '*' + block_id + '.vcf'))
@@ -676,7 +727,7 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
             cohort_index += 1
             continue
 
-        candidates = [i[2] for i in variant_table[key].search_point(r.pos)]
+        candidates = [i for i in variant_table[key].find_overlaps(r.pos, r.pos+1)]
         if len(candidates):
             # NMB is skipped for older versions of dysgu
             numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB"}
@@ -810,9 +861,12 @@ def make_updated_sample_level_vcfs(samp, samp_split_path, samp_file_path, update
     for i, r in enumerate(samp_file.fetch()):
         key = get_variant_key(r)
         if key not in variant_table:
-            variant_table[key] = IntervalSet(with_data=True, distance_threshold=10_000_000)
+            variant_table[key] = IntervalSet(with_data=True)
         variant_table[key].add(r.pos - 500, r.pos + 500, (i, r))
-        # variant_table[key].add(r.pos - 25, r.pos + 25, (i, r))
+
+    for k, v in variant_table.items():
+        v.index()
+
     samp_file.close()
 
     # First pass, find matching SVs between cohort vcf and input vcf
@@ -907,6 +961,7 @@ def update_cohort_only(args):
 def view_file(args):
 
     t0 = time.time()
+
     if args["input_list"]:
         with open(args["input_list"], "r") as il:
             args["input_files"] += tuple([i.strip() for i in il.readlines()])
@@ -936,7 +991,12 @@ def view_file(args):
         Global.open_files = soft  # we dont know how many file descriptors are already open by the user, assume all
         Global.soft = soft
 
+        args['progressive'] = args['merge_method'] == "progressive" or (args['merge_method'] == "auto" and len(args['input_files']) > 4)
+        prog = '' if args['merge_method'] != "auto" else (': progressive' if args['progressive'] else ': all-vs-all')
+        logging.info(f"Merge method {args['merge_method']}{prog}")
         if not args["wd"]:
+            if args['procs'] > 1:
+                logging.warning(f"A working directory is needed to use multiprocessing with --procs={args['procs']}")
             seen_names, names_list = get_names_list(args["input_files"])
             process_file_list(args, args["input_files"], seen_names, names_list, log_messages=True)
         else:

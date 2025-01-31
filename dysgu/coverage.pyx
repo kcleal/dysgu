@@ -192,7 +192,7 @@ cdef class GenomeScanner:
                         length = <int> cigar_value >> 4
                         if opp == 4 and length >= self.clip_length:
                             good_read = True
-                        elif opp == 2:
+                        elif opp == 2 or opp == 3:
                             index_start += length
                             if length >= self.min_within_size:
                                 good_read = True
@@ -277,7 +277,7 @@ cdef class GenomeScanner:
                         length = <int> cigar_value >> 4
                         if opp == 4 and length >= self.clip_length:
                             good_read = True
-                        elif opp == 2:
+                        elif opp == 2 or opp == 3:
                             index_start += length
                             if length >= self.min_within_size:
                                 good_read = True
@@ -368,7 +368,7 @@ cdef class GenomeScanner:
                         cigar_value = cigar_p[i]
                         opp = <int> cigar_value & 15
                         length = <int> cigar_value >> 4
-                        if opp == 2:
+                        if opp == 2 or opp == 3:
                             index_start += length
                         elif opp == 0 or opp == 7 or opp == 8:
                             end = index_start + length
@@ -434,9 +434,9 @@ cdef class GenomeScanner:
             if insert_median == -1:
                 insert_median, insert_stdev = get_insert_params(inserts)
             if not assume_single:
-                logging.info(f"Inferred read length {approx_read_length}, insert median {insert_median}, insert stdev {insert_stdev}")
+                logging.info(f"Inferred read length: {approx_read_length}, insert median: {insert_median}, insert stdev: {insert_stdev}")
             else:
-                logging.info(f"Inferred read length {approx_read_length}")
+                logging.info(f"Inferred read length: {approx_read_length}")
             if ibam is None:
                 self.last_tell = tell
                 if not self.no_tell:
@@ -452,7 +452,7 @@ cdef class GenomeScanner:
         if total_reads == 0:
             logging.critical("No reads found, finishing")
             return
-        logging.info(f"Total input reads {total_reads}")
+        logging.info(f"Total input reads: {total_reads}")
 
     def add_to_buffer(self, r, n1, tell):
         if self.first == 1 or tell == -1:
@@ -544,6 +544,18 @@ cpdef calculate_coverage(int start, int end, np.int16_t[:] chrom_depth, int bin_
     return total / (end - start), max_cov
 
 
+def switch_AB(r):
+    chrA, posA, cipos95A, contig2 = r.chrA, r.posA, r.cipos95A, r.contig2
+    r.chrA = r.chrB
+    r.posA = r.posB
+    r.cipos95A = r.cipos95B
+    r.chrB = chrA
+    r.posB = posA
+    r.cipos95B = cipos95A
+    r.contig2 = r.contig
+    r.contig = contig2
+
+
 def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov):
     new_events = []
     for r in events:
@@ -554,19 +566,20 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
         if intersecter(regions, r.chrB, r.posB, r.posB + 1):
             br = True
         kind = "extra-regional"
-        switch = False
+
         if not ar and not br:
             if r.chrA == r.chrB and r.posA > r.posB:  # Put non-region first
-                switch = True
+                switch_AB(r)
         if (br and not ar) or (not br and ar):
             kind = "hemi-regional"
             if not br and ar:
-                switch = True
+                switch_AB(r)
+
         if ar and br:
             if r.chrA == r.chrB:
-                rA = regions[r.chrA].overlappingInterval(r.posA, r.posA + 1)
-                rB = regions[r.chrB].overlappingInterval(r.posB, r.posB + 1)
-                if rA and rB and rA[0] == rB[0] and rA[1] == rB[1]:
+                rA = regions[r.chrA].find_overlaps(r.posA, r.posA + 1)
+                rB = regions[r.chrB].find_overlaps(r.posB, r.posB + 1)
+                if rA and rB and rA[0] == rB[0]: # and rA[1] == rB[1]:
                     kind = "intra_regional"
                     if r.posA > r.posB:
                         switch = True
@@ -576,16 +589,7 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
                         switch = True
             else:
                 kind = "inter-regional"
-        if switch:
-            chrA, posA, cipos95A, contig2 = r.chrA, r.posA, r.cipos95A, r.contig2
-            r.chrA = r.chrB
-            r.posA = r.posB
-            r.cipos95A = r.cipos95B
-            r.chrB = chrA
-            r.posB = posA
-            r.cipos95B = cipos95A
-            r.contig2 = r.contig
-            r.contig = contig2
+
         max_depth = 0
         if kind == "hemi-regional":
             chrom_i = r.chrA
@@ -611,6 +615,7 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
                 reads_10kb = reads_10kb_left
             else:
                 reads_10kb = reads_10kb_right
+
         r.kind = kind
         r.raw_reads_10kb = reads_10kb
         if r.chrA != r.chrB:

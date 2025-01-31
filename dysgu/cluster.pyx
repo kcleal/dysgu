@@ -54,7 +54,7 @@ def filter_potential(input_events, tree, regions_only):
 
 def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
                   merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size, max_single_size,
-                  sites_index, paired_end, length_extend, divergence):
+                  sites_index, paired_end, length_extend, divergence, hp_tag):
     potential_events = []
     grp_id = event_id
     cdef EventResult_t event
@@ -71,7 +71,8 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
                                                       sites_index,
                                                       paired_end,
                                                       length_extend,
-                                                      divergence):
+                                                      divergence,
+                                                      hp_tag):
         if event:
             event.grp_id = grp_id
             event.event_id = event_id
@@ -90,7 +91,7 @@ def component_job(infile, component, regions, event_id, clip_length, insert_med,
 def process_job(msg_queue, args):
     job_path, infile_path, bam_mode, ref_path, regions_path, clip_length, insert_median, insert_stdev, insert_ppf, min_support, \
     lower_bound_support, merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size,\
-        max_single_size, sites_index, paired_end, length_extend, divergence = args
+        max_single_size, sites_index, paired_end, length_extend, divergence, hp_tag = args
     regions = io_funcs.overlap_regions(regions_path)
     completed_file = open(job_path[:-3] + "done.pkl", "wb")
     pysam.set_verbosity(0)
@@ -114,7 +115,8 @@ def process_job(msg_queue, args):
                                                    assemble_contigs,
                                                    rel_diffs=rel_diffs, diffs=diffs, min_size=min_size,
                                                    max_single_size=max_single_size, sites_index=sites_index,
-                                                   paired_end=paired_end, length_extend=length_extend, divergence=divergence)
+                                                   paired_end=paired_end, length_extend=length_extend, divergence=divergence,
+                                                   hp_tag=hp_tag)
         if potential_events:
             for res in potential_events:
                 pickle.dump(res, completed_file)
@@ -173,7 +175,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         max_clust_dist = 1 * (int(insert_median + (5 * insert_stdev)))
         if args["merge_dist"] is None:
             args["merge_dist"] = max_clust_dist
-        logging.info(f"Max clustering dist {max_clust_dist}")
+        logging.info(f"Max clustering dist: {max_clust_dist}")
         args["divergence"] = 1
     else:
         if args["divergence"] == "auto":
@@ -181,19 +183,19 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             args["divergence"] = divergence
         else:
             args["divergence"] = float(args["divergence"])
-            logging.info(f"Sequence divergence {args['divergence']}")
+            logging.info(f"Sequence divergence: {args['divergence']}")
         if args["mode"] == "pacbio-sequel2":
             max_dist, max_clust_dist = 35, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 1000
+                args["merge_dist"] = 2000
         elif args["mode"] == "pacbio-revio":
             max_dist, max_clust_dist = 50, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 1000
+                args["merge_dist"] = 2000
         elif args["mode"] == "nanopore-r9" or args["mode"] == "nanopore-r10":
             max_dist, max_clust_dist = 100, 500000
             if args["merge_dist"] is None:
-                args["merge_dist"] = 1000
+                args["merge_dist"] = 2000
 
     # set upper bound on single-partition size
     max_single_size = min(max(args["max_cov"] * 50, 10000), 100000)  # limited between 5000 - 50,000 reads
@@ -211,7 +213,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["parse_probs"], sample_name, args["ignore_sample_sites"] == "True", args["sites_prob"], args["sites_pass_only"] == "True")
 
     cdef Py_SimpleGraph G
-    G, node_to_name, bad_clip_counter, sites_adder, n_aligned_bases = graph.construct_graph(genome_scanner,
+    G, node_to_name, bad_clip_counter, sites_adder, n_aligned_bases, hp_tag_found = graph.construct_graph(genome_scanner,
                                             infile,
                                             max_dist=max_dist,
                                             clustering_dist=max_clust_dist,
@@ -238,8 +240,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             find_n_aligned_bases=find_n_aligned_bases,
                                             position_distance_thresh=args['sd'],
                                             max_search_depth=args['search_depth'],
-                                            max_divergence=max_divergence
+                                            max_divergence=max_divergence,
+                                            no_phase=args['no_phase']
     )
+
     sites_index = None
     if sites_adder:
         sites_index = sites_adder.sites_index
@@ -249,7 +253,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     if args["min_support"] != "auto":
         args["min_support"] = int(args["min_support"])
         min_support = args["min_support"]
-        logging.info(f"Minimum support {args['min_support']}")
+        logging.info(f"Minimum support: {args['min_support']}")
     else:
         auto_support = True
         genome_length = sum(infile.lengths)
@@ -261,12 +265,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         cov_estimate = bases / genome_length
         min_support = round(1.5 + 0.05 * cov_estimate)
         args["min_support"] = min_support
-        logging.info(f"Inferred minimum support {min_support}")
+        logging.info(f"Inferred minimum support: {min_support}")
 
     if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
         lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
     else:
-        lower_bound_support = min_support
+        lower_bound_support = 2
 
     component_path = f"{tdir}/components.bin"
     cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
@@ -300,7 +304,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             job_path = f"{tdir}/job_{n}.pkl"
             proc_args = ( job_path, args["sv_aligns"], args["bam_mode"], args["reference"], args["regions"], clip_length, insert_median, insert_stdev,
                 insert_ppf, min_support, lower_bound_support, merge_dist, regions_only, assemble_contigs,
-                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end, length_extend, divergence )
+                rel_diffs, diffs, min_size, max_single_size, sites_index, paired_end, length_extend, divergence, hp_tag_found )
             p = multiprocessing.Process(target=process_job, args=(msg_queues[n][0], proc_args,), daemon=True)
             p.start()
             consumers.append(p)
@@ -356,7 +360,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                                                    sites_index=sites_index,
                                                                    paired_end=paired_end,
                                                                    length_extend=length_extend,
-                                                                   divergence=divergence)
+                                                                   divergence=divergence,
+                                                                   hp_tag=hp_tag_found)
                         if potential_events:
                             if not low_mem:
                                 block_edge_events += potential_events
@@ -388,7 +393,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                                                    max_single_size=max_single_size,
                                                                    sites_index=sites_index,
                                                                    paired_end=paired_end,
-                                                                   length_extend=length_extend, divergence=divergence)
+                                                                   length_extend=length_extend, divergence=divergence,
+                                                                   hp_tag=hp_tag_found)
                         if potential_events:
                             if not low_mem:
                                 block_edge_events += potential_events
@@ -438,21 +444,26 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     if len(block_edge_events) == 0:
         return [], None
 
-    # for item1 in block_edge_events:
-    #     echo(item1.svtype, item1.su, item1.svlen)
-
-    logging.info("Number of components {}. N candidates {}".format(components_seen, len(block_edge_events)))
+    logging.info("Number of components: {}. N candidates: {}".format(components_seen, len(block_edge_events)))
     keeps = len([i for i in block_edge_events if i.site_info])
     if keeps:
-        logging.info("Number of matching SVs from --sites {}".format(keeps))
+        logging.info("Number of matching SVs from sites: {}".format(keeps))
     preliminaries = []
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
                                                     min_support=min_support)
-        logging.info("Re-alignment of soft-clips done. N candidates {}".format(len(block_edge_events)))
+        logging.info("Re-alignment of soft-clips done. N candidates: {}".format(len(block_edge_events)))
 
     block_edge_events = consensus.contig_info(block_edge_events)  # GC info, repetitiveness
+
+    cdef EventResult_t d
+    for d in block_edge_events:
+        d.type = args["pl"]
+        if d.posA > d.posB and d.chrA == d.chrB:
+            t = d.posA
+            d.posA = d.posB
+            d.posB = t
 
     # Merge across calls
     if args["merge_within"] == "True":
@@ -465,9 +476,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
 
-    # echo("no--->")
-    # for item1 in merged:
-    #     echo(item1.svtype, item1.su, item1.svlen)
     before = len(merged)
 
     if auto_support:
@@ -479,16 +487,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         else:
             merged = [event for event in merged if (event.su >= args["min_support"] or event.site_info)]
 
-    cdef EventResult_t d
-    for d in merged:
-        d.type = args["pl"]
-        if d.posA > d.posB and d.chrA == d.chrB:
-            t = d.posA
-            d.posA = d.posB
-            d.posB = t
-
     coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
+
     preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
 
     if auto_support:

@@ -1,9 +1,10 @@
 #cython: language_level=3, c_string_type=unicode, c_string_encoding=utf8
 import numpy as np
 cimport numpy as np
-from dysgu.map_set_utils cimport unordered_map, EventResult
+from dysgu.map_set_utils cimport unordered_map, EventResult, cigar_clip, clip_sizes
 from dysgu.map_set_utils import merge_intervals
-from dysgu.io_funcs import intersecter, iitree
+from dysgu.io_funcs import intersecter #, iitree
+from superintervals import IntervalSet
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 from libc.math cimport fabs as c_fabs
 from libc.stdint cimport uint32_t
@@ -88,18 +89,24 @@ cdef float soft_clip_qual_corr(reads):
     cdef const unsigned char[:] quals
     cdef int idx, x, i, j
     cdef unordered_map[int, cpp_vector[int]] qq
+    cdef int left_clip, right_clip
+    cdef AlignedSegment r
     for r in reads:
         quals = r.query_qualities
-        if r.cigartuples is None or quals is None:
+        left_clip = 0
+        right_clip = 0
+        clip_sizes(r, left_clip, right_clip)
+
+        if quals is None:
             continue
-        if r.cigartuples[0][0] == 4:
+        if left_clip:
             idx = 0
-            for x in range(r.pos - r.cigartuples[0][1], r.pos):
+            for x in range(r.pos - left_clip, r.pos):
                 qq[x].push_back(quals[idx])
                 idx += 1
-        if r.cigartuples[-1][0] == 4:
-            end_pos = r.query_alignment_end + r.cigartuples[-1][1]
-            for idx in range(-1, - r.cigartuples[-1][1], -1):
+        if right_clip:
+            end_pos = r.query_alignment_end + right_clip
+            for idx in range(-1, - right_clip, -1):
                 qq[end_pos].push_back(quals[idx])
                 end_pos -= 1
 
@@ -364,6 +371,8 @@ cpdef gap_size_upper_bound(AlignedSegment alignment, int cigarindex, int pos_inp
 def sample_level_density(potential, regions, max_dist=50):
     tmp_list = defaultdict(list)
     cdef EventResult_t ei
+    cdef int start, stop, idx
+
     for idx in range(len(potential)):
         ei = potential[idx]
         # Only find density for non-region calls, otherwise too dense to be meaningful
@@ -371,7 +380,17 @@ def sample_level_density(potential, regions, max_dist=50):
             tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
-    nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
+    # nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
+
+    si_sets = {}
+
+    for k, v in tmp_list.items():
+        iset = IntervalSet(with_data=True)
+        for start, stop, idx in v:
+            iset.add_int_value(start, stop, idx)
+        iset.index()
+        si_sets[k] = iset
+
     cdef int vv
     for idx in range(len(potential)):
         ei = potential[idx]
@@ -382,11 +401,13 @@ def sample_level_density(potential, regions, max_dist=50):
         else:
             expected = 1
         if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
-            vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
+            # vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
+            vv = si_sets[ei.chrA].count_overlaps(ei.posA, ei.posA + 1) #countOverlappingIntervals(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
-            vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
+            # vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
+            vv = si_sets[ei.chrB].count_overlaps(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
         neighbors_10kb = 0.
@@ -394,7 +415,8 @@ def sample_level_density(potential, regions, max_dist=50):
         large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
         for c, s, e in large_itv:
             if not intersecter(regions, c, s, e):
-                vv = nc2[c].countOverlappingIntervals(s, e)
+                # vv = nc2[c].countOverlappingIntervals(s, e)
+                vv = si_sets[c].count_overlaps(s, e)
                 neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1
         if neighbors < 0:

@@ -57,6 +57,7 @@ ctypedef enum ReadEnum_t:
     DELETION = 2
     INSERTION = 3
     BREAKEND = 4
+    SKIP = 5
 
 
 cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
@@ -327,11 +328,15 @@ cdef class PairedEndScoper:
         cdef int node_name2 = vitem.second.node_name
         cdef int sep, sep2
         cdef float max_span, span_distance
+
         if (read_enum == DELETION and vitem.second.read_enum == INSERTION) or \
            (read_enum == INSERTION and vitem.second.read_enum == DELETION):
             return True
         if node_name2 == node_name:
             return True
+        # if read_enum != DELETION and pos2 - current_pos > 10:
+        #     return True
+        # echo(vitem.first, vitem.second.pos2, (vitem.second.pos2 - vitem.first), is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2) )
 
         if current_chrom != chrom2 or is_reciprocal_overlapping(current_pos, pos2, vitem.first, vitem.second.pos2):
             sep = c_abs(vitem.first - pos2)
@@ -578,21 +583,25 @@ cdef class NodeToName:
     cdef vector[NodeNameItem] stored_nodes
     def __cinit__(self):
         pass
+
     cdef void append(self, long hash_val, int flag, int pos, int chrom, long tell, int cigar_index, int event_pos):
-        self.stored_nodes.resize(self.stored_nodes.size() + 1);
-        cdef NodeNameItem *nd = &self.stored_nodes.back();
-        nd.hash_val = hash_val
-        nd.flag = flag
-        nd.pos = pos
-        nd.chrom = chrom
-        if tell == -1: # means to look in read buffer instead
+        cdef NodeNameItem node
+        node.hash_val = hash_val
+        node.flag = flag
+        node.pos = pos
+        node.chrom = chrom
+        if tell == -1:  # means to look in read buffer instead
             tell = 0
-        nd.tell = tell
-        nd.cigar_index = cigar_index
-        nd.event_pos = event_pos
-    def __getitem__(self, idx):
-        cdef NodeNameItem *nd = &self.stored_nodes[idx]
+        node.tell = tell
+        node.cigar_index = cigar_index
+        node.event_pos = event_pos
+        self.stored_nodes.push_back(node)
+
+    cpdef NodeName getitem(self, idx):
+        cdef NodeNameItem *nd
+        nd = &self.stored_nodes[idx]
         return NodeName(nd.hash_val, nd.flag, nd.pos, nd.chrom, nd.tell, nd.cigar_index, nd.event_pos)
+
     cdef bint same_template(self, int query_node, int target_node):
         if self.stored_nodes[query_node].hash_val == self.stored_nodes[target_node].hash_val:
             return True
@@ -804,9 +813,8 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
     cdef int bnd_site_node, bnd_site_node2
     cdef int q_start
 
-    # if r.cigartuples[cigar_index][1] == 288 and event_pos > 159764: #r.qname =="m84039_230928_213653_s3/70715399/ccs":
-    #     echo("GRAPH", r.qname, node_name, r.pos, chrom, tell, cigar_index, event_pos, r.cigartuples[cigar_index])
     node_to_name.append(v, flag, r.pos, chrom, tell, cigar_index, event_pos)  # Index this list to get the template_name
+
     genome_scanner.add_to_buffer(r, node_name, tell)  # Add read to buffer
 
     both_overlap = p1_overlaps and p2_overlaps
@@ -1042,19 +1050,18 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                 return
         if read_enum == DELETION or read_enum == INSERTION:
             chrom2 = chrom
-
-            # if r.cigartuples[cigar_index][0] != 1:  # not insertion, use length of cigar event
+            # not insertion, use length of cigar event
             if cigar_p[cigar_index] & 15 != 1:
                 pos2 = cigar_pos2
             else:
                 pos2 = event_pos
 
         add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                     tell, cigar_index, event_pos,
-                     1,
+                     tell, cigar_index, event_pos, 1,
                      chrom2, pos2, clip_scope, read_enum,
                      current_overlaps_roi, next_overlaps_roi,
-                     mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
+                     mm_only, clip_l, site_adder, length_from_cigar,
+                     trust_ins_len, paired_end)
     ###
     else:  # Single end
         current_overlaps_roi, next_overlaps_roi = False, False  # not supported
@@ -1070,24 +1077,23 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                                  j.query_pos,
                                  j.chrom2, j.pos2, clip_scope, j.read_enum,
                                  current_overlaps_roi, next_overlaps_roi,
-                                 mm_only, clip_l, site_adder,
-                                 0,
+                                 mm_only, clip_l, site_adder, 0,
                                  trust_ins_len, paired_end)
         elif read_enum >= 2:  # Sv within read or breakend
             if read_enum == BREAKEND:
                return
             chrom2 = r.rname
-            # if cigar_index != -1 and r.cigartuples[cigar_index][0] != 1:  # If not insertion
             if cigar_index != -1 and cigar_p[cigar_index] & 15 != 1:  # If not insertion
                 pos2 = cigar_pos2
             else:
                 pos2 = event_pos
 
             add_to_graph(G, r, pe_scope, template_edges, node_to_name, genome_scanner, flag, chrom,
-                         tell, cigar_index, event_pos,
-                          1,
+                         tell, cigar_index, event_pos, 1,
                          chrom2, pos2, clip_scope, read_enum,
-                         current_overlaps_roi, next_overlaps_roi, mm_only, clip_l, site_adder, length_from_cigar, trust_ins_len, paired_end)
+                         current_overlaps_roi, next_overlaps_roi,
+                         mm_only, clip_l, site_adder, length_from_cigar,
+                         trust_ins_len, paired_end)
 
 
 cdef struct CigarEvent:
@@ -1233,21 +1239,30 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             int paired_end=1, int read_length=150, bint contigs=True,
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
                             sites=None, bint trust_ins_len=True, bint low_mem=False, temp_dir=".",
-                            bint find_n_aligned_bases=True, float position_distance_thresh=0.8,
-                            int max_search_depth=20, float max_divergence=0.2):
+                            bint find_n_aligned_bases=True, float position_distance_thresh=0.8, int max_search_depth=20,
+                            float max_divergence=0.2, bint no_phase=False):
+    logging.info("Building cluster graph")
 
-    logging.info("Building graph with clustering {} bp".format(clustering_dist))
-    cdef TemplateEdges_t template_edges = TemplateEdges()  # Edges are added between alignments from same template, after building main graph
+    # Edges are added between alignments from same template, after building main graph
+    cdef TemplateEdges_t template_edges = TemplateEdges()
 
-    node_to_name = NodeToName()  # Map of nodes -> read ids
-    cdef ClipScoper_t clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,  # Keeps track of local reads
+    # Map of nodes -> read ids
+    cdef NodeToName node_to_name = NodeToName()
+
+    # Keeps track of local reads
+    cdef ClipScoper_t clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth, read_length=read_length)
+
     # Infers long-range connections, outside local scope using pe information
     cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh, max_search_depth)
 
+    # Counts poor quality soft-clips
     bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
+
+    # The main graph for clustering variant information
     cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
+
     site_adder = None
     if sites:
         site_adder = SiteAdder(sites)
@@ -1270,6 +1285,10 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef int elide_threshold = 150
     cdef int left_clip_size, right_clip_size
 
+    cdef bint hp_tag_found = False
+    cdef int n_checked_for_hp_tag = 0
+    if no_phase:
+        n_checked_for_hp_tag = 10_001
     for chunk in genome_scanner.iter_genome():
         for r, tell in chunk:
             if r.mapq < mapq_thresh:
@@ -1281,9 +1300,14 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
             events_to_add.clear()
             cigar_l = r._delegate.core.n_cigar
             cigar_p = bam_get_cigar(r._delegate)
-            
-            if not paired_end and r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
-                continue
+            if not paired_end:
+                if n_checked_for_hp_tag < 10_000:
+                    n_checked_for_hp_tag += 1
+                    if r.has_tag("HP"):
+                        hp_tag_found = <bint>True
+                        n_checked_for_hp_tag = 10_001
+                if r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
+                    continue
 
             if cigar_l > 1:
                 if r.has_tag("SA"):
@@ -1309,6 +1333,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     if opp == 1:
                         if length >= min_sv_size:
                             # Insertion type
+                            # if event_pos < 998000 or event_pos > 999000:
+                            #     continue
                             pos2 = event_pos + length
                             # if not events_to_add.empty() and event_pos - events_to_add.back().event_pos < elide_threshold and events_to_add.back().read_enum == ReadEnum_t.INSERTION:
                             #     continue
@@ -1322,6 +1348,12 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             #     continue
                             # else:
                             events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
+                            added = True
+                        event_pos += length
+                    elif opp == 3:
+                        if length >= min_sv_size:
+                            pos2 = event_pos + length
+                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.SKIP))
                             added = True
                         event_pos += length
                     else:
@@ -1399,7 +1431,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     add_template_edges(G, template_edges)
     if site_adder:
         logging.info(f"Added {site_adder.count} variants from input sites")
-    return G, node_to_name, bad_clip_counter, site_adder, n_aligned_bases
+    return G, node_to_name, bad_clip_counter, site_adder, n_aligned_bases, hp_tag_found
 
 
 cdef BFS_local(Py_SimpleGraph G, int source, unordered_set[int]& visited ):
@@ -1576,6 +1608,7 @@ cdef class GraphComponent:
                 "n2n": self.n2n,
                 "info": self.info}
 
+
 cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGraph G, int min_support, int procs, int paired_end,
                      sites_index):
     n2n = {}
@@ -1585,6 +1618,8 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     info = None
     if min_support >= 3 and len(component) == 1 and not sites_index:
         return
+
+    cdef NodeName key
     for v in component:
         # Add information from --sites, keep any read found that link to --sites variants
         if sites_index and v in sites_index:
@@ -1596,7 +1631,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             continue
         if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
-        key = node_to_name[v]
+        key = node_to_name.getitem(v)
         if key.cigar_index != -1:
             support_estimate += 2
         else:

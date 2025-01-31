@@ -3,10 +3,12 @@
 import numpy as np
 cimport numpy as np
 import logging
-from dysgu.map_set_utils import merge_intervals, Py_BasicIntervalTree, echo
+
+from dysgu.map_set_utils import merge_intervals, echo #, Py_BasicIntervalTree,
 from collections import defaultdict
 from importlib.metadata import version
 import sortedcontainers
+from superintervals import IntervalSet
 import pandas as pd
 import os
 import sys
@@ -64,19 +66,19 @@ cpdef list get_bed_regions(bed):
     return b
 
 
-def iitree(a, add_value=False):
-    # sorted input list a will not lead to a balanced binary-search-tree if added in sequential order
-    # This function reorders the list to ensure a balanced BST when added using Py_BasicIntervalTree
-    tree = Py_BasicIntervalTree()
-    index = 0
-    for h in a:
-        if add_value:
-            tree.add(h[0], h[1], h[2])
-        else:
-            tree.add(h[0], h[1], index)
-        index += 1
-    tree.index()
-    return tree
+# def iitree(a, add_value=False):
+#     # sorted input list a will not lead to a balanced binary-search-tree if added in sequential order
+#     # This function reorders the list to ensure a balanced BST when added using Py_BasicIntervalTree
+#     tree = Py_BasicIntervalTree()
+#     index = 0
+#     for h in a:
+#         if add_value:
+#             tree.add(h[0], h[1], h[2])
+#         else:
+#             tree.add(h[0], h[1], index)
+#         index += 1
+#     tree.index()
+#     return tree
 
 
 cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
@@ -90,14 +92,26 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
         chrom_intervals[c].append((s, e))
 
     # create balanced ordering
-    chrom_intervals = {k: iitree(v) for k, v in chrom_intervals.items()}
-    return chrom_intervals
+    # chrom_intervals = {k: iitree(v) for k, v in chrom_intervals.items()}
+
+    si_sets = {}
+    cdef int idx = 0
+    for k, v in chrom_intervals.items():
+        iset = IntervalSet(with_data=True)
+        for start, stop in v:
+            iset.add_int_value(start, stop, idx)
+            idx += 1
+        iset.index()
+        si_sets[k] = iset
+
+    # return chrom_intervals
+    return si_sets
 
 
 cpdef int intersecter(tree, chrom, int start, int end):
     cdef bint found = 0
     if tree and chrom in tree:
-        found = tree[chrom].searchInterval(start, end)
+        found = tree[chrom].any_overlaps(start, end) #searchInterval(start, end)
     return found
 
 

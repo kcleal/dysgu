@@ -82,34 +82,6 @@ cdef extern from "find_reads.hpp" nogil:
         void set_max_cov(int)
 
 
-cdef extern from "graph_objects.hpp":
-    ctypedef struct Interval:
-        int low
-        int high
-
-
-cdef extern from "graph_objects.hpp":
-    cdef cppclass BasicIntervalTree:
-        BasicIntervalTree()
-        void add(int, int, int)
-        bint searchInterval(int, int)
-        Interval* overlappingInterval(int, int)
-        void index()
-        void allOverlappingIntervals(int, int, cpp_vector[int])
-        int countOverlappingIntervals(int, int)
-
-
-cdef class Py_BasicIntervalTree:
-    cdef BasicIntervalTree *thisptr
-
-    cpdef void add(self, int start, int end, int index)
-    cpdef bint searchInterval(self, int pos, int pos2)
-    cpdef overlappingInterval(self, int pos, int pos2)
-    cpdef void index(self)
-    cpdef allOverlappingIntervals(self, int pos, int pos2)
-    cpdef int countOverlappingIntervals(self, int pos, int pos2)
-
-
 cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass DiGraph:
         DiGraph() nogil
@@ -188,7 +160,7 @@ cdef class Py_SimpleGraph:
 cdef extern from "graph_objects.hpp" nogil:
     cdef cppclass Int2IntMap:
         Int2IntMap() nogil
-        void insert(int, int) nogil
+        void insert(int, int) noexcept nogil
         void erase(int) nogil
         int has_key(int) nogil
         int get(int) nogil
@@ -200,7 +172,7 @@ cdef class Py_Int2IntMap:
     """Fast integer to integer unordered map using tsl::robin-map"""
     cdef Int2IntMap *thisptr
 
-    cdef void insert(self, int key, int value) nogil
+    cdef void insert(self, int key, int value) noexcept nogil
     cdef void erase(self, int key) nogil
     cdef int has_key(self, int key) nogil
     cdef int get(self, int key) nogil
@@ -292,24 +264,24 @@ cdef extern from "<map>" namespace "std" nogil:
         iterator upper_bound(const T&)
         const_iterator const_upper_bound "upper_bound"(const T&)
 
-cdef int cigar_exists(r)
+cdef int cigar_exists(AlignedSegment r)
 
 cdef void clip_sizes(AlignedSegment r, int* left, int* right)
 
 cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right)
 
-cdef int cigar_clip(r, int clip_length)
+cdef int cigar_clip(AlignedSegment r, int clip_length)
 
-cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil
+cpdef int is_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
 
 cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2)
 
-cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
-cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil
+cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) noexcept nogil
 
-cdef float position_distance(int x1, int x2, int y1, int y2) nogil
+cdef float position_distance(int x1, int x2, int y1, int y2) noexcept nogil
 
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""
@@ -325,4 +297,4 @@ cdef class EventResult:
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, contig_cigar, contig2_cigar, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
-        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info, qnames
+        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info, qnames, haplotypes

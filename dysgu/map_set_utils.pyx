@@ -94,6 +94,7 @@ def merge_intervals(intervals, srt=True, pad=0, add_indexes=False):
                     merged.append(list(higher)[:3] + [[higher[3]]])
     return merged
 
+
 def load_bed(filepath):
     """
     Load the first 3 columns of a BED file into a list of tuples.
@@ -127,31 +128,6 @@ def load_bed(filepath):
                     continue
 
     return bed_regions
-
-
-cdef class Py_BasicIntervalTree:
-    def __cinit__(self):
-        self.thisptr = new BasicIntervalTree()
-    def __dealloc__(self):
-        del self.thisptr
-    cpdef void add(self, int start, int end, int index):
-        self.thisptr.add(start, end, index)
-    cpdef bint searchInterval(self, int pos, int pos2):
-        return self.thisptr.searchInterval(pos, pos2)
-    cpdef overlappingInterval(self, int pos, int pos2):
-        cdef Interval* res = self.thisptr.overlappingInterval(pos, pos2)
-        if res[0] is None:  # [0] dereferences pointer
-            return None
-        else:
-            return res[0].low, res[0].high
-    cpdef void index(self):
-        self.thisptr.index()
-    cpdef allOverlappingIntervals(self, int start, int end):
-        cdef cpp_vector[int] res
-        self.thisptr.allOverlappingIntervals(start, end, res)
-        return list(res)
-    cpdef int countOverlappingIntervals(self, int pos, int pos2):
-        return self.thisptr.countOverlappingIntervals(pos, pos2)
 
 
 cdef class Py_DiGraph:
@@ -210,7 +186,7 @@ cdef class Py_Int2IntMap:
         self.thisptr = new Int2IntMap()
     def __dealloc__(self):
         del self.thisptr
-    cdef void insert(self, int key, int value) nogil:
+    cdef void insert(self, int key, int value) noexcept nogil:
         self.thisptr.insert(key, value)
     cdef void erase(self, int key) nogil:
         self.thisptr.erase(key)
@@ -240,9 +216,10 @@ cdef class Py_IntSet:
         return self.thisptr.size()
 
 
-cdef int cigar_exists(r):
-    if r.cigartuples:
-        return 1
+cdef int cigar_exists(AlignedSegment r):
+    cigar_l = r._delegate.core.n_cigar
+    if cigar_l > 0:
+        return 0
     return 0
 
 
@@ -264,19 +241,6 @@ cdef void clip_sizes(AlignedSegment r, int* left, int* right):
     if opp == 4:
         right[0] = <int> cigar_value >> 4
 
-    # c = r.cigartuples
-    # if not c:
-    #     return 0, 0
-    #
-    # cdef int left = 0
-    # cdef int right = 0
-    #
-    # if c[0][0] == 4:
-    #     left = c[0][1]
-    # if c[-1][0] == 4:
-    #     right = c[-1][1]
-    # return left, right
-
 
 cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right):
     cdef uint32_t cigar_value
@@ -297,32 +261,21 @@ cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right):
     if opp == 4 or opp == 5:
         right[0] = <int> cigar_value >> 4
 
-    # c = r.cigartuples
-    # if not c:
-    #     return 0, 0
-    #
-    # cdef int left = 0
-    # cdef int right = 0
-    # c1 = c[0][0]
-    # if c1 == 4 or c1 == 5:
-    #     left = c[0][1]
-    # c1 = c[-1][0]
-    # if c1 == 4 or c1 == 5:
-    #     right = c[-1][1]
-    # return left, right
 
-
-cdef int cigar_clip(r, int clip_length):
-
-    c = r.cigartuples
-    if not c:
+cdef int cigar_clip(AlignedSegment r, int clip_length):
+    cigar_l = r._delegate.core.n_cigar
+    cigar_p = bam_get_cigar(r._delegate)
+    if cigar_l == 0:
         return 0
-    if (c[0][0] == 4 and c[0][1] >= clip_length) or (c[-1][0] == 4 and c[-1][1] >= clip_length):
+    cdef int left = 0
+    cdef int right = 0
+    clip_sizes(r, left, right)
+    if left >= clip_length or right >= clip_length:
         return 1
     return 0
 
 
-cpdef int is_overlapping(int x1, int x2, int y1, int y2) nogil:
+cpdef int is_overlapping(int x1, int x2, int y1, int y2) noexcept nogil:
     return int(max(x1, y1) <= min(x2, y2))
 
 
@@ -341,7 +294,7 @@ cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2):
     cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
     return min( overlap / float(c_abs(x2 - x1)),  overlap / float(c_abs(y2 - y1)) )
 
-cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) nogil:
+cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nogil:
     # Insertions have same x1/y1 position, use another measure
     if x1 == x2 or y1 == y2:
         return True
@@ -389,7 +342,7 @@ cdef bint span_position_distance2(int x1, int x2, int y1, int y2):
 
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum,
-                                 bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) nogil:
+                                 bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) noexcept nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
@@ -436,7 +389,7 @@ cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, flo
     return 0
 
 
-cdef float position_distance(int x1, int x2, int y1, int y2) nogil:
+cdef float position_distance(int x1, int x2, int y1, int y2) noexcept nogil:
     # https://github.com/eldariont/svim/blob/master/src/svim/SVIM_clustering.py
     cdef int span1, span2
     cdef float center1, center2
