@@ -223,7 +223,7 @@ cdef int cigar_exists(AlignedSegment r):
     return 0
 
 
-cdef void clip_sizes(AlignedSegment r, int& left, int& right):
+cdef void clip_sizes(AlignedSegment r, int* left, int* right):
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
@@ -235,14 +235,14 @@ cdef void clip_sizes(AlignedSegment r, int& left, int& right):
     cigar_value = cigar_p[0]
     opp = <int> cigar_value & 15
     if opp == 4:
-        left = <int> cigar_value >> 4
+        left[0] = <int> cigar_value >> 4
     cigar_value = cigar_p[cigar_l - 1]
     opp = <int> cigar_value & 15
     if opp == 4:
-        right = <int> cigar_value >> 4
+        right[0] = <int> cigar_value >> 4
 
 
-cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right):
+cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right):
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
@@ -255,11 +255,11 @@ cdef void clip_sizes_hard(AlignedSegment r, int& left, int& right):
     cigar_value = cigar_p[0]
     opp = <int> cigar_value & 15
     if opp == 4 or opp == 5:
-        left = <int> cigar_value >> 4
+        left[0] = <int> cigar_value >> 4
     cigar_value = cigar_p[cigar_l - 1]
     opp = <int> cigar_value & 15
     if opp == 4 or opp == 5:
-        right = <int> cigar_value >> 4
+        right[0] = <int> cigar_value >> 4
 
 
 cdef int cigar_clip(AlignedSegment r, int clip_length):

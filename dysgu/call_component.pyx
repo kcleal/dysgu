@@ -105,7 +105,7 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
     cdef float clipped_base_quals = 0
     cdef int left_clip = 0
     cdef int right_clip = 0
-    clip_sizes(a, left_clip, right_clip)
+    clip_sizes(a, &left_clip, &right_clip)
     clipped_bases = left_clip + right_clip
     cdef const unsigned char[:] quals = a.query_qualities
     cdef int i
@@ -154,7 +154,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.n_unmapped_mates += 1
         left_clip = 0
         right_clip = 0
-        clip_sizes_hard(a, left_clip, right_clip)
+        clip_sizes_hard(a, &left_clip, &right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         has_sa = a.has_tag("SA")
@@ -206,7 +206,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
         left_clip = 0
         right_clip = 0
-        clip_sizes(a, left_clip, right_clip)
+        clip_sizes(a, &left_clip, &right_clip)
         if left_clip or right_clip:
             er.sc += 1
         if a.flag & 1:  # paired read
@@ -222,7 +222,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             er.NP += 1
         left_clip = 0
         right_clip = 0
-        clip_sizes_hard(a, left_clip, right_clip)
+        clip_sizes_hard(a, &left_clip, &right_clip)
         if left_clip > 0 and right_clip > 0:
             er.double_clips += 1
         if a.has_tag("SA"):
@@ -507,7 +507,7 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
         v_item.svtype = "BND"
         left_clip = 0
         right_clip = 0
-        clip_sizes(aln, left_clip, right_clip)
+        clip_sizes(aln, &left_clip, &right_clip)
         clip_s = max(left_clip, right_clip)
         rand_insert_pos = 100 if not clip_s else clip_s
     v_item.inferred_sv_len = 0 if rand_insert_pos < 0 else rand_insert_pos
@@ -945,6 +945,7 @@ cdef linear_scan_clustering(spanning, bint hp_tag):
 
 def process_spanning(bint paired_end, spanning_alignments, float divergence, length_extend, informative,
                      generic_insertions, float insert_ppf, bint to_assemble, bint hp_tag):
+
     # echo("PROCESS SPANNING")
     cdef int min_found_support = 0
     cdef str svtype, jointype
@@ -996,6 +997,7 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
 
         # 1.7.0
         # svlen = int(np.median([sp.cigar_item.len for sp in spanning_alignments]))
+
         posA = spanning_alignments[best_index].pos
         posB = spanning_alignments[best_index].end
         er.preciseA = True
@@ -2020,8 +2022,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
         for (u, v), d in data.s_between: #.items():
             rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
             rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
-            # echo("rd_u", [rr[1].qname for rr in rd_u])
-            # echo("rd_v", [rr[1].qname for rr in rd_v])
+
             total_reads = len(rd_u) + len(rd_v)
             buffered_reads += total_reads
             if add_to_buffer and buffered_reads > 50000:
@@ -2106,9 +2107,6 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     n_parts = len(data.parts) if data.parts else 0
     events = []
     info = data.info
-    # echo(data.parts)
-    # echo(data.s_between)
-    # echo(data.s_within)
     if data.reads is None:
         data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
