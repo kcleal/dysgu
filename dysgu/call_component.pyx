@@ -1459,8 +1459,8 @@ cdef tuple mask_soft_clips(AlignedSegment a, AlignedSegment b):
     cdef int left_clipB = 0
     cdef int right_clipB = 0
 
-    clip_sizes_hard(a, left_clipA, right_clipA)
-    clip_sizes_hard(b, left_clipB, right_clipB)
+    clip_sizes_hard(a, &left_clipA, &right_clipA)
+    clip_sizes_hard(b, &left_clipB, &right_clipB)
 
     cdef int a_template_start = 0
     cdef int b_template_start = 0
@@ -1643,7 +1643,8 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
 
     cdef AlignedSegment a, b
     cdef uint32_t cigar_l_a, cigar_l_b
-    cdef uint32_t *cigar_p_a, *cigar_p_b
+    cdef uint32_t *cigar_p_a
+    cdef uint32_t *cigar_p_b
 
 
     for qname in [k for k in grp_u if k in grp_v]:  # Qname found on both sides

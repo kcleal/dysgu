@@ -249,6 +249,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         sites_index = sites_adder.sites_index
     logging.info("Graph constructed")
 
+    if not args['no_phase'] and hp_tag_found:
+        logging.info("Using HP tag")
+
     auto_support = False
     if args["min_support"] != "auto":
         args["min_support"] = int(args["min_support"])

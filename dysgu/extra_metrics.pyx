@@ -95,7 +95,7 @@ cdef float soft_clip_qual_corr(reads):
         quals = r.query_qualities
         left_clip = 0
         right_clip = 0
-        clip_sizes(r, left_clip, right_clip)
+        clip_sizes(r, &left_clip, &right_clip)
 
         if quals is None:
             continue
