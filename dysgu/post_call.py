@@ -648,11 +648,11 @@ def join_phase_sets(events, ps_id):
         if not e.phase_set or isinstance(e.phase_set, str):
             continue
         assert isinstance(e.phase_set, list)
-        new_p = list(set([new_phase_set[n] for n in e.phase_set if n in new_phase_set]))[0]
+        new_p = list(set([new_phase_set[n] for n in e.phase_set if n in new_phase_set]))
         if not new_p:
             e.phase_set = ''
         else:
-            e.phase_set = str(new_p)
+            e.phase_set = str(new_p[0])
 
 
 def get_hp_format(events):
