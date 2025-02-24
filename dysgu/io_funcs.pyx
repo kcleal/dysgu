@@ -138,13 +138,13 @@ cpdef list col_names(small_output):
 
     if small_output:
         return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise", "rep", "gc",
-          ["GT", "GQ", "MAPQpri", "MAPQsupp", "su", "spanning", "pe", "supp", "sc", "bnd", "NMbase",
+          ["GT", "GQ", "phase_set", "haplotype", "a_freq", "MAPQpri", "MAPQsupp", "su", "spanning", "pe", "supp", "sc", "bnd", "NMbase",
          "raw_reads_10kb", "neigh10kb", "plus",
                 "minus", "remap_score", "remap_ed", "bad_clip_count", "fcc", "inner_cn", "outer_cn", "prob"]
             ]
     else:
         return ["chrA", "posA", "chrB", "posB", "sample", "event_id", "grp_id", "n_in_grp", "kind", "type", "svtype", "join_type", "cipos95A", "cipos95B", 'contigA', 'contigB', "svlen", "svlen_precise",  "rep", "gc",
-          ["GT", "GQ", "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
+          ["GT", "GQ", "phase_set", "haplotype", "a_freq",  "NMpri", "NMsupp", "NMbase", "MAPQpri", "MAPQsupp", "NP",
           "maxASsupp",  "su", "spanning", "pe", "supp", "sc", "bnd", "sqc", "scw", "clip_qual_ratio", "block_edge",
          "raw_reads_10kb", "mcov",
           "linked", "neigh", "neigh10kb",  "ref_bases", "plus",
@@ -157,11 +157,6 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     rep, repsc, lenprec = 0, 0, 1
     mean_prob, max_prob = None, None
     debug = False
-    # if abs(r['posA'] - 39084726) < 10:
-    #     echo('found', dict(r))
-    #     echo(len(format_f) > 1)
-    #     echo([(int(v["su"]), v["posA"], v["event_id"], k) for k, v in df_rows.items()])
-    #     debug = True
     if len(format_f) > 1:
         best = sorted([(int(v["su"]), k) for k, v in df_rows.items()], reverse=True)[0][1]
         probs = [v["prob"] for k, v in df_rows.items()]
@@ -273,9 +268,9 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
         info_extras += [f"MeanPROB={round(mean_prob, 3)}", f"MaxPROB={round(max_prob, 3)}"]
 
     if small_output:
-        fmt_keys = "GT:GQ:MAPQP:MAPQS:SU:WR:PE:SR:SC:BND:NMB:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
+        fmt_keys = "GT:GQ:PSET:HP:AF:MAPQP:MAPQS:SU:WR:PE:SR:SC:BND:NMB:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
     else:
-        fmt_keys = "GT:GQ:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
+        fmt_keys = "GT:GQ:PSET:HP:AF:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     if "variant_seq" in r and isinstance(r["variant_seq"], str):
         if r['svtype'] == "INS" or r.variant_seq:
@@ -318,13 +313,13 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
 
 def get_fmt(r, small_output):
     if small_output:
-        v = [r["GT"], r["GQ"], r['MAPQpri'], r['MAPQsupp'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'], r['NMbase'],
+        v = [r["GT"], r["GQ"], r["phase_set"], r["haplotype"], r['a_freq'], r['MAPQpri'], r['MAPQsupp'], r['su'], r['spanning'], r['pe'], r['supp'], r['sc'], r['bnd'], r['NMbase'],
              r['raw_reads_10kb'], r['neigh10kb'], r["plus"], r["minus"], r["remap_score"], r["remap_ed"],
              r["bad_clip_count"], round(r["fcc"], 3), round(r["inner_cn"], 3), round(r["outer_cn"], 3), r['prob']
              ]
         return v
     else:
-        v = [r["GT"], r["GQ"], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
+        v = [r["GT"], r["GQ"],  r["phase_set"], r["haplotype"], r['a_freq'], r['NMpri'], r['NMsupp'], r['NMbase'], r['MAPQpri'],
              r['MAPQsupp'], r['NP'], r['maxASsupp'], r['su'], r['spanning'], r['pe'], r['supp'],
              r['sc'], r['bnd'], round(r['sqc'], 2), round(r['scw'], 1), round(r['clip_qual_ratio'], 3), r['block_edge'], r['raw_reads_10kb'], round(r['mcov'], 2), int(r['linked']), r['neigh'], r['neigh10kb'],
              r['ref_bases'], r["plus"], r["minus"], round(r["strand_binom_t"], 4), r['n_gaps'], round(r["n_sa"], 2),
@@ -407,6 +402,9 @@ def get_header(contig_names=""):
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
+##FORMAT=<ID=PSET,Number=1,Type=String,Description="Phase-set ID for phased SVs">
+##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
+##FORMAT=<ID=AF,Number=1,Type=Float,Description="Allele frequency">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">
 ##FORMAT=<ID=NMS,Number=1,Type=Float,Description="Mean edit distance for supplementary alignments supporting the variant">
 ##FORMAT=<ID=NMB,Number=1,Type=Float,Description="Mean basic, edit distance. Gaps >= 30 bp are ignored">
@@ -460,7 +458,6 @@ def get_header(contig_names=""):
 def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=None,
            small_output_f=True, sort_output=True, n_fields=None):
 
-
     outfile.write(get_header(contig_names) + "\t" + "\t".join(names) + "\n")
 
     if show_names:
@@ -478,21 +475,19 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
 
     count = 0
     recs = []
-    if args is not None:
-        add_kind = args["add_kind"] == "True"
-        if args["metrics"]:
-            small_output_f = False
-        if args["verbosity"] == '0':
-            df["contigA"] = [''] * len(df)
-            df["contigB"] = [''] * len(df)
-        elif args["verbosity"] == '1':
-            has_alt = [True if isinstance(i, str) and i[0] != '<' else False for i in df['variant_seq']]
-            df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
-            df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
 
-        n_fields = len(col_names(small_output_f)[-1])
-    else:
+    add_kind = args["add_kind"] == "True"
+    if args["metrics"]:
         small_output_f = False
+    if args["verbosity"] == '0':
+        df["contigA"] = [''] * len(df)
+        df["contigB"] = [''] * len(df)
+    elif args["verbosity"] == '1':
+        has_alt = [True if (isinstance(i, str) and len(i) >= 1 and i[0] != '<') else False for i in df['variant_seq']]
+        df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
+        df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
+
+    n_fields = len(col_names(small_output_f)[-1])
 
     for idx, r in df.iterrows():
         if idx in seen_idx:

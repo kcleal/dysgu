@@ -297,4 +297,5 @@ cdef class EventResult:
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, contig_cigar, contig2_cigar, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
-        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info, qnames, haplotypes
+        partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info
+    cdef public object qnames, haplotype, phase_set, a_freq

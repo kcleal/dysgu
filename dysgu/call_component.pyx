@@ -119,6 +119,32 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
     return aligned_base_quals, aligned_bases, clipped_base_quals, clipped_bases
 
 
+cdef collect_phase_tags(bint get_hp_tag, AlignedSegment a, EventResult_t er):
+    if not get_hp_tag:
+        return
+    if not a.has_tag("HP"):
+        if er.haplotype is None or 'u' not in er.haplotype:
+            er.haplotype = {'u': 1}
+        else:
+            er.haplotype['u'] += 1
+        return
+    hp_tag = a.get_tag("HP")
+    if not er.haplotype:
+        er.haplotype = {hp_tag: 1}
+    elif hp_tag not in er.haplotype:
+        er.haplotype[hp_tag] = 1
+    else:
+        er.haplotype[hp_tag] += 1
+    if a.has_tag("PS"):
+        pg_tag = a.get_tag("PS")
+        if not er.phase_set:
+            er.phase_set = {pg_tag: 1}
+        elif pg_tag not in er.phase_set:
+            er.phase_set[pg_tag] = 1
+        else:
+            er.phase_set[pg_tag] += 1
+
+
 cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
                        EventResult_t er, bint paired_end_reads, bint get_hp_tag):
     cdef float NMpri = 0
@@ -145,6 +171,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     cdef float a_bases, large_gaps, n_small_gaps
     cdef AlignedSegment a
     for index, a in enumerate(itertools.chain(reads1, reads2, [i.read_a for i in generic_ins])):
+        seen.add(a.qname)
         flag = a.flag
         if flag & 2:
             er.NP += 1
@@ -162,16 +189,11 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
             n_xa += a.get_tag("XA").count(";")
-        if get_hp_tag and a.has_tag("HP"):
-            hp_tag = a.get_tag("HP")
-            if not er.haplotypes:
-                er.haplotypes = {hp_tag: 1}
-            elif hp_tag not in er.haplotypes:
-                er.haplotypes[hp_tag] = 1
-            else:
-                er.haplotypes[hp_tag] += 1
+
+        collect_phase_tags(get_hp_tag, a, er)
 
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
+
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
@@ -190,7 +212,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             total_pri += 1
             MAPQpri += a.mapq
             if paired_end_reads:
-                if index >= len(reads2) and a.qname in paired_end:
+                if index >= len(reads1) and a.qname in paired_end:
                     er.pe += 1
                 else:
                     paired_end.add(a.qname)
@@ -217,6 +239,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             clipped_bases += cb
 
     for a in spanning:
+        seen.add(a.qname)
         flag = a.flag
         if flag & 2:
             er.NP += 1
@@ -229,16 +252,10 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             n_sa += a.get_tag("SA").count(";")
         if a.has_tag("XA"):
             n_xa += a.get_tag("XA").count(";")
-        if get_hp_tag and a.has_tag("HP"):
-            hp_tag = a.get_tag("HP")
-            if not er.haplotypes:
-                er.haplotypes = {hp_tag: 1}
-            elif hp_tag not in er.haplotypes:
-                er.haplotypes[hp_tag] = 1
-            else:
-                er.haplotypes[hp_tag] += 1
 
+        collect_phase_tags(get_hp_tag, a, er)
         a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
+
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
         if flag & 2304:  # Supplementary
@@ -257,7 +274,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             total_pri += 1
             if paired_end_reads:
                 if a.qname in paired_end:  # If two primary reads from same pair
-                    er.pe += 2
+                    er.pe += 1
                 else:
                     paired_end.add(a.qname)
             if a.has_tag("NM"):
@@ -295,6 +312,8 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
     else:
         er.clip_qual_ratio = 0
+
+    er.a_freq += len(seen)
 
 
 cdef int within_read_end_position(int event_pos, CigarItem cigar_item):
@@ -918,7 +937,7 @@ cdef linear_scan_clustering(spanning, bint hp_tag):
                 hp_count += 1
                 lengths = [s.cigar_item.len for s in hp_spanning]
                 cluster_lengths(clusters, lengths, hp_spanning, eps)
-            # Merge near-identical haplotypes
+            # Merge near-identical haplotype
             if len(clusters) > 1:
                 cl_srt = sorted([ [ np.mean([c.cigar_item.len for c in clst]), clst ] for clst in clusters], key=lambda x: x[0])
                 merged_haps = [cl_srt[0]]

@@ -9,8 +9,8 @@ import pickle
 import glob
 import gzip
 import pandas as pd
-# import networkx as nx
-# from itertools import combinations
+import networkx as nx
+from itertools import combinations
 pd.options.mode.chained_assignment = None
 from dysgu.scikitbio._ssw_wrapper import StripedSmithWaterman
 from dysgu.consensus import compute_rep
@@ -324,6 +324,57 @@ def median(arr, start, end):
     return -1
 
 
+def get_ref_base(events, ref_genome, symbolic_sv_size):
+    for e in events:
+        if e.posA == 0:
+            e.posA = 1  # !!
+        if not e.ref_seq and not e.svtype == "BND":
+            if symbolic_sv_size == -1 or e.svtype in ("INS", "TRA", "INV"):
+                if e.posA == 0:
+                    e.posA = 1
+                try:
+                    base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
+                    e.ref_seq = base
+                except:
+                    pass
+            else:
+                bases = ""
+                if e.svlen < symbolic_sv_size:
+                    start = e.posA
+                    end = e.posB
+                else:
+                    start = e.posA - 1
+                    end - e.posA
+                try:
+                    bases = ref_genome.fetch(e.chrA, start, end).upper()
+                except:
+                    pass
+                if e.svtype == "DEL":
+                    e.ref_seq = bases
+                    e.variant_seq = bases[0] if bases else ""
+                else:
+                    e.variant_seq = bases
+                    e.ref_seq = bases[0] if bases else ""
+
+                #
+                #
+                #
+                #     try:
+                #         bases = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
+                #
+                #     except:
+                #         pass
+                #     e.ref_seq = bases
+                #     e.variant_seq = bases[0] if len(bases) else ""
+                # else:
+                #     try:
+                #         bases = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
+                #     except:
+                #         pass
+                #     e.ref_seq = bases
+    return events
+
+
 def nCk(n,k):
     f = math.factorial
     return f(n) // f(k) // f(n-k)
@@ -349,38 +400,6 @@ def strand_binom_t(events):
             e.strand_binom_t = binom_prob(n, k, 0.5)
         else:
             e.strand_binom_t = 1
-    return events
-
-
-def get_ref_base(events, ref_genome, symbolic_sv_size):
-    for e in events:
-        if not e.ref_seq and not e.svtype == "BND":
-            if symbolic_sv_size == -1 or e.svtype == "INS" or e.svtype == "TRA":
-                if e.posA == 0:
-                    e.posA = 1
-                try:
-                    base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
-                    e.ref_seq = base
-                except:
-                    pass
-            else:
-                if e.svlen < symbolic_sv_size:
-                    if e.posA == 0:
-                        e.posA = 1
-                    try:
-                        bases = ref_genome.fetch(e.chrA, e.posA, e.posB).upper()
-                        e.ref_seq = bases
-                        e.variant_seq = bases[0] if len(bases) else ""
-                    except:
-                        pass
-                else:
-                    if e.posA == 0:
-                        e.posA = 1
-                    try:
-                        base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
-                        e.ref_seq = base
-                    except:
-                        pass
     return events
 
 
@@ -593,33 +612,102 @@ def fix_inconsistent_gt(events):
                 e2.GT = "0/1"
 
 
-# def phase_haplotypes(events):
-#     qname_2_eventidx = defaultdict(set)
-#     for idx, e in enumerate(events):
-#         if e.qnames and e.GT.replace('/', '|') != '1|1' and e.GT[0] != '.':
-#             for qname in e.qnames:
-#                 qname_2_eventidx[qname].add(idx)
-#
-#     G = nx.Graph()
-#     for qname, idxs in qname_2_eventidx.items():
-#         for u, v in combinations(idxs, 2):
-#             if G.has_edge(u, v):
-#                 G[u][v]['weight'] += 1
-#             else:
-#                 G.add_edge(u, v, weight=1)
-#     bad_edges = []
-#     for e in G.edges(data=True):
-#         if e[2]['weight'] < 2:
-#             bad_edges.append(e)
-#     G.remove_edges_from(bad_edges)
-#     echo('G', len(G.edges()))
-#     for component in nx.connected_components(G):
-#         echo('component', component)
-#         gts = [events[idx].GT for idx in component]
-#         echo('gts', gts)
-#         echo(list(f'{e.chrA}:{e.posA}({e.svlen})' for e in [events[idx] for idx in component]))
-#         sub = G.subgraph(component)
-#         echo(sub.edges(data=True))
+def low_ps_support(r, support_fraction=0.1):
+    min_support = round(1.5 + support_fraction * r.su)
+    return min_support
+
+
+
+def join_phase_sets(events, ps_id):
+    # Join phase sets if support is greater than threshold
+    G = nx.Graph()
+    for idx, e in enumerate(events):
+        if not e.phase_set:
+            e.phase_set = ''
+            continue
+        if len(e.phase_set) > 1:
+            if e.GT not in '1|11/1':  # only heterozygous variants
+                threshold = low_ps_support(e)
+                passing_ps = [k for k, v in e.phase_set.items() if v >= threshold]
+                e.phase_set = passing_ps
+                if len(passing_ps) > 1:
+                    G.add_edges_from(combinations(passing_ps, 2))
+            else:
+                # Choose PS with maximum support
+                e.phase_set = str(max(e.phase_set, key=e.phase_set.get))
+        else:
+            e.phase_set = str(list(e.phase_set.keys())[0])
+
+    new_phase_set = {}
+    for sub in nx.connected_components(G):
+        for n in sub:
+            new_phase_set[n] = str(ps_id)
+        ps_id += 1
+
+    for e in events:
+        if not e.phase_set or isinstance(e.phase_set, str):
+            continue
+        assert isinstance(e.phase_set, list)
+        new_p = list(set([new_phase_set[n] for n in e.phase_set if n in new_phase_set]))[0]
+        if not new_p:
+            e.phase_set = ''
+        else:
+            e.phase_set = str(new_p)
+
+
+def get_hp_format(events):
+    max_ps = 0
+    any_phase_set = False
+    keys = set([])
+    for e in events:
+        if e.haplotype:
+            for k in e.haplotype:
+                if k != 'u':
+                    keys.add(k)
+    keys = sorted(list(keys))
+    for e in events:
+        if e.haplotype:
+            all_haps = e.haplotype
+            phased_haps = {k: v for k, v in e.haplotype.items() if k != 'u'}
+            n_haps = len(phased_haps)
+            n_phase_set = len(e.phase_set) if e.phase_set else 0
+            if n_phase_set:
+                ps = max(e.phase_set, key=e.phase_set.get)
+                if ps > max_ps:
+                    max_ps = ps
+                any_phase_set = True
+            else:
+                e.phase_set = ""
+            if n_haps >= 2:
+                if e.GT == "1/1":
+                    e.GT = "1|1"
+                else:
+                    best_hap = max(phased_haps, key=phased_haps.get)
+                    if best_hap == 1:
+                        e.GT = "1|0"
+                    else:
+                        e.GT = "0|1"
+            elif n_haps == 1:
+                if 1 in e.haplotype:
+                    e.GT = "1|0"
+                else:
+                    e.GT = "0|1"
+
+            hp_string = ''
+            if n_haps >= 1:
+                unphased = all_haps['u'] if 'u' in all_haps else 0
+                hp_string = '|'.join([str(phased_haps[k]) if k in phased_haps else '0' for k in keys])
+                if unphased:
+                    hp_string += f'_{unphased}'
+                if not hp_string:
+                    hp_string = "."
+
+            e.haplotype = hp_string
+        else:
+            e.haplotype = "."
+
+
+    return max_ps, any_phase_set
 
 
 def get_gt_metric2(events, mode, add_gt=True):
@@ -677,66 +765,15 @@ def get_gt_metric2(events, mode, add_gt=True):
 
     fix_inconsistent_gt(events)
 
-    # any_haps = False
-    for e in events:
-        if e.haplotypes:
-            # any_haps = True
-            n_haps = len(e.haplotypes)
-            if n_haps >= 2:
-                if e.GT == "1/1":
-                    e.GT = "1|1"
-                else:
-                    best_hap = max(e.haplotypes, key=e.haplotypes.get)
-                    if best_hap == 1:
-                        e.GT = "1|0"
-                    else:
-                        e.GT = "0|1"
-            elif n_haps == 1:
-                if 1 in e.haplotypes:
-                    e.GT = "1|0"
-                else:
-                    e.GT = "0|1"
+    max_ps, any_phase_set = get_hp_format(events)
 
-    # phase_haplotypes(events)
+    if any_phase_set:
+        join_phase_sets(events, max_ps + 1)
+    else:
+        for e in events:
+            e.phase_set = "."
 
     return events
-
-
-# def filter_microsatellite_non_diploid(potential):
-#     tmp_list = defaultdict(list)
-#     max_dist = 50
-#     half_d = (max_dist * 0.5)
-#     candidates = []
-#     for idx in range(len(potential)):
-#         ei = potential[idx]
-#         if (ei.svtype != "DEL" and ei.svtype != "INS") or not ei.variant_seq:
-#             continue
-#         rep = compute_rep(ei.variant_seq)
-#         if rep < 0.4:
-#             continue
-#         candidates.append(idx)
-#         tmp_list[ei.chrA].append((ei.posA - ei.cipos95A - max_dist, ei.posA + ei.cipos95A + max_dist, idx))
-#         if ei.chrA == ei.chrB and ei.svlen > half_d:
-#             tmp_list[ei.chrA].append((ei.posB - ei.cipos95B - max_dist, ei.posB + ei.cipos95B + max_dist, idx))
-#
-#     nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
-#     seen = set([])
-#     to_drop = set([])
-#     for idx in candidates:
-#         if idx in seen:
-#             continue
-#         ei = potential[idx]
-#         ols = set(nc2[ei.chrA].allOverlappingIntervals(ei.posA, ei.posA + 1))
-#         ols2 = set(nc2[ei.chrB].allOverlappingIntervals(ei.posB, ei.posB + 1))
-#         ols |= ols2
-#         ols.add(idx)
-#         if len(ols) <= 2:
-#             continue
-#         bad = sorted([(i, potential[i]) for i in ols], key=lambda x: x[1].su, reverse=True)[2:]
-#         for jdx, p in bad:
-#             to_drop.add(jdx)
-#         seen |= ols
-#     return [p for i, p in enumerate(potential) if i not in to_drop]
 
 
 def compressability(events):
