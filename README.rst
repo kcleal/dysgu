@@ -42,7 +42,7 @@ for calling structural variants using paired-end or long read sequencing data. S
 ⚙️ Installation
 ---------------
 
-Dysgu can be installed via pip using Python 3.10 - 3.12 and has been tested on linux and MacOS.
+Dysgu can be installed via pip using Python >=3.10 and has been tested on linux and MacOS.
 The list of python packages needed can be found in requirements.txt.
 To install::
 
@@ -79,7 +79,8 @@ For help use::
     dysgu --help
     dysgu command --help
 
-To use the python-API see the `documentation <https://kcleal.github.io/dysgu/API.html>`_, or `jupyter notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,
+To use the python-API see the `documentation <https://kcleal.github.io/dysgu/API.html>`_,
+or `jupyter notebook <https://github.com/kcleal/dysgu/blob/master/dysgu_api_demo.ipynb>`_,
 
 
 🎯 Calling SVs
@@ -87,13 +88,16 @@ To use the python-API see the `documentation <https://kcleal.github.io/dysgu/API
 
 Paired-end reads
 ****************
-Dysgu was developed to work with paired-end reads aligned using bwa mem, although other aligners will work. To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format). Also a working directory must
-be provided to store temporary files. There are a few ways to run dysgu depending on the type of data you have.
+Dysgu was developed to work with paired-end reads aligned using bwa mem, although other aligners will work.
+To call SVs, a sorted and indexed .bam/cram is needed plus an indexed reference genome (fasta format).
+Also a working directory must be provided to store temporary files.
+There are a few ways to run dysgu depending on the type of data you have.
 For paired-end data the `run` command is recommended which wraps `fetch` and `call`::
 
     dysgu run reference.fa temp_dir input.bam > svs.vcf
 
-This will first run the `fetch` command that will create a temporary bam file plus other analysis files in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
+This will first run the `fetch` command that will create a temporary bam file plus other analysis files
+in the directory `temp_dir`. These temporary files are then analysed using the `call` program.
 To make use of multiprocessing, set the "-p" parameter::
 
     dysgu run -p4 reference.fa temp_dir input.bam > svs.vcf
@@ -104,14 +108,24 @@ Dysgu also accepts reads from stdin. In this example, the --clean flag will remo
 
 Long reads
 **********
-Dysgy is designed to work with long reads aligned using minimap2 or ngmlr. Use the 'call' pipeline if starting with a bam file, or 'run' if starting with a cram::
+Dysgy is designed to work with long reads aligned using minimap2 or ngmlr. Use the 'call' pipeline if
+starting with a bam file, or 'run' if starting with a cram::
 
     dysgu call --mode pacbio-revio reference.fa temp_dir input.bam > svs.vcf
 
     dysgu call --mode nanopore-r10 reference.fa temp_dir input.bam > svs.vcf
 
-Presets are available using the `--mode` option for PacBio `pacbio-sequel2 | pacbio-revio`, and ONT `nanopore-r9 | nanopore-r10`
-If you are using using reads with higher error rates, or are unsure of the read-accuracy, it is recommended to set '--divergence auto', to infer a more conservative sequence divergence. The default is set at 0.02 which can be too stringent for lower accuracy reads and will result in more reads being filtered and lower sensitivity::
+Presets are available using the `--mode` option for PacBio `pacbio-sequel2 | pacbio-revio`,
+and ONT `nanopore-r9 | nanopore-r10`.
+
+Since v1.8, higher calling accuracy can be achieved by adding "haplotags" to your input bam/cram file
+(using hiphase / whatshap / longshot etc). Dysgu reads HP and PS tags automatically and produces
+phased output calls.
+
+If you are using using reads with higher error rates, or are unsure of the read-accuracy,
+it is recommended to set '--divergence auto', to infer a more conservative sequence divergence.
+The default is set at 0.02 which can be too stringent for lower accuracy reads and will result in
+more reads being filtered and lower sensitivity::
 
     dysgu call --divergence auto --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
