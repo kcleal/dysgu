@@ -621,5 +621,8 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
         if r.chrA != r.chrB:
             r.svlen = 1000000
         r.mcov = max_depth
+
+        r.a_freq = r.a_freq / reads_10kb
+        r.a_freq = round(max(0, min(r.a_freq, 1.0)), 2)
         new_events.append(r)
     return new_events

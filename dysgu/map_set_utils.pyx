@@ -436,16 +436,8 @@ cdef class EventResult:
         self.n_sa = 0
         self.n_gaps = 0
         self.compress = 0
+        self.a_freq = 0
         self.qnames = set([])
 
     def __repr__(self):
         return str(to_dict(self))
-        # return str(self.to_dict())
-
-    # def __getstate__(self):  # for pickling
-    #     return to_dict(self)
-    #     # return self.to_dict()
-    #
-    # def __setstate__(self, d):
-    #     for k, v in d.items():
-    #         self.__setattr__(k, v)

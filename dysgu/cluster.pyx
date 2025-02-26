@@ -511,8 +511,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
 
     preliminaries = post_call.get_ref_base(preliminaries, ref_genome, args["symbolic_sv_size"])
 
-    # preliminaries = post_call.filter_microsatellite_non_diploid(preliminaries)
-
     preliminaries = extra_metrics.sample_level_density(preliminaries, regions)
     preliminaries = coverage_analyser.normalize_coverage_values(preliminaries)
 

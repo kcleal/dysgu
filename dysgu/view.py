@@ -362,6 +362,9 @@ def vcf_to_df(path):
                "JIT": ("jitter", float),
                "LEFT_SVINSSEQ": ("left_ins_seq", str),
                "RIGHT_SVINSSEQ": ("right_ins_seq", str),
+               "PSET": ("phase_set", str),
+               "HP": ("haplotype", str),
+               "AF": ("a_freq", float),
                }
     # df = df[df.posA == 110156314]
     df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
