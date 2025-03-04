@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from dysgu.map_set_utils import echo
 from dysgu import re_map
-from dysgu.io_funcs import reverse_complement, intersecter #, iitree
+from dysgu.io_funcs import reverse_complement, intersecter
 import zlib
 import math
 import pickle
@@ -17,8 +17,11 @@ from dysgu.consensus import compute_rep
 from collections import defaultdict, Counter
 import os
 import warnings
-from sklearn.exceptions import InconsistentVersionWarning
-warnings.filterwarnings(action='ignore', category=InconsistentVersionWarning)
+try:
+    from sklearn.exceptions import InconsistentVersionWarning
+    warnings.filterwarnings(action='ignore', category=InconsistentVersionWarning)
+except ImportError:
+    pass
 
 
 def get_badclip_metric(events, bad_clip_counter, bam, regions):

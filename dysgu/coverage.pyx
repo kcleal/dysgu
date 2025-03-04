@@ -112,9 +112,6 @@ cdef class GenomeScanner:
         self.procs = read_threads
         self.buff_size = buffer_size
         self.current_bin = []
-        self.current_cov = 0
-        self.current_chrom = 0
-        self.current_pos = 0
         self.current_cov_array = None
         self.reads_dropped = 0
         self.depth_d = {}
@@ -152,10 +149,10 @@ cdef class GenomeScanner:
 
                     if aln.flag & 1284 or aln.mapq < mq_thresh or cigar_l == 0:  # not primary, duplicate or unmapped?
                         continue
-                    self._add_to_bin_buffer(aln, tell)
+                    yield aln, tell
                     tell = 0 if self.no_tell else self.input_bam.tell()
-                    while len(self.staged_reads) > 0:
-                        yield self.staged_reads.popleft()
+                    # yield aln, tell
+
             # when 'call' command was run only. generate coverage track here
             else:
                 self.cpp_cov_track.set_max_cov(self.max_cov)
@@ -167,7 +164,7 @@ cdef class GenomeScanner:
 
                     cigar_l = aln._delegate.core.n_cigar
                     if cigar_l == 0 or aln.flag & 1284:
-                        tell = 0 if self.no_tell else self.input_bam.tell()
+                        # tell = 0 if self.no_tell else self.input_bam.tell()
                         continue
 
                     if aln.rname != self.current_tid:
@@ -203,18 +200,14 @@ cdef class GenomeScanner:
                             index_start += length
 
                     if aln.mapq < mq_thresh or not good_read or not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
-                        tell = 0 if self.no_tell else self.input_bam.tell()
                         continue
-
-                    self._add_to_bin_buffer(aln, tell)
+                    yield aln, tell
                     tell = 0 if self.no_tell else self.input_bam.tell()
-                    while len(self.staged_reads) > 0:
-                        yield self.staged_reads.popleft()
+                    # yield aln, tell
+
                 if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
                     out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
                     self.cpp_cov_track.write_track(out_path)
-            if len(self.current_bin) > 0:
-                yield self.current_bin
 
         else:
             logging.info("Searching --regions and collecting reads from mate-pair locations")
@@ -291,16 +284,13 @@ cdef class GenomeScanner:
                         continue
                     if not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
                         continue
-                    self._add_to_bin_buffer(aln, tell)
+                    yield aln, tell
                     tell = 0 if self.no_tell else self.input_bam.tell()
-                    while len(self.staged_reads) > 0:
-                        yield self.staged_reads.popleft()
+                    # yield aln, tell
 
                 if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
                     out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
                     self.cpp_cov_track.write_track(out_path)
-                if len(self.current_bin) > 0:
-                    yield self.current_bin
 
 
     def get_read_properties(self, int max_tlen, int insert_median, int insert_stdev, int read_len, ibam=None, find_divergence=False):
@@ -352,7 +342,8 @@ cdef class GenomeScanner:
                     continue
                 tell = 0 if self.no_tell else self.input_bam.tell()
                 if self.no_tell:
-                    self._add_to_bin_buffer(a, tell)
+                    self.staged_reads.append((a, tell))
+                    # self._add_to_bin_buffer(a, tell)
                     if a.rname != self.current_tid:
                         if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
                             out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path.outpath, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
@@ -447,7 +438,7 @@ cdef class GenomeScanner:
         # Read the rest of the genome, reads are sent in blocks
         cdef int total_reads = 0
         for staged in self._get_reads():
-            total_reads += len(staged)
+            total_reads += 1  # len(staged)
             yield staged
         if total_reads == 0:
             logging.critical("No reads found, finishing")
@@ -463,33 +454,6 @@ cdef class GenomeScanner:
             self.read_buffer[n1] = r
         elif self.no_tell:
             raise BufferError("Read buffer has overflowed, increase --buffer-size")
-
-    def _add_to_bin_buffer(self, AlignedSegment a, tell):
-        # Calculates coverage information on fly, drops high coverage regions, buffers reads
-        cdef int flag = a.flag
-        cdef uint32_t cigar_l = a._delegate.core.n_cigar
-        if flag & 1540 or cigar_l == 0: # or a.seq is None:
-            return
-        cdef int rname = a.rname
-        cdef int apos = a.pos
-        cdef int bin_pos = int(apos / 100)
-        cdef int ref_length
-        cdef str reference_name = ""
-        cdef int aend = a.reference_end
-        cdef float current_coverage
-        if self.current_chrom != rname:
-            self.current_chrom = rname
-        # in_roi = False
-        # if self.overlap_regions:
-        #     in_roi = intersecter(self.overlap_regions, a.rname, apos, apos+1)
-        if rname == self.current_chrom and bin_pos == self.current_pos:
-            self.current_bin.append((a, tell))
-        else:
-            if len(self.current_bin) != 0:
-                self.staged_reads.append(self.current_bin)
-            self.current_chrom = rname
-            self.current_pos = bin_pos
-            self.current_bin = [(a, tell)]
 
 
 cdef float add_coverage(int start, int end, DTYPE_t[:] chrom_depth) nogil:
@@ -622,7 +586,7 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
             r.svlen = 1000000
         r.mcov = max_depth
 
-        r.a_freq = r.a_freq / reads_10kb
+        r.a_freq = r.a_freq / (reads_10kb + 1e-5)
         r.a_freq = round(max(0, min(r.a_freq, 1.0)), 2)
         new_events.append(r)
     return new_events
