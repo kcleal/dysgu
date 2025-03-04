@@ -672,7 +672,6 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     as2 = None
     ref_bases = 0
     if to_assemble or len(spanning_alignments) > 0:
-        # echo('MAKE SINGLE CALL')
         if er.preciseA:
             as1 = consensus.base_assemble(u_reads, er.posA, 500)
             if as1 and (er.svtype != "TRA" or (as1['contig'] and (as1['contig'][0].islower() or as1['contig'][-1].islower()))):
@@ -965,7 +964,6 @@ cdef linear_scan_clustering(spanning, bint hp_tag):
 def process_spanning(bint paired_end, spanning_alignments, float divergence, length_extend, informative,
                      generic_insertions, float insert_ppf, bint to_assemble, bint hp_tag):
 
-    # echo("PROCESS SPANNING")
     cdef int min_found_support = 0
     cdef str svtype, jointype
     cdef bint passed
@@ -2055,32 +2053,9 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                 seen.remove(u)
             if v in seen:
                 seen.remove(v)
-
             events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1,
                                assemble_contigs,
                                sites_info, paired_end, hp_tag)
-
-            # finds reads that should be a single partition
-            # u_reads, v_reads, u_single, v_single = filter_single_partitions(rd_u, rd_v)
-            # if len(u_reads) > 0 and len(v_reads) > 0:
-            #     events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1, assemble_contigs,
-            #                        sites_info, paired_end)
-            # if u_single:
-            #     res = single(u_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-            #                  sites_info, paired_end, length_extend, divergence)
-            #     if res:
-            #         if isinstance(res, EventResult):
-            #             events.append(res)
-            #         else:
-            #             events += res
-            # if v_single:
-            #     res = single(v_single, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-            #                  sites_info, paired_end, length_extend, divergence)
-            #     if res:
-            #         if isinstance(res, EventResult):
-            #             events.append(res)
-            #         else:
-            #             events += res
 
     # Process any singles / unconnected blocks
     if seen:
@@ -2101,23 +2076,28 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                         events += res
 
     # Check for events within clustered nodes
-    if data.s_within:
-        for k, d in data.s_within:  #.items():
-            o_count = out_counts[k]
-            i_counts = len(d)
-            if i_counts > max_single_size:
-                continue
-            if o_count > 0 and i_counts > (2*min_support) and i_counts > o_count:
-                rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
-                if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
-                        continue
-                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-                             sites_info, paired_end, length_extend, divergence, hp_tag)
-                if res:
-                    if isinstance(res, EventResult):
-                        events.append(res)
-                    else:
-                        events += res
+    # if data.s_within:
+    #     for k, d in data.s_within:
+    #         o_count = out_counts[k]
+    #         i_counts = len(d)
+    #
+    #         if i_counts > max_single_size:
+    #             continue
+    #         # if o_count > 0 and i_counts >= (2*min_support) and i_counts > o_count:
+    #         # if o_count > 0 or i_counts > 0:
+    #         rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
+    #         if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+    #             continue
+    #         echo('Calling single 1')
+    #         res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+    #                      sites_info, paired_end, length_extend, divergence, hp_tag)
+    #         for r in res:
+    #             echo(r.posA, r.posB, r.svlen)
+    #         if res:
+    #             if isinstance(res, EventResult):
+    #                 events.append(res)
+    #             else:
+    #                 events += res
     return events
 
 

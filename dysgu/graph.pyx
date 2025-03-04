@@ -827,7 +827,6 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_
         pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar,
                                   trust_ins_len)
 
-        # other_nodes = pe_scope.find_other_nodes(node_name, chrom, event_pos, chrom2, pos2, read_enum, length_from_cigar, trust_ins_len)
         if not dereference(found_nodes_exact).empty():
             for other_node in dereference(found_nodes_exact):
                 if node_to_name.same_template(node_name, other_node):
@@ -1289,144 +1288,135 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef int n_checked_for_hp_tag = 0
     if no_phase:
         n_checked_for_hp_tag = 10_001
-    for chunk in genome_scanner.iter_genome():
-        for r, tell in chunk:
-            if r.mapq < mapq_thresh:
+
+    for r, tell in genome_scanner.iter_genome():
+        if r.mapq < mapq_thresh:
+            continue
+        pos2 = -1
+        event_pos = r.pos
+        added = False
+        clipped = 0
+        events_to_add.clear()
+        cigar_l = r._delegate.core.n_cigar
+        cigar_p = bam_get_cigar(r._delegate)
+        if not paired_end:
+            if n_checked_for_hp_tag < 10_000:
+                n_checked_for_hp_tag += 1
+                if r.has_tag("HP"):
+                    hp_tag_found = <bint>True
+                    n_checked_for_hp_tag = 10_001
+            if r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
                 continue
-            pos2 = -1
-            event_pos = r.pos
-            added = False
-            clipped = 0
-            events_to_add.clear()
-            cigar_l = r._delegate.core.n_cigar
-            cigar_p = bam_get_cigar(r._delegate)
-            if not paired_end:
-                if n_checked_for_hp_tag < 10_000:
-                    n_checked_for_hp_tag += 1
-                    if r.has_tag("HP"):
-                        hp_tag_found = <bint>True
-                        n_checked_for_hp_tag = 10_001
-                if r.has_tag("NM") and edit_distance_too_high(cigar_p, cigar_l, max_divergence, r.get_tag("NM")):
+
+        if cigar_l > 1:
+            if r.has_tag("SA"):
+                # Set cigar-index to -1 means it is unset, will be determined during SA parsing
+                cigar_index = -1
+                process_alignment(G, r, clip_l, max_dist, gettid,
+                                  overlap_regions, clustering_dist, pe_scope,
+                                  cigar_index, event_pos, paired_end, tell, genome_scanner,
+                                  template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
+                                  bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
+                added = True
+            for cigar_index in range(cigar_l):
+                cigar_value = cigar_p[cigar_index]
+                opp = <int> cigar_value & 15
+                length = <int> cigar_value >> 4
+
+                if opp == 0 or opp == 7 or opp == 8:
+                    if find_n_aligned_bases:
+                        n_aligned_bases += length
+                    event_pos += length
                     continue
 
-            if cigar_l > 1:
-                if r.has_tag("SA"):
-                    # Set cigar-index to -1 means it is unset, will be determined during SA parsing
-                    cigar_index = -1
+                if opp == 1:
+                    if length >= min_sv_size:
+                        pos2 = event_pos + length
+                        events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.INSERTION))
+                        added = True
+                elif opp == 2:
+                    if length >= min_sv_size:
+                        pos2 = event_pos + length
+                        events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
+                        added = True
+                    event_pos += length
+                elif opp == 3:
+                    if length >= min_sv_size:
+                        pos2 = event_pos + length
+                        events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.SKIP))
+                        added = True
+                    event_pos += length
+                else:
+                    if opp != 4 and opp != 5:
+                        event_pos += length
+                    elif opp == 4 and length >= clip_l:
+                        clipped = 1
+
+        if (paired_end and not added and contigs) or not paired_end:
+            # Whole alignment will be used, try infer position from soft-clip
+            cigar_index = -1
+            pos2 = -1
+            left_clip_size = 0
+            right_clip_size = 0
+            clip_sizes_hard(r, &left_clip_size, &right_clip_size)  # soft and hard-clips
+            if r.flag & 8 and clipped:  # paired by inference
+                # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
+                # if not (left_clip_size and right_clip_size) and ((paired_end and good_quality_clip(r, 20)) or (not paired_end and) ):
+                if not (left_clip_size and right_clip_size) and good_quality_clip(r, 20):
+                    # Mate is unmapped, insertion type. Only add if soft-clip is available
                     process_alignment(G, r, clip_l, max_dist, gettid,
                                       overlap_regions, clustering_dist, pe_scope,
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
-                                      template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
-                                      bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
-                    added = True
-                for cigar_index in range(cigar_l):
-                    cigar_value = cigar_p[cigar_index]
-                    opp = <int> cigar_value & 15
-                    length = <int> cigar_value >> 4
-
-                    if opp == 0 or opp == 7 or opp == 8:
-                        if find_n_aligned_bases:
-                            n_aligned_bases += length
-                        event_pos += length
-                        continue
-
-                    if opp == 1:
-                        if length >= min_sv_size:
-                            # Insertion type
-                            # if event_pos < 998000 or event_pos > 999000:
-                            #     continue
-                            pos2 = event_pos + length
-                            # if not events_to_add.empty() and event_pos - events_to_add.back().event_pos < elide_threshold and events_to_add.back().read_enum == ReadEnum_t.INSERTION:
-                            #     continue
-                            # else:
-                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.INSERTION))
-                            added = True
-                    elif opp == 2:
-                        if length >= min_sv_size:
-                            pos2 = event_pos + length
-                            # if not events_to_add.empty() and event_pos - events_to_add.back().event_pos < elide_threshold and events_to_add.back().read_enum == ReadEnum_t.DELETION:
-                            #     continue
-                            # else:
-                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
-                            added = True
-                        event_pos += length
-                    elif opp == 3:
-                        if length >= min_sv_size:
-                            pos2 = event_pos + length
-                            events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.SKIP))
-                            added = True
-                        event_pos += length
-                    else:
-                        if opp != 4 and opp != 5:
-                            event_pos += length
-                        elif opp == 4 and length >= clip_l:
-                            clipped = 1
-
-            if (paired_end and not added and contigs) or not paired_end:
-                # Whole alignment will be used, try infer position from soft-clip
-                cigar_index = -1
-                pos2 = -1
-                left_clip_size = 0
-                right_clip_size = 0
-                clip_sizes_hard(r, &left_clip_size, &right_clip_size)  # soft and hard-clips
-                if r.flag & 8 and clipped:  # paired by inference
-                    # skip if both ends are clipped, usually means its a chunk of badly mapped sequence
-                    # if not (left_clip_size and right_clip_size) and ((paired_end and good_quality_clip(r, 20)) or (not paired_end and) ):
-                    if not (left_clip_size and right_clip_size) and good_quality_clip(r, 20):
-                        # Mate is unmapped, insertion type. Only add if soft-clip is available
-                        process_alignment(G, r, clip_l, max_dist, gettid,
-                                          overlap_regions, clustering_dist, pe_scope,
-                                          cigar_index, event_pos, paired_end, tell, genome_scanner,
-                                          template_edges, node_to_name,
-                                          pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
-                                          mm_only, site_adder, 0, trust_ins_len)
-                else:
-                    # Use whole read, could be normal or discordant
-                    if not paired_end:
-                        if max(left_clip_size, right_clip_size) > 250:
-                            read_enum = ReadEnum_t.BREAKEND
-                            if left_clip_size > right_clip_size:
-                                event_pos = r.pos  # else reference_end is used
-                            process_alignment(G, r, clip_l, max_dist, gettid,
-                                              overlap_regions, clustering_dist, pe_scope,
-                                              cigar_index, event_pos, paired_end, tell, genome_scanner,
-                                              template_edges, node_to_name,
-                                              pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                              mm_only, site_adder, 0, trust_ins_len)
-
-                    else:
-                        if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
-                            if not clipped:
-                                continue
-                            read_enum = ReadEnum_t.BREAKEND
-                        else:
-                            read_enum = ReadEnum_t.DISCORDANT
-
-                        if left_clip_size or right_clip_size:
-                            if left_clip_size > right_clip_size:
-                                event_pos = r.pos  # else reference_end is used
+                                      template_edges, node_to_name,
+                                      pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
+                                      mm_only, site_adder, 0, trust_ins_len)
+            else:
+                # Use whole read, could be normal or discordant
+                if not paired_end:
+                    if max(left_clip_size, right_clip_size) > 250:
+                        read_enum = ReadEnum_t.BREAKEND
+                        if left_clip_size > right_clip_size:
+                            event_pos = r.pos  # else reference_end is used
                         process_alignment(G, r, clip_l, max_dist, gettid,
                                           overlap_regions, clustering_dist, pe_scope,
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
                                           mm_only, site_adder, 0, trust_ins_len)
-            # process within-read events
-            if not events_to_add.empty():
-                itr_events = events_to_add.begin()
-                while itr_events != events_to_add.end():
-                    v = dereference(itr_events)
-                    if v.cigar_skip:
-                        pos2 = v.pos2
+
+                else:
+                    if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
+                        if not clipped:
+                            continue
+                        read_enum = ReadEnum_t.BREAKEND
                     else:
-                        pos2 = v.event_pos + v.length  # fall back on original cigar event length
+                        read_enum = ReadEnum_t.DISCORDANT
+
+                    if left_clip_size or right_clip_size:
+                        if left_clip_size > right_clip_size:
+                            event_pos = r.pos  # else reference_end is used
                     process_alignment(G, r, clip_l, max_dist, gettid,
                                       overlap_regions, clustering_dist, pe_scope,
-                                      v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
+                                      cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
-                                      v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter,
-                                      mm_only, site_adder, v.length, trust_ins_len)
-                    preincrement(itr_events)
+                                      pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
+                                      mm_only, site_adder, 0, trust_ins_len)
+        # process within-read events
+        if not events_to_add.empty():
+            itr_events = events_to_add.begin()
+            while itr_events != events_to_add.end():
+                v = dereference(itr_events)
+                if v.cigar_skip:
+                    pos2 = v.pos2
+                else:
+                    pos2 = v.event_pos + v.length  # fall back on original cigar event length
+                process_alignment(G, r, clip_l, max_dist, gettid,
+                                  overlap_regions, clustering_dist, pe_scope,
+                                  v.cigar_index, v.event_pos, paired_end, tell, genome_scanner,
+                                  template_edges, node_to_name,
+                                  v.pos2, mapq_thresh, clip_scope, v.read_enum, bad_clip_counter,
+                                  mm_only, site_adder, v.length, trust_ins_len)
+                preincrement(itr_events)
 
     add_template_edges(G, template_edges)
     if site_adder:
