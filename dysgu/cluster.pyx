@@ -273,7 +273,13 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     if args["pl"] == "pe":  # reads with internal SVs can be detected at lower support
         lower_bound_support = min_support - 1 if min_support - 1 > 1 else 1
     else:
-        lower_bound_support = min_support
+        if min_support >= 4:
+            lower_bound_support = 3
+        elif min_support >= 2:
+            lower_bound_support = 2
+        else:
+            lower_bound_support = 1
+        #lower_bound_support = min(min_support, 3)
 
     component_path = f"{tdir}/components.bin"
     cdef bytes cmp_file = component_path.encode("ascii")  # write components to file if low-mem used
