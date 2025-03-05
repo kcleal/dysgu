@@ -2076,28 +2076,51 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
                         events += res
 
     # Check for events within clustered nodes
-    # if data.s_within:
-    #     for k, d in data.s_within:
-    #         o_count = out_counts[k]
-    #         i_counts = len(d)
-    #
-    #         if i_counts > max_single_size:
-    #             continue
-    #         # if o_count > 0 and i_counts >= (2*min_support) and i_counts > o_count:
-    #         # if o_count > 0 or i_counts > 0:
-    #         rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
-    #         if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
-    #             continue
-    #         echo('Calling single 1')
-    #         res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
-    #                      sites_info, paired_end, length_extend, divergence, hp_tag)
-    #         for r in res:
-    #             echo(r.posA, r.posB, r.svlen)
-    #         if res:
-    #             if isinstance(res, EventResult):
-    #                 events.append(res)
-    #             else:
-    #                 events += res
+    # if paired_end and data.s_within:
+        # for item in events:
+        #     echo(item.svlen)
+        # echo('s_within', data.s_within)
+        # echo('parts', data.parts)
+        # echo('s_between', data.s_between)
+
+        # for k, d in data.s_within:
+        #     o_count = out_counts[k]
+        #     i_counts = len(d)
+        #
+        #     if i_counts > max_single_size:
+        #         continue
+        #     # if o_count > 0 and i_counts >= (2*min_support) and i_counts > o_count:
+        #     # if o_count > 0 or i_counts > 0:
+        #     rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
+        #     if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+        #         continue
+        #     res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+        #                  sites_info, paired_end, length_extend, divergence, hp_tag)
+        #     if res:
+        #         if isinstance(res, EventResult):
+        #             events.append(res)
+        #         else:
+        #             events += res
+        #     for item in events:
+        #         echo(item.svlen)
+        #     echo()
+    if paired_end and data.s_within:
+        for k, d in data.s_within:
+            o_count = out_counts[k]
+            i_counts = len(d)
+            if i_counts > max_single_size:
+                continue
+            if o_count > 0 and i_counts > (2 * min_support) and i_counts > o_count:
+                rds = get_reads(bam, d, data.reads, data.n2n, 0, info)
+                if len(rds) < lower_bound_support or (len(sites_info) != 0 and len(rds) == 0):
+                    continue
+                res = single(rds, insert_size, insert_stdev, insert_ppf, clip_length, min_support, assemble_contigs,
+                             sites_info, paired_end, length_extend, divergence, hp_tag)
+                if res:
+                    if isinstance(res, EventResult):
+                        events.append(res)
+                    else:
+                        events += res
     return events
 
 
