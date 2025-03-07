@@ -82,13 +82,13 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
 
 class CoverageAnalyser(object):
-    def __init__(self, temp_dir):
+    def __init__(self, temp_dir, postfix=""):
         self.pad_size = 1000
         self.temp_dir = temp_dir
         self.chrom_cov_arrays = {}
         if os.path.exists(self.temp_dir):
             for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
-                chrom_name = pth.split("/")[-1].split(".")[0]
+                chrom_name = pth.split("/")[-1].replace('.dysgu_chrom.bin', '')
                 self.chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
             if self.chrom_cov_arrays:
                 logging.info("Loaded n={} chromosome coverage arrays from {}".format(len(self.chrom_cov_arrays), self.temp_dir))
@@ -475,7 +475,6 @@ def del_like(r):
         ref_supp = r.outer_cn
     else:
         return 0, 0
-
     return round(ref_supp), round(variant_supp)
 
 
