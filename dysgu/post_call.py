@@ -328,14 +328,14 @@ def median(arr, start, end):
 
 
 def get_bases(ref_genome, chrom, start, end):
-    bases = ''
+    bases = '.'
     try:
         bases = ref_genome.fetch(chrom, start, end).upper()
     except:
         pass
     if bases.count('N') > 0:  # N bases do not load using IGV!
         return '.'
-    return bases
+    return bases if bases else '.'
 
 
 def get_ref_base(events, ref_genome, symbolic_sv_size):
@@ -348,7 +348,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
             # Fetch deleted seq
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posB)
-                if bases != '.':
+                if bases and bases != '.':
                     e.ref_seq = bases
                     e.variant_seq = bases[0]
                 else:  # Use symbolic
@@ -363,7 +363,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         elif e.svtype == 'DUP':
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posB)
-                if bases != '.':
+                if bases and bases != '.':
                     e.ref_seq = bases[0]
                     e.variant_seq = bases
                 else:
