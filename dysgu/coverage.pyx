@@ -328,14 +328,8 @@ cdef class GenomeScanner:
             if "SO" in hd:
                 if hd["SO"] == "unsorted":
                     raise ValueError("Input bam file must be sorted")
-                
-        prev_alignment = None
+
         for a in file_iter:
-            # double check with index
-            if prev_alignment and prev_alignment.reference_id > a.reference_id:
-                raise ValueError("Input bam file must be sorted")
-            prev_alignment = a
-            
             if ibam is None:
                 cigar_l = a._delegate.core.n_cigar
                 if a.flag & 1284 or a.mapq < self.mapq_threshold or cigar_l == 0:
