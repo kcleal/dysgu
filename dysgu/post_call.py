@@ -339,8 +339,8 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
                 except:
                     pass
             else:
-                if e.svlen < symbolic_sv_size: # Fetch the variant sequence
-                    start = e.posA - 1  # Adjust to 0-based and include preceding base
+                if e.svlen < symbolic_sv_size:  # Fetch the variant sequence
+                    start = e.posA
                     end = e.posB
                     try:
                         bases = ref_genome.fetch(e.chrA, start, end).upper()
