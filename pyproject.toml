@@ -15,9 +15,8 @@ description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }
 ]
-license = { text = "MIT" }
+license = { file = "LICENSE.md" }
 requires-python = ">=3.9"
-dynamic = []
 dependencies = [
     "setuptools >= 61.0",
     "cython",
