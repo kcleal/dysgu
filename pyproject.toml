@@ -17,6 +17,7 @@ authors = [
 ]
 license = { text = "MIT" }
 requires-python = ">=3.9"
+dynamic = []
 dependencies = [
     "setuptools >= 61.0",
     "cython",
@@ -42,4 +43,4 @@ dysgu = "dysgu.main:cli"
 packages = ["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"]
 
 [tool.setuptools.package-data]
-"dysgu" = ["*.pxd", "*.pyx"]
+"dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
