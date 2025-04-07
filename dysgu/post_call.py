@@ -347,42 +347,42 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         if e.svtype == 'DEL':
             # Fetch deleted seq
             if not symbolic_repr:
-                bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posB)
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
                 if bases and bases != '.':
                     e.ref_seq = bases
                     e.variant_seq = bases[0]
                 else:  # Use symbolic
-                    bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
                     e.ref_seq = bases
                     e.variant_seq = '<DEL>'
             else:
-                bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
                 e.ref_seq = bases
                 e.variant_seq = '<DEL>'
 
         elif e.svtype == 'DUP':
             if not symbolic_repr:
-                bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posB)
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
                 if bases and bases != '.':
                     e.ref_seq = bases[0]
                     e.variant_seq = bases
                 else:
-                    bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
                     e.ref_seq = bases
                     e.variant_seq = '<DUP>'
             else:
-                bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
                 e.ref_seq = bases
                 e.variant_seq = '<DUP>'
 
         elif e.svtype == 'INS':
-            bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
             if symbolic_repr:
                 e.variant_seq = '<INS>'
 
         elif e.svtype in ('TRA', 'INV', 'BND'):
-            bases = get_bases(ref_genome, e.chrA, e.posA - 1, e.posA)
+            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
             e.variant_seq = f'<{e.svtype}>'
 
