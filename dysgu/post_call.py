@@ -82,13 +82,13 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
 
 
 class CoverageAnalyser(object):
-    def __init__(self, temp_dir):
+    def __init__(self, temp_dir, postfix=""):
         self.pad_size = 1000
         self.temp_dir = temp_dir
         self.chrom_cov_arrays = {}
         if os.path.exists(self.temp_dir):
             for pth in glob.glob(self.temp_dir + "/*.dysgu_chrom.bin"):
-                chrom_name = pth.split("/")[-1].split(".")[0]
+                chrom_name = pth.split("/")[-1].replace('.dysgu_chrom.bin', '')
                 self.chrom_cov_arrays[chrom_name] = np.fromfile(pth, dtype="int16")
             if self.chrom_cov_arrays:
                 logging.info("Loaded n={} chromosome coverage arrays from {}".format(len(self.chrom_cov_arrays), self.temp_dir))
@@ -327,40 +327,64 @@ def median(arr, start, end):
     return -1
 
 
+def get_bases(ref_genome, chrom, start, end):
+    bases = '.'
+    try:
+        bases = ref_genome.fetch(chrom, start, end).upper()
+    except:
+        pass
+    if bases.count('N') > 0:  # N bases do not load using IGV!
+        return '.'
+    return bases if bases else '.'
+
+
 def get_ref_base(events, ref_genome, symbolic_sv_size):
     for e in events:
         if e.posA == 0:
             e.posA = 1
-        if not e.ref_seq and not e.svtype == "BND":
-            if symbolic_sv_size == -1 or e.svtype in ("INS", "TRA", "INV"):
-                try:
-                    base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
-                    e.ref_seq = base
-                except:
-                    pass
+
+        symbolic_repr = symbolic_sv_size > 0 and (e.svlen >= symbolic_sv_size or e.svlen == 0)
+        if e.svtype == 'DEL':
+            # Fetch deleted seq
+            if not symbolic_repr:
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
+                if bases and bases != '.':
+                    e.ref_seq = bases
+                    e.variant_seq = bases[0]
+                else:  # Use symbolic
+                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+                    e.ref_seq = bases
+                    e.variant_seq = '<DEL>'
             else:
-                if e.svlen < symbolic_sv_size:  # Fetch the variant sequence
-                    start = e.posA
-                    end = e.posB
-                    try:
-                        bases = ref_genome.fetch(e.chrA, start, end).upper()
-                    except:
-                        bases = ""
-                    if e.svtype == "DEL":
-                        e.ref_seq = bases
-                        e.variant_seq = bases[0] if bases else ""
-                    else:  # For duplications, etc.
-                        e.variant_seq = bases
-                        e.ref_seq = bases[0] if bases else ""
-                else: # Use symbolic representation
-                    try:
-                        base = ref_genome.fetch(e.chrA, e.posA - 1, e.posA).upper()
-                        e.ref_seq = base
-                        e.variant_seq = base  # For non-DEL SVs
-                        if e.svtype == "DEL":
-                            e.variant_seq = base
-                    except:
-                        pass
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+                e.ref_seq = bases
+                e.variant_seq = '<DEL>'
+
+        elif e.svtype == 'DUP':
+            if not symbolic_repr:
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
+                if bases and bases != '.':
+                    e.ref_seq = bases[0]
+                    e.variant_seq = bases
+                else:
+                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+                    e.ref_seq = bases
+                    e.variant_seq = '<DUP>'
+            else:
+                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+                e.ref_seq = bases
+                e.variant_seq = '<DUP>'
+
+        elif e.svtype == 'INS':
+            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+            e.ref_seq = bases
+            if symbolic_repr:
+                e.variant_seq = '<INS>'
+
+        elif e.svtype in ('TRA', 'INV', 'BND'):
+            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
+            e.ref_seq = bases
+            e.variant_seq = f'<{e.svtype}>'
 
     return events
 
@@ -475,7 +499,6 @@ def del_like(r):
         ref_supp = r.outer_cn
     else:
         return 0, 0
-
     return round(ref_supp), round(variant_supp)
 
 
