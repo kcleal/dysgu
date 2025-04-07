@@ -12,10 +12,10 @@ git clone --depth 1 https://github.com/ebiggers/libdeflate.git && \
     cp build/libdeflate.a /usr/local/lib && cp libdeflate.h /usr/local/include && cd ../
 
 cd ./dysgu
-curl -L -o htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2
+curl -L -o htslib.tar.bz2 https://github.com/samtools/htslib/releases/download/1.21/htslib-1.21.tar.bz2
 ls -lh
 tar -xvf htslib.tar.bz2
-mv htslib-1.17 htslib && rm htslib.tar.bz2
+mv htslib-1.21 htslib && rm htslib.tar.bz2
 cd htslib
 
 #autoheader
