@@ -328,27 +328,30 @@ def median(arr, start, end):
 
 
 def get_bases(ref_genome, chrom, start, end):
-    bases = '.'
     try:
         bases = ref_genome.fetch(chrom, start, end).upper()
-    except:
-        pass
-    if bases.count('N') > 0:  # N bases do not load using IGV!
-        return '.'
-    return bases if bases else '.'
+        if not bases or bases.isspace():
+            return 'N'
+        return bases
+    except Exception as e:
+        logging.warning(f"Error fetching {chrom}:{start}-{end}: {str(e)}")
+        return 'N'
 
 
 def get_ref_base(events, ref_genome, symbolic_sv_size):
+    chrom_set = set(ref_genome.references)
     for e in events:
         if e.posA == 0:
             e.posA = 1
-
+        if e.chrA not in chrom_set or (e.chrB != e.chrA and e.chrB not in chrom_set):
+            logging.warning(f"Chrom missing from reference {e.chrA}, {e.chrB}")
+            continue
         symbolic_repr = symbolic_sv_size > 0 and (e.svlen >= symbolic_sv_size or e.svlen == 0)
         if e.svtype == 'DEL':
             # Fetch deleted seq
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
-                if bases and bases != '.':
+                if bases and bases != 'N':
                     e.ref_seq = bases
                     e.variant_seq = bases[0]
                 else:  # Use symbolic
@@ -363,7 +366,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         elif e.svtype == 'DUP':
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
-                if bases and bases != '.':
+                if bases and bases != 'N':
                     e.ref_seq = bases[0]
                     e.variant_seq = bases
                 else:
@@ -378,6 +381,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         elif e.svtype == 'INS':
             bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
+            # the variant_seq is set elsewhere, so only set symbolic here
             if symbolic_repr:
                 e.variant_seq = '<INS>'
 
