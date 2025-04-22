@@ -9,27 +9,33 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN pip install dysgu==1.6.2 && \
-wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 && \
-tar -xvf samtools-1.18.tar.bz2 && \
-rm samtools-1.18.tar.bz2 && \
-mv samtools-1.18 samtools && \
-cd samtools && ./configure && \
-make && \
-make install && \
-cd ../ && \
-wget https://github.com/samtools/bcftools/releases/download/1.18/bcftools-1.18.tar.bz2 && \
-tar -xvf bcftools-1.18.tar.bz2 && \
-rm bcftools-1.18.tar.bz2 && \
-mv bcftools-1.18 bcftools && \
-cd bcftools && \
-./configure && \
-make && \
-make install && \
-cd ../
+# Install dysgu and required Python dependencies
+RUN pip install --upgrade pip && \
+    pip install "superintervals>=0.2.10" "dysgu"
+
+# Install samtools 1.18
+RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 && \
+    tar -xvf samtools-1.18.tar.bz2 && \
+    rm samtools-1.18.tar.bz2 && \
+    mv samtools-1.18 samtools && \
+    cd samtools && \
+    ./configure && \
+    make && \
+    make install && \
+    cd ../
+
+# Install bcftools 1.18
+RUN wget https://github.com/samtools/bcftools/releases/download/1.18/bcftools-1.18.tar.bz2 && \
+    tar -xvf bcftools-1.18.tar.bz2 && \
+    rm bcftools-1.18.tar.bz2 && \
+    mv bcftools-1.18 bcftools && \
+    cd bcftools && \
+    ./configure && \
+    make && \
+    make install && \
+    cd ../
 
 CMD ["/bin/sh"]
-
 
 # Docker user guide
 # -----------------
