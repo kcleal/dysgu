@@ -1,6 +1,7 @@
 include dysgu/tests/*
 include *.rst
 include *.md
+include LICENSE.md
 include dysgu/*
 include ci/*
 include scripts/*

@@ -10,12 +10,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dysgu"
-version = "1.8.1"
+version = "1.8.3"
 description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }
 ]
-license = { text = "MIT" }
+license = "MIT"
+license-files = [
+    "LICENSE.md",
+]
 requires-python = ">=3.9"
 dependencies = [
     "setuptools >= 61.0",
@@ -24,7 +27,7 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "pysam >= 0.22",
+    "pysam >= 0.23",
     "networkx >= 2.4",
     "scikit-learn >= 0.22",
     "sortedcontainers",
@@ -42,4 +45,4 @@ dysgu = "dysgu.main:cli"
 packages = ["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"]
 
 [tool.setuptools.package-data]
-"dysgu" = ["*.pxd", "*.pyx"]
+"dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
