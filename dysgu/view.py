@@ -366,14 +366,24 @@ def vcf_to_df(path):
                "HP": ("haplotype", str),
                "AF": ("a_freq", float),
                }
-    # df = df[df.posA == 110156314]
-    df.rename(columns={k: v[0] for k, v in col_map.items()}, inplace=True)
-    for value_name, value_type in col_map.values():
-        if value_name != "posB_tra" and value_name not in df:
-            if value_type == np.int64 or value_type == float:
-                df[value_name] = [0] * len(df)
-            else:
-                df[value_name] = [''] * len(df)
+
+    # First check which original columns are missing before renaming
+    original_columns_in_df = set(df.columns)
+    missing_original_columns = {}
+    required = {"phase_set", "haplotype", "a_freq", "posB_tra"}
+    for orig_col, (new_col, dtype) in col_map.items():
+        if orig_col not in original_columns_in_df and new_col in required:
+            missing_original_columns[new_col] = dtype
+
+    # Now rename the columns that are present
+    df.rename(columns={k: v[0] for k, v in col_map.items() if k in df.columns}, inplace=True)
+
+    # Add the missing columns after renaming
+    for value_name, value_type in missing_original_columns.items():
+        if value_type == np.int64 or value_type == float:
+            df[value_name] = [0] * len(df)
+        else:
+            df[value_name] = [''] * len(df)
 
     df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
     for k, dtype in col_map.values():
