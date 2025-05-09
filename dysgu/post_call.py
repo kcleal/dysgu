@@ -338,6 +338,7 @@ def get_bases(ref_genome, chrom, start, end):
         return 'N'
 
 
+
 def get_ref_base(events, ref_genome, symbolic_sv_size):
     chrom_set = set(ref_genome.references)
     for e in events:
@@ -346,6 +347,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         if e.chrA not in chrom_set or (e.chrB != e.chrA and e.chrB not in chrom_set):
             logging.warning(f"Chrom missing from reference {e.chrA}, {e.chrB}")
             continue
+
         symbolic_repr = symbolic_sv_size > 0 and (e.svlen >= symbolic_sv_size or e.svlen == 0)
         if e.svtype == 'DEL':
             # Fetch deleted seq
