@@ -197,6 +197,8 @@ Remove events with low probability::
 
     dysgu filter --min-prob 0.2 input.vcf > output.vcf
 
+Note, dysgu currently leaves the QUAL field empty so the PROB field should be used for quality filtering.
+
 Remove events with low support fraction::
 
     dysgu filter --support-fraction 0.15 input.vcf > output.vcf
