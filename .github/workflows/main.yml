@@ -38,7 +38,7 @@ jobs:
 
           CIBW_ENVIRONMENT: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
           CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=14.0
-          CIBW_CONFIG_SETTINGS: --htslib-prefix="/usr/local"
+          CIBW_CONFIG_SETTINGS: "--meson-options=-Dhtslib_prefix=/usr/local"
 
           CIBW_BEFORE_BUILD: |
             pip install "meson>=0.63" ninja
