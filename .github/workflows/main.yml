@@ -25,6 +25,7 @@ jobs:
           export MACOSX_DEPLOYMENT_TARGET=14.0
           echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
           brew install libomp
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.3
         env:
@@ -34,17 +35,31 @@ jobs:
           CIBW_ARCHS_LINUX: "auto"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+
+          CIBW_ENVIRONMENT: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+          CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=14.0
+          CIBW_CONFIG_SETTINGS: --htslib-prefix="/usr/local"
+
+          CIBW_BEFORE_BUILD: |
+            pip install "meson>=0.63" ninja
+
           CIBW_BEFORE_ALL_MACOS: |
             sudo bash ci/osx-deps
+
           CIBW_BEFORE_ALL_LINUX: |
             bash ci/manylinux-deps
+
           CIBW_BEFORE_BUILD_MACOS: |
             ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
+
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
+
           CIBW_TEST_SKIP: "*-macosx_arm64"
+
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.2.10 numpy scipy pandas pysam>=0.23.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
+
           CIBW_TEST_COMMAND: dysgu test --verbose
 
       - uses: actions/upload-artifact@v4
