@@ -1,12 +1,15 @@
 #!/bin/bash
 
+# Get architecture from the first argument, default to arm64 if not provided
+ARCH="${1:-arm64}"
+echo "Building dependencies for architecture: $ARCH"
 
 BREW_PREFIX="$(brew --prefix)"
 
 export MACOSX_DEPLOYMENT_TARGET=14.0
-export CFLAGS="${CFLAGS} -mmacosx-version-min=14.0"
-export CPPFLAGS="${CXXFLAGS} -mmacosx-version-min=14.0 -I${BREW_PREFIX}/include "
-export LDFLAGS="${LDFLAGS} -mmacosx-version-min=14.0 -L${BREW_PREFIX}/lib"
+export CFLAGS="${CFLAGS} -mmacosx-version-min=14.0 -arch $ARCH"
+export CPPFLAGS="${CXXFLAGS} -mmacosx-version-min=14.0 -I${BREW_PREFIX}/include -arch $ARCH"
+export LDFLAGS="${LDFLAGS} -mmacosx-version-min=14.0 -L${BREW_PREFIX}/lib -arch $ARCH"
 
 git clone --depth 1 https://github.com/ebiggers/libdeflate.git
 cd libdeflate
@@ -28,5 +31,6 @@ cd htslib
  --enable-s3 \
  --enable-lzma \
  --enable-bz2 \
- --with-libdeflate
+ --with-libdeflate \
+ --build="$ARCH-apple-darwin"
 sudo make && make install
