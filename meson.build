@@ -175,7 +175,7 @@ py3.extension_module(
   include_directories : [includes, include_directories('dysgu/edlib')],
   cpp_args            : ['-O3', '-std=c++17'] + cpp_defines,
   install             : true,
-  install_dir         : py3.get_install_dir() / 'dysgu/edlib'
+  install_dir         : py3.get_install_dir(false) / 'dysgu/edlib'
 )
 
 py3.extension_module(
@@ -184,7 +184,7 @@ py3.extension_module(
   include_directories : [includes, include_directories('dysgu/scikitbio')],
   c_args              : ['-Wno-deprecated-declarations'] + cpp_defines,
   install             : true,
-  install_dir         : py3.get_install_dir() / 'dysgu/scikitbio'
+  install_dir         : py3.get_install_dir(false) / 'dysgu/scikitbio'
 )
 
 # Main modules
@@ -196,7 +196,7 @@ foreach module : main_modules
     dependencies        : [py3_dep, hts_lib],
     cpp_args            : extra_args + cpp_defines,
     install             : true,
-    install_dir         : py3.get_install_dir() / 'dysgu'
+    install_dir         : py3.get_install_dir(false) / 'dysgu'
   )
 endforeach
 
