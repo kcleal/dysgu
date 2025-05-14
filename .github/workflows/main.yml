@@ -4,22 +4,26 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }} for ${{ matrix.cibw_arch }}
+    name: Build wheels on ${{ matrix.os }}
     env:
       PREFIX: "/usr/local/"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macOS-14]
-        cibw_arch: ['x86_64', 'arm64']
-        exclude:
-          - os: ubuntu-22.04
-            cibw_arch: arm64
+        os: [ubuntu-24.04, macOS-15, macOS-13]
+        include:
+          - os: macOS-15
+            arch: arm64
+          - os: macOS-13
+            arch: x86_64
+          - os: ubuntu-24.04
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set correct paths for Homebrew on macOS
-        if: matrix.os == 'macOS-14'
+        if: startsWith(matrix.os, 'macOS')
         run: |
           export BREW_PREFIX="$(brew --prefix)"
           export PREFIX="$(brew --prefix)"
@@ -35,7 +39,8 @@ jobs:
         env:
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.14"
           CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *musl* "
-          CIBW_ARCHS_MACOS: "${{ matrix.cibw_arch }}"
+          # Only build for the appropriate architecture on each runner
+          CIBW_ARCHS_MACOS: "${{ matrix.arch }}"
           CIBW_ARCHS_LINUX: "auto"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
@@ -53,7 +58,7 @@ jobs:
             pkg-config --libs --cflags htslib || echo "htslib pkg-config not available"
 
           CIBW_BEFORE_ALL_MACOS: |
-            sudo bash ci/osx-deps ${{ matrix.cibw_arch }}
+            sudo bash ci/osx-deps
 
           CIBW_BEFORE_ALL_LINUX: |
             bash ci/manylinux-deps
@@ -73,5 +78,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheelhouse-${{ matrix.os }}-${{ matrix.cibw_arch }}-${{ github.run_id }}
+          name: wheelhouse-${{ matrix.os }}-${{ matrix.arch }}-${{ github.run_id }}
           path: ./wheelhouse/*.whl
