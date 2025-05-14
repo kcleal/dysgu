@@ -541,8 +541,6 @@ cdef void add_template_edges(Py_SimpleGraph G, TemplateEdges template_edges):
             if not G.hasEdge(primary1, primary2):
                 G.addEdge(primary1, primary2, w=1)
 
-
-@cython.auto_pickle(True)
 cdef class NodeName:
     cdef public uint64_t hash_name
     cdef public uint64_t tell
@@ -551,6 +549,7 @@ cdef class NodeName:
     cdef public uint32_t event_pos
     cdef public uint16_t flag
     cdef public uint16_t chrom
+
     def __init__(self, h, f, p, c, t, cigar_index, event_pos):
         self.hash_name = h
         self.flag = f
@@ -559,6 +558,7 @@ cdef class NodeName:
         self.tell = t
         self.cigar_index = cigar_index
         self.event_pos = event_pos
+
     def as_dict(self):
         return {"hash_name": self.hash_name,
                 "flag": self.flag,
@@ -566,9 +566,16 @@ cdef class NodeName:
                 "pos": self.pos,
                 "tell": self.tell,
                 "cigar_index": self.cigar_index,
-                "event_pos": self.event_pos,
-                "read_enum": self.read_enum,
-                }
+                "event_pos": self.event_pos}
+
+    def __reduce__(self):
+        return (NodeName, (self.hash_name,
+                           self.flag,
+                           self.pos,
+                           self.chrom,
+                           self.tell,
+                           self.cigar_index,
+                           self.event_pos))
 
 
 cdef struct NodeNameItem:
@@ -1581,7 +1588,6 @@ cpdef break_large_component(Py_SimpleGraph G, component, int min_support):
     return jobs
 
 
-@cython.auto_pickle(True)
 cdef class GraphComponent:
     cdef public object parts, s_between, reads, s_within, n2n, info
     def __init__(self, parts, s_between, reads, s_within, n2n, info):
@@ -1591,6 +1597,7 @@ cdef class GraphComponent:
         self.s_within = s_within
         self.n2n = n2n
         self.info = info
+
     def as_dict(self):
         return {"parts": self.parts,
                 "s_between": self.s_between,
@@ -1598,6 +1605,9 @@ cdef class GraphComponent:
                 "s_within": self.s_within,
                 "n2n": self.n2n,
                 "info": self.info}
+
+    def __reduce__(self):
+        return (GraphComponent, (self.parts, self.s_between, self.reads, self.s_within, self.n2n, self.info))
 
 
 cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGraph G, int min_support, int procs, int paired_end,

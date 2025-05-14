@@ -1,7 +1,8 @@
 #cython: language_level=3, c_string_type=unicode, c_string_encoding=utf8
 import numpy as np
 cimport numpy as np
-from dysgu.map_set_utils cimport unordered_map, EventResult, cigar_clip, clip_sizes
+from dysgu.map_set_utils cimport EventResult, cigar_clip, clip_sizes
+from dysgu.map_set_utils cimport map as ankerl_map
 from dysgu.map_set_utils import merge_intervals
 from dysgu.io_funcs import intersecter #, iitree
 from superintervals import IntervalSet
@@ -88,7 +89,7 @@ cdef float soft_clip_qual_corr(reads):
     1 imply no correlation whereas closer to 0 implies that quality values are correlated"""
     cdef const unsigned char[:] quals
     cdef int idx, x, i, j
-    cdef unordered_map[int, cpp_vector[int]] qq
+    cdef ankerl_map[int, cpp_vector[int]] qq
     cdef int left_clip, right_clip
     cdef AlignedSegment r
     for r in reads:
@@ -120,7 +121,7 @@ cdef float soft_clip_qual_corr(reads):
     cdef cpp_vector[int] second
     cdef int first
     cdef float mean_second, sum_second, sum_diff
-    cdef unordered_map[int, cpp_vector[int]].iterator qq_iter
+    cdef ankerl_map[int, cpp_vector[int]].iterator qq_iter
     cdef int size;
     with nogil:
         qq_iter = qq.begin()

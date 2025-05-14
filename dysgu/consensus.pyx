@@ -23,7 +23,9 @@ from libc.stdlib cimport abs as c_abs
 from libc.stdint cimport uint32_t, int32_t, uint64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map, EventResult
+from dysgu.map_set_utils cimport DiGraph, EventResult
+from dysgu.map_set_utils cimport set as ankerl_set
+from dysgu.map_set_utils cimport map as ankerl_map
 from dysgu.map_set_utils cimport hash as xxhasher
 
 from pysam.libcalignedsegment cimport AlignedSegment
@@ -272,8 +274,8 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
 cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
-    cdef unordered_set[int] seen
-    cdef unordered_set[int] explored
+    cdef ankerl_set[int] seen
+    cdef ankerl_set[int] explored
 
     # cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
@@ -842,7 +844,7 @@ cpdef contig_from_read_cigar(AlignedSegment r, int cigar_index):
 
 cpdef float compute_rep(seq):
 
-    cdef unordered_map[float, int] last_visited
+    cdef ankerl_map[float, int] last_visited
     cdef float tot_amount = 0
     cdef float total_seen = 0
     cdef int k, i, diff
