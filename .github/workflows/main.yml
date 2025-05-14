@@ -66,8 +66,8 @@ jobs:
           #CIBW_BEFORE_ALL_LINUX: |
           #  bash ci/manylinux-deps
 
-          CIBW_BEFORE_BUILD_MACOS: |
-            ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
+          #CIBW_BEFORE_BUILD_MACOS: |
+          #  ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
