@@ -54,7 +54,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
 
           CIBW_BEFORE_BUILD: |
-            pip install "meson>=0.63" "ninja" "cython>=3.0.0" "numpy" "pysam>=0.23.0"
+            pip install "meson>=0.64" "ninja" "cython>=3.0.0" "numpy" "pysam>=0.23.0"
             #echo "Checking for htslib in $HTSLIB_PREFIX"
             #ls -la /usr/local/lib/lib*hts*
             #ls -la /usr/local/include/htslib || echo "htslib include dir not found"
