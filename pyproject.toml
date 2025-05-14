@@ -51,3 +51,6 @@ packages = [
 
 [tool.setuptools.package-data]
 "dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
+
+[tool.meson-python.args]
+setup = []
