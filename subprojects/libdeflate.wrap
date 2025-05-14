@@ -1,0 +1,9 @@
+[wrap-git]
+url = https://github.com/ebiggers/libdeflate.git
+revision = v1.24
+depth = 1
+
+[cmake]
+
+[provide]
+libdeflate = libdeflate_dep

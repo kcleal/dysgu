@@ -13,8 +13,8 @@ project(
 # ---------------------------------------------------------------------------
 py_mod = import('python')
 
-cython_prog = find_program('cython')
-if run_command(cython_prog, '--version',
+cython = find_program('cython')
+if run_command(cython, '--version',
                 check: true
                 ).stdout().strip().split()[-1].version_compare('<3.0.0')
   error('Cython ≥3.0.0 is required (needed for NumPy2 support)')
@@ -48,7 +48,7 @@ pysam_includes  = run_command(py3,
 extra_args  = [
   '-Wno-sign-compare', '-Wno-unused-function',
   '-Wno-unused-result', '-Wno-ignored-qualifiers',
-  '-Wno-deprecated-declarations', '-fpermissive'
+  '-Wno-deprecated-declarations'
 ]
 cpp_defines = ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
 
@@ -100,7 +100,6 @@ endforeach
 # ---------------------------------------------------------------------------
 # Cython handling and module definitions
 # ---------------------------------------------------------------------------
-cython = find_program('cython')
 
 # Define the main Cython modules (those in the main dysgu directory)
 main_modules = [
@@ -183,7 +182,7 @@ py3.extension_module(
   '_ssw_wrapper',
   [cython_targets['_ssw_wrapper'], join_paths('dysgu', 'scikitbio', 'ssw.c')],
   include_directories : [includes, include_directories('dysgu/scikitbio')],
-  c_args              : ['-Wno-deprecated-declarations', '-std=c99'] + cpp_defines,
+  c_args              : ['-Wno-deprecated-declarations'] + cpp_defines,
   install             : true,
   install_dir         : py3.get_install_dir() / 'dysgu/scikitbio'
 )

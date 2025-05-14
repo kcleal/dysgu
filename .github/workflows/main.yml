@@ -45,23 +45,26 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
 
-          CIBW_ENVIRONMENT: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
-          CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=14.0
-          CIBW_CONFIG_SETTINGS: "setup-args=-Dhtslib_prefix=/usr/local"
+          #CIBW_ENVIRONMENT: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
+          #CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=14.0
+          #CIBW_CONFIG_SETTINGS: "setup-args=-Dhtslib_prefix=$GITHUB_WORKSPACE/htslib-1.21"
+
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14.0
+
           CIBW_BUILD_VERBOSITY: 1
 
           CIBW_BEFORE_BUILD: |
             pip install "meson>=0.63" "ninja" "cython>=3.0.0" "numpy" "pysam>=0.23.0"
-            echo "Checking for htslib in $HTSLIB_PREFIX"
-            ls -la /usr/local/lib/lib*hts*
-            ls -la /usr/local/include/htslib || echo "htslib include dir not found"
-            pkg-config --libs --cflags htslib || echo "htslib pkg-config not available"
+            #echo "Checking for htslib in $HTSLIB_PREFIX"
+            #ls -la /usr/local/lib/lib*hts*
+            #ls -la /usr/local/include/htslib || echo "htslib include dir not found"
+            #pkg-config --libs --cflags htslib || echo "htslib pkg-config not available"
 
-          CIBW_BEFORE_ALL_MACOS: |
-            sudo bash ci/osx-deps
+          #CIBW_BEFORE_ALL_MACOS: |
+          #  sudo bash ci/osx-deps
 
-          CIBW_BEFORE_ALL_LINUX: |
-            bash ci/manylinux-deps
+          #CIBW_BEFORE_ALL_LINUX: |
+          #  bash ci/manylinux-deps
 
           CIBW_BEFORE_BUILD_MACOS: |
             ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
