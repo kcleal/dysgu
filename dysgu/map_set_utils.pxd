@@ -28,11 +28,12 @@ cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
     cdef uint64_t hash(void* input, uint64_t length, uint64_t seed) nogil
 
 
-cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
-    cdef cppclass unordered_set[T]:
+cdef extern from "unordered_dense.h" namespace "ankerl::unordered_dense" nogil:
+    cdef cppclass set[T]:
         cppclass iterator:
             T operator*()
             iterator operator++()
+            iterator operator++(int)
             bint operator==(iterator)
             bint operator!=(iterator)
         vector()
@@ -45,20 +46,19 @@ cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
         void clear()
         bint empty()
 
-
-cdef extern from "robin_hood.h" namespace "robin_hood" nogil:
-    cdef cppclass unordered_map[T, U, HASH=*]:
+    cdef cppclass map[T, U, HASH=*]:
         ctypedef T key_type
         ctypedef U mapped_type
         ctypedef pair[const T, U] value_type
         cppclass iterator:
             pair[T, U]& operator*()
             iterator operator++()
+            iterator operator++(int)
             iterator operator--()
             bint operator==(iterator)
             bint operator!=(iterator)
-        unordered_map() except +
-        unordered_map(unordered_map&) except +
+        map() except +
+        map(map&) except +
         U& operator[](T&)
         pair[iterator, bint] insert(pair[T, U])
         iterator find(const T&)
@@ -122,9 +122,9 @@ cdef extern from "graph_objects.hpp" nogil:
         int has_key(long key)
         int has_lower_key(long key2)
         long get_lower()
-        unordered_set[long].iterator get_iterator()
-        unordered_set[long].iterator get_iterator_begin()
-        unordered_set[long].iterator get_iterator_end()
+        set[long].iterator get_iterator()
+        set[long].iterator get_iterator_begin()
+        set[long].iterator get_iterator_end()
 
 
 cdef extern from "graph_objects.hpp":
@@ -169,7 +169,7 @@ cdef extern from "graph_objects.hpp" nogil:
 
 
 cdef class Py_Int2IntMap:
-    """Fast integer to integer unordered map using tsl::robin-map"""
+    """Fast integer to integer unordered map"""
     cdef Int2IntMap *thisptr
 
     cdef void insert(self, int key, int value) noexcept nogil
@@ -191,7 +191,7 @@ cdef extern from "graph_objects.hpp" nogil:
 
 
 cdef class Py_IntSet:
-    """Fast 32 bit int set using tsl::robin-set"""
+    """Fast 32 bit int set"""
     cdef IntSet *thisptr
 
     cdef void insert(self, int key) nogil

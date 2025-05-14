@@ -7,7 +7,7 @@ from sys import argv
 import shutil
 import time
 from multiprocessing import cpu_count
-from subprocess import run, Popen, PIPE
+from subprocess import Popen, PIPE
 from importlib.metadata import version
 import warnings
 from dysgu import cluster, view, sv2bam, filter_normals
@@ -190,6 +190,8 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
+@click.option("-t", "--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
+              required=False, type=click.Path())
 @click.option("--sites", help="A vcf file of known variant sites. All sites will be genotyped in the output vcf",
               required=False, type=click.Path())
 @click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
@@ -316,6 +318,8 @@ def run_pipeline(ctx, **kwargs):
 @click.argument('bam', required=True, type=click.Path(exists=False))
 @click.option("--reference", help="Reference file for opening cram files",
               show_default=False, default="", required=False, type=click.Path())
+@click.option("-t", "--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
+              required=False, type=click.Path())
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",

@@ -672,10 +672,10 @@ cdef class StripedSmithWaterman:
         seq = np.empty(len(sequence), dtype=np.int8)
         if self.is_protein:
             for i, char in enumerate(sequence):
-                seq[i] = np_aa_table[ord(char)]
+                seq[i] = np_aa_table[<int>ord(char)]
         else:
             for i, char in enumerate(sequence):
-                seq[i] = np_nt_table[ord(char)]
+                seq[i] = np_nt_table[<int>ord(char)]
         return seq
 
     cdef cnp.ndarray[cnp.int8_t, ndim = 1, mode = "c"] \
@@ -704,6 +704,6 @@ cdef class StripedSmithWaterman:
             np.empty(length*length, dtype=np.int8)
         for row in sequence_order:
             for column in sequence_order:
-                py_list_matrix[i] = dict2d[row][column]
+                py_list_matrix[i] = <int>dict2d[row][column]
                 i += 1
         return py_list_matrix

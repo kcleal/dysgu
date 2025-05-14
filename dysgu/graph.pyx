@@ -5,24 +5,25 @@ from collections import defaultdict, deque, namedtuple
 import numpy as np
 cimport numpy as np
 import sortedcontainers
-import cython
 from cpython cimport array
 import array
 import logging
-from dysgu.map_set_utils cimport unordered_map as robin_map, Py_SimpleGraph
+from dysgu.map_set_utils cimport Py_SimpleGraph
 from dysgu.map_set_utils cimport multimap as cpp_map
 from dysgu cimport map_set_utils
 from dysgu.io_funcs import intersecter
-from dysgu.map_set_utils cimport unordered_set, cigar_clip, clip_sizes, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance
+from dysgu.map_set_utils cimport cigar_clip, clip_sizes, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
+from dysgu.map_set_utils cimport set as ankerl_set
+from dysgu.map_set_utils cimport map as ankerl_map
+
 from dysgu.extra_metrics import BadClipCounter
 from dysgu.map_set_utils import echo  # for debugging
 from libcpp.string cimport string
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.vector cimport vector
 from libcpp.pair cimport pair as cpp_pair
-from libcpp.unordered_map cimport unordered_map
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, int32_t, uint64_t
 from libc.stdlib cimport abs as c_abs
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
@@ -60,7 +61,7 @@ ctypedef enum ReadEnum_t:
     SKIP = 5
 
 
-cdef void sliding_window_minimum(int k, int m, str s, unordered_set[long]& found):
+cdef void sliding_window_minimum(int k, int m, str s, ankerl_set[long]& found):
     """End minimizer
     https://github.com/keegancsmith/Sliding-Window-Minimum/blob/master/sliding_window_minimum.py"""
     cdef int i = 0
@@ -114,7 +115,7 @@ cdef class ClipScoper:
     # MinimizerTable - keys are read-names, value is a set of longs, minimizers associated with read
     cdef MinimizerTable read_minimizers_left, read_minimizers_right
     # Hashmap key is minimizer val, value is a set of chrom pos + node name packed as a 64 int
-    cdef robin_map[uint64_t, unordered_set[uint64_t]] clip_table_left, clip_table_right
+    cdef ankerl_map[uint64_t, ankerl_set[uint64_t]] clip_table_left, clip_table_right
     cdef int max_dist, k, w, clip_length, current_chrom, minimizer_support_thresh, minimizer_matches
     cdef float target_density, upper_bound_n_minimizers
     cdef int n_local_minimizers_left, n_local_minimizers_right
@@ -142,10 +143,10 @@ cdef class ClipScoper:
         self.minimizer_mode = False
 
     cdef void _add_m_find_candidates(self, clip_seq, int name, int idx, int position,
-                                     robin_map[uint64_t, unordered_set[uint64_t]]& clip_table,
-                                     unordered_set[int]& clustered_nodes):
-        cdef unordered_set[long] clip_minimizers
-        cdef unordered_set[uint64_t].iterator targets_iter, targets_end
+                                     ankerl_map[uint64_t, ankerl_set[uint64_t]]& clip_table,
+                                     ankerl_set[int]& clustered_nodes):
+        cdef ankerl_set[long] clip_minimizers
+        cdef ankerl_set[uint64_t].iterator targets_iter, targets_end
         sliding_window_minimum(self.k, self.w, clip_seq, clip_minimizers)
         if clip_minimizers.empty():
             return
@@ -203,14 +204,14 @@ cdef class ClipScoper:
             clip_table[m].insert(pair_to_int64(position, name))
 
     cdef void _refresh_scope(self, cpp_deque[cpp_pair[int, int]]& scope, int position, MinimizerTable& mm_table,
-                             robin_map[uint64_t, unordered_set[uint64_t]]& clip_table, int index
+                             ankerl_map[uint64_t, ankerl_set[uint64_t]]& clip_table, int index
                              ):
         # Remove out of scope reads and minimizers
         cdef int item_position, name
         cdef long m
         cdef cpp_pair[int, int] name_pair
-        cdef unordered_set[long].iterator set_iter
-        cdef unordered_set[long].iterator set_iter_end
+        cdef ankerl_set[long].iterator set_iter
+        cdef ankerl_set[long].iterator set_iter_end
         while True:
             if scope.empty():
                 break
@@ -235,7 +236,7 @@ cdef class ClipScoper:
             else:
                 break
     cdef void _insert(self, seq, int cigar_start, int cigar_end, int input_read, int position,
-                      unordered_set[int]& clustered_nodes):
+                      ankerl_set[int]& clustered_nodes):
         # Find soft-clips of interest
         if cigar_start >= self.clip_length:
             clip_seq = left_soft_clips(seq, cigar_start)
@@ -249,7 +250,7 @@ cdef class ClipScoper:
             self.scope_right.push_back(cpp_item(position, input_read))
 
     cdef void update(self, r, int input_read, int chrom, int position,
-               unordered_set[int]& clustered_nodes):
+               ankerl_set[int]& clustered_nodes):
         cdef int clip_left = 0
         cdef int clip_right = 0
         clip_sizes(r, &clip_left, &clip_right)
@@ -272,7 +273,7 @@ cdef struct LocalVal:
     ReadEnum_t read_enum
 
 
-cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, ReadEnum_t read_enum, int length_from_cigar) nogil:
+cdef LocalVal make_local_val(int chrom2, int pos2, int node_name, ReadEnum_t read_enum, int length_from_cigar) noexcept nogil:
     cdef LocalVal item
     item.chrom2 = chrom2
     item.pos2 = pos2
@@ -456,7 +457,7 @@ cdef struct TemplateNode:
 
 
 cdef class TemplateEdges:
-    cdef public unordered_map[string, vector[TemplateNode]] templates_s  # query_start, node, flag
+    cdef ankerl_map[string, vector[TemplateNode]] templates_s  # query_start, node, flag
     def __init__(self):
         pass
     cdef void add(self, str template_name, int flag, int node, int query_start):
@@ -471,7 +472,7 @@ cdef class TemplateEdges:
 cdef void add_template_edges(Py_SimpleGraph G, TemplateEdges template_edges):
     # this function joins up template reads (read 1, read 2, plus any supplementary)
     cdef int i, j, u_start, v_start, u, v, uflag, vflag, primary1, primary2, n1, n2
-    cdef unordered_map[string, vector[TemplateNode]].iterator it = template_edges.templates_s.begin()
+    cdef ankerl_map[string, vector[TemplateNode]].iterator it = template_edges.templates_s.begin()
     cdef vector[TemplateNode] arr
     cdef TemplateNode *t
     while it != template_edges.templates_s.end():
@@ -789,7 +790,7 @@ class AlignmentsSA:
 cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
     cdef int other_node
     cdef int count = 0
-    cdef unordered_set[int] clustered_nodes
+    cdef ankerl_set[int] clustered_nodes
     clip_scope.update(r, node_name, chrom, pos, clustered_nodes)
     if not clustered_nodes.empty():
         for other_node in clustered_nodes:
@@ -1106,7 +1107,7 @@ cdef struct CigarEvent:
 
 
 cdef CigarEvent make_cigar_event(int opp, int cigar_index, int event_pos, int pos2, int length,
-                                 ReadEnum_t read_enum) nogil:
+                                 ReadEnum_t read_enum) noexcept nogil:
     cdef CigarEvent item
     item.opp = opp
     item.cigar_index = cigar_index
@@ -1424,7 +1425,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     return G, node_to_name, bad_clip_counter, site_adder, n_aligned_bases, hp_tag_found
 
 
-cdef BFS_local(Py_SimpleGraph G, int source, unordered_set[int]& visited ):
+cdef BFS_local(Py_SimpleGraph G, int source, ankerl_set[int]& visited ):
     cdef array.array queue = array.array("L", [source])
     nodes_found = set([])
     cdef int u, v
@@ -1445,7 +1446,7 @@ cdef BFS_local(Py_SimpleGraph G, int source, unordered_set[int]& visited ):
 
 
 cdef get_partitions(Py_SimpleGraph G, nodes):
-    cdef unordered_set[int] seen
+    cdef ankerl_set[int] seen
     cdef int u, v, i
     cdef vector[int] neighbors
     parts = []
