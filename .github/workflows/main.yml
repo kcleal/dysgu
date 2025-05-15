@@ -73,8 +73,13 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            export LD_LIBRARY_PATH=$PWD/build/subprojects/htslib-1.21:$LD_LIBRARY_PATH
-            find $PWD -name "libhts.so*" 
+            # Htslib is build as libhts.so.1.21, but auditwheel expects libhts.so.3
+            lib_path=$(find /project -name "libhts.so*" | head -1 | xargs dirname)
+            echo "Found htslib at: $lib_path"
+            
+            # Create the necessary symlinks
+            ln -sf $lib_path/libhts.so.1.21 $lib_path/libhts.so.3
+            ln -sf $lib_path/libhts.so.3 $lib_path/libhts.so 
             auditwheel repair --lib-sdir $PWD/build/subprojects/htslib-1.21 -w {dest_dir} {wheel}
 
           CIBW_TEST_SKIP: "*-macosx_arm64"

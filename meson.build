@@ -70,7 +70,8 @@ else
                               required: false)
   hts_lib = dependency('htslib',
                        fallback : ['htslib', 'htslib_dep'],
-                       required : true)
+                       required : true,
+                       default_options: ['libdeflate=true'])
 endif
 
 
