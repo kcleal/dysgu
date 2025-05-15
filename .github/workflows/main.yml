@@ -69,14 +69,14 @@ jobs:
             echo "Current directory:"
             pwd
             
-            echo "Root directory contents:"
-            ls -la / | grep project
-            
             echo "Project directory contents:"
             ls -la /project
             
-            echo "Temporary directories that might contain build artifacts:"
-            ls -la /tmp | grep -E '(meson|build|hts)'
+            echo "Subprojects contents:"
+            ls -la /project/subprojects
+            
+            echo "Subproject htslib:"
+            ls -la /project/subprojects/htslib*
             
             echo "Looking for libhts.so* files:"
             find / -name "libhts.so*" -type f 2>/dev/null | grep -v "Permission denied" | sort
