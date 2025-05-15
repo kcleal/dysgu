@@ -323,8 +323,8 @@ and significantly improve calling accuracy. Existing phasing tags will be automa
 
 Dysgu uses a specialized phasing format in its output VCF::
 
-    <ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
-    <ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. \
+    ##FORMAT=<ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
+    ##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. \
         Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
 
 The HP tag contains detailed information about read support for each haplotype:
