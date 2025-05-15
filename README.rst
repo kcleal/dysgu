@@ -13,29 +13,10 @@ for calling structural variants using paired-end or long read sequencing data. S
 
 |Generic badge| |Li badge|
 
-`⚙️ Installation`_
-
-`🚀 Quick start`_
-
-`🎯 Calling SVs`_
-
-`🚦Filtering SVs`_
-
-`➕ Merging SVs`_
-
-`♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
-
-`🔍 Genotype list of sites`_
-
-`🔪 Regions of interest / excluding regions`_
-
-`🔧 Useful parameters`_
-
-`🚑 Issues`_
-
-`🐍 Python API`_
-
-`🎓 Citation`_
+.. contents::
+   :local:
+   :depth: 1
+   :backlinks: none
 
 ----
 
