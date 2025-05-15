@@ -54,16 +54,13 @@ jobs:
 
           CIBW_BEFORE_BUILD: |
             pip install "meson>=0.64" "ninja" "cython>=3.0.0" "numpy" "pysam>=0.23.0"
-            #echo "Checking for htslib in $HTSLIB_PREFIX"
-            #ls -la /usr/local/lib/lib*hts*
-            #ls -la /usr/local/include/htslib || echo "htslib include dir not found"
-            #pkg-config --libs --cflags htslib || echo "htslib pkg-config not available"
 
           CIBW_BEFORE_ALL_MACOS: |
             brew install htslib
 
           CIBW_BEFORE_ALL_LINUX: |
-            dnf install libdeflate-devel
+            dnf install -y epel-release
+            dnf install -y libdeflate-devel
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
@@ -81,10 +78,7 @@ jobs:
             ln -sf libhts.so.3 libhts.so
             ls -la
             
-            # Repair the wheel with the fixed library directory
             auditwheel repair --lib-sdir /tmp/lib_fix -w {dest_dir} {wheel}
-
-#          CIBW_TEST_SKIP: "*-macosx_arm64"
 
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.2.10 numpy scipy pandas pysam>=0.23.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm

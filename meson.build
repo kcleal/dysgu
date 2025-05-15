@@ -228,19 +228,10 @@ python_sources = [
   're_map.py', 'view.py'
 ]
 
-# Add all Cython .pyx files for installation
-foreach module : main_modules
-  python_sources += [module + '.pyx']
-endforeach
-
 # Install Python sources
 foreach source : python_sources
   py3.install_sources(join_paths('dysgu', source), subdir : 'dysgu')
 endforeach
-
-# Also install the special module .pyx files
-py3.install_sources(join_paths('dysgu', 'edlib', 'edlib.pyx'), subdir : 'dysgu/edlib')
-py3.install_sources(join_paths('dysgu', 'scikitbio', '_ssw_wrapper.pyx'), subdir : 'dysgu/scikitbio')
 
 # Install data files
 install_data(
@@ -248,14 +239,12 @@ install_data(
   install_dir : py_pkg_root
 )
 
-# ---------------------------------------------------------------------------
-# Install entire sub‑packages verbatim
-# ---------------------------------------------------------------------------
-
+# Install sub‑packages
 foreach pkg : ['tests', 'scikitbio', 'edlib', 'gfftool']
   # copies dysgu/<pkg>/… into <site‑packages>/dysgu/<pkg>/…
   install_subdir(
     join_paths('dysgu', pkg),
-    install_dir : py_pkg_root
+    install_dir : py_pkg_root,
+    exclude_files : ['*.pyx', '*.c', '*.cpp', '*.h', '*.hpp']
   )
 endforeach
