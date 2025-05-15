@@ -326,6 +326,34 @@ Also of note, the ``--ignore-sample-sites`` option is set to True by default. Th
  being ignored from a multi-sample sites file. This may not be the deired behavior if trying to re-genotype a sample using different
  read types, for example.
 
+🔫 Phasing Support
+ ------------------
+Since v1.8, dysgu supports phased variant calling. Phasing information helps determine which
+variants occur on the same chromosome (haplotype), improving accuracy for complex structural variant detection.
+
+Dysgu automatically detects and uses phasing information if your input bam/cram has::
+
+    HP tags (haplotype identifier)
+    PS tags (phase set identifier)
+
+For long reads, haplotagged bams (created with tools like hiphase, whatshap, or longshot etc) provide phasing information
+and significantly improve calling accuracy. Existing phasing tags will be automatically incorporated into the output VCF.
+
+Dysgu uses a specialized phasing format in its output VCF::
+
+    <ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
+    <ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. \
+        Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
+
+The HP tag contains detailed information about read support for each haplotype:
+
+- 10|12 means 10 reads support haplotype 1, 12 reads support haplotype 2, and no unphased reads
+- 8|7_3 means 8 reads support haplotype 1, 7 support haplotype 2, and 3 reads are unphased
+- _4 means all 4 reads are unphased (no phasing information)
+- Support for multiple haplotypes is indicated with pipe-delimited values: HP1|HP2|...HPn
+
+The PSET tag identifies which variants belong to the same phased block (currently PS tag is reserved for 'plus-strand' read support).
+
 
 🔪 Regions of interest / excluding regions
 ------------------------------------------
