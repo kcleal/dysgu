@@ -219,6 +219,9 @@ endforeach
 # ---------------------------------------------------------------------------
 # Install Python source files
 # ---------------------------------------------------------------------------
+# Absolute path where Python packages go (e.g. site‑packages)
+py_pkg_root = py3.get_install_dir() / 'dysgu'
+
 python_sources = [
   '__init__.py', 'main.py', 'python_api.py',
   'sites_utils.py', 'filter_normals.py', 'post_call.py',
@@ -248,8 +251,6 @@ install_data(
 # ---------------------------------------------------------------------------
 # Install entire sub‑packages verbatim
 # ---------------------------------------------------------------------------
-# Absolute path where Python packages go (e.g. site‑packages)
-py_pkg_root = py3.get_install_dir() / 'dysgu'
 
 foreach pkg : ['tests', 'scikitbio', 'edlib', 'gfftool']
   # copies dysgu/<pkg>/… into <site‑packages>/dysgu/<pkg>/…
