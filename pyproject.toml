@@ -53,5 +53,4 @@ packages = [
 "dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
 
 [tool.meson-python.args]
-setup   = ['--default-library=static']  # Build hts library in static mode
-install = ['--skip-subprojects']  # don’t try to 'install' htslib to /usr/local/lib
+setup   = []

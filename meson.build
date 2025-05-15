@@ -83,7 +83,6 @@ else
   hts_lib = dependency('htslib',
                        fallback : ['htslib', 'htslib_dep'],
                        required : true,
-                       static   : true,
                        default_options: htslib_options)
 endif
 
