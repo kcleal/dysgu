@@ -66,19 +66,32 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            pwd
+            ls -a
+            echo "---"
+            ls {project}
+            echo "---"
+            ls {project}/subprojects/htslib*
+            echo "---"
+            ls {project}/build
+            
             # Need to find libhts and rename it to somthing that auditwheel expects
             echo "Build dir:"
             ls build
             echo "subprojects dir:"
             ls subprojects/htslib*
             
-            HTSLIB_PATH=$(find /project -path "*subprojects/htslib*" -name "libhts.so*" -type f | head -1)
+            HTSLIB_PATH=$(find {project} -path "*subprojects/htslib*" -name "libhts.so*" -type f | head -1)
             
             HTSLIB_FILE=$(basename "$HTSLIB_PATH")
             echo "HTSLIB_FILE: $HTSLIB_FILE"
             
-            ln -sf "$HTSLIB_FILE" libhts.so.3
+            mkdir -p lib_fix && cd lib_fix
+
+            ln -sf "$HTSLIB_PATH" libhts.so.3
             ln -sf libhts.so.3 libhts.so
+            
+            echo "Created symlinks in lib_fix directory:"
             ls -la
     
             auditwheel repair --lib-sdir . -w {dest_dir} {wheel}
