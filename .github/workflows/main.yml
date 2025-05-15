@@ -73,33 +73,20 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            # More extensive search to locate the library
-            echo "Searching for htslib libraries..."
-            find /project -type f -name "libhts.so*" || echo "No libhts.so found in /project"
-            find /tmp -type f -name "libhts.so*" || echo "No libhts.so found in /tmp"
-            find /project -type d -path "*/htslib*" || echo "No htslib directory found"
-
-            # Establish location where we want to place the symlinks
+            find /project -name "libhts.so*" -type f | sort
             mkdir -p /tmp/lib_fix
-
-            # Copy the actual library and create symlinks
-            original_lib=$(find /project -type f -name "libhts.so*" | head -1)
-            if [ -n "$original_lib" ]; then
-              cp "$original_lib" /tmp/lib_fix/
-              lib_name=$(basename "$original_lib")
-              ln -sf "/tmp/lib_fix/$lib_name" /tmp/lib_fix/libhts.so.3
-              ln -sf /tmp/lib_fix/libhts.so.3 /tmp/lib_fix/libhts.so
-              echo "Created symlinks in /tmp/lib_fix"
-              ls -la /tmp/lib_fix
-
-              # Use this directory for auditwheel
-              auditwheel repair --lib-sdir /tmp/lib_fix -w {dest_dir} {wheel}
-            else
-              echo "CRITICAL: Could not find libhts.so library!"
-              echo "Contents of build directory:"
-              find /project -type f -name "*.so*" | sort
-              exit 1
-            fi
+            
+            # Find and copy the library
+            cp $(find /project -name "libhts.so*" -type f | head -1) /tmp/lib_fix/ || echo "Failed to copy htslib"
+            
+            # Create the symlinks
+            cd /tmp/lib_fix
+            ln -sf libhts.so.* libhts.so.3
+            ln -sf libhts.so.3 libhts.so
+            ls -la
+            
+            # Repair the wheel with the fixed library directory
+            auditwheel repair --lib-sdir /tmp/lib_fix -w {dest_dir} {wheel}
 
           CIBW_TEST_SKIP: "*-macosx_arm64"
 

@@ -6,4 +6,4 @@ source_hash = ad8d3723d0065c4723ab738be9723f2ff1cb0f1571e8bfcf0301ff9661f475e8
 method = cmake
 
 [provide]
-libdeflate = libdeflate_dep
+dependency_names = libdeflate
