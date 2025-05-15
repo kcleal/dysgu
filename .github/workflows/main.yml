@@ -30,8 +30,8 @@ jobs:
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
-          export MACOSX_DEPLOYMENT_TARGET=14.0
-          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+          export MACOSX_DEPLOYMENT_TARGET=15.0
+          echo "MACOSX_DEPLOYMENT_TARGET=15.0" >> $GITHUB_ENV
           brew install libomp
 
       - name: Build wheels
@@ -46,10 +46,10 @@ jobs:
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
 
           #CIBW_ENVIRONMENT: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH"
-          #CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=14.0
-          #CIBW_CONFIG_SETTINGS: "setup-args=-Dhtslib_prefix=$GITHUB_WORKSPACE/htslib-1.21"
+          #CIBW_ENVIRONMENT_MACOS: HTSLIB_PREFIX="/usr/local" PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH" MACOSX_DEPLOYMENT_TARGET=15.0
+          #CIBW_CONFIG_SETTINGS: "setup-args=-Dhtslib_prefix=$GITHUB_WORKSPACE/htslib-1.21
 
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=14.0
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=15.0
 
           CIBW_BUILD_VERBOSITY: 1
 
@@ -73,7 +73,7 @@ jobs:
           #  ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
 
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
-            delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
+            delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 15.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
             find /project -name "libhts.so*" -type f | sort
