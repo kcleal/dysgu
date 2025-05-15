@@ -66,43 +66,7 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            echo "Current directory:"
-            pwd
-            
-            echo "Project directory contents:"
-            ls -la /project
-            
-            echo "Subprojects contents:"
-            ls -la /project/subprojects
-            
-            echo "Subproject htslib:"
-            ls -la /project/subprojects/htslib*
-            
-            echo "Looking for libhts.so* files:"
-            find / -name "libhts.so*" -type f 2>/dev/null | grep -v "Permission denied" | sort
-            
-            echo "Looking for htslib directories:"
-            find /project -name "htslib*" -type d 2>/dev/null
-            
-            echo "Looking in build directories:"
-            find /project -path "*build*" -name "*.so*" -type f 2>/dev/null | grep hts
-            
-            # Try to find the htslib shared library anywhere on the system
-            HTSLIB_PATH=$(find / -name "libhts.so*" -type f 2>/dev/null | head -1)
-            echo "Found HTSLIB_PATH: $HTSLIB_PATH"
-                  
-            HTSLIB_FILE=$(basename "$HTSLIB_PATH")
-            echo "HTSLIB_FILE: $HTSLIB_FILE"
-            
-            mkdir -p lib_fix && cd lib_fix
-
-            ln -sf "$HTSLIB_PATH" libhts.so.3
-            ln -sf libhts.so.3 libhts.so
-            
-            echo "Created symlinks in lib_fix directory:"
-            ls -la
-    
-            auditwheel repair --lib-sdir . -w {dest_dir} {wheel}
+            auditwheel repair -w {dest_dir} {wheel}
 
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.2.10 numpy scipy pandas pysam>=0.23.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
