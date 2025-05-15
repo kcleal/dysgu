@@ -53,4 +53,4 @@ packages = [
 "dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
 
 [tool.meson-python.args]
-setup = ["-Dhtslib:libdeflate=true"]
+setup = []

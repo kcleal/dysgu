@@ -59,18 +59,31 @@ cpp_defines = ['-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION']
 htslib_prefix = get_option('htslib_prefix')
 
 if htslib_prefix != ''
+  # Use the system-provided htslib
   hts_lib = declare_dependency(
     include_directories : include_directories(
                             join_paths(htslib_prefix, 'include'),
                             join_paths(htslib_prefix, 'include/htslib')),
     link_args           : ['-L' + join_paths(htslib_prefix, 'lib'), '-lhts'])
 else
-  libdeflate_dep = dependency('libdeflate',
-                              fallback: ['libdeflate'])
+  # Try to get libdeflate, but make it optional
+  libdeflate_dep = dependency('libdeflate', required: false)
+
+  # Set htslib options based on whether libdeflate was found
+  htslib_options = []
+  if libdeflate_dep.found()
+    message('libdeflate found, enabling it for htslib')
+    htslib_options += 'libdeflate=true'
+  else
+    message('libdeflate not found, building htslib without it')
+    htslib_options += 'libdeflate=false'
+  endif
+
+  # Build htslib as a dependency
   hts_lib = dependency('htslib',
                        fallback : ['htslib', 'htslib_dep'],
                        required : true,
-                       default_options: ['libdeflate=true'])
+                       default_options: htslib_options)
 endif
 
 

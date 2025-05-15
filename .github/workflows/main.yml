@@ -60,10 +60,13 @@ jobs:
             #ls -la /usr/local/include/htslib || echo "htslib include dir not found"
             #pkg-config --libs --cflags htslib || echo "htslib pkg-config not available"
 
-          #CIBW_BEFORE_ALL_MACOS: |
+          CIBW_BEFORE_ALL_MACOS: |
+            brew install htslib
           #  sudo bash ci/osx-deps
 
-          #CIBW_BEFORE_ALL_LINUX: |
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf install libdeflate-devel
+
           #  bash ci/manylinux-deps
 
           #CIBW_BEFORE_BUILD_MACOS: |
