@@ -73,14 +73,33 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            # Htslib is build as libhts.so.1.21, but auditwheel expects libhts.so.3
-            lib_path=$(find /project -name "libhts.so*" | head -1 | xargs dirname)
-            echo "Found htslib at: $lib_path"
-            
-            # Create the necessary symlinks
-            ln -sf $lib_path/libhts.so.1.21 $lib_path/libhts.so.3
-            ln -sf $lib_path/libhts.so.3 $lib_path/libhts.so 
-            auditwheel repair --lib-sdir $PWD/build/subprojects/htslib-1.21 -w {dest_dir} {wheel}
+            # More extensive search to locate the library
+            echo "Searching for htslib libraries..."
+            find /project -type f -name "libhts.so*" || echo "No libhts.so found in /project"
+            find /tmp -type f -name "libhts.so*" || echo "No libhts.so found in /tmp"
+            find /project -type d -path "*/htslib*" || echo "No htslib directory found"
+
+            # Establish location where we want to place the symlinks
+            mkdir -p /tmp/lib_fix
+
+            # Copy the actual library and create symlinks
+            original_lib=$(find /project -type f -name "libhts.so*" | head -1)
+            if [ -n "$original_lib" ]; then
+              cp "$original_lib" /tmp/lib_fix/
+              lib_name=$(basename "$original_lib")
+              ln -sf "/tmp/lib_fix/$lib_name" /tmp/lib_fix/libhts.so.3
+              ln -sf /tmp/lib_fix/libhts.so.3 /tmp/lib_fix/libhts.so
+              echo "Created symlinks in /tmp/lib_fix"
+              ls -la /tmp/lib_fix
+
+              # Use this directory for auditwheel
+              auditwheel repair --lib-sdir /tmp/lib_fix -w {dest_dir} {wheel}
+            else
+              echo "CRITICAL: Could not find libhts.so library!"
+              echo "Contents of build directory:"
+              find /project -type f -name "*.so*" | sort
+              exit 1
+            fi
 
           CIBW_TEST_SKIP: "*-macosx_arm64"
 
