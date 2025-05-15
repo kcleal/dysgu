@@ -239,6 +239,12 @@ endforeach
 py3.install_sources(join_paths('dysgu', 'edlib', 'edlib.pyx'), subdir : 'dysgu/edlib')
 py3.install_sources(join_paths('dysgu', 'scikitbio', '_ssw_wrapper.pyx'), subdir : 'dysgu/scikitbio')
 
+# Install data files
+install_data(
+  join_paths('dysgu', 'dysgu_model.1.pkl.gz'),
+  install_dir : py_pkg_root
+)
+
 # ---------------------------------------------------------------------------
 # Install entire sub‑packages verbatim
 # ---------------------------------------------------------------------------
