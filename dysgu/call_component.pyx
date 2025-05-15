@@ -120,6 +120,9 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
 
 
 cdef collect_phase_tags(bint get_hp_tag, AlignedSegment a, EventResult_t er):
+    # Note, haplotype/phase_set attributes start out as None type
+    # but get converted to dicts (counts) during calling.
+    # phase_set becomes and integer. haplotype has its own string format (see post_call.pyx file)
     if not get_hp_tag:
         return
     if not a.has_tag("HP"):
@@ -136,13 +139,13 @@ cdef collect_phase_tags(bint get_hp_tag, AlignedSegment a, EventResult_t er):
     else:
         er.haplotype[hp_tag] += 1
     if a.has_tag("PS"):
-        pg_tag = a.get_tag("PS")
+        ps_tag = a.get_tag("PS")
         if not er.phase_set:
-            er.phase_set = {pg_tag: 1}
-        elif pg_tag not in er.phase_set:
-            er.phase_set[pg_tag] = 1
+            er.phase_set = {ps_tag: 1}
+        elif ps_tag not in er.phase_set:
+            er.phase_set[ps_tag] = 1
         else:
-            er.phase_set[pg_tag] += 1
+            er.phase_set[ps_tag] += 1
 
 
 cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,

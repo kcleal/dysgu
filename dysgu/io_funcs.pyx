@@ -286,8 +286,7 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
-    # if debug:
-    #     echo("returned ", rec)
+
     return rec
 
 
@@ -382,7 +381,7 @@ def get_header(contig_names=""):
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
-##FORMAT=<ID=PSET,Number=1,Type=String,Description="Phase-set ID for phased SVs">
+##FORMAT=<ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
 ##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
 ##FORMAT=<ID=AF,Number=1,Type=Float,Description="Allele frequency">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">

@@ -162,6 +162,7 @@ def merge_df(df, samples, merge_dist, tree=None, merge_within_sample=False, aggr
     df["preciseA"] = [1] * len(df)
     df["preciseB"] = [1] * len(df)
     potential = [dotdict(set_numeric(i)) for i in df.to_dict("records")]
+
     if not merge_within_sample:
         return merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, progressive)
     else:
@@ -362,7 +363,7 @@ def vcf_to_df(path):
                "JIT": ("jitter", float),
                "LEFT_SVINSSEQ": ("left_ins_seq", str),
                "RIGHT_SVINSSEQ": ("right_ins_seq", str),
-               "PSET": ("phase_set", str),
+               "PSET": ("phase_set", np.int64),
                "HP": ("haplotype", str),
                "AF": ("a_freq", float),
                }
@@ -370,20 +371,20 @@ def vcf_to_df(path):
     # First check which original columns are missing before renaming
     original_columns_in_df = set(df.columns)
     missing_original_columns = {}
-    required = {"phase_set", "haplotype", "a_freq", "posB_tra"}
-    for orig_col, (new_col, dtype) in col_map.items():
+
+    # Required columns with default values:
+    required = {"phase_set": -1, "haplotype": "-1", "a_freq": -1, "posB_tra": -1, "svlen": -1, "MAPQsupp": -1,
+                "NMbase": -1, "exp_seq": ""}
+    for orig_col, (new_col, _) in col_map.items():
         if orig_col not in original_columns_in_df and new_col in required:
-            missing_original_columns[new_col] = dtype
+            missing_original_columns[new_col] = required[new_col]
 
     # Now rename the columns that are present
     df.rename(columns={k: v[0] for k, v in col_map.items() if k in df.columns}, inplace=True)
 
     # Add the missing columns after renaming
-    for value_name, value_type in missing_original_columns.items():
-        if value_type == np.int64 or value_type == float:
-            df[value_name] = [0] * len(df)
-        else:
-            df[value_name] = [''] * len(df)
+    for value_name, default_value in missing_original_columns.items():
+        df[value_name] = [default_value] * len(df)
 
     df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
     for k, dtype in col_map.values():

@@ -52,7 +52,7 @@ Or, from conda::
 
     conda install -c conda-forge -c bioconda dysgu
 
-To build from source::
+To build from source (htslib is also required)::
 
     git clone https://github.com/kcleal/dysgu
     cd dysgu
