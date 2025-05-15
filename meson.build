@@ -66,7 +66,7 @@ if htslib_prefix != ''
     link_args           : ['-L' + join_paths(htslib_prefix, 'lib'), '-lhts'])
 else
   libdeflate_dep = dependency('libdeflate',
-                              fallback: ['libdeflate', 'libdeflate_dep'])
+                              fallback: ['libdeflate'])
   hts_lib = dependency('htslib',
                        fallback : ['htslib', 'htslib_dep'],
                        required : true,
