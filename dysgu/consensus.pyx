@@ -276,12 +276,10 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
     cdef ankerl_set[int] seen
     cdef ankerl_set[int] explored
-
-    # cdef cpp_deque[int] order
     cdef cpp_vector[int] fringe
     cdef cpp_vector[int] new_nodes
     cdef cpp_vector[int] neighbors
-    cdef int v, n, w
+    cdef int v, n, w, i
 
     cdef cpp_vector[int] debug_res
 
@@ -296,7 +294,7 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
         while fringe.size() != 0:
 
-            w = fringe.back() # depth first search
+            w = fringe.back()  # depth first search
             if explored.find(w) != explored.end():  # already looked down this branch
                 fringe.pop_back()
                 continue
@@ -323,8 +321,8 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
                     new_nodes.push_back(n)
 
             if new_nodes.size() > 0:  # Add new_nodes to fringe
-                fringe.reserve(fringe.size() + new_nodes.size())
-                fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
+                for i in range(new_nodes.size()):
+                    fringe.push_back(new_nodes[i])  # Extend
 
             else:  # No new nodes so w is fully explored
                 explored.insert(w)
