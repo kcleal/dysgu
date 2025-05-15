@@ -723,7 +723,7 @@ def get_hp_format(events):
 
             e.haplotype = hp_string
         else:
-            e.haplotype = "0"
+            e.haplotype = ""
 
 
     return max_ps, any_phase_set
@@ -790,7 +790,7 @@ def get_gt_metric2(events, mode, add_gt=True):
         join_phase_sets(events, max_ps + 1)
     else:
         for e in events:
-            e.phase_set = "-1"
+            e.phase_set = -1
 
     return events
 

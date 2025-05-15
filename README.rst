@@ -52,8 +52,11 @@ Or, from conda::
 
     conda install -c conda-forge -c bioconda dysgu
 
+To build from source (htslib is also required)::
 
-To build from source, run the install script: ``bash INSTALL.sh``.
+    git clone https://github.com/kcleal/dysgu
+    cd dysgu
+    pip install .
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
@@ -61,7 +64,11 @@ Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kc
 
 Run tests::
 
-    $ dysgu test
+    dysgu test
+
+For development use::
+
+    pip install -e . --no-build-isolation --config-settings=builddir=build-meson
 
 🚀 Quick start
 --------------

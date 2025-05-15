@@ -16,6 +16,7 @@ from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_ciga
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
 
+from builtins import set as python_set
 
 def echo(*args):
     click.echo(args, err=True)
@@ -413,7 +414,7 @@ def to_dict(self):
 
 
 def from_dict(self, d):
-    allowed = set(dir(self))
+    allowed = python_set(dir(self))
     for k, v in d.items():
         if k in allowed:
             self.__setattr__(k, v)
@@ -437,7 +438,9 @@ cdef class EventResult:
         self.n_gaps = 0
         self.compress = 0
         self.a_freq = 0
-        self.qnames = set([])
+        self.qnames = python_set([])
+        self.haplotype = None
+        self.phase_set = None
 
     def __repr__(self):
         return str(to_dict(self))

@@ -6,19 +6,13 @@ dysgu/scikitbio/_ssw_wrapper.c
 var
 *.pyc
 dysgu.egg-info/
-old
-old/*
 dist
 *.so
-htslib/config.h.in~
 *.so.1
 *.swp
-htslib/test
 *.5
-htslib/.gitignore
 *.o
 *.pico
-libhts.a
 _build
 _staticcd dy
 _templates
@@ -31,4 +25,6 @@ docs/build/
 docs/source/_templates/
 dev
 /dysgu/edlib/edlib.cpp
-/dysgu/sortedintersect/sintersect.cpp
+/builddir/
+/build-meson/
+/wd*/

@@ -8,7 +8,8 @@
 #include <fstream>
 #include <sstream>
 
-#include "robin_hood.h"
+//#include "robin_hood.h"
+#include "unordered_dense.h"
 #include "xxhash64.h"
 #include <htslib/sam.h>
 #include <htslib/hfile.h>
@@ -124,7 +125,7 @@ class CoverageTrack
 
 int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>& scope, std::vector<bam1_t*>& write_queue,
                        const int max_scope, const int max_write_queue, const int clip_length,
-                       robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
+                       ankerl::unordered_dense::set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
                        const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
                        sam_hdr_t **samHdr, htsFile **f_out,
                        std::string& temp_folder, const bool write_all, long *n_aligned_bases, int remove_extra_tags) {
@@ -322,7 +323,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     std::pair<uint64_t, bam1_t*> scope_item;
     std::deque<std::pair<uint64_t, bam1_t*>> scope;
     std::vector<bam1_t*> write_queue;  // Write in blocks
-    robin_hood::unordered_set<uint64_t> read_names;
+    ankerl::unordered_dense::set<uint64_t> read_names;
 
     // Initialize first item in scope, set hash once read has been read
     scope.push_back(std::make_pair(0, bam_init1()));

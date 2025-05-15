@@ -3,8 +3,7 @@
 import numpy as np
 cimport numpy as np
 import logging
-
-from dysgu.map_set_utils import merge_intervals, echo #, Py_BasicIntervalTree,
+from dysgu.map_set_utils import merge_intervals, echo
 from collections import defaultdict
 from importlib.metadata import version
 import sortedcontainers
@@ -66,21 +65,6 @@ cpdef list get_bed_regions(bed):
     return b
 
 
-# def iitree(a, add_value=False):
-#     # sorted input list a will not lead to a balanced binary-search-tree if added in sequential order
-#     # This function reorders the list to ensure a balanced BST when added using Py_BasicIntervalTree
-#     tree = Py_BasicIntervalTree()
-#     index = 0
-#     for h in a:
-#         if add_value:
-#             tree.add(h[0], h[1], h[2])
-#         else:
-#             tree.add(h[0], h[1], index)
-#         index += 1
-#     tree.index()
-#     return tree
-
-
 cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
     if not bed:
         return {}
@@ -90,9 +74,6 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
         if int_chroms:
             c = infile.gettid(c)
         chrom_intervals[c].append((s, e))
-
-    # create balanced ordering
-    # chrom_intervals = {k: iitree(v) for k, v in chrom_intervals.items()}
 
     si_sets = {}
     cdef int idx = 0
@@ -104,14 +85,13 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
         iset.index()
         si_sets[k] = iset
 
-    # return chrom_intervals
     return si_sets
 
 
 cpdef int intersecter(tree, chrom, int start, int end):
     cdef bint found = 0
     if tree and chrom in tree:
-        found = tree[chrom].any_overlaps(start, end) #searchInterval(start, end)
+        found = tree[chrom].any_overlaps(start, end)
     return found
 
 
@@ -306,8 +286,7 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     # FORMAT line(s)
     for item in format_f.values():
         rec.append(":".join(map(str, item)))
-    # if debug:
-    #     echo("returned ", rec)
+
     return rec
 
 
@@ -402,7 +381,7 @@ def get_header(contig_names=""):
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 ##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
-##FORMAT=<ID=PSET,Number=1,Type=String,Description="Phase-set ID for phased SVs">
+##FORMAT=<ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
 ##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
 ##FORMAT=<ID=AF,Number=1,Type=Float,Description="Allele frequency">
 ##FORMAT=<ID=NMP,Number=1,Type=Float,Description="Mean edit distance for primary alignments supporting the variant">

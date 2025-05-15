@@ -10,49 +10,69 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, macOS-14]
+        os: [ubuntu-24.04, macOS-15, macOS-13]
+        include:
+          - os: macOS-15
+            arch: arm64
+            target: 15
+          - os: macOS-13
+            arch: x86_64
+            target: 13
+          - os: ubuntu-24.04
+            arch: x86_64
+            target: 24
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set correct paths for Homebrew on macOS
-        if: matrix.os == 'macOS-14'
+        if: startsWith(matrix.os, 'macOS')
         run: |
           export BREW_PREFIX="$(brew --prefix)"
           export PREFIX="$(brew --prefix)"
           export PATH="$BREW_PREFIX/bin:$PATH"
           export LIBRARY_PATH="$BREW_PREFIX/lib:$LIBRARY_PATH"
           export PKG_CONFIG_PATH="$BREW_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
-          export MACOSX_DEPLOYMENT_TARGET=14.0
-          echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
-          brew install libomp
-      - name: Install project dependencies
-        run: which python; python -m pip install -r requirements.txt
+          export MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0
+          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0" >> $GITHUB_ENV
+          echo "CPPFLAGS=-I$BREW_PREFIX/include $CPPFLAGS" >> $GITHUB_ENV
+          echo "LDFLAGS=-L$BREW_PREFIX/lib $LDFLAGS"       >> $GITHUB_ENV
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23.3
         env:
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.14"  #  >=3.8 <3.12
-          CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *musl* "  # cp311-macosx*
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.14"
+          CIBW_SKIP: "*-win32 *-manylinux_i686 pp* *musl* "
+          CIBW_ARCHS_MACOS: "${{ matrix.arch }}"
           CIBW_ARCHS_LINUX: "auto"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
+
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0
+
+          CIBW_BUILD_VERBOSITY: 1
+
+          CIBW_BEFORE_BUILD: |
+            pip install "meson>=0.64" "ninja" "cython>=3.0.0" "numpy" "pysam>=0.23.0"
+
           CIBW_BEFORE_ALL_MACOS: |
-            sudo bash ci/osx-deps
+            brew install libomp libdeflate htslib
+
           CIBW_BEFORE_ALL_LINUX: |
             bash ci/manylinux-deps
-          CIBW_BEFORE_BUILD_MACOS: |
-            ln -s /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11/cpython/longintrepr.h /Library/Frameworks/Python.framework/Versions/3.11/include/python3.11
-            which python3
-            python3 -m pip install -r requirements.txt
-          CIBW_BEFORE_BUILD_LINUX: pip install -r requirements.txt
+
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
-            delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version 14.0
-          CIBW_TEST_SKIP: "*-macosx_arm64"
+            delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
+
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            auditwheel repair -w {dest_dir} {wheel}
+
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.2.10 numpy scipy pandas pysam>=0.23.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
+
           CIBW_TEST_COMMAND: dysgu test --verbose
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheelhouse-${{ matrix.os }}-${{ github.run_id }}
+          name: wheelhouse-${{ matrix.os }}-${{ matrix.arch }}-${{ github.run_id }}
           path: ./wheelhouse/*.whl

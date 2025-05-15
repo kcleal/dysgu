@@ -1,16 +1,16 @@
 [build-system]
 requires = [
-    "setuptools >= 61.0",
+    "meson-python>=0.14.0",
     "wheel",
     "cython",
     "pysam",
     "numpy",
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "mesonpy"
 
 [project]
 name = "dysgu"
-version = "1.8.3"
+version = "1.8.4"
 description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }
@@ -21,7 +21,6 @@ license-files = [
 ]
 requires-python = ">=3.9"
 dependencies = [
-    "setuptools >= 61.0",
     "cython",
     "click >= 8.0",
     "numpy",
@@ -42,7 +41,16 @@ Homepage = "https://github.com/kcleal/dysgu"
 dysgu = "dysgu.main:cli"
 
 [tool.setuptools]
-packages = ["dysgu", "dysgu.tests", "dysgu.scikitbio", "dysgu.edlib"]
+packages = [
+    "dysgu",
+    "dysgu.tests",
+    "dysgu.scikitbio",
+    "dysgu.edlib",
+    "dysgu.gfftool"
+]
 
 [tool.setuptools.package-data]
 "dysgu" = ["*.pxd", "*.pyx", "LICENSE.md"]
+
+[tool.meson-python.args]
+setup   = []

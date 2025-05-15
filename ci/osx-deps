@@ -29,4 +29,6 @@ cd htslib
  --enable-lzma \
  --enable-bz2 \
  --with-libdeflate
-sudo make && make install
+
+sudo make
+sudo make install
