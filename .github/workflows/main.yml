@@ -66,23 +66,31 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            echo "Current directory:"
             pwd
-            ls -a
-            echo "---"
-            ls {project}
-            echo "---"
-            ls {project}/subprojects/htslib*
-            echo "---"
-            ls {project}/build
             
-            # Need to find libhts and rename it to somthing that auditwheel expects
-            echo "Build dir:"
-            ls build
-            echo "subprojects dir:"
-            ls subprojects/htslib*
+            echo "Root directory contents:"
+            ls -la / | grep project
             
-            HTSLIB_PATH=$(find {project} -path "*subprojects/htslib*" -name "libhts.so*" -type f | head -1)
+            echo "Project directory contents:"
+            ls -la /project
             
+            echo "Temporary directories that might contain build artifacts:"
+            ls -la /tmp | grep -E '(meson|build|hts)'
+            
+            echo "Looking for libhts.so* files:"
+            find / -name "libhts.so*" -type f 2>/dev/null | grep -v "Permission denied" | sort
+            
+            echo "Looking for htslib directories:"
+            find /project -name "htslib*" -type d 2>/dev/null
+            
+            echo "Looking in build directories:"
+            find /project -path "*build*" -name "*.so*" -type f 2>/dev/null | grep hts
+            
+            # Try to find the htslib shared library anywhere on the system
+            HTSLIB_PATH=$(find / -name "libhts.so*" -type f 2>/dev/null | head -1)
+            echo "Found HTSLIB_PATH: $HTSLIB_PATH"
+                  
             HTSLIB_FILE=$(basename "$HTSLIB_PATH")
             echo "HTSLIB_FILE: $HTSLIB_FILE"
             
