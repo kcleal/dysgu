@@ -66,19 +66,22 @@ jobs:
             delocate-wheel -w {dest_dir} -v {wheel} --require-target-macos-version ${{ matrix.target }}.0
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            find /project -name "libhts.so*" -type f | sort
-            mkdir -p /tmp/lib_fix
+            # Need to find libhts and rename it to somthing that auditwheel expects
+            echo "Build dir:"
+            ls build
+            echo "subprojects dir:"
+            ls subprojects/htslib*
             
-            # Find and copy the library
-            cp $(find /project -name "libhts.so*" -type f | head -1) /tmp/lib_fix/ || echo "Failed to copy htslib"
+            HTSLIB_PATH=$(find /project -path "*subprojects/htslib*" -name "libhts.so*" -type f | head -1)
             
-            # Create the symlinks
-            cd /tmp/lib_fix
-            ln -sf libhts.so.* libhts.so.3
+            HTSLIB_FILE=$(basename "$HTSLIB_PATH")
+            echo "HTSLIB_FILE: $HTSLIB_FILE"
+            
+            ln -sf "$HTSLIB_FILE" libhts.so.3
             ln -sf libhts.so.3 libhts.so
             ls -la
-            
-            auditwheel repair --lib-sdir /tmp/lib_fix -w {dest_dir} {wheel}
+    
+            auditwheel repair --lib-sdir . -w {dest_dir} {wheel}
 
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.2.10 numpy scipy pandas pysam>=0.23.0 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
