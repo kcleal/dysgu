@@ -187,7 +187,7 @@ class CoverageAnalyser(object):
             e.outer_cn = sides
             e.inner_cn = middle
 
-        elif e.svtype == "DUP":  # DUP, INV
+        elif e.svtype == "DUP" or e.svtype == "INV":
             if middle == 0:
                 fc = 0
             else:
