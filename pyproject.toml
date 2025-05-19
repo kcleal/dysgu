@@ -10,7 +10,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "dysgu"
-version = "1.8.4"
+version = "1.8.5"
 description = "Structural variant calling"
 authors = [
     { name = "Kez Cleal", email = "clealk@cardiff.ac.uk" }

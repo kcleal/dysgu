@@ -120,32 +120,18 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
 
 
 cdef collect_phase_tags(bint get_hp_tag, AlignedSegment a, EventResult_t er):
-    # Note, haplotype/phase_set attributes start out as None type
-    # but get converted to dicts (counts) during calling.
-    # phase_set becomes and integer. haplotype has its own string format (see post_call.pyx file)
     if not get_hp_tag:
         return
+
     if not a.has_tag("HP"):
-        if er.haplotype is None or 'u' not in er.haplotype:
-            er.haplotype = {'u': 1}
-        else:
-            er.haplotype['u'] += 1
+        er.haplotype_counts['u'] = er.haplotype_counts.get('u', 0) + 1
         return
+
     hp_tag = a.get_tag("HP")
-    if not er.haplotype:
-        er.haplotype = {hp_tag: 1}
-    elif hp_tag not in er.haplotype:
-        er.haplotype[hp_tag] = 1
-    else:
-        er.haplotype[hp_tag] += 1
+    er.haplotype_counts[hp_tag] = er.haplotype_counts.get(hp_tag, 0) + 1
     if a.has_tag("PS"):
         ps_tag = a.get_tag("PS")
-        if not er.phase_set:
-            er.phase_set = {ps_tag: 1}
-        elif ps_tag not in er.phase_set:
-            er.phase_set[ps_tag] = 1
-        else:
-            er.phase_set[ps_tag] += 1
+        er.phase_set_counts[ps_tag] = er.phase_set_counts.get(ps_tag, 0) + 1
 
 
 cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
@@ -544,8 +530,10 @@ def consensus_matches_gap(target_gap, float target_svlen, cigar, float threshold
         target_op = 1
     elif target_gap == "DEL":
         target_op = 2
+    elif target_gap == "SKIP":
+        target_op = 3
     else:
-        raise ValueError
+        raise ValueError(f"Target gap={target_gap}")
 
     cdef float l
     cdef int op
@@ -971,13 +959,11 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
     cdef str svtype, jointype
     cdef bint passed
     cdef AlignmentItem align
-
     if not paired_end:
         spanning_alignments, rate_poor_ends = filter_poorly_aligned_ends(spanning_alignments, divergence)
 
         if not spanning_alignments or rate_poor_ends > 0.7:
             return None
-
     # make call from spanning alignments if possible
     svtype_m = Counter([i.cigar_item.op for i in spanning_alignments]).most_common()[0][0]
     spanning_alignments = [i for i in spanning_alignments if i.cigar_item.op == svtype_m]
@@ -998,7 +984,6 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
             best_dist = dist
             if dist == 0:
                 break
-
     cdef AlignedSegment best_align = spanning_alignments[best_index].align
     cdef EventResult_t er = EventResult()
 
@@ -1059,7 +1044,6 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
     er.query_overlap = 0
     er.jitter = jitter
     u_reads = [i.align for i in spanning_alignments]
-
     min_found_support = len(spanning_alignments)
     if len(generic_insertions) > 0:
         min_found_support += len(generic_insertions)
@@ -1069,7 +1053,6 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
         informative_reads.append(v_item.read_a)
         if v_item.read_b is not None:
             informative_reads.append(v_item.read_b)
-
     count_attributes2(informative_reads, [], [i.align for i in spanning_alignments], insert_ppf, generic_insertions, er,
                       paired_end, hp_tag)
 
@@ -1099,7 +1082,6 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
     cdef uint32_t cigar_l, idx
     cdef uint32_t *cigar_p
     cdef uint32_t opp, cigar_value
-
     if er.svtype == "INS":
         cigar_l = best_align._delegate.core.n_cigar
         cigar_p = bam_get_cigar(best_align._delegate)
@@ -1112,7 +1094,6 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
                 start_ins += cigar_value >> 4
         er.variant_seq = best_align.seq[start_ins:start_ins + target_len]
         er.ref_seq = best_align.seq[start_ins - 1]
-
     return er
 
 
@@ -1133,7 +1114,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     # Use spanning if available, otherwise informative, otherwise generic
     spanning_alignments, informative, generic_insertions = group_read_subsets(rds, insert_ppf, insert_size, insert_stdev)
     n_spanning = len(spanning_alignments)
-
     if n_spanning and len(generic_insertions) > n_spanning * 10:
         generic_insertions = []
     if n_spanning and len(informative) > n_spanning * 20:
@@ -1143,7 +1123,6 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         # if not paired_end:
             candidates = []
             clst_res = linear_scan_clustering(spanning_alignments, hp_tag)
-
             if not clst_res:
                 cand = process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                                 generic_insertions, insert_ppf, <bint>to_assemble, hp_tag)
@@ -2028,6 +2007,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
 
     # Sometimes partitions are not linked, happens when there is not much support between partitions
     # Then need to decide whether to call from a single partition
+
     n2n = data.n2n
     seen = set(range(len(data.parts))) if data.parts else {}
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters

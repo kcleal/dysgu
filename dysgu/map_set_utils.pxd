@@ -24,11 +24,11 @@ ctypedef enum ReadEnum_t:
     BREAKEND = 4
 
 
-cdef extern from "xxhash64.h" namespace "XXHash64" nogil:
+cdef extern from "include/xxhash64.h" namespace "XXHash64" nogil:
     cdef uint64_t hash(void* input, uint64_t length, uint64_t seed) nogil
 
 
-cdef extern from "unordered_dense.h" namespace "ankerl::unordered_dense" nogil:
+cdef extern from "include/unordered_dense.h" namespace "ankerl::unordered_dense" nogil:
     cdef cppclass set[T]:
         cppclass iterator:
             T operator*()
@@ -70,7 +70,7 @@ cdef extern from "unordered_dense.h" namespace "ankerl::unordered_dense" nogil:
         bint empty()
 
 
-cdef extern from "find_reads.hpp" nogil:
+cdef extern from "include/find_reads.hpp" nogil:
     cdef cppclass CoverageTrack:
         CoverageTrack() nogil
 
@@ -82,7 +82,7 @@ cdef extern from "find_reads.hpp" nogil:
         void set_max_cov(int)
 
 
-cdef extern from "graph_objects.hpp" nogil:
+cdef extern from "include/graph_objects.hpp" nogil:
     cdef cppclass DiGraph:
         DiGraph() nogil
 
@@ -298,4 +298,7 @@ cdef class EventResult:
     cdef public int8_t svlen_precise
     cdef public object contig, contig2, contig_cigar, contig2_cigar, svtype, join_type, chrA, chrB, exp_seq, sample, type, \
         partners, GQ, GT, kind, ref_seq, variant_seq, left_ins_seq, right_ins_seq, site_info
-    cdef public object qnames, haplotype, phase_set, a_freq
+    cdef public object qnames, a_freq
+    cdef public dict haplotype_counts, phase_set_counts
+    cdef public str haplotype
+    cdef public int phase_set

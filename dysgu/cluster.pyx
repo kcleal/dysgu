@@ -384,12 +384,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                         heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
                         msg_queues[w_idx][1].send(res)
             else:
-                # most partitions processed here, dict returned, or None
+                # most partitions processed here, GraphComponent returned, or None
                 res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
                                            procs, paired_end, sites_index)
-                if res:
+                if res is not None:
                     event_id += 1
-                    # Res is a dict {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+                    # Res is a GraphComponent
                     if procs == 1:
                         potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                                    insert_median,

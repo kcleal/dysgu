@@ -78,11 +78,11 @@ cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
             seq_index += length
         if opp == 1:
             seq_index += length
-        elif opp == 2:
+        elif opp == 2 or opp == 3:
             if not started:
                 start_pos += length
             pos += length
-        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+        elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:
             if not started:
                 if abs(pos + length - approx_pos) < 500:
                     started = True
@@ -232,10 +232,10 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                 prev_node = n
             # current_pos += 1  # <-- Reference pos increases 1
 
-        elif opp == 2: # deletion
+        elif opp == 2 or opp == 3: # deletion
             current_pos += length # + 1
 
-        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
+        elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:  # All match, match (=), mis-match (X), N's
             if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
                 i += length
                 current_pos += length

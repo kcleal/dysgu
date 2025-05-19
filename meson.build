@@ -93,6 +93,7 @@ endif
 includes = [
   include_directories('.'),
   include_directories(numpy_include),
+  include_directories('dysgu/include')
 ]
 
 foreach inc : pysam_includes
@@ -100,18 +101,6 @@ foreach inc : pysam_includes
 endforeach
 
 includes += include_directories('dysgu')
-
-# ---------------------------------------------------------------------------
-# Additional source files
-# ---------------------------------------------------------------------------
-extra_headers = [
-  'find_reads.hpp',
-  'graph_objects.hpp'
-]
-
-foreach header : extra_headers
-  install_headers(join_paths('dysgu', header), subdir : 'dysgu')
-endforeach
 
 # ---------------------------------------------------------------------------
 # Cython handling and module definitions
@@ -240,7 +229,7 @@ install_data(
 )
 
 # Install sub‑packages
-foreach pkg : ['tests', 'scikitbio', 'edlib', 'gfftool']
+foreach pkg : ['tests', 'scikitbio', 'edlib']
   # copies dysgu/<pkg>/… into <site‑packages>/dysgu/<pkg>/…
   install_subdir(
     join_paths('dysgu', pkg),

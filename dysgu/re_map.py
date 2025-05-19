@@ -373,6 +373,8 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
     ref_locs = []
 
     clip_results = {}
+    allowed_chroms = set(ref_genome.references)
+
     for count, e in enumerate(events):
 
         e.remapped = 0
@@ -380,7 +382,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
         e.remap_ed = 0
         e.scw = 0
 
-        if e.chrA != e.chrB or e.spanning > 0:
+        if e.chrA != e.chrB or e.spanning > 0 or e.chrA not in allowed_chroms or e.chrB not in allowed_chroms:
             new_events.append(e)
             continue
 
@@ -429,7 +431,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
         except (ValueError, KeyError, IndexError) as errors:
             # Might be different reference genome version, compared to bam genome
-            logging.warning("Error fetching reference chromosome: {}".format(chrom), errors)
+            logging.warning("Error fetching reference chromosome: {}".format(chrom))
             continue
 
         for index in grp_idxs:
@@ -517,7 +519,7 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
             ref_seq_big = ref_genome.fetch(chrom, gstart, gend).upper()
         except (ValueError, KeyError, IndexError) as errors:
             # Might be different reference genome version, compared to bam genome
-            logging.warning("Error fetching reference chromosome: {}".format(chrom), errors)
+            logging.warning("Error fetching reference chromosome: {}".format(chrom))
             continue
         try:
             if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":

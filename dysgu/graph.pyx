@@ -1618,7 +1618,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     cdef int v
     info = None
     if min_support >= 3 and len(component) == 1 and not sites_index:
-        return
+        return None
 
     cdef NodeName key
     for v in component:
@@ -1639,7 +1639,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             support_estimate += 1
         n2n[v] = key
     if support_estimate < min_support:
-        return
+        return None
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)
@@ -1650,7 +1650,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             if len(n2n) >= min_support or len(reads) >= min_support or info:
                 return GraphComponent(None, None, None, None, n2n, info)
             else:
-                return
+                return None
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
@@ -1658,7 +1658,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             elif len(reads) >= min_support or info:
                 return GraphComponent(None, None, None, None, n2n, info)
             else:
-                return
+                return None
     # Debug:
     # if 14 in n2n:
     #     echo("parts", partitions)

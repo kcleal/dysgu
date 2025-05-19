@@ -347,8 +347,8 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         if e.chrA not in chrom_set or (e.chrB != e.chrA and e.chrB not in chrom_set):
             logging.warning(f"Chrom missing from reference {e.chrA}, {e.chrB}")
             continue
-
-        symbolic_repr = symbolic_sv_size > 0 and (e.svlen >= symbolic_sv_size or e.svlen == 0)
+        fetch_size = abs(e.posB - e.posA)
+        symbolic_repr = fetch_size >= symbolic_sv_size #(e.svlen >= symbolic_sv_size or e.svlen == 0)
         if e.svtype == 'DEL':
             # Fetch deleted seq
             if not symbolic_repr:
@@ -641,21 +641,23 @@ def join_phase_sets(events, ps_id):
     # Join phase sets if support is greater than threshold
     G = nx.Graph()
     for idx, e in enumerate(events):
-        if not e.phase_set:
+        if len(e.phase_set_counts) == 0:
             e.phase_set = ''
             continue
-        if len(e.phase_set) > 1:
+        elif len(e.phase_set_counts) > 1:
             if e.GT not in '1|11/1':  # only heterozygous variants
                 threshold = low_ps_support(e)
-                passing_ps = [k for k, v in e.phase_set.items() if v >= threshold]
-                e.phase_set = passing_ps
+                passing_ps = {k: v for k, v in e.phase_set_counts.items() if v >= threshold}
+                e.phase_set_counts = passing_ps
                 if len(passing_ps) > 1:
                     G.add_edges_from(combinations(passing_ps, 2))
             else:
                 # Choose PS with maximum support
-                e.phase_set = str(max(e.phase_set, key=e.phase_set.get))
-        else:
-            e.phase_set = str(list(e.phase_set.keys())[0])
+                e.phase_set = int(max(e.phase_set_counts, key=e.phase_set_counts.get))
+                e.phase_set_counts = {}
+        else:  # Only one phase set
+            e.phase_set = int(list(e.phase_set_counts.keys())[0])
+            e.phase_set_counts = {}
 
     new_phase_set = {}
     for sub in nx.connected_components(G):
@@ -664,14 +666,13 @@ def join_phase_sets(events, ps_id):
         ps_id += 1
 
     for e in events:
-        if not e.phase_set or isinstance(e.phase_set, str):
+        if not e.phase_set_counts:
             continue
-        assert isinstance(e.phase_set, list)
-        new_p = list(set([new_phase_set[n] for n in e.phase_set if n in new_phase_set]))
+        new_p = list(set([new_phase_set[n] for n in e.phase_set_counts.values() if n in new_phase_set]))
         if not new_p:
-            e.phase_set = ''
+            e.phase_set = -1
         else:
-            e.phase_set = str(new_p[0])
+            e.phase_set = int(new_p[0])
 
 
 def get_hp_format(events):
@@ -679,24 +680,25 @@ def get_hp_format(events):
     any_phase_set = False
     keys = set([])
     for e in events:
-        if e.haplotype:
-            for k in e.haplotype:
-                if k != 'u':
-                    keys.add(k)
+        for k in e.haplotype_counts.keys():
+            if k != 'u':
+                keys.add(k)
+
     keys = sorted(list(keys))
     for e in events:
-        if e.haplotype:
-            all_haps = e.haplotype
-            phased_haps = {k: v for k, v in e.haplotype.items() if k != 'u'}
+
+        if not e.haplotype_counts:
+            continue
+
+        else:
+            all_haps = e.haplotype_counts
+            phased_haps = {k: v for k, v in e.haplotype_counts.items() if k != 'u'}
             n_haps = len(phased_haps)
-            n_phase_set = len(e.phase_set) if e.phase_set else 0
-            if n_phase_set:
-                ps = max(e.phase_set, key=e.phase_set.get)
+            any_phase_set = bool(len(e.phase_set_counts))
+            if any_phase_set:
+                ps = max(e.phase_set_counts, key=e.phase_set_counts.get)
                 if ps > max_ps:
                     max_ps = ps
-                any_phase_set = True
-            else:
-                e.phase_set = ""
             if n_haps >= 2:
                 if e.GT == "1/1":
                     e.GT = "1|1"
@@ -707,7 +709,7 @@ def get_hp_format(events):
                     else:
                         e.GT = "0|1"
             elif n_haps == 1:
-                if 1 in e.haplotype:
+                if 1 in e.haplotype_counts:
                     e.GT = "1|0"
                 else:
                     e.GT = "0|1"
@@ -722,20 +724,20 @@ def get_hp_format(events):
                     hp_string = "0"
 
             e.haplotype = hp_string
-        else:
-            e.haplotype = ""
-
 
     return max_ps, any_phase_set
 
 
 def get_gt_metric2(events, mode, add_gt=True):
-    params = {"DEL,TRA": [[0.5, 0.9], [0.2, 1 / 3.0]],
-              "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
-    pp = {}
-    for k, v in params.items():
-        for kk in k.split(","):
-            pp[kk] = v
+    p1 = [[0.5, 0.9], [0.2, 1 / 3.0]]
+    p2 = [[0.4, 0.9], [0.6, 0.2]]
+    # params = {"DEL,TRA,SKIP": [[0.5, 0.9], [0.2, 1 / 3.0]],
+    #           "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
+    pp = {"DEL": p1, "TRA": p1, "SKIP": p1,
+          "INS": p2, "DUP": p2, "INV": p2, "BND": p2}
+    # for k, v in params.items():
+    #     for kk in k.split(","):
+    #         pp[kk] = v
 
     if add_gt:
         pass
@@ -746,8 +748,8 @@ def get_gt_metric2(events, mode, add_gt=True):
         return events
 
     for e in events:
-
         a_params, b_params = pp[e.svtype]
+
         if e.svtype == "DEL" or e.svtype == "TRA":
             ref, support_reads = del_like(e)
         else:
@@ -788,9 +790,6 @@ def get_gt_metric2(events, mode, add_gt=True):
 
     if any_phase_set:
         join_phase_sets(events, max_ps + 1)
-    else:
-        for e in events:
-            e.phase_set = -1
 
     return events
 
@@ -851,7 +850,7 @@ def apply_model(df, mode, contigs, diploid, thresholds, model_path=None):
 
     X = df[[c[i] for i in cols]]
     X.columns = cols
-    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2, "BND": 4}
+    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2, "BND": 4, "SKIP": 1}
 
     X["SVTYPE"] = [keys[i] for i in X["SVTYPE"]]
     X["SVLEN"] = [i if i == i and i is not None else -1 for i in X["SVLEN"]]

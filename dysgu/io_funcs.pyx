@@ -132,6 +132,12 @@ cpdef list col_names(small_output):
                 "inner_cn", "outer_cn", "compress", "ref_rep", "prob"]
             ]
 
+def prob_to_phred(prob, max_qual=30):
+    # Apply sigmoid-like transformation to stretch the middle range
+    transformed_prob = 1 - (1 - prob) * (1 - prob)  # Square the error probability
+    qual = min(max_qual, int(-10 * np.log10(1 - transformed_prob)))
+    return str(round(qual))
+
 
 def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small_output):
     rep, repsc, lenprec = 0, 0, 1
@@ -246,6 +252,9 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
 
     if mean_prob is not None:
         info_extras += [f"MeanPROB={round(mean_prob, 3)}", f"MaxPROB={round(max_prob, 3)}"]
+        qual_field = prob_to_phred(max_prob)
+    else:
+        qual_field = prob_to_phred(r['prob'])
 
     if small_output:
         fmt_keys = "GT:GQ:PSET:HP:AF:MAPQP:MAPQS:SU:WR:PE:SR:SC:BND:NMB:COV:NEIGH10:PS:MS:RMS:RED:BCC:FCC:ICN:OCN:PROB"
@@ -268,7 +277,8 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     rec = [r["chrA"], r["posA"], r["event_id"],
            ref_field,
            alt_field,
-           ".", "." if "filter" not in r else r['filter'],
+           qual_field,
+           "." if "filter" not in r else r['filter'],
            # INFO line
            ";".join([f"SVMETHOD=DYSGUv{dysgu_version}",
                    f"SVTYPE={r['svtype']}",

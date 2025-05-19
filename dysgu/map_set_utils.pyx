@@ -439,8 +439,10 @@ cdef class EventResult:
         self.compress = 0
         self.a_freq = 0
         self.qnames = python_set([])
-        self.haplotype = None
-        self.phase_set = None
+        self.haplotype = "-1"
+        self.phase_set = -1
+        self.haplotype_counts = {}
+        self.phase_set_counts = {}
 
     def __repr__(self):
         return str(to_dict(self))
