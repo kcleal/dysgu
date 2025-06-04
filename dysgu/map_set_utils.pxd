@@ -1,6 +1,7 @@
 #cython: language_level=3
 
 from libcpp.vector cimport vector as cpp_vector
+from libcpp.string cimport string as cpp_string
 from libcpp.pair cimport pair as cpp_pair
 from libcpp.utility cimport pair
 
@@ -72,8 +73,7 @@ cdef extern from "include/unordered_dense.h" namespace "ankerl::unordered_dense"
 
 cdef extern from "include/find_reads.hpp" nogil:
     cdef cppclass CoverageTrack:
-        CoverageTrack() nogil
-
+        CoverageTrack()
         void add(int, int)
         int get_cov(int)
         bint cov_val_good(int, int, int)
@@ -82,122 +82,114 @@ cdef extern from "include/find_reads.hpp" nogil:
         void set_max_cov(int)
 
 
+cdef extern from "include/transcripts.hpp" nogil:
+    cdef cppclass TranscriptData:
+        TranscriptData() noexcept
+        void open(const char*)
+        bint hasRefSkipGap(cpp_string&, int, int, int) noexcept
+
+
 cdef extern from "include/graph_objects.hpp" nogil:
     cdef cppclass DiGraph:
-        DiGraph() nogil
+        DiGraph() noexcept
+        int addNode() noexcept
+        int hasEdge(int, int) noexcept
+        void addEdge(int, int, int) noexcept
+        int weight(int, int) noexcept
+        void updateEdge(int, int, int) noexcept
+        int numberOfNodes() noexcept
+        void forInEdgesOf(int, cpp_vector[cpp_pair[int, int]]&) noexcept
+        void neighbors(int, cpp_vector[int]&) noexcept
+        float node_path_quality(int, int, int) noexcept
 
-        int addNode()
-        int hasEdge(int, int)
-        void addEdge(int, int, int)
-        int weight(int, int)
-        void updateEdge(int, int, int)
-        int numberOfNodes() nogil
-        void forInEdgesOf(int, cpp_vector[cpp_pair[int, int]]&) nogil
-        void neighbors(int, cpp_vector[int]&) nogil
-        float node_path_quality(int, int, int) nogil
+    cdef cppclass MinimizerTable:
+        MinimizerTable() noexcept
+        int size() noexcept
+        void insert(long key, long value1) noexcept
+        void erase(long key) noexcept
+        void erase_lower(long key, long value) noexcept
+        int has_key(long key) noexcept
+        int has_lower_key(long key2) noexcept
+        long get_lower() noexcept
+        set[long].iterator get_iterator() noexcept
+        set[long].iterator get_iterator_begin() noexcept
+        set[long].iterator get_iterator_end() noexcept
+
+    cdef cppclass SimpleGraph:
+        SimpleGraph() noexcept
+        int addNode() noexcept
+        int hasEdge(int, int) noexcept
+        void addEdge(int, int, int) noexcept
+        int edgeCount() noexcept
+        int weight(int, int) noexcept
+        void neighbors(int, cpp_vector[int] &) noexcept
+        void removeNode(int) noexcept
+        void connectedComponents(char *, bint, cpp_vector[int] &) noexcept
+        int showSize() noexcept
+
+    cdef cppclass Int2IntMap:
+        Int2IntMap() noexcept
+        void insert(int, int) noexcept
+        void erase(int) noexcept
+        int has_key(int) noexcept
+        int get(int) noexcept
+        get_val_result get_value(int key) noexcept
+        int size() noexcept
+
+    cdef cppclass IntSet:
+        IntSet() noexcept
+        void insert(int) noexcept
+        void erase(int) noexcept
+        int has_key(int) noexcept
+        int get(int) noexcept
+        int size() noexcept
 
 
 cdef class Py_DiGraph:
     """DiGraph, no weight"""
     cdef DiGraph *thisptr
-
-    cdef int addNode(self)
-    cdef int hasEdge(self, int u, int v)
-    cdef void addEdge(self, int u, int v, int w)
-    cdef void updateEdge(self, int u, int v, int w)
-    cdef int numberOfNodes(self) nogil
-    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) nogil
-    cdef void neighbors(self, int u, cpp_vector[int]& neigh) nogil
-    cdef float node_path_quality(self, int u, int v, int w) nogil
-
-
-cdef extern from "graph_objects.hpp" nogil:
-    cdef cppclass MinimizerTable:
-        MinimizerTable() nogil
-
-        int size()
-        void insert(long key, long value1)
-        void erase(long key)
-        void erase_lower(long key, long value)
-        int has_key(long key)
-        int has_lower_key(long key2)
-        long get_lower()
-        set[long].iterator get_iterator()
-        set[long].iterator get_iterator_begin()
-        set[long].iterator get_iterator_end()
-
-
-cdef extern from "graph_objects.hpp":
-    cdef cppclass SimpleGraph:
-        SimpleGraph()
-
-        int addNode()
-        int hasEdge(int, int)
-        void addEdge(int, int, int)
-        int edgeCount()
-        int weight(int, int)
-        void neighbors(int, cpp_vector[int]&)
-        void removeNode(int)
-        void connectedComponents(char*, bint, cpp_vector[int]&)
-        int showSize()
+    cdef int addNode(self) noexcept nogil
+    cdef int hasEdge(self, int u, int v) noexcept nogil
+    cdef void addEdge(self, int u, int v, int w) noexcept nogil
+    cdef void updateEdge(self, int u, int v, int w) noexcept nogil
+    cdef int numberOfNodes(self) noexcept nogil
+    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) noexcept nogil
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) noexcept nogil
+    cdef float node_path_quality(self, int u, int v, int w) noexcept nogil
 
 
 cdef class Py_SimpleGraph:
     """Graph"""
     cdef SimpleGraph *thisptr
-
     cpdef int addNode(self)
     cpdef int hasEdge(self, int u, int v)
     cpdef void addEdge(self, int u, int v, int w)
     cpdef int edgeCount(self)
     cpdef int weight(self, int u, int v)
-    cdef void neighbors(self, int u, cpp_vector[int]& neigh)
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) noexcept nogil
     cpdef void removeNode(self, int u)
-    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& neigh)
+    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& neigh) noexcept nogil
     cpdef int showSize(self)
-
-
-cdef extern from "graph_objects.hpp" nogil:
-    cdef cppclass Int2IntMap:
-        Int2IntMap() nogil
-        void insert(int, int) noexcept nogil
-        void erase(int) nogil
-        int has_key(int) nogil
-        int get(int) nogil
-        get_val_result get_value(int key) nogil
-        int size() nogil
 
 
 cdef class Py_Int2IntMap:
     """Fast integer to integer unordered map"""
     cdef Int2IntMap *thisptr
-
     cdef void insert(self, int key, int value) noexcept nogil
-    cdef void erase(self, int key) nogil
-    cdef int has_key(self, int key) nogil
-    cdef int get(self, int key) nogil
-    cdef get_val_result get_value(self, int key) nogil
-    cdef int size(self) nogil
-
-
-cdef extern from "graph_objects.hpp" nogil:
-    cdef cppclass IntSet:
-        IntSet() nogil
-        void insert(int) nogil
-        void erase(int) nogil
-        int has_key(int) nogil
-        int get(int) nogil
-        int size() nogil
+    cdef void erase(self, int key) noexcept nogil
+    cdef int has_key(self, int key) noexcept nogil
+    cdef int get(self, int key) noexcept nogil
+    cdef get_val_result get_value(self, int key) noexcept nogil
+    cdef int size(self) noexcept nogil
 
 
 cdef class Py_IntSet:
     """Fast 32 bit int set"""
     cdef IntSet *thisptr
-
-    cdef void insert(self, int key) nogil
-    cdef void erase(self, int key) nogil
-    cdef int has_key(self, int key) nogil
-    cdef int size(self) nogil
+    cdef void insert(self, int key) noexcept nogil
+    cdef void erase(self, int key) noexcept nogil
+    cdef int has_key(self, int key) noexcept nogil
+    cdef int size(self) noexcept nogil
 
 
 cdef extern from "<map>" namespace "std" nogil:
@@ -264,24 +256,24 @@ cdef extern from "<map>" namespace "std" nogil:
         iterator upper_bound(const T&)
         const_iterator const_upper_bound "upper_bound"(const T&)
 
-cdef int cigar_exists(AlignedSegment r)
+cdef int cigar_exists(AlignedSegment r) noexcept nogil
 
-cdef void clip_sizes(AlignedSegment r, int* left, int* right)
+cdef void clip_sizes(AlignedSegment r, int* left, int* right) noexcept nogil
 
-cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right)
+cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right) noexcept nogil
 
-cdef int cigar_clip(AlignedSegment r, int clip_length)
+cdef int cigar_clip(AlignedSegment r, int clip_length) noexcept nogil
 
 cpdef int is_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
-
-cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2)
+cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nogil
 
 cdef bint span_position_distance(int x1, int x2, int y1, int y2, float norm, float thresh, ReadEnum_t read_enum, bint paired_end, int cigar_len1, int cigar_len2, bint trust_ins_len) noexcept nogil
 
 cdef float position_distance(int x1, int x2, int y1, int y2) noexcept nogil
+
 
 cdef class EventResult:
     """Data holder for classifying alignments into SV types"""

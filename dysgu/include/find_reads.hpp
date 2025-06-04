@@ -228,7 +228,6 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
         return 0;
     }
 
-    bool has_ref_skip_gap = false;
     int index_start = aln->core.pos;
     for (uint32_t k=0; k < n_cigar; k++) {
         uint32_t op = bam_cigar_op(cigar[k]);
@@ -245,17 +244,8 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
         } else if (op == BAM_CREF_SKIP) {
             if (transcript_gaps.any_data) {
                 int index_end = index_start + length;
-                std::vector<std::pair<int, int>> overlapping_tr_gaps;
-                transcript_gaps.allBlocks[current_chrom].findOverlaps(index_start, index_end, overlapping_tr_gaps);
-                for (const auto& ol : overlapping_tr_gaps) {
-                    if (std::abs(ol.first - index_start) < 10 && std::abs(ol.second - index_end) < 10) {
-                        has_ref_skip_gap = true;
-                        sv_read = false;
-                        break;
-                    } else {
-                        sv_read = true;
-                    }
-                }
+                bool has_ref_skip_gap = transcript_gaps.hasRefSkipGap(current_chrom, index_start, index_end, 10);
+                sv_read = (has_ref_skip_gap) ? false : true;
                 if (has_ref_skip_gap) {
                     break;
                 }
@@ -289,21 +279,23 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
 }
 
 
-void collect_transcripts(char* transcripts_file, Tr::TranscriptData& t_reader) {
+void collect_transcripts(const char* transcripts_file, const char* unique_gaps_file, Tr::TranscriptData& t_reader) {
     if (transcripts_file == nullptr || strlen(transcripts_file) == 0) {
         t_reader.done = true;
         return;
     }
     t_reader.open(transcripts_file);
+    t_reader.writeUniqueGapsToBed(unique_gaps_file);
 }
 
-int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage, char* region,
-                          char* max_cov_ignore_regions, char* fasta,
-                          const bool write_all, char* write_mode, char* transcripts_file) {
+int search_hts_alignments(const char* infile, const char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
+                          int threads, int paired_end, const char* temp_f, int max_coverage, const char* region,
+                          const char* max_cov_ignore_regions, const char* fasta,
+                          bool write_all, const char* write_mode,
+                          const char* transcripts_file, const char* unique_gaps_file) {
 
     Tr::TranscriptData transcript_gaps = Tr::TranscriptData();
-    collect_transcripts(transcripts_file, transcript_gaps);
+    collect_transcripts(transcripts_file, unique_gaps_file, transcript_gaps);
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
