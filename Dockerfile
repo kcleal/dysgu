@@ -11,9 +11,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install dysgu and required Python dependencies
 RUN pip install --upgrade pip && \
-    pip install "superintervals>=0.2.10"
-
-RUN pip install dysgu
+    pip install "superintervals>=0.2.10" && \
+    pip install dysgu
 
 # Install samtools 1.18 for connveience
 RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 && \
