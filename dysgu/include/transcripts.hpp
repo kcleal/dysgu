@@ -9,6 +9,7 @@
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <cstdint>
 #include "superintervals.h"
 #include "unordered_dense.h"
 
@@ -55,11 +56,6 @@ namespace Tr {
     public:
         std::string chrom, name, vartype, parent; // line
         int start{0}, end{0};
-        //int coding_start{-1}, coding_end{-1};
-        //int strand{0};  // 0 is none, 1 forward, 2 reverse
-       // std::vector<std::string> parts;
-       // std::vector<int> s;  // block starts and block ends for bed12/GFF
-        //std::vector<int> e;
     };
 
     class GFFTrackBlock {
@@ -67,7 +63,6 @@ namespace Tr {
         std::string chrom, name, line, vartype;
         std::vector<std::string> parts;
         int start, end;
-        //int strand;  // 0 is none, 1 forward, 2 reverse
     };
 
     class Region {
@@ -101,25 +96,27 @@ namespace Tr {
         std::vector<std::string> parts;  // string split by delimiter
         std::vector<std::string> keyval;
 
+        ankerl::unordered_dense::map< std::string, ankerl::unordered_dense::set<int64_t>> unique_gaps;
         ankerl::unordered_dense::map< std::string, SuperIntervals<int, std::pair<int, int>>> allBlocks;
 
-
         TrackBlock block;
-        bool done;
+        bool done{true};
         bool any_data{false};
 		std::string variantString;
+		std::vector<std::pair<int, int>> overlapping_tr_gaps;
 
-        void open(const std::string &p) {
+        void open(const char* input_file) {
+            std::string path = input_file;
             fileIndex = 0;
-            path = p;
             done = false;
 
-            if (endsWith(p, ".gff3")) {
+            if (endsWith(path, ".gff3")) {
                 kind = GFF3_NOI;
-            } else if (endsWith(p, ".gtf")) {
+            } else if (endsWith(path, ".gtf")) {
                 kind = GTF_NOI;
             } else {
                 std::cerr << "Error: only uncompressed GFF3 files are supported\n";
+                std::cerr << "File name: " << path << std::endl;
                 throw std::exception();
             }
 
@@ -206,10 +203,6 @@ namespace Tr {
                     if (b.name.empty()) {
                         continue;
                     }
-//                    if (b.name != "ENST00000376760.5") {
-//
-//                        continue;
-//                    }
                     track_blocks[b.name].push_back(std::move(b));
                 }
                 for (auto& kv : track_blocks) {
@@ -220,15 +213,10 @@ namespace Tr {
                     std::sort(blocks.begin(), blocks.end(),
                         [](const TrackBlock& t1, const TrackBlock& t2) { return t1.start < t2.start; }
                     );
-//                    if (blocks.front().line.find("ENSG00000132879.14") != std::string::npos) {
-//                        for (auto &b : blocks) {
-//                            std::cerr << b.start <<  " " << b.end << " " << b.parent << " " << b.name << " " << b.vartype << std::endl;
-//                        }
-//                        std::cerr << "\n";
-//                    }
                     for (size_t i = 0; i < blocks.size() - 1; ++i) {
                         if (blocks[i].end < blocks[i+1].start) {
-                            allBlocks[blocks[i].chrom].add(blocks[i].end, blocks[i+1].start, {blocks[i].end, blocks[i+1].start});
+                            int64_t pos_key = (static_cast<int64_t>(blocks[i].end) << 32) | static_cast<int64_t>(blocks[i+1].start);
+                            unique_gaps[blocks[i].chrom].insert(pos_key);
                         }
                     }
                 }
@@ -238,10 +226,41 @@ namespace Tr {
                 throw std::exception();
             }
 
-            for (auto &item : allBlocks) {
-                item.second.index();
+            for (const auto& item : unique_gaps) {
+                for (auto& se : item.second ) {
+                    int end = se & 0xFFFFFFFF;
+                    int start = (se >> 32);
+                    allBlocks[item.first].add(start, end, {start, end});
+                }
+                allBlocks[item.first].index();
                 any_data = true;
             }
+        }
+
+        bool hasRefSkipGap(std::string& current_chrom, int start, int end, int tolerance=10) {
+            overlapping_tr_gaps.clear();
+            this->allBlocks[current_chrom].findOverlaps(start, end, this->overlapping_tr_gaps);
+            for (const auto& ol : this->overlapping_tr_gaps) {
+                if (std::abs(ol.first - start) < tolerance && std::abs(ol.second - end) < tolerance) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void writeUniqueGapsToBed(const char* out_file) {
+            std::ofstream out(out_file);
+            if (!out.is_open()) {
+                throw std::runtime_error("Could not open file for writing");
+            }
+            for (const auto& item : unique_gaps) {
+                for (auto& se : item.second ) {
+                    int end = se & 0xFFFFFFFF;
+                    int start = (se >> 32);
+                    out << item.first << "\t" << start << "\t" << end << "\n";
+                }
+            }
+            out.close();
         }
     };
 

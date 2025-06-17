@@ -136,7 +136,7 @@ cdef extern from "find_reads.hpp":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region,
                                    char* max_cov_ignore, char *fasta, bint write_all, char* out_write_mode_b,
-                                   char* transcripts_file)
+                                   char* transcripts_file, char* unique_gaps_file)
 
 def process(args):
 
@@ -172,7 +172,7 @@ def process(args):
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
-    cdef bytes fasta_b, transcripts_b
+    cdef bytes fasta_b, transcripts_b, unique_gaps_b
 
     if "reference" in args and args["reference"]:
         if not os.path.exists(args["reference"]):
@@ -184,8 +184,10 @@ def process(args):
         if not os.path.exists(args["transcripts"]):
             raise FileNotFoundError(f'Could not find {args["transcripts"]}')
         transcripts_b = args["transcripts"].encode("ascii")
+        unique_gaps_b = f"{temp_dir}/unique_gaps_transcripts.bed".encode("ascii")
     else:
         transcripts_b = "".encode("ascii")
+        unique_gaps_b = "".encode("ascii")
 
     cdef bytes outfile_string_b = out_name.encode("ascii")
     cdef bytes out_write_mode_b = args["compression"].encode("ascii")
@@ -216,7 +218,8 @@ def process(args):
                                   fasta_b,
                                   write_all,
                                   out_write_mode_b,
-                                  transcripts_b)
+                                  transcripts_b,
+                                  unique_gaps_b)
 
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))
