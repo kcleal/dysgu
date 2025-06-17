@@ -1,5 +1,5 @@
-
-FROM python:3.11
+# sudo docker build -t kcleal/dysgu .
+FROM --platform=linux/amd64 python:3.11-bullseye
 
 MAINTAINER Kez Cleal clealk@cardiff.ac.uk
 
@@ -11,27 +11,29 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install dysgu and required Python dependencies
 RUN pip install --upgrade pip && \
-    pip install "superintervals>=0.2.10" "dysgu"
+    pip install "superintervals>=0.2.10"
 
-# Install samtools 1.18
+RUN pip install dysgu
+
+# Install samtools 1.18 for connveience
 RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 && \
     tar -xvf samtools-1.18.tar.bz2 && \
     rm samtools-1.18.tar.bz2 && \
     mv samtools-1.18 samtools && \
     cd samtools && \
     ./configure && \
-    make && \
+    make -j$(nproc) && \
     make install && \
     cd ../
 
-# Install bcftools 1.18
+# Install bcftools 1.18 for connveience
 RUN wget https://github.com/samtools/bcftools/releases/download/1.18/bcftools-1.18.tar.bz2 && \
     tar -xvf bcftools-1.18.tar.bz2 && \
     rm bcftools-1.18.tar.bz2 && \
     mv bcftools-1.18 bcftools && \
     cd bcftools && \
     ./configure && \
-    make && \
+    make -j$(nproc) && \
     make install && \
     cd ../
 
