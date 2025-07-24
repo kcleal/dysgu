@@ -13,7 +13,7 @@ from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
 from dysgu.map_set_utils import echo
 from cython.operator import dereference
 from functools import cmp_to_key
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 
 
 ctypedef EventResult EventResult_t
@@ -41,16 +41,16 @@ def compare_subset(potential, max_dist, max_comparisons, same_sample):
 
     si_sets = {}
     for k, v in tmp_list.items():
-        iset = IntervalSet(with_data=True)
+        iset = IntervalMap()
         for start, stop, idx in v:
-            iset.add_int_value(start, stop, idx)
-        iset.index()
+            iset.add(start, stop, idx)
+        iset.build()
         si_sets[k] = iset
 
     for idx in range(len(potential)):
         ei = potential[idx]
         # ols = nc2[get_chrom_key(ei)].allOverlappingIntervals(ei.posA, ei.posA + 1)
-        ols = si_sets[get_chrom_key(ei)].find_overlaps(ei.posA, ei.posA + 1)
+        ols = si_sets[get_chrom_key(ei)].search_values(ei.posA, ei.posA + 1)
         # echo(ols, ols2)
         ols = [i for i in set(ols) if i != idx]
         if len(ols) > max_comparisons:
@@ -762,7 +762,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 remapped = bool(not w0.svlen_precise and w0.remap_score > 0)
             else:
                 remapped = False
-            add_contig_a = bool(not w0.contig)
+            add_contig_a = bool(not w0.contig)  # True when contigA is missing from main event
             new_a = ""
             add_contig_b = bool(not w0.contig2)
             new_b = ""
@@ -783,9 +783,11 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                 w0.minus += item.minus
                 w0.spanning += item.spanning
                 w0.n_small_tlen += item.n_small_tlen
+                matching_svtypes = svt == item.svtype
+
                 if item.maxASsupp > w0.maxASsupp:
                     w0.maxASsupp = item.maxASsupp
-                if item.svtype == "DEL" and svt == "DEL":
+                if item.svtype == "DEL" and matching_svtypes:
                     if not spanned:
                         if item.spanning:
                             w0.svlen = item.svlen
@@ -796,7 +798,6 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                         if item.spanning:
                             w0.svlen = item.svlen
                             w0.variant_seq = item.variant_seq
-                        # elif item.svlen * 0.6 < w0.svlen < item.svlen or min_size > w0.svlen < item.svlen:
                         elif w0.remap_score == 0 and min_size > w0.svlen < item.svlen:
                             w0.svlen = item.svlen
                             w0.svtype = item.svtype
@@ -824,9 +825,9 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                     w0.MAPQpri = norm_vals(w0.MAPQpri, weight, item.MAPQpri, wt, denom)
                     w0.NMpri = norm_vals(w0.NMpri, weight, item.NMpri, wt, denom)
                     w0.NMsupp = norm_vals(w0.NMsupp, weight, item.NMsupp, wt, denom)
-                if add_contig_a and item.contig and len(item.contig) > len(new_a):
+                if add_contig_a and matching_svtypes and item.contig and len(item.contig) > len(new_a):
                     new_a = item.contig
-                if add_contig_b and item.contig2 and len(item.contig2) > len(new_b):
+                if add_contig_b and matching_svtypes and item.contig2 and len(item.contig2) > len(new_b):
                     new_b = item.contig2
             if add_contig_a and new_a:
                 w0.contig = new_a

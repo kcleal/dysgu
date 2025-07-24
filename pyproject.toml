@@ -26,11 +26,11 @@ dependencies = [
     "numpy",
     "scipy",
     "pandas",
-    "pysam >= 0.23",
+    "pysam >= 0.23.3",
     "networkx >= 2.4",
     "scikit-learn >= 0.22",
     "sortedcontainers",
-    "superintervals >= 0.2.10",
+    "superintervals >= 0.3.0",
     "lightgbm"
 ]
 

@@ -5,7 +5,7 @@ from dysgu.map_set_utils cimport EventResult, cigar_clip, clip_sizes
 from dysgu.map_set_utils cimport map as ankerl_map
 from dysgu.map_set_utils import merge_intervals
 from dysgu.io_funcs import intersecter #, iitree
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 from libc.math cimport fabs as c_fabs
 from libc.stdint cimport uint32_t
@@ -386,10 +386,10 @@ def sample_level_density(potential, regions, max_dist=50):
     si_sets = {}
 
     for k, v in tmp_list.items():
-        iset = IntervalSet(with_data=True)
+        iset = IntervalMap()
         for start, stop, idx in v:
-            iset.add_int_value(start, stop, idx)
-        iset.index()
+            iset.add(start, stop, idx)
+        iset.build()
         si_sets[k] = iset
 
     cdef int vv
@@ -403,12 +403,12 @@ def sample_level_density(potential, regions, max_dist=50):
             expected = 1
         if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
             # vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
-            vv = si_sets[ei.chrA].count_overlaps(ei.posA, ei.posA + 1) #countOverlappingIntervals(ei.posA, ei.posA + 1)
+            vv = si_sets[ei.chrA].count(ei.posA, ei.posA + 1) #countOverlappingIntervals(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             # vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
-            vv = si_sets[ei.chrB].count_overlaps(ei.posB, ei.posB + 1)
+            vv = si_sets[ei.chrB].count(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
         neighbors_10kb = 0.
@@ -417,7 +417,7 @@ def sample_level_density(potential, regions, max_dist=50):
         for c, s, e in large_itv:
             if not intersecter(regions, c, s, e):
                 # vv = nc2[c].countOverlappingIntervals(s, e)
-                vv = si_sets[c].count_overlaps(s, e)
+                vv = si_sets[c].count(s, e)
                 neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1
         if neighbors < 0:

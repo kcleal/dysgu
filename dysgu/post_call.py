@@ -338,7 +338,6 @@ def get_bases(ref_genome, chrom, start, end):
         return 'N'
 
 
-
 def get_ref_base(events, ref_genome, symbolic_sv_size):
     chrom_set = set(ref_genome.references)
     for e in events:
@@ -348,7 +347,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
             logging.warning(f"Chrom missing from reference {e.chrA}, {e.chrB}")
             continue
         fetch_size = abs(e.posB - e.posA)
-        symbolic_repr = fetch_size >= symbolic_sv_size #(e.svlen >= symbolic_sv_size or e.svlen == 0)
+        symbolic_repr = fetch_size >= symbolic_sv_size
         if e.svtype == 'DEL':
             # Fetch deleted seq
             if not symbolic_repr:
@@ -392,6 +391,11 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
             e.ref_seq = bases
             e.variant_seq = f'<{e.svtype}>'
 
+        # Sanity check
+        if e.ref_seq == e.variant_seq:
+            logging.warning(f"ALT and REF seqs are the same at {e.chrom}:{e.posA}, {e.chrom}:{e.posB}. Setting ALT to symbolic.")
+            e.variant_seq = f"<{e.svtype}>"
+
     return events
 
 
@@ -431,11 +435,12 @@ def log_choose(n, k):
     # swap for efficiency if k is more than half of n
     if k * 2 > n:
         k = n - k
-    for  d in range(1,k+1):
+    for d in range(1,k+1):
         r += math.log(n, 10)
         r -= math.log(d, 10)
         n -= 1
     return r
+
 
 # return the genotype and log10 p-value
 def bayes_gt(ref, alt, is_dup):
@@ -636,7 +641,6 @@ def low_ps_support(r, support_fraction=0.1):
     return min_support
 
 
-
 def join_phase_sets(events, ps_id):
     # Join phase sets if support is greater than threshold
     G = nx.Graph()
@@ -731,13 +735,8 @@ def get_hp_format(events):
 def get_gt_metric2(events, mode, add_gt=True):
     p1 = [[0.5, 0.9], [0.2, 1 / 3.0]]
     p2 = [[0.4, 0.9], [0.6, 0.2]]
-    # params = {"DEL,TRA,SKIP": [[0.5, 0.9], [0.2, 1 / 3.0]],
-    #           "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
     pp = {"DEL": p1, "TRA": p1, "SKIP": p1,
           "INS": p2, "DUP": p2, "INV": p2, "BND": p2}
-    # for k, v in params.items():
-    #     for kk in k.split(","):
-    #         pp[kk] = v
 
     if add_gt:
         pass

@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import sortedcontainers
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 import logging
 import time
 import datetime
@@ -741,7 +741,7 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
             cohort_index += 1
             continue
 
-        candidates = [i for i in variant_table[key].find_overlaps(r.pos, r.pos+1)]
+        candidates = [i for i in variant_table[key].search_values(r.pos, r.pos+1)]
         if len(candidates):
             # NMB is skipped for older versions of dysgu
             numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB"}
@@ -875,11 +875,11 @@ def make_updated_sample_level_vcfs(samp, samp_split_path, samp_file_path, update
     for i, r in enumerate(samp_file.fetch()):
         key = get_variant_key(r)
         if key not in variant_table:
-            variant_table[key] = IntervalSet(with_data=True)
+            variant_table[key] = IntervalMap(with_data=True)
         variant_table[key].add(r.pos - 500, r.pos + 500, (i, r))
 
     for k, v in variant_table.items():
-        v.index()
+        v.build()
 
     samp_file.close()
 

@@ -7,7 +7,7 @@ from dysgu.map_set_utils import merge_intervals, echo
 from collections import defaultdict
 from importlib.metadata import version
 import sortedcontainers
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 import pandas as pd
 import os
 import sys
@@ -78,11 +78,11 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
     si_sets = {}
     cdef int idx = 0
     for k, v in chrom_intervals.items():
-        iset = IntervalSet(with_data=True)
+        iset = IntervalMap()
         for start, stop in v:
-            iset.add_int_value(start, stop, idx)
+            iset.add(start, stop, idx)
             idx += 1
-        iset.index()
+        iset.build()
         si_sets[k] = iset
 
     return si_sets
@@ -91,7 +91,7 @@ cpdef dict overlap_regions(str bed, int_chroms=False, infile=None):
 cpdef int intersecter(tree, chrom, int start, int end):
     cdef bint found = 0
     if tree and chrom in tree:
-        found = tree[chrom].any_overlaps(start, end)
+        found = tree[chrom].has_overlaps(start, end)
     return found
 
 

@@ -97,7 +97,7 @@ namespace Tr {
         std::vector<std::string> keyval;
 
         ankerl::unordered_dense::map< std::string, ankerl::unordered_dense::set<int64_t>> unique_gaps;
-        ankerl::unordered_dense::map< std::string, SuperIntervals<int, std::pair<int, int>>> allBlocks;
+        ankerl::unordered_dense::map< std::string, si::IntervalMap<int, std::pair<int, int>>> allBlocks;
 
         TrackBlock block;
         bool done{true};
@@ -232,14 +232,14 @@ namespace Tr {
                     int start = (se >> 32);
                     allBlocks[item.first].add(start, end, {start, end});
                 }
-                allBlocks[item.first].index();
+                allBlocks[item.first].build();
                 any_data = true;
             }
         }
 
         bool hasRefSkipGap(std::string& current_chrom, int start, int end, int tolerance=10) {
             overlapping_tr_gaps.clear();
-            this->allBlocks[current_chrom].findOverlaps(start, end, this->overlapping_tr_gaps);
+            this->allBlocks[current_chrom].search_values(start, end, this->overlapping_tr_gaps);
             for (const auto& ol : this->overlapping_tr_gaps) {
                 if (std::abs(ol.first - start) < tolerance && std::abs(ol.second - end) < tolerance) {
                     return true;

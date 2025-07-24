@@ -8,7 +8,7 @@ import time
 import datetime
 import os
 from dysgu.map_set_utils import is_overlapping
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 from dysgu.graph import AlignmentsSA
 from dysgu.extra_metrics import gap_size_upper_bound
 from dysgu.call_component import n_aligned_bases
@@ -194,7 +194,7 @@ def get_sv_type(r, chrom, chrom2):
 def make_interval_tree(args, infile, sample_name, normal_vcfs):
     if not normal_vcfs:
         return None
-    intervals = defaultdict(lambda: defaultdict(lambda: IntervalSet(with_data=True)))  # chrom : SVTYPE : interval
+    intervals = defaultdict(lambda: defaultdict(lambda: IntervalMap(with_data=True)))  # chrom : SVTYPE : interval
     ignored = defaultdict(int)
     added = 0
     for normal_vcf in normal_vcfs:
@@ -237,7 +237,7 @@ def make_interval_tree(args, infile, sample_name, normal_vcfs):
             added += 1
     for tree_v in intervals.values():
         for tree in tree_v.values():
-            tree.index()
+            tree.build()
     if ignored:
         logging.warning(f'Ignored SV types: {ignored}')
     if added == 0:
@@ -974,9 +974,9 @@ def check_for_interval_overlap(intervals, r, chrom_tid, chrom2_tid, posB, filter
 
     svtype = r.info["SVTYPE"]
     if chrom_tid in intervals and svtype in intervals[chrom_tid]:
-        posA_overlaps = set(intervals[chrom_tid][svtype].find_overlaps(r.pos, r.pos + 1))
+        posA_overlaps = set(intervals[chrom_tid][svtype].search_values(r.pos, r.pos + 1))
         if chrom2_tid in intervals and svtype in intervals[chrom2_tid]:
-            posB_overlaps = set(intervals[chrom2_tid][svtype].find_overlaps(posB, posB + 1))
+            posB_overlaps = set(intervals[chrom2_tid][svtype].search_values(posB, posB + 1))
             matching_svlens = posA_overlaps.intersection(posB_overlaps)
             if matching_svlens:
                 for other_svlen in matching_svlens:
