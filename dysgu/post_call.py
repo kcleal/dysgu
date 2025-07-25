@@ -393,7 +393,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
 
         # Sanity check
         if e.ref_seq == e.variant_seq:
-            logging.warning(f"ALT and REF seqs are the same at {e.chrom}:{e.posA}, {e.chrom}:{e.posB}. Setting ALT to symbolic.")
+            logging.warning(f"ALT and REF seqs are the same at {e.chrA}:{e.posA}, {e.chrB}:{e.posB}. Setting ALT to symbolic.")
             e.variant_seq = f"<{e.svtype}>"
 
     return events
