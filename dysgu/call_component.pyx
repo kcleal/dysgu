@@ -674,7 +674,10 @@ cdef make_single_call(sub_informative, insert_size, insert_stdev, insert_ppf, mi
     er.linked = 0
     er.block_edge = 0
     er.ref_bases = ref_bases
-    er.svlen_precise = svlen_precise  # if 0 then soft-clip will be remapped
+    # v1.8.6
+    # svlen_precise is set by make_call, otherwise this line overwrites it and causes some events
+    # to not be re-mapped
+    # er.svlen_precise = svlen_precise  # if 0 then soft-clip will be remapped
     if svlen_precise == 0:
         corr_score = soft_clip_qual_corr(u_reads + v_reads)
         er.sqc = corr_score
@@ -2108,7 +2111,7 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events.append(ev)
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
     for e in events:
-       # echo("call_component svlen", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}")
+       # echo("call_component svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}, {e.svtype}, svlen_precise={e.svlen_precise}")
        if e.svlen_precise:
            set_ins_seq(e)
     return events
