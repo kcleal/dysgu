@@ -535,8 +535,8 @@ def get_raw_coverage_information(events, regions, regions_depth, infile, max_cov
 
         if ar and br:
             if r.chrA == r.chrB:
-                rA = regions[r.chrA].find_overlaps(r.posA, r.posA + 1)
-                rB = regions[r.chrB].find_overlaps(r.posB, r.posB + 1)
+                rA = regions[r.chrA].search_values(r.posA, r.posA + 1)
+                rB = regions[r.chrB].search_values(r.posB, r.posB + 1)
                 if rA and rB and rA[0] == rB[0]: # and rA[1] == rB[1]:
                     kind = "intra_regional"
                     if r.posA > r.posB:
