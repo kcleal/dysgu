@@ -83,7 +83,7 @@ namespace Tr {
         std::string chrom, chrom2, rid, vartype, parent;
         int start{-1}, stop{-1};
         int strand{0};
-        int fileIndex;
+        int fileIndex{0};
 
         FType kind;
 
@@ -97,25 +97,69 @@ namespace Tr {
         std::vector<std::string> keyval;
 
         ankerl::unordered_dense::map< std::string, ankerl::unordered_dense::set<int64_t>> unique_gaps;
-        ankerl::unordered_dense::map< std::string, si::IntervalMap<int, std::pair<int, int>>> allBlocks;
+        ankerl::unordered_dense::map< std::string, si::IntervalMap<int, int> > allBlocks;
 
         TrackBlock block;
-        bool done{true};
         bool any_data{false};
 		std::string variantString;
 		std::vector<std::pair<int, int>> overlapping_tr_gaps;
 
+        void readBed(const char* input_file) {
+            std::string path = input_file;
+            if (!endsWith(path, ".bed")) {
+                std::cerr << "Only .bed file supported for readBed function, found: '" << path << "'\n";
+                throw std::exception();
+            }
+            auto file_stream = std::make_shared<std::ifstream>(path);
+            if (!file_stream->is_open()) {
+                std::cerr << "Error: opening file " << path << std::endl;
+                throw std::runtime_error("Error opening file");
+            }
+            allBlocks.clear();
+            fpu = file_stream;
+            fileIndex = 0;
+            while (true) {
+                auto got_line = (bool)getline(*fpu, tp);
+                if (!got_line) {
+                    break;
+                }
+                fileIndex += 1;
+                if (tp[0] == '#') {
+                    continue;
+                }
+                size_t col1_end = tp.find("\t");
+
+                size_t col2_start = col1_end + 1;
+                size_t col2_end = tp.find("\t", col1_end + 1);
+                size_t col3_start = col2_end + 1;
+                size_t col3_end = tp.find("\t", col3_start);
+
+                std::string chrom = tp.substr(0, col1_end);
+
+                int start_value = 0;
+                int end_value = 0;
+                std::from_chars(tp.data() + col2_start, tp.data() + col2_end, start_value);
+                std::from_chars(tp.data() + col3_start, tp.data() + col3_end, end_value);
+                allBlocks[chrom].add(start_value, end_value, fileIndex);
+            }
+            if (!allBlocks.empty()) {
+                any_data = true;
+                for (auto& item : allBlocks) {
+                    item.second.build();
+                }
+            }
+        }
+
         void open(const char* input_file) {
             std::string path = input_file;
             fileIndex = 0;
-            done = false;
 
             if (endsWith(path, ".gff3")) {
                 kind = GFF3_NOI;
-            } else if (endsWith(path, ".gtf")) {
-                kind = GTF_NOI;
+//            } else if (endsWith(path, ".gtf")) {
+//                kind = GTF_NOI;
             } else {
-                std::cerr << "Error: only uncompressed GFF3 files are supported\n";
+                std::cerr << "Error: only uncompressed GFF3 files are supported, found: '" << path << "'\n";
                 std::cerr << "File name: " << path << std::endl;
                 throw std::exception();
             }
@@ -123,7 +167,7 @@ namespace Tr {
             if (kind == GFF3_NOI || kind == GTF_NOI) {
                 auto file_stream = std::make_shared<std::ifstream>(path);
                 if (!file_stream->is_open()) {
-                    std::cerr << "Error: opening track file " << path << std::endl;
+                    std::cerr << "Error: opening file " << path << std::endl;
                     throw std::runtime_error("Error opening file");
                 }
                 fpu = file_stream;
@@ -133,7 +177,6 @@ namespace Tr {
                 while (true) {
                     auto got_line = (bool)getline(*fpu, tp);
                     if (!got_line) {
-                        done = true;
                         break;
                     }
                     fileIndex += 1;
@@ -167,7 +210,7 @@ namespace Tr {
                     size_t col9_start = col8_end + 1;
 
                     // Extract needed fields directly
-//                    b.line = tp;  // todo remove this
+//                    b.line = tp;
                     b.chrom = tp.substr(0, col1_end);
 
                     // Parse start and end using from_chars
@@ -227,21 +270,25 @@ namespace Tr {
             }
 
             for (const auto& item : unique_gaps) {
+                int i = 0;
                 for (auto& se : item.second ) {
                     int end = se & 0xFFFFFFFF;
                     int start = (se >> 32);
-                    allBlocks[item.first].add(start, end, {start, end});
+                    allBlocks[item.first].add(start, end, i);
+                    i += 1;
                 }
                 allBlocks[item.first].build();
                 any_data = true;
             }
         }
 
-        bool hasRefSkipGap(std::string& current_chrom, int start, int end, int tolerance=10) {
-            overlapping_tr_gaps.clear();
-            this->allBlocks[current_chrom].search_values(start, end, this->overlapping_tr_gaps);
-            for (const auto& ol : this->overlapping_tr_gaps) {
-                if (std::abs(ol.first - start) < tolerance && std::abs(ol.second - end) < tolerance) {
+        bool hasRefSkipGap(std::string& chrom, int start, int end, int tolerance=10) {
+            if (!any_data) {
+                return false;
+            }
+            for (const auto &ol : this->allBlocks[chrom].search_keys(start, end)) {
+                if (std::abs(ol.first - start) < tolerance &&
+                    std::abs(ol.second - end) < tolerance) {
                     return true;
                 }
             }

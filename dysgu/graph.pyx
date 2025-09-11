@@ -8,18 +8,21 @@ import sortedcontainers
 from cpython cimport array
 import array
 import logging
-from dysgu.map_set_utils cimport Py_SimpleGraph
-from dysgu.map_set_utils cimport multimap as cpp_map
-from dysgu cimport map_set_utils
+
 from dysgu.io_funcs import intersecter
+
+from dysgu.map_set_utils cimport Py_SimpleGraph, Py_Int2IntMap
+from dysgu.map_set_utils cimport multimap as cpp_map
 from dysgu.map_set_utils cimport cigar_clip, clip_sizes, clip_sizes_hard, is_reciprocal_overlapping, span_position_distance
 from dysgu.map_set_utils cimport hash as xxhasher
 from dysgu.map_set_utils cimport MinimizerTable
 from dysgu.map_set_utils cimport set as ankerl_set
 from dysgu.map_set_utils cimport map as ankerl_map
+from dysgu.map_set_utils cimport TranscriptData
+from dysgu.map_set_utils import echo  # for debugging
 
 from dysgu.extra_metrics import BadClipCounter
-from dysgu.map_set_utils import echo  # for debugging
+
 from libcpp.string cimport string
 from libcpp.deque cimport deque as cpp_deque
 from libcpp.vector cimport vector
@@ -32,20 +35,11 @@ from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_ciga
 
 ctypedef cpp_pair[int, int] cpp_item
 
-ctypedef map_set_utils.Py_IntSet Py_IntSet
-ctypedef map_set_utils.Py_Int2IntMap Py_Int2IntMap
-
 ctypedef cpp_map[int, cpp_item] ScopeItem_t
 ctypedef vector[ScopeItem_t] ForwardScope_t
 
 ctypedef cpp_pair[int, cpp_item] event_item
 ctypedef cpp_pair[long, int] cpp_long_pair
-ctypedef long int long_int
-
-ctypedef PairedEndScoper PairedEndScoper_t
-ctypedef TemplateEdges TemplateEdges_t
-ctypedef NodeToName NodeToName_t
-ctypedef ClipScoper ClipScoper_t
 
 
 # 1 = soft-clipped split-read, the supplementary mapping might be discarded. whole read is a node
@@ -794,7 +788,7 @@ class AlignmentsSA:
         self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, query_pos, query_end, read_enum, cigar_index))
 
 #
-cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper_t clip_scope, chrom, pos, node_name):
+cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper clip_scope, chrom, pos, node_name):
     cdef int other_node
     cdef int count = 0
     cdef ankerl_set[int] clustered_nodes
@@ -807,10 +801,10 @@ cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper_t clip_scope, chrom, po
     return count
 
 
-cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper_t pe_scope, TemplateEdges_t template_edges,
+cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper pe_scope, TemplateEdges template_edges,
                        NodeToName node_to_name, genome_scanner,
                        int flag, int chrom, tell, int cigar_index, int event_pos, int query_pos,
-                       int chrom2, int pos2, ClipScoper_t clip_scope, ReadEnum_t read_enum,
+                       int chrom2, int pos2, ClipScoper clip_scope, ReadEnum_t read_enum,
                        bint p1_overlaps, bint p2_overlaps, bint mm_only, int clip_l, site_adder,
                        int length_from_cigar, bint trust_ins_len, bint paired_end):
     # Adds relevant information to graph and other data structures for further processing
@@ -962,10 +956,10 @@ cdef int good_quality_clip(AlignedSegment r, int clip_length):
 
 
 cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int loci_dist, gettid,
-                            overlap_regions, int clustering_dist, PairedEndScoper_t pe_scope,
+                            overlap_regions, int clustering_dist, PairedEndScoper pe_scope,
                             int cigar_index, int event_pos, int paired_end, long tell, genome_scanner,
-                            TemplateEdges_t template_edges, NodeToName node_to_name,
-                            int cigar_pos2, int mapq_thresh, ClipScoper_t clip_scope,
+                            TemplateEdges template_edges, NodeToName node_to_name,
+                            int cigar_pos2, int mapq_thresh, ClipScoper clip_scope,
                             ReadEnum_t read_enum, bad_clip_counter, bint mm_only, site_adder,
                             int length_from_cigar, bint trust_ins_len):
     cdef int other_node, clip_left, clip_right
@@ -1179,7 +1173,7 @@ class SiteAdder:
         else:
             self.scope = sortedcontainers.sortedlist.SortedList([site], key=lambda x: x.start)
             self.current_chrom = site.chrom
-    def add_any_sites(self, int chrom, int pos, Py_SimpleGraph G, PairedEndScoper_t pe_scope, NodeToName node_to_name, cluster_dist):
+    def add_any_sites(self, int chrom, int pos, Py_SimpleGraph G, PairedEndScoper pe_scope, NodeToName node_to_name, cluster_dist):
         cdef int node_name, start, stop, file_index
         cdef ReadEnum_t read_enum
         if chrom not in self.sites_queue:
@@ -1247,28 +1241,39 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
                             sites=None, bint trust_ins_len=True, bint low_mem=False, temp_dir=".",
                             bint find_n_aligned_bases=True, float position_distance_thresh=0.8, int max_search_depth=20,
-                            float max_divergence=0.2, bint no_phase=False):
+                            float max_divergence=0.2, bint no_phase=False, transcript_gaps_file=""):
     logging.info("Building cluster graph")
 
     # Edges are added between alignments from same template, after building main graph
-    cdef TemplateEdges_t template_edges = TemplateEdges()
+    cdef TemplateEdges template_edges = TemplateEdges()
 
     # Map of nodes -> read ids
     cdef NodeToName node_to_name = NodeToName()
 
     # Keeps track of local reads
-    cdef ClipScoper_t clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,
+    cdef ClipScoper clip_scope = ClipScoper(minimizer_dist, k=k, m=m, clip_length=clip_l,
                        minimizer_support_thresh=minimizer_support_thresh,
                        minimizer_breadth=minimizer_breadth, read_length=read_length)
 
     # Infers long-range connections, outside local scope using pe information
-    cdef PairedEndScoper_t pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh, max_search_depth)
+    cdef PairedEndScoper pe_scope = PairedEndScoper(max_dist, clustering_dist, infile.header.nreferences, norm_thresh, spd_thresh, paired_end, position_distance_thresh, max_search_depth)
 
     # Counts poor quality soft-clips
     bad_clip_counter = BadClipCounter(infile.header.nreferences, low_mem, temp_dir)
 
     # The main graph for clustering variant information
-    cdef Py_SimpleGraph G = map_set_utils.Py_SimpleGraph()
+    cdef Py_SimpleGraph G = Py_SimpleGraph()
+
+    # Table of expected gaps from transcripts file
+    cdef TranscriptData transcript_gaps = TranscriptData()
+    cdef vector[string] chrom_names
+    cdef bytes chr_b
+    cdef int i
+    if transcript_gaps_file:
+        transcript_gaps.readBed(transcript_gaps_file)
+        for i in range(infile.header.nreferences):
+            chr_b = infile.get_reference_name(i).encode("ascii")
+            chrom_names.push_back(chr_b)
 
     site_adder = None
     if sites:
@@ -1293,6 +1298,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef int left_clip_size, right_clip_size
 
     cdef bint hp_tag_found = False
+    cdef bint is_transcript_gap
     cdef int n_checked_for_hp_tag = 0
     if no_phase:
         n_checked_for_hp_tag = 10_001
@@ -1337,22 +1343,25 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                     event_pos += length
                     continue
 
-                if opp == 1:
+                if opp == 1:  # INS
                     if length >= min_sv_size:
                         pos2 = event_pos + length
                         events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.INSERTION))
                         added = True
-                elif opp == 2:
+                elif opp == 2:  # DEL
                     if length >= min_sv_size:
                         pos2 = event_pos + length
                         events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.DELETION))
                         added = True
                     event_pos += length
-                elif opp == 3:
+                elif opp == 3:  # SKIP
                     if length >= min_sv_size:
-                        pos2 = event_pos + length
-                        events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.SKIP))
-                        added = True
+                        if r.rname < chrom_names.size() and transcript_gaps.any_data:
+                            pos2 = event_pos + length
+                            is_transcript_gap = transcript_gaps.hasRefSkipGap(chrom_names[r.rname], event_pos, pos2, 10)
+                            if not is_transcript_gap:
+                                events_to_add.push_back(make_cigar_event(opp, cigar_index, event_pos, pos2, length, ReadEnum_t.SKIP))
+                                added = True
                     event_pos += length
                 else:
                     if opp != 4 and opp != 5:
@@ -1480,7 +1489,7 @@ cdef tuple count_support_between(Py_SimpleGraph G, parts):
         return None, None
     elif len(parts) == 1:
         return None, {0: parts[0]}
-    cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
+    cdef Py_Int2IntMap p2i = Py_Int2IntMap()
     for i, p in enumerate(parts):
         for node in p:
             p2i.insert(node, i)
@@ -1538,7 +1547,7 @@ cpdef break_large_component(Py_SimpleGraph G, component, int min_support):
     if len(parts) <= 1:
         return parts
     # Make a table to count from, int-int
-    cdef Py_Int2IntMap p2i = map_set_utils.Py_Int2IntMap()
+    cdef Py_Int2IntMap p2i = Py_Int2IntMap()
     for i, p in enumerate(parts):
         for node in p:
             p2i.insert(node, i)

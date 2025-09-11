@@ -914,8 +914,17 @@ cdef tuple get_rep(contig_seq):
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
 
-def contig_info(events):
+def order_posA_first(events, args):
+    cdef EventResult_t d
+    for d in events:
+        d.type = args["pl"]
+        if d.posA > d.posB and d.chrA == d.chrB:
+            t = d.posA
+            d.posA = d.posB
+            d.posB = t
 
+
+def contig_info(events):
     cdef EventResult_t e
     for i in range(len(events)):
         e = events[i]
@@ -965,8 +974,6 @@ def contig_info(events):
         e.rep = round(aln_rep, 3)
         e.rep_sc = round(sc_rep, 3)
         e.ref_bases = aligned
-
-    return events
 
 
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):

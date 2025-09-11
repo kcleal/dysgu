@@ -229,37 +229,52 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
     }
 
     int index_start = aln->core.pos;
-    for (uint32_t k=0; k < n_cigar; k++) {
+
+    for (uint32_t k = 0; k < n_cigar; k++) {
         uint32_t op = bam_cigar_op(cigar[k]);
         uint32_t length = bam_cigar_oplen(cigar[k]);
-        if (op == BAM_CDEL) {
-            index_start += length;
 
-        } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
-            int index_end = index_start + length;
-            cov_track.add(index_start, index_end);
-            index_start = index_end;
-            *n_aligned_bases += length;
+        // Process different CIGAR operations
+        switch (op) {
+            case BAM_CDEL:
+                index_start += length;
+                break;
 
-        } else if (op == BAM_CREF_SKIP) {
-            if (transcript_gaps.any_data) {
+            case BAM_CMATCH:
+            case BAM_CEQUAL:
+            case BAM_CDIFF: {
                 int index_end = index_start + length;
-                bool has_ref_skip_gap = transcript_gaps.hasRefSkipGap(current_chrom, index_start, index_end, 10);
-                sv_read = (has_ref_skip_gap) ? false : true;
-                if (has_ref_skip_gap) {
-                    break;
-                }
+                cov_track.add(index_start, index_end);
+                index_start = index_end;
+                *n_aligned_bases += length;
+                break;
             }
-            index_start += length;
+
+            case BAM_CREF_SKIP:
+                if (transcript_gaps.hasRefSkipGap(current_chrom, index_start,
+                                                index_start + length, 10)) {
+                    sv_read = false;
+                    goto loop_exit;  // Break out of the entire loop
+                } else {
+                    sv_read = true;
+                }
+                index_start += length;
+                break;
         }
+
+        // Check for structural variant indicators
         if (!sv_read) {
-            if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {
-                sv_read = true;
-            } else if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
+            bool is_large_soft_clip = (check_clips && op == BAM_CSOFT_CLIP &&
+                                      length >= clip_length);
+            bool is_large_indel = ((op == BAM_CINS || op == BAM_CDEL) &&
+                                  length >= min_within_size);
+
+            if (is_large_soft_clip || is_large_indel) {
                 sv_read = true;
             }
         }
     }
+    loop_exit:
 
     if (!sv_read) { // not an sv read template yet
         // Check for discordant of supplementary
@@ -281,7 +296,7 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
 
 void collect_transcripts(const char* transcripts_file, const char* unique_gaps_file, Tr::TranscriptData& t_reader) {
     if (transcripts_file == nullptr || strlen(transcripts_file) == 0) {
-        t_reader.done = true;
+        t_reader.any_data = false;
         return;
     }
     t_reader.open(transcripts_file);

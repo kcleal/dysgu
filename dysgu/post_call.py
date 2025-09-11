@@ -386,14 +386,14 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
             if symbolic_repr:
                 e.variant_seq = '<INS>'
 
-        elif e.svtype in ('TRA', 'INV', 'BND'):
+        elif e.svtype in ('TRA', 'INV', 'BND', 'SKIP'):
             bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
             e.variant_seq = f'<{e.svtype}>'
 
         # Sanity check
         if e.ref_seq == e.variant_seq:
-            logging.warning(f"ALT and REF seqs are the same at {e.chrA}:{e.posA}, {e.chrB}:{e.posB}. Setting ALT to symbolic.")
+            logging.warning(f"ALT and REF seqs are the same at {e.chrA}:{e.posA}, {e.chrB}:{e.posB}. Setting ALT to symbolic {e.svtype}.")
             e.variant_seq = f"<{e.svtype}>"
 
     return events
@@ -646,7 +646,7 @@ def join_phase_sets(events, ps_id):
     G = nx.Graph()
     for idx, e in enumerate(events):
         if len(e.phase_set_counts) == 0:
-            e.phase_set = ''
+            e.phase_set = -1
             continue
         elif len(e.phase_set_counts) > 1:
             if e.GT not in '1|11/1':  # only heterozygous variants

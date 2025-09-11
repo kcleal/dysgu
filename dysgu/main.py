@@ -185,7 +185,7 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
-@click.option("-t", "--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
+@click.option("--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
               required=False, type=click.Path(), hidden=True)
 @click.option("--sites", help="A vcf file of known variant sites. All sites will be genotyped in the output vcf",
               required=False, type=click.Path())

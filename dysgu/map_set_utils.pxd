@@ -82,11 +82,14 @@ cdef extern from "include/find_reads.hpp" nogil:
         void set_max_cov(int)
 
 
-cdef extern from "include/transcripts.hpp" nogil:
+cdef extern from "include/transcripts.hpp" namespace "Tr" nogil:
     cdef cppclass TranscriptData:
         TranscriptData() noexcept
+
+        bint any_data
         void open(const char*)
-        bint hasRefSkipGap(cpp_string&, int, int, int) noexcept
+        void readBed(const char*)
+        bint hasRefSkipGap(cpp_string& chrom, int start, int end, int tolerance) noexcept
 
 
 cdef extern from "include/graph_objects.hpp" nogil:

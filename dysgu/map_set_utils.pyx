@@ -447,3 +447,20 @@ cdef class EventResult:
 
     def __repr__(self):
         return str(to_dict(self))
+
+def filter_transcript_gaps(events, gaps_file=""):
+    if not gaps_file:
+        return events
+    cdef TranscriptData transcript_gaps = TranscriptData()
+    cdef bytes str_b = gaps_file.encode('ascii')
+    cdef int i
+    transcript_gaps.readBed(str_b)
+    kept = []
+    for e in events:
+        if e.svtype in ('TRA', 'BND'):
+            kept.append(e)
+            continue
+        str_b = e.chrA.encode('ascii')
+        if not transcript_gaps.hasRefSkipGap(str_b, e.posA, e.posB, tolerance=10):
+            kept.append(e)
+    return kept
