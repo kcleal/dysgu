@@ -61,16 +61,16 @@ def conver2bnd(t, o, reference, input_vcf):
                     ref_base2 += alt_bases
             elif ct == '3to3':
                 template = "{t}]{p}]"
-                template2 = "[{p}[{t}"
-                if add_ins:
-                    ref_base += alt_bases
-                    ref_base2 = alt_bases + ref_base2
-            else:
-                template = "[{p}[{t}"
                 template2 = "{t}]{p}]"
                 if add_ins:
-                    ref_base = alt_bases + ref_base
+                    ref_base += alt_bases
                     ref_base2 += alt_bases
+            elif ct == '5to5':
+                template = "[{p}[{t}"
+                template2 = "[{p}[{t}"
+                if add_ins:
+                    ref_base = alt_bases + ref_base
+                    ref_base2 = alt_bases + ref_base2
 
             # info['SVTYPE'] = 'BND'
             info2 = copy.deepcopy(info)
