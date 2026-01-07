@@ -45,7 +45,7 @@ cdef class CigarItem:
         self.op = o
         self.len = l
     def __repr__(self):
-        return f"op={self.op}, len={self.length}"
+        return f"op={self.op}, len={self.len}"
 
 
 cdef class Spanning:
@@ -364,7 +364,7 @@ cdef guess_informative_pair(aligns):
             return (ci,
                     a.rname,
                     event_pos,
-                    event_pos + 1 if ci.op == 1 else event_pos + cigar_len_a + 1,
+                    event_pos + 1 if ci.op == 1 else event_pos + cigar_l + 1,
                     a,
                     cigar_index)
         elif 0 < b_cigar_info.cigar_index < cigar_len_b - 1:
@@ -379,7 +379,7 @@ cdef guess_informative_pair(aligns):
             return (ci,
                     b.rname,
                     event_pos,
-                    event_pos + 1 if ci.op == 1 else event_pos + cigar_len_b + 1,
+                    event_pos + 1 if ci.op == 1 else event_pos + cigar_l + 1,
                     b,
                     cigar_index)
         a_pos = a_cigar_info.event_pos  # Position may have been inferred from SA tag, use this if available
@@ -430,7 +430,7 @@ cdef int same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_en
     # If data is paired-end, check if one supplementary overlaps the other primary read
     aflag = a.flag
     bflag = b.flag
-    if aflag & 1 and not aflag & 8 and a_chrom == b_chrom and aflag & 64 == bflag & 64:  # same read, one is supplementary
+    if (aflag & 1) and (not aflag & 8) and a_chrom == b_chrom and (aflag & 64) == (bflag & 64):  # same read, one is supplementary
         if is_overlapping(b_start, b_end, a_start, a_end):
             return 1
     return 0
@@ -538,8 +538,6 @@ def consensus_matches_gap(target_gap, float target_svlen, cigar, float threshold
     cdef float l
     cdef int op
     for op, l in cigar:
-        if op == target_op and min(l, target_svlen) / max(l, target_svlen) > threshold:
-            return True
         if op == target_op and min(l, target_svlen) / max(l, target_svlen) > threshold:
             return True
     return False
@@ -705,17 +703,17 @@ def assign_sites_to_clusters(sites_info, clusters, informative, coords, cluster_
         y_sum[c_id - 1] += coords[i, 1]
         c_count[c_id - 1] += 1
     m_x = x_sum / c_count
-    m_y = x_sum / c_count
+    m_y = y_sum / c_count
     c_xy = {}
     for cluster_id in clusters_d.keys():
         c_xy[cluster_id] = (m_x[cluster_id - 1], m_y[cluster_id - 1])
 
     # assign sites to clusters in greedy fashion
     sites_to_clusters = {}
-    un_partitoned = sites_info
+    un_partitioned = sites_info.copy()
     c = cluster_count
-    while len(un_partitoned) > 0 and c > 0 and len(c_xy) > 0:
-        s = un_partitoned.pop()
+    while len(un_partitioned) > 0 and c > 0 and len(c_xy) > 0:
+        s = un_partitioned.pop()
         best_id = -1
         best_dist = 1e9
         for cluster_id, (x, y) in c_xy.items():
@@ -972,10 +970,10 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
     spanning_alignments = [i for i in spanning_alignments if i.cigar_item.op == svtype_m]
     posA_arr = [i.pos for i in spanning_alignments]
     posA = int(np.median(posA_arr))
-    posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
+    posA_95 = int(abs(int(np.percentile(posA_arr, 97.5)) - posA))
     posB_arr = [i.end for i in spanning_alignments]
     posB = int(np.median(posB_arr))
-    posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
+    posB_95 = int(abs(int(np.percentile(posB_arr, 97.5)) - posB))
     chrom = spanning_alignments[0].chrom
     # choose representative alignment to use
     best_index = 0
@@ -1102,14 +1100,14 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
 
 cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
             int to_assemble, sites_info, bint paired_end, int length_extend, float divergence, bint hp_tag):
-
+    # echo("SINGLE")
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
     cdef int min_distance = insert_size + (2*insert_stdev)
     cdef int n_templates = len(set([i.qname for _, i in rds]))
     if n_templates == 1:
-        if not any(not i.flag & 1 or not i.flag & 2 or i.rname != i.rnext or node_info.cigar_index != 2 or
+        if not any((not i.flag & 1) or (not i.flag & 2) or i.rname != i.rnext or node_info.cigar_index != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
                    for node_info, i in rds):
             return []
@@ -1167,7 +1165,7 @@ cdef tuple informative_pair(u, v):
         if not i.flag & 2304:  # Not pri, supplementary --> is primary
             pri_u = i_info, i
         for j_info, j in v:
-            if j.flag & 64 == ri_flag:  # Same read
+            if (j.flag & 64) == ri_flag:  # Same read
                 # Same read, primary + supp, or supp + supp
                 return (i_info, i), (j_info, j)
             if not j.flag & 2304:  # Is primary
@@ -1326,6 +1324,7 @@ cdef infer_unmapped_insertion_break_point(int main_A_break, int cipos95A, int pr
 
 cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointype,
                     int insert_size, int insert_stdev, EventResult_t er):
+    # echo("MAKE_CALL")
     cdef int limit = insert_size + insert_stdev
     cdef AlignmentItem i
     positionsA = [i.breakA for i in informative]
@@ -1461,12 +1460,13 @@ cdef tuple mask_soft_clips(AlignedSegment a, AlignedSegment b):
     cdef int left_clipB = 0
     cdef int right_clipB = 0
 
+    # supplementary alignments usually have hard clips so we need to count them
     clip_sizes_hard(a, &left_clipA, &right_clipA)
     clip_sizes_hard(b, &left_clipB, &right_clipB)
 
     cdef int a_template_start = 0
     cdef int b_template_start = 0
-    if aflag & 64 == bflag & 64:  # Same read
+    if (aflag & 64) == (bflag & 64):  # Same read
         if (left_clipB and right_clipB) or (left_clipA and right_clipA):  # One read has more than one soft-clip
             if aflag & 16:  # A is reverse, convert to forward
                 cigar_value = cigar_p_a[cigar_l_a - 1]
@@ -1495,7 +1495,7 @@ cdef tuple mask_soft_clips(AlignedSegment a, AlignedSegment b):
                     else:
                         right_clipB = 0
                 else:
-                    if not bflag & 16:  # B on reverse strand
+                    if not bflag & 16:
                         right_clipB = 0
                     else:
                         left_clipB = 0
@@ -1507,7 +1507,7 @@ cdef tuple mask_soft_clips(AlignedSegment a, AlignedSegment b):
                     else:
                         right_clipA = 0
                 else:
-                    if not aflag & 16:  # A on reverse strand
+                    if not aflag & 16:
                         right_clipA = 0
                     else:
                         left_clipA = 0
@@ -1529,7 +1529,7 @@ cdef int query_start_end_from_cigar(AlignedSegment r, int *start, int *end):
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
-    cdef int opp, length
+    cdef int opp, length, i
     cdef int query_length = 0
     cigar_l = r._delegate.core.n_cigar
     cigar_p = bam_get_cigar(r._delegate)
@@ -1544,9 +1544,9 @@ cdef int query_start_end_from_cigar(AlignedSegment r, int *start, int *end):
         length = <int> cigar_value >> 4  # Get length
         if opp <= 1 or opp == 4 or opp >= 7:  # M, I, S, =, X
             query_length += length
-        elif opp == 5:  # H
-            query_length += length
-        if i == 0 and (opp == 4 or opp == 5):  # S or H
+        # elif opp == 5:  # H
+            # query_length += length
+        if i == 0 and opp == 4:  #(opp == 4 or opp == 5):  # S or H
             start[0] = length
 
     # Set initial end position
@@ -1556,7 +1556,7 @@ cdef int query_start_end_from_cigar(AlignedSegment r, int *start, int *end):
     cigar_value = cigar_p[cigar_l - 1]
     opp = <int> cigar_value & 15
     length = <int> cigar_value >> 4
-    if opp == 4 or opp == 5:  # S or H
+    if opp == 4: # or opp == 5:  # S or H
         end[0] -= length
 
     return query_length
@@ -1568,8 +1568,8 @@ cdef start_end_query_pair(AlignedSegment r1, AlignedSegment r2):
     r1l = query_start_end_from_cigar(r1, &s1, &e1)
     r2l = query_start_end_from_cigar(r2, &s2, &e2)
 
-    if r1.flag & 64 == r2.flag & 64:  # same read
-        if r2.flag & 16 != r1.flag & 16:  # different strand
+    if (r1.flag & 64) == (r2.flag & 64):  # same read
+        if (r2.flag & 16) != (r1.flag & 16):  # different strand
             start_temp = r1l - e2
             e2 = start_temp + e2 - s2
             s2 = start_temp
@@ -1632,6 +1632,7 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
 
 cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_stdev, float insert_ppf, int min_support,
                      int block_edge, int assemble, info, bint paired_end, bint hp_tag):
+    # echo("CALL_FROM_READS")
     grp_u = defaultdict(list)
     grp_v = defaultdict(list)
     for uinfo, r in u_reads_info:
@@ -1655,7 +1656,7 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
         pair = informative_pair(u, v)
         if not pair:
             continue
-        a_node_info, a, b_node_info, b, = pair[0][0], pair[0][1], pair[1][0], pair[1][1]
+        (a_node_info, a), (b_node_info, b) = pair
 
         a_qstart, a_qend, b_qstart, b_qend, a_len, b_len = start_end_query_pair(a, b)
         # Soft-clips for the chosen pair, plus template start of alignment
@@ -1796,6 +1797,7 @@ cdef filter_single_partitions(u_reads, v_reads):
 
 cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int insert_stdev, float insert_ppf,
             int min_support, int block_edge, int assemble, info, bint paired_end, bint hp_tag):
+    # echo("ONE_EDGE")
     spanning_alignments = []
     u_reads = []
     v_reads = []
@@ -2012,7 +2014,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     # Then need to decide whether to call from a single partition
 
     n2n = data.n2n
-    seen = set(range(len(data.parts))) if data.parts else {}
+    seen = set(range(len(data.parts))) if data.parts else set([])
     out_counts = defaultdict(int)  # The number of 'outward' links to other clusters
     cdef int buffered_reads = 0
     cdef bint add_to_buffer = 1
@@ -2023,7 +2025,7 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
     # Node info has the for NodeName(nd.hash_val, nd.flag, nd.pos, nd.chrom, nd.tell, nd.cigar_index, nd.event_pos)
     if data.s_between:
         # u and v are the part ids, d[0] and d[1] are the lists of nodes for those parts
-        for (u, v), d in data.s_between: #.items():
+        for (u, v), d in data.s_between:
             rd_u = get_reads(bam, d[0], data.reads, n2n, add_to_buffer, info)   # [(Nodeinfo, alignment)..]
             rd_v = get_reads(bam, d[1], data.reads, n2n, add_to_buffer, info)
 
@@ -2092,6 +2094,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     if data.reads is None:
         data.reads = {}
     # next deal with info - need to filter these into the partitions, then deal with them in single / one_edge
+    # if data.s_between:
+        # echo([(i, len(j[0]) + len(j[1])) for i, j in data.s_between])
     cdef EventResult_t e
     if n_parts >= 1:
         events += multi(data, bam, insert_size, insert_stdev, insert_ppf, clip_length, min_support, lower_bound_support,
@@ -2111,7 +2115,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events.append(ev)
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
     for e in events:
-       # echo("call_component svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}-{e.posB}, {e.chrB}, {e.svtype}, svlen_precise={e.svlen_precise}")
-       if e.svlen_precise:
-           set_ins_seq(e)
+        # echo(e.svtype, "svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}, {e.chrB}:{e.posB}, {e.svtype}, svlen_precise={e.svlen_precise}")
+        # exit()
+        if e.svlen_precise:
+            set_ins_seq(e)
     return events

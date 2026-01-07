@@ -102,26 +102,22 @@ class DiGraph {
         int numberOfNodes() { return N; }
 
         void neighbors(int u, std::vector<int> &neigh) {  // Get all out edges
-            //std::vector<int> neigh;
             if (!neigh.empty()) {
                 neigh.clear();
             }
             for (const auto& val: outList[u]) {
                 neigh.push_back(val.first);
             }
-            //return neigh;
         }
 
 
         void forInEdgesOf(int u, std::vector<PairW2>& inEdges) {
-//            std::vector<PairW2> inEdges;
             if (!inEdges.empty()) {
                 inEdges.clear();
             }
             for (const auto& val: inList[u]) {
                 inEdges.push_back(val);
             }
-//            return inEdges;
         }
 
         float node_path_quality(int u, int v, int w) {
@@ -204,14 +200,12 @@ class SimpleGraph {
         }
 
         void neighbors(int u, std::vector<int>& neigh) {
-//            std::vector<int> neigh;
             if (!neigh.empty()) {
                 neigh.clear();
             }
             for (const auto& val: adjList[u]) {
                 neigh.push_back(val.first);
             }
-//            return neigh;
         }
 
         void removeNode(int u) {

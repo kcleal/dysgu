@@ -381,7 +381,6 @@ def sample_level_density(potential, regions, max_dist=50):
             tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
-    # nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
 
     si_sets = {}
 
@@ -402,12 +401,10 @@ def sample_level_density(potential, regions, max_dist=50):
         else:
             expected = 1
         if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
-            # vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
-            vv = si_sets[ei.chrA].count(ei.posA, ei.posA + 1) #countOverlappingIntervals(ei.posA, ei.posA + 1)
+            vv = si_sets[ei.chrA].count(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
-            # vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
             vv = si_sets[ei.chrB].count(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
@@ -416,7 +413,6 @@ def sample_level_density(potential, regions, max_dist=50):
         large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
         for c, s, e in large_itv:
             if not intersecter(regions, c, s, e):
-                # vv = nc2[c].countOverlappingIntervals(s, e)
                 vv = si_sets[c].count(s, e)
                 neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1

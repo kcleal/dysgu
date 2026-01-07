@@ -315,6 +315,7 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nog
         return False
     if (overlap / float(c_abs(x2 - x1))) > 0.1 and (overlap / float(c_abs(y2 - y1))) > 0.1:
         return True
+    return False
 
 
 cdef bint span_position_distance2(int x1, int x2, int y1, int y2) noexcept nogil:
@@ -448,7 +449,8 @@ cdef class EventResult:
     def __repr__(self):
         return str(to_dict(self))
 
-def filter_transcript_gaps(events, gaps_file=""):
+
+def filter_transcript_gaps(events, gaps_file=""): 
     if not gaps_file:
         return events
     cdef TranscriptData transcript_gaps = TranscriptData()

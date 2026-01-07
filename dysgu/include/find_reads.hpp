@@ -294,23 +294,29 @@ int process_alignment(int& current_tid, std::string& current_chrom, std::deque<s
 }
 
 
-void collect_transcripts(const char* transcripts_file, const char* unique_gaps_file, Tr::TranscriptData& t_reader) {
+void collect_transcripts(const char* transcripts_file,
+        const char* unique_gaps_file,
+        const char* unique_blocks_file,
+        Tr::TranscriptData& t_reader) {
     if (transcripts_file == nullptr || strlen(transcripts_file) == 0) {
         t_reader.any_data = false;
         return;
     }
     t_reader.open(transcripts_file);
     t_reader.writeUniqueGapsToBed(unique_gaps_file);
+
+    t_reader.writeUniqueBlocksToBed(unique_blocks_file);
+
 }
 
 int search_hts_alignments(const char* infile, const char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
                           int threads, int paired_end, const char* temp_f, int max_coverage, const char* region,
                           const char* max_cov_ignore_regions, const char* fasta,
                           bool write_all, const char* write_mode,
-                          const char* transcripts_file, const char* unique_gaps_file) {
+                          const char* transcripts_file, const char* unique_gaps_file, const char* unique_blocks_file) {
 
     Tr::TranscriptData transcript_gaps = Tr::TranscriptData();
-    collect_transcripts(transcripts_file, unique_gaps_file, transcript_gaps);
+    collect_transcripts(transcripts_file, unique_gaps_file, unique_blocks_file, transcript_gaps);
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 

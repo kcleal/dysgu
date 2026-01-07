@@ -54,21 +54,15 @@ namespace Tr {
 
     class TrackBlock {
     public:
-        std::string chrom, name, vartype, parent; // line
+        std::string chrom, gene_name, vartype, transcript_id;
         int start{0}, end{0};
-    };
-
-    class GFFTrackBlock {
-    public:
-        std::string chrom, name, line, vartype;
-        std::vector<std::string> parts;
-        int start, end;
     };
 
     class Region {
     public:
         std::string chrom;
         int start, end;
+        Region(std::string& chr, int s, int e) : chrom{chr}, start{s}, end{e} {}
     };
 
     /*
@@ -96,8 +90,15 @@ namespace Tr {
         std::vector<std::string> parts;  // string split by delimiter
         std::vector<std::string> keyval;
 
+        // We need two things:
+        //  1. The unique gaps (introns), these are used during graph construction
+        //  2. A table of transcripts-exons, for annotation after calling
+        // Key=chrom. The int64 in the set is just a 32bit pair (start, end); makes gaps unique
         ankerl::unordered_dense::map< std::string, ankerl::unordered_dense::set<int64_t>> unique_gaps;
         ankerl::unordered_dense::map< std::string, si::IntervalMap<int, int> > allBlocks;
+
+        // Key=transcript, value=32bit pair
+        ankerl::unordered_dense::map< std::string, std::vector<Region>> transcript_exons;
 
         TrackBlock block;
         bool any_data{false};
@@ -141,6 +142,7 @@ namespace Tr {
                 std::from_chars(tp.data() + col2_start, tp.data() + col2_end, start_value);
                 std::from_chars(tp.data() + col3_start, tp.data() + col3_end, end_value);
                 allBlocks[chrom].add(start_value, end_value, fileIndex);
+
             }
             if (!allBlocks.empty()) {
                 any_data = true;
@@ -224,29 +226,26 @@ namespace Tr {
                     // Extract attributes (column 9)
                     std::string attributes = tp.substr(col9_start);
                     for (const auto &item : split(attributes, ';')) {
-                        if (kind == GFF3_NOI) {
-                            std::vector<std::string> keyval = split(item, '=');
-                            if (keyval.size() >= 2) {  // Safety check
-                                if (keyval[0] == "Parent") {
-                                    b.parent = keyval[1];
-                                    if (!b.name.empty()) {
-                                        break;
-                                    }
-                                } else if (keyval[0] == "transcript_id") {
-                                    b.name = keyval[1];
-                                    if (!b.parent.empty()) {
-                                        break;
-                                    }
-                                }
+                        assert (kind == GFF3_NOI); // {
+                        std::vector<std::string> keyval = split(item, '=');
+                        if (keyval.size() >= 2) {  // Safety check
+                            if (keyval[0] == "transcript_id") {
+                                b.transcript_id = keyval[1];
                             }
-                        } else {  // GTF_NOI
-                            // todo
+                            if (keyval[0] == "gene_name") {
+                                b.gene_name = keyval[1];
+                            }
+                            if (!b.gene_name.empty() && !b.transcript_id.empty()) {
+                                break;
+                            }
                         }
                     }
-                    if (b.name.empty()) {
+                    if (b.gene_name.empty() && b.transcript_id.empty()) {
                         continue;
                     }
-                    track_blocks[b.name].push_back(std::move(b));
+                    std::string gene_transcript_key = b.gene_name + "~" + b.transcript_id;
+                    transcript_exons[gene_transcript_key].push_back({b.chrom, b.start, b.end});
+                    track_blocks[b.transcript_id].push_back(std::move(b));
                 }
                 for (auto& kv : track_blocks) {
                     if (kv.second.size() <= 1) {
@@ -256,6 +255,16 @@ namespace Tr {
                     std::sort(blocks.begin(), blocks.end(),
                         [](const TrackBlock& t1, const TrackBlock& t2) { return t1.start < t2.start; }
                     );
+
+                    // Remove consecutive duplicates with same start and end
+                    // This shouldn't happen anyway
+                    auto new_end = std::unique(blocks.begin(), blocks.end(),
+                        [](const TrackBlock& t1, const TrackBlock& t2) {
+                            return t1.start == t2.start && t1.end == t2.end;
+                        }
+                    );
+                    blocks.erase(new_end, blocks.end());
+
                     for (size_t i = 0; i < blocks.size() - 1; ++i) {
                         if (blocks[i].end < blocks[i+1].start) {
                             int64_t pos_key = (static_cast<int64_t>(blocks[i].end) << 32) | static_cast<int64_t>(blocks[i+1].start);
@@ -305,6 +314,19 @@ namespace Tr {
                     int end = se & 0xFFFFFFFF;
                     int start = (se >> 32);
                     out << item.first << "\t" << start << "\t" << end << "\n";
+                }
+            }
+            out.close();
+        }
+
+         void writeUniqueBlocksToBed(const char* out_file) {
+            std::ofstream out(out_file);
+            if (!out.is_open()) {
+                throw std::runtime_error("Could not open file for writing");
+            }
+            for (const auto& item : transcript_exons) {
+                for (const auto& b : item.second) {
+                    out << b.chrom << "\t" << b.start << "\t" << b.end << "\t" << item.first <<"\n";
                 }
             }
             out.close();

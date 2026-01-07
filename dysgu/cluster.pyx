@@ -154,8 +154,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     # Look for gaps file in working directory
     if os.path.exists(os.path.join(tdir, "unique_gaps_transcripts.bed")):
         transcript_gaps_file = os.path.join(tdir, "unique_gaps_transcripts.bed")
+        transcript_blocks_file = os.path.join(tdir, "unique_blocks_transcripts.bed")
     else:
         transcript_gaps_file = ""
+        transcript_blocks_file = ""
 
     genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], procs,
                                             args["buffer_size"], regions_only,
@@ -480,7 +482,6 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     consensus.contig_info(block_edge_events)
     consensus.order_posA_first(block_edge_events, args)
 
-
     # Merge across calls
     if args["merge_within"] == "True":
         merged = merge_svs.merge_events(block_edge_events, args["merge_dist"], regions, bool(paired_end), try_rev=False, pick_best=False,
@@ -506,7 +507,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
 
-    preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
+    if transcript_blocks_file:  # RNAseq transcripts
+        preliminaries = coverage.get_raw_coverage_information_transcriptome(merged, regions, coverage_analyser, transcript_blocks_file)
+    else:
+        preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser)
 
     if auto_support:
         preliminaries = post_call.filter_auto_min_support(preliminaries)

@@ -21,10 +21,95 @@ ctypedef EventResult EventResult_t
 np.random.seed(0)
 random.seed(0)
 
+
 def get_chrom_key(ei):
     if ei.chrA != ei.chrB:
         return min(ei.chrA, ei.chrB), max(ei.chrA, ei.chrB)
     return ei.chrA
+
+
+class EventCanonicaliser:
+    """
+    Canonicalise inter-chrom events so that chrA/posA always refer to the
+    lexicographically smaller chromosome (to match get_chrom_key()).
+    """
+    @staticmethod
+    def canonicalise(e):
+        chrA = EventCanonicaliser._get(e, "chrA", None)
+        chrB = EventCanonicaliser._get(e, "chrB", None)
+        if not chrA or not chrB or chrA == chrB:
+            return e
+        min_chr = min(chrA, chrB)
+        max_chr = max(chrA, chrB)
+        if chrA == min_chr and chrB == max_chr:
+            return e
+
+        EventCanonicaliser._swap(e, "chrA", "chrB")
+        EventCanonicaliser._swap(e, "posA", "posB")
+        EventCanonicaliser._swap(e, "cipos95A", "cipos95B")
+        EventCanonicaliser._swap(e, "preciseA", "preciseB")
+        EventCanonicaliser._swap(e, "ciend95A", "ciend95B")
+        EventCanonicaliser._swap(e, "contig", "contig2")
+        EventCanonicaliser._swap(e, "contig_cigar", "contig2_cigar")
+        EventCanonicaliser._swap(e, "contig_ref_start", "contig2_ref_start")
+        EventCanonicaliser._swap(e, "contig_ref_end", "contig2_ref_end")
+        EventCanonicaliser._swap(e, "contig_lc", "contig2_lc")
+        EventCanonicaliser._swap(e, "contig_rc", "contig2_rc")
+        EventCanonicaliser._swap(e, "contig_left_weight", "contig2_left_weight")
+        EventCanonicaliser._swap(e, "contig_right_weight", "contig2_right_weight")
+        EventCanonicaliser._swap(e, "left_ins_seq", "right_ins_seq")
+
+        jt = EventCanonicaliser._get(e, "join_type", None)
+        if jt is not None:
+            EventCanonicaliser._set(e, "join_type", EventCanonicaliser._flip_ct(jt))
+
+        return e
+
+    @staticmethod
+    def _is_dict(e):
+        return isinstance(e, dict)
+
+    @staticmethod
+    def _get(e, k, default=None):
+        if isinstance(e, dict):
+            return e.get(k, default)
+        return getattr(e, k, default)
+
+    @staticmethod
+    def _set(e, k, v):
+        if isinstance(e, dict):
+            e[k] = v
+        else:
+            setattr(e, k, v)
+
+    @staticmethod
+    def _swap(e, k1, k2):
+        if isinstance(e, dict):
+            in1, in2 = (k1 in e), (k2 in e)
+            if not (in1 or in2):
+                return
+            if in1 and in2:
+                e[k1], e[k2] = e[k2], e[k1]
+            elif in1 and not in2:
+                e[k2] = e[k1]
+                del e[k1]
+            else:  # in2 and not in1
+                e[k1] = e[k2]
+                del e[k2]
+        else:
+            if not (hasattr(e, k1) and hasattr(e, k2)):
+                return
+            v1 = getattr(e, k1)
+            v2 = getattr(e, k2)
+            setattr(e, k1, v2)
+            setattr(e, k2, v1)
+
+    @staticmethod
+    def _flip_ct(ct):
+        if not ct or "to" not in ct:
+            return ct
+        a, b = ct.split("to", 1)
+        return f"{b}to{a}"
 
 
 def compare_subset(potential, max_dist, max_comparisons, same_sample):
@@ -98,12 +183,14 @@ cdef break_distances(int i_a, int i_b, int j_a, j_b, bint i_a_precise, bint i_b_
             i_b = temp
             temp = i_a_precise
             i_a_precise = i_b_precise
+            i_b_precise = temp
         if j_b < j_a:
             temp = j_a
             j_a = j_b
             j_b = temp
             temp = j_a_precise
             j_a_precise = j_b_precise
+            j_b_precise = temp
     dist_a = abs(i_a - j_a)
     dist_b = abs(i_b - j_b)
     precise_thresh = min(max(350, min_svlen), 1500)
@@ -403,29 +490,6 @@ def process_contig_aignments(ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_en
             return idx, jdx
 
 
-# def consistent_break_pattern(ei, ej, ci, ci2, cj, cj2):  # for paired-end reads only
-#     return True
-#     if ei.svtype == ej.svtype:
-#         return True
-#     if ei.svtype in 'INSTRABND' or ei.svtype in 'INSTRABND':
-#         if ei.svtype in 'INSTRABND':
-#             if ej.svtype == 'DUP':  # Make sure merging SV has clip on left-hand-side
-#                 if ej.posA <= ei.posA and ci and ci[0].islower():
-#                     return True
-#             if ej.svtype == 'DEL':
-#                 if ej.posA >= ei.posA and ci and ci[-1].islower():
-#                     return True
-#
-#         elif ej.svtype in 'INSTRABND':
-#             if ei.svtype == 'DUP':
-#                 if ei.posA <= ej.posA and cj and cj[0].islower():
-#                     return True
-#             if ei.svtype == 'DEL':
-#                 if ei.posA >= ej.posA and cj and cj[-1].islower():
-#                     return True
-#     return False  # No merging between other SV types
-
-
 def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, rel_diffs=False, diffs=15,
                      same_sample=True, aggressive_ins_merge=False, debug=False, max_comparisons=20, procs=1):
     event_iter = compare_subset(potential, max_dist, max_comparisons, same_sample)
@@ -461,13 +525,15 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                         G.add_edge(edge[0], edge[1], loci_same=True)
             job = []
 
-        i_id, j_id = ei.event_id, ej.event_id
+        i_id, j_id = ei.event_id, ej.event_id   
 
         id_key = (min(idx, jdx), max(idx, jdx))
         idx, jdx = id_key
 
         if id_key in seen:
             continue
+
+        #echo('merge comparison', i_id, j_id, ei.posA, ej.posA)
 
         if not same_sample and ((ei.svtype in {"INS", "DUP"} and ej.svtype not in {"INS", "DUP"}) or ei.svtype != ej.svtype):
             seen.add(id_key)
@@ -479,7 +545,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             ei.svlen != ej.svlen:  # <-- todo THIS
             seen.add(id_key)
             disjoint_edges.add(id_key)
-            # echo('disjoin added here', ei.su, ej.su, avg_su_thresh)
+            #echo('disjoin added here', ei.su, ej.su, avg_su_thresh)
             continue
 
         if not same_sample and ei.sample == ej.sample:
@@ -489,12 +555,9 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         if (same_sample and i_id == j_id) or \
             (not same_sample and ei.sample == ej.sample) or \
-            out_edges[idx] > 10 or out_edges[jdx] > 10:
-                # or
-                # (ej.svtype == "DEL" and ei.svtype != "DEL") or
-                # (ei.svtype == "DEL" and ej.svtype != "DEL")):
-                # (ei.svtype in {"INS", "DUP"} and ej.svtype not in {"INS", "DUP"}) or
-                # ei.svtype != ej.svtype):
+            (same_sample and (out_edges[idx] > 100 or out_edges[jdx] > 100)) or \
+            (not same_sample and (out_edges[idx] > 10 or out_edges[jdx] > 10)):
+            # out_edges[idx] > 10 or out_edges[jdx] > 10:
                 seen.add(id_key)
                 continue
 
@@ -523,11 +586,11 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
         if ei.type != ej.type and (ei.type == 'pe' or ej.type == 'pe'):
             out_edges[idx] += 1
             out_edges[jdx] += 1
-            G.add_edge(idx, jdx)
+            # G.add_edge(idx, jdx)
             continue
 
         if ei.spanning > 0 and ej.spanning > 0 and jaccard_similarity(ei.qnames, ej.qnames) > 0.1: #0.1:
-            # echo('qnames!', ei.qnames, ej.qnames, jaccard_similarity(ei.qnames, ej.qnames))
+            #echo('qnames!', ei.qnames, ej.qnames, jaccard_similarity(ei.qnames, ej.qnames))
             disjoint_edges.add(id_key)
             continue
 
@@ -535,22 +598,16 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             out_edges[idx] += 1
             out_edges[jdx] += 1
             G.add_edge(idx, jdx, loci_same=True)
+            #echo('added edge')
+            continue
 
         any_contigs_to_check, ci, ci2, ci_alt, cj, cj2, cj_alt = get_consensus_seqs(ei, ej)
 
         if paired_end:
-
-            # Make sure patterns are consistent between different SV calls
-            # if not consistent_break_pattern(ei, ej, ci, ci2, cj, cj2):
-            #     continue
-            # if paired_end and ei.svtype != ej.svtype:
-            #     echo("merge candidate", (id_key), ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype,
-            #          ej.svtype, 'SU=', ei.su, ej.su, ei.haplotypes, ej.haplotypes)
-            #     seen.add(id_key)
-            #     continue
-
-            overlap = max(0, min(ei.posA, ej.posA) - max(ei.posB, ej.posB))
-            if ei.spanning > 0 and ej.spanning > 0 and overlap == 0 and ei.svtype != "INS":
+            
+            #overlap = max(0, min(ei.posA, ej.posA) - max(ei.posB, ej.posB))
+            overlap = min(ei.posB, ej.posB) - max(ei.posA, ej.posA)
+            if ei.spanning > 0 and ej.spanning > 0 and overlap <= 0 and ei.svtype != "INS":
                 disjoint_edges.add(id_key)
                 continue
 
@@ -579,35 +636,6 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 G.add_edge(idx, jdx, loci_same=False)
                 continue
 
-        # merge_conditions_met = False
-        # if ins_dup or ei.svtype == "TRA" or ej.svtype == "TRA":
-        #     merge_conditions_met = True
-        # elif ei.svtype == "INS":
-        #     if aggressive_ins_merge or paired_end: #(paired_end and isinstance(ei.variant_seq, str) and isinstance(ej.variant_seq, str) and l_ratio > 0.7):
-        #         merge_conditions_met = True
-        #     elif ml > 0 and l_ratio > 0.7:
-        #         merge_conditions_met = True
-        # else:
-        #     spd = span_position_distance(ei, ej)
-        #     recpi_overlap = is_reciprocal_overlapping(ei.posA, ei.posB, ej.posA, ej.posB)
-        #     both_in_include = intersecter(tree, ei.chrA, ei.posA, ei.posA + 1) and intersecter(tree, ei.chrB, ei.posB, ei.posB + 1)
-        #
-        #     merge_conditions_met = (
-        #             (paired_end and ei.spanning > 0 and ej.spanning > 0 and (recpi_overlap or spd > 0.3)) or
-        #             ((recpi_overlap or spd > 0.3 or (loci_similar and any_contigs_to_check)) and not both_in_include)
-        #     )
-
-
-        # if not merge_conditions_met:
-        #     echo("merge conditions not met", i_id, j_id, ei.svlen, ej.svlen)
-        #     continue
-
-        # if same_sample and not paired_end and not consistent_alignment_and_cigars(ei, ej, l_ratio):
-        #     echo("inconsistent cigars")
-        #     continue
-
-        # echo('hi', ei.type, ej.type)
-
         # Loci are similar, check contig match or reciprocal overlap
         if not any_contigs_to_check:
             one_is_imprecise = (not ei.preciseA or not ei.preciseB or ei.svlen_precise or
@@ -618,7 +646,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 G.add_edge(idx, jdx, loci_same=False)
                 # echo("MERGED2", ei.svlen, ej.svlen, ei.svtype)
                 continue
-            elif ei.svtype == 'TRA' or ei.svtype == 'TRA':
+            elif ei.svtype == 'TRA' or ej.svtype == 'TRA':
                 out_edges[idx] += 1
                 out_edges[jdx] += 1
                 G.add_edge(idx, jdx, loci_same=False)
@@ -641,8 +669,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if not edge:
                 continue
             else:
-                out_edges[idx] += 1
-                out_edges[jdx] += 1
+                out_edges[edge[0]] += 1
+                out_edges[edge[1]] += 1
                 G.add_edge(edge[0], edge[1], loci_same=True)
 
     return G, disjoint_edges
@@ -726,9 +754,21 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                  skip_imprecise=False, max_comparisons=100, procs=1):
     """Try and merge similar events, use overlap of both breaks points
     """
+    # p = []
+    # for ei in potential:
+    #     if ei.chrA != "chr7" or abs(ei.posA - 116771655) > 10:
+    #         continue
+    #     #echo('pos in merge', ei.posA)
+    #     p.append(ei)
+    # potential = p
+
     max_dist = max_dist / 2
     if len(potential) <= 1:
         return potential
+    for ei in potential:
+        if ei.chrA != ei.chrB:
+            EventCanonicaliser.canonicalise(ei)
+
     # Cluster events on graph
     G = nx.Graph()
     G, forbidden_edges = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,

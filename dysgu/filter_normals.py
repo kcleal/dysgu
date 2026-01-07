@@ -125,6 +125,7 @@ def output_vcf(args, template_vcf):
     hdr.add_line('##FILTER=<ID=normalOverlap,Description="SV overlap in a normal vcf">')
     hdr.add_line('##FILTER=<ID=normal,Description="SV has read support in a normal alignment file">')
     hdr.add_line('##FILTER=<ID=lowSupport,Description="Not enough supporting evidence / too many nuisance reads">')
+    hdr.add_line('##FILTER=<ID=lowAF,Description="Allele frequency below threshold">')
     hdr.add_line('##FILTER=<ID=lowMapQ,Description="Mean MapQ below threshold">')
     hdr.add_line('##FILTER=<ID=highDivergence,Description="Too many mismatches or small gaps in reads">')
     hdr.add_line(f'##command="{input_command}"')
@@ -189,6 +190,34 @@ def get_sv_type(r, chrom, chrom2):
     if "DUP" in svt and svt != "DUP":
         svt = "DUP"
     return svt
+
+
+def get_record_af(r, sample, fallback=True):
+    d = r.samples[sample]
+    if "AF" in d and d["AF"] is not None:
+        af = d["AF"]
+        if isinstance(af, (tuple, list)):
+            if len(af) == 0:
+                return None
+            af = af[0]
+            echo('got af', af)
+        try:
+            return float(af)
+        except Exception:
+            return None
+
+    if not fallback:
+        return None
+
+    if "COV" in d and d["COV"] is not None and d["COV"] > 0 and "SU" in r.info:
+        af = float(r.info["SU"] / 2) / (float(d["COV"]) + 1e-5)
+        if af < 0:
+            af = 0.0
+        if af > 1:
+            af = 1.0
+        return af
+
+    return None
 
 
 def make_interval_tree(args, infile, sample_name, normal_vcfs):
@@ -1003,6 +1032,7 @@ def run_filtering(args):
     keep_all = args["keep_all"]
     min_prob = args['min_prob']
     min_mapq = args['min_mapq']
+    min_af = args["min_af"]
     pass_prob = args['pass_prob']
     support_fraction = args['support_fraction']
     max_divergence = args['max_divergence']
@@ -1031,6 +1061,16 @@ def run_filtering(args):
                 update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowProb")
                 out_vcf.write(r)
             continue
+        if min_af > 0:
+            af = get_record_af(r, samp, fallback=True)
+            if af is not None:
+                if af < min_af:
+                    filter_results["lowAF"] += 1
+                    if keep_all:
+                        update_filter_value(r, sample_name, old_filter_value, pass_prob, new_value="lowAF")
+                        out_vcf.write(r)
+                    continue
+
         if has_low_support(r, sample_name, support_fraction):
             filter_results['lowSupport'] += 1
             if keep_all:
