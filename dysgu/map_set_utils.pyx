@@ -16,6 +16,7 @@ from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_ciga
 ctypedef cpp_pair[int, int] cpp_item
 ctypedef cpp_pair[long, int] cpp_long_item
 
+from builtins import set as python_set
 
 def echo(*args):
     click.echo(args, err=True)
@@ -136,21 +137,21 @@ cdef class Py_DiGraph:
         self.thisptr = new DiGraph()
     def __dealloc__(self):
         del self.thisptr
-    cdef int addNode(self):
+    cdef int addNode(self) noexcept nogil:
         return self.thisptr.addNode()
-    cdef int hasEdge(self, int u, int v):
+    cdef int hasEdge(self, int u, int v) noexcept nogil:
         return self.thisptr.hasEdge(u, v)
-    cdef void addEdge(self, int u, int v, int w):
+    cdef void addEdge(self, int u, int v, int w) noexcept nogil:
         self.thisptr.addEdge(u, v, w)
-    cdef void updateEdge(self, int u, int v, int w):
+    cdef void updateEdge(self, int u, int v, int w) noexcept nogil:
         self.thisptr.addEdge(u, v, w)
-    cdef int numberOfNodes(self) nogil:
+    cdef int numberOfNodes(self) noexcept nogil:
         return self.thisptr.numberOfNodes()
-    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) nogil:
+    cdef void forInEdgesOf(self, int u, cpp_vector[cpp_pair[int, int]]& inEdges) noexcept nogil:
         self.thisptr.forInEdgesOf(u, inEdges)
-    cdef void neighbors(self, int u, cpp_vector[int]& neigh) nogil:
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) noexcept nogil:
         self.thisptr.neighbors(u, neigh)
-    cdef float node_path_quality(self, int u, int v, int w)  nogil:
+    cdef float node_path_quality(self, int u, int v, int w) noexcept nogil:
         return self.thisptr.node_path_quality(u, v, w)
 
 
@@ -170,11 +171,11 @@ cdef class Py_SimpleGraph:
         return self.thisptr.edgeCount()
     cpdef int weight(self, int u, int v):
         return self.thisptr.weight(u, v)
-    cdef void neighbors(self, int u, cpp_vector[int]& neigh):
+    cdef void neighbors(self, int u, cpp_vector[int]& neigh) noexcept nogil:
         self.thisptr.neighbors(u, neigh)
     cpdef void removeNode(self, int u):
         self.thisptr.removeNode(u)
-    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& components):
+    cdef void connectedComponents(self, char* pth, bint low_mem, cpp_vector[int]& components) noexcept nogil:
         self.thisptr.connectedComponents(pth, low_mem, components)
     cpdef int showSize(self):
         return self.thisptr.showSize()
@@ -188,15 +189,15 @@ cdef class Py_Int2IntMap:
         del self.thisptr
     cdef void insert(self, int key, int value) noexcept nogil:
         self.thisptr.insert(key, value)
-    cdef void erase(self, int key) nogil:
+    cdef void erase(self, int key) noexcept nogil:
         self.thisptr.erase(key)
-    cdef int has_key(self, int key) nogil:
+    cdef int has_key(self, int key) noexcept nogil:
         return self.thisptr.has_key(key)
-    cdef int get(self, int key) nogil:
+    cdef int get(self, int key) noexcept nogil:
         return self.thisptr.get(key)
-    cdef get_val_result get_value(self, int key) nogil:
+    cdef get_val_result get_value(self, int key) noexcept nogil:
         return self.thisptr.get_value(key)
-    cdef int size(self) nogil:
+    cdef int size(self) noexcept nogil:
         return self.thisptr.size()
 
 
@@ -206,24 +207,24 @@ cdef class Py_IntSet:
         self.thisptr = new IntSet()
     def __dealloc__(self):
         del self.thisptr
-    cdef void insert(self, int key) nogil:
+    cdef void insert(self, int key) noexcept nogil:
         self.thisptr.insert(key)
-    cdef void erase(self, int key) nogil:
+    cdef void erase(self, int key) noexcept nogil:
         self.thisptr.erase(key)
-    cdef int has_key(self, int key) nogil:
+    cdef int has_key(self, int key) noexcept nogil:
         return self.thisptr.has_key(key)
-    cdef int size(self) nogil:
+    cdef int size(self) noexcept nogil:
         return self.thisptr.size()
 
 
-cdef int cigar_exists(AlignedSegment r):
+cdef int cigar_exists(AlignedSegment r) noexcept nogil:
     cigar_l = r._delegate.core.n_cigar
     if cigar_l > 0:
         return 0
     return 0
 
 
-cdef void clip_sizes(AlignedSegment r, int* left, int* right):
+cdef void clip_sizes(AlignedSegment r, int* left, int* right) noexcept nogil:
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
@@ -242,7 +243,7 @@ cdef void clip_sizes(AlignedSegment r, int* left, int* right):
         right[0] = <int> cigar_value >> 4
 
 
-cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right):
+cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right) noexcept nogil:
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
@@ -262,7 +263,7 @@ cdef void clip_sizes_hard(AlignedSegment r, int* left, int* right):
         right[0] = <int> cigar_value >> 4
 
 
-cdef int cigar_clip(AlignedSegment r, int clip_length):
+cdef int cigar_clip(AlignedSegment r, int clip_length) noexcept nogil:
     cigar_l = r._delegate.core.n_cigar
     cigar_p = bam_get_cigar(r._delegate)
     if cigar_l == 0:
@@ -279,7 +280,7 @@ cpdef int is_overlapping(int x1, int x2, int y1, int y2) noexcept nogil:
     return int(max(x1, y1) <= min(x2, y2))
 
 
-cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2):
+cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2) noexcept nogil:
     cdef int temp_v
     if x1 == x2 or y1 == y2:
         return 0
@@ -293,6 +294,7 @@ cdef float min_fractional_overlapping(int x1, int x2, int y1, int y2):
         y1 = temp_v
     cdef float overlap = float(max(0, (min(x2, y2) - max(x1, y1))))
     return min( overlap / float(c_abs(x2 - x1)),  overlap / float(c_abs(y2 - y1)) )
+
 
 cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nogil:
     # Insertions have same x1/y1 position, use another measure
@@ -313,9 +315,10 @@ cdef bint is_reciprocal_overlapping(int x1, int x2, int y1, int y2) noexcept nog
         return False
     if (overlap / float(c_abs(x2 - x1))) > 0.1 and (overlap / float(c_abs(y2 - y1))) > 0.1:
         return True
+    return False
 
 
-cdef bint span_position_distance2(int x1, int x2, int y1, int y2):
+cdef bint span_position_distance2(int x1, int x2, int y1, int y2) noexcept nogil:
     cdef int span1, span2, max_span
     cdef float span_distance, position_distance, center1, center2
     if x1 == x2:
@@ -413,7 +416,7 @@ def to_dict(self):
 
 
 def from_dict(self, d):
-    allowed = set(dir(self))
+    allowed = python_set(dir(self))
     for k, v in d.items():
         if k in allowed:
             self.__setattr__(k, v)
@@ -437,7 +440,29 @@ cdef class EventResult:
         self.n_gaps = 0
         self.compress = 0
         self.a_freq = 0
-        self.qnames = set([])
+        self.qnames = python_set([])
+        self.haplotype = "-1"
+        self.phase_set = -1
+        self.haplotype_counts = {}
+        self.phase_set_counts = {}
 
     def __repr__(self):
         return str(to_dict(self))
+
+
+def filter_transcript_gaps(events, gaps_file=""): 
+    if not gaps_file:
+        return events
+    cdef TranscriptData transcript_gaps = TranscriptData()
+    cdef bytes str_b = gaps_file.encode('ascii')
+    cdef int i
+    transcript_gaps.readBed(str_b)
+    kept = []
+    for e in events:
+        if e.svtype in ('TRA', 'BND'):
+            kept.append(e)
+            continue
+        str_b = e.chrA.encode('ascii')
+        if not transcript_gaps.hasRefSkipGap(str_b, e.posA, e.posB, tolerance=10):
+            kept.append(e)
+    return kept

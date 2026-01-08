@@ -187,7 +187,7 @@ class CoverageAnalyser(object):
             e.outer_cn = sides
             e.inner_cn = middle
 
-        elif e.svtype == "DUP":  # DUP, INV
+        elif e.svtype == "DUP" or e.svtype == "INV":
             if middle == 0:
                 fc = 0
             else:
@@ -328,27 +328,31 @@ def median(arr, start, end):
 
 
 def get_bases(ref_genome, chrom, start, end):
-    bases = '.'
     try:
         bases = ref_genome.fetch(chrom, start, end).upper()
-    except:
-        pass
-    if bases.count('N') > 0:  # N bases do not load using IGV!
-        return '.'
-    return bases if bases else '.'
+        if not bases or bases.isspace():
+            return 'N'
+        return bases
+    except Exception as e:
+        logging.warning(f"Error fetching {chrom}:{start}-{end}: {str(e)}")
+        return 'N'
 
 
 def get_ref_base(events, ref_genome, symbolic_sv_size):
+    chrom_set = set(ref_genome.references)
     for e in events:
         if e.posA == 0:
             e.posA = 1
-
-        symbolic_repr = symbolic_sv_size > 0 and (e.svlen >= symbolic_sv_size or e.svlen == 0)
+        if e.chrA not in chrom_set or (e.chrB != e.chrA and e.chrB not in chrom_set):
+            logging.warning(f"Chrom missing from reference {e.chrA}, {e.chrB}")
+            continue
+        fetch_size = abs(e.posB - e.posA)
+        symbolic_repr = fetch_size >= symbolic_sv_size
         if e.svtype == 'DEL':
             # Fetch deleted seq
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
-                if bases and bases != '.':
+                if bases and bases != 'N':
                     e.ref_seq = bases
                     e.variant_seq = bases[0]
                 else:  # Use symbolic
@@ -363,7 +367,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         elif e.svtype == 'DUP':
             if not symbolic_repr:
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
-                if bases and bases != '.':
+                if bases and bases != 'N':
                     e.ref_seq = bases[0]
                     e.variant_seq = bases
                 else:
@@ -378,13 +382,19 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
         elif e.svtype == 'INS':
             bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
+            # the variant_seq is set elsewhere, so only set symbolic here
             if symbolic_repr:
                 e.variant_seq = '<INS>'
 
-        elif e.svtype in ('TRA', 'INV', 'BND'):
+        elif e.svtype in ('TRA', 'INV', 'BND', 'SKIP'):
             bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
             e.ref_seq = bases
             e.variant_seq = f'<{e.svtype}>'
+
+        # Sanity check
+        if e.ref_seq == e.variant_seq:
+            logging.warning(f"ALT and REF seqs are the same at {e.chrA}:{e.posA}, {e.chrB}:{e.posB}. Setting ALT to symbolic {e.svtype}.")
+            e.variant_seq = f"<{e.svtype}>"
 
     return events
 
@@ -425,11 +435,12 @@ def log_choose(n, k):
     # swap for efficiency if k is more than half of n
     if k * 2 > n:
         k = n - k
-    for  d in range(1,k+1):
+    for d in range(1,k+1):
         r += math.log(n, 10)
         r -= math.log(d, 10)
         n -= 1
     return r
+
 
 # return the genotype and log10 p-value
 def bayes_gt(ref, alt, is_dup):
@@ -630,26 +641,27 @@ def low_ps_support(r, support_fraction=0.1):
     return min_support
 
 
-
 def join_phase_sets(events, ps_id):
     # Join phase sets if support is greater than threshold
     G = nx.Graph()
     for idx, e in enumerate(events):
-        if not e.phase_set:
-            e.phase_set = ''
+        if len(e.phase_set_counts) == 0:
+            e.phase_set = -1
             continue
-        if len(e.phase_set) > 1:
+        elif len(e.phase_set_counts) > 1:
             if e.GT not in '1|11/1':  # only heterozygous variants
                 threshold = low_ps_support(e)
-                passing_ps = [k for k, v in e.phase_set.items() if v >= threshold]
-                e.phase_set = passing_ps
+                passing_ps = {k: v for k, v in e.phase_set_counts.items() if v >= threshold}
+                e.phase_set_counts = passing_ps
                 if len(passing_ps) > 1:
                     G.add_edges_from(combinations(passing_ps, 2))
             else:
                 # Choose PS with maximum support
-                e.phase_set = str(max(e.phase_set, key=e.phase_set.get))
-        else:
-            e.phase_set = str(list(e.phase_set.keys())[0])
+                e.phase_set = int(max(e.phase_set_counts, key=e.phase_set_counts.get))
+                e.phase_set_counts = {}
+        else:  # Only one phase set
+            e.phase_set = int(list(e.phase_set_counts.keys())[0])
+            e.phase_set_counts = {}
 
     new_phase_set = {}
     for sub in nx.connected_components(G):
@@ -658,14 +670,13 @@ def join_phase_sets(events, ps_id):
         ps_id += 1
 
     for e in events:
-        if not e.phase_set or isinstance(e.phase_set, str):
+        if not e.phase_set_counts:
             continue
-        assert isinstance(e.phase_set, list)
-        new_p = list(set([new_phase_set[n] for n in e.phase_set if n in new_phase_set]))
+        new_p = list(set([new_phase_set[n] for n in e.phase_set_counts.values() if n in new_phase_set]))
         if not new_p:
-            e.phase_set = ''
+            e.phase_set = -1
         else:
-            e.phase_set = str(new_p[0])
+            e.phase_set = int(new_p[0])
 
 
 def get_hp_format(events):
@@ -673,24 +684,25 @@ def get_hp_format(events):
     any_phase_set = False
     keys = set([])
     for e in events:
-        if e.haplotype:
-            for k in e.haplotype:
-                if k != 'u':
-                    keys.add(k)
+        for k in e.haplotype_counts.keys():
+            if k != 'u':
+                keys.add(k)
+
     keys = sorted(list(keys))
     for e in events:
-        if e.haplotype:
-            all_haps = e.haplotype
-            phased_haps = {k: v for k, v in e.haplotype.items() if k != 'u'}
+
+        if not e.haplotype_counts:
+            continue
+
+        else:
+            all_haps = e.haplotype_counts
+            phased_haps = {k: v for k, v in e.haplotype_counts.items() if k != 'u'}
             n_haps = len(phased_haps)
-            n_phase_set = len(e.phase_set) if e.phase_set else 0
-            if n_phase_set:
-                ps = max(e.phase_set, key=e.phase_set.get)
+            any_phase_set = bool(len(e.phase_set_counts))
+            if any_phase_set:
+                ps = max(e.phase_set_counts, key=e.phase_set_counts.get)
                 if ps > max_ps:
                     max_ps = ps
-                any_phase_set = True
-            else:
-                e.phase_set = ""
             if n_haps >= 2:
                 if e.GT == "1/1":
                     e.GT = "1|1"
@@ -701,7 +713,7 @@ def get_hp_format(events):
                     else:
                         e.GT = "0|1"
             elif n_haps == 1:
-                if 1 in e.haplotype:
+                if 1 in e.haplotype_counts:
                     e.GT = "1|0"
                 else:
                     e.GT = "0|1"
@@ -716,20 +728,15 @@ def get_hp_format(events):
                     hp_string = "0"
 
             e.haplotype = hp_string
-        else:
-            e.haplotype = "0"
-
 
     return max_ps, any_phase_set
 
 
 def get_gt_metric2(events, mode, add_gt=True):
-    params = {"DEL,TRA": [[0.5, 0.9], [0.2, 1 / 3.0]],
-              "INS,DUP,INV,BND": [[0.4, 0.9], [0.6, 0.2]]}
-    pp = {}
-    for k, v in params.items():
-        for kk in k.split(","):
-            pp[kk] = v
+    p1 = [[0.5, 0.9], [0.2, 1 / 3.0]]
+    p2 = [[0.4, 0.9], [0.6, 0.2]]
+    pp = {"DEL": p1, "TRA": p1, "SKIP": p1,
+          "INS": p2, "DUP": p2, "INV": p2, "BND": p2}
 
     if add_gt:
         pass
@@ -740,8 +747,8 @@ def get_gt_metric2(events, mode, add_gt=True):
         return events
 
     for e in events:
-
         a_params, b_params = pp[e.svtype]
+
         if e.svtype == "DEL" or e.svtype == "TRA":
             ref, support_reads = del_like(e)
         else:
@@ -782,9 +789,6 @@ def get_gt_metric2(events, mode, add_gt=True):
 
     if any_phase_set:
         join_phase_sets(events, max_ps + 1)
-    else:
-        for e in events:
-            e.phase_set = "-1"
 
     return events
 
@@ -845,7 +849,7 @@ def apply_model(df, mode, contigs, diploid, thresholds, model_path=None):
 
     X = df[[c[i] for i in cols]]
     X.columns = cols
-    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2, "BND": 4}
+    keys = {"DEL": 1, "INS": 2, "DUP": 3, "INV": 4, "TRA": 2, "INV:DUP": 2, "BND": 4, "SKIP": 1}
 
     X["SVTYPE"] = [keys[i] for i in X["SVTYPE"]]
     X["SVLEN"] = [i if i == i and i is not None else -1 for i in X["SVLEN"]]

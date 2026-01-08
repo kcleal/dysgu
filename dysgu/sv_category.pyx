@@ -104,7 +104,7 @@ cdef void two_primary(AlignmentItem v):
                         v.breakA_precise = 1
 
                     v.breakB = v.posB
-                    if v.right_clipB:
+                    if v.left_clipB:
                         v.breakB_precise = 1
 
                     v.svtype = "INV"
@@ -140,7 +140,7 @@ cdef void two_primary(AlignmentItem v):
                 else:  # either no clips or right clips
 
                     v.breakA = v.endA
-                    if v.left_clipA:
+                    if v.right_clipA:
                         v.breakA_precise = 1
 
                     v.breakB = v.endB
@@ -202,7 +202,7 @@ cdef void two_primary(AlignmentItem v):
                     v.breakA_precise = 1
 
                 v.breakB = v.posB
-                if v.right_clipB:
+                if v.left_clipB:
                     v.breakB_precise = 1
 
                 v.svtype = "INV"
@@ -216,7 +216,7 @@ cdef void two_primary(AlignmentItem v):
                     v.breakA_precise = 1
 
                 v.breakB = v.posB
-                if v.right_clipB:
+                if v.left_clipB:
                     v.breakB_precise = 1
 
                 v.svtype = "INV"
@@ -225,7 +225,7 @@ cdef void two_primary(AlignmentItem v):
             else:
 
                 v.breakA = v.endA
-                if v.left_clipA:
+                if v.right_clipA:
                     v.breakA_precise = 1
 
                 v.breakB = v.endB
@@ -467,8 +467,8 @@ cdef void same_read(AlignmentItem v):
             elif not v.left_clipB and not v.right_clipA:
                 v.breakA = v.posA
                 v.breakB = v.endB
-                v.breakA_precise = 1
-                v.breakB_precise = 1
+                #v.breakA_precise = 1
+                #v.breakB_precise = 1
 
                 # Check if gap on query is bigger than gap on reference; call insertion if it is
                 query_gap = v.b_qend - v.a_qstart  # as B is first
@@ -543,7 +543,7 @@ cdef void different_read(AlignmentItem v):
 
     if v.posA < v.posB or (v.posA == v.posB and v.endA <= v.endB):  # A is first
 
-        if v.strandA == 3 and v.strandB == 5:  # DEL type
+        if v.strandA == 3 and v.strandB == 5:
             v.breakA = v.endA
             if v.right_clipA:
                 v.breakA_precise = 1
@@ -740,44 +740,101 @@ cdef void different_read(AlignmentItem v):
                 v.join_type = "5to5"
 
 
+# cdef void translocation(AlignmentItem v):
+
+#     v.svtype = "TRA"
+
+#     if v.left_clipA:
+#         v.breakA = v.posA
+#         v.breakA_precise = 1
+#     elif v.right_clipA:
+#         v.breakA = v.endA
+#         v.breakA_precise = 1
+#     else:
+#         v.breakA = v.posA
+#         v.breakA_precise = 1
+
+#     if v.left_clipB:
+#         v.breakB = v.posB
+#         v.breakB_precise = 1
+#     elif v.right_clipB:
+#         v.breakB = v.endB
+#         v.breakB_precise = 1
+#     else:
+#         v.breakB = v.posB
+#         v.breakB_precise = 1
+#     v.join_type = f"{v.strandA}to{v.strandB}"
+
+#     echo(v.join_type, (v.left_clipA, v.right_clipA), (v.left_clipB, v.right_clipB), (v.posA, v.endA), (v.posB, v.endB), v.breakA, v.breakB)
+
+#     cdef int query_gap = 0
+#     cdef int query_overlap = 0
+#     if v.rA == v.rB:  # same read
+#         if v.b_qstart < v.a_qstart:  # B is first on query
+#             query_gap = v.a_qstart - v.b_qend
+#         else:
+#             query_gap = v.b_qstart - v.a_qend
+#         if query_gap < 0:
+#             query_overlap = abs(query_gap)
+#             query_gap = 0
+
+#     v.query_gap = query_gap
+#     v.query_overlap = query_overlap
+
+
 cdef void translocation(AlignmentItem v):
 
     v.svtype = "TRA"
+    #v.join_type = f"{v.strandA}to{v.strandB}"
 
-    if v.left_clipA:
+    # ---- A side ----
+    if v.left_clipA and not v.right_clipA:
         v.breakA = v.posA
         v.breakA_precise = 1
-    elif v.right_clipA:
+    elif v.right_clipA and not v.left_clipA:
         v.breakA = v.endA
         v.breakA_precise = 1
     else:
-        v.breakA = v.posA
-        v.breakA_precise = 1
+        # no clips OR both clips -> fall back to join-type/strand end
+        if v.strandA == 3:
+            v.breakA = v.endA      # "3" means right edge
+        else:
+            v.breakA = v.posA      # "5" means left edge
+        v.breakA_precise = 0       # important: this is NOT precise without a clip
 
-    if v.left_clipB:
+    # ---- B side ----
+    if v.left_clipB and not v.right_clipB:
         v.breakB = v.posB
         v.breakB_precise = 1
-    elif v.right_clipB:
+    elif v.right_clipB and not v.left_clipB:
         v.breakB = v.endB
         v.breakB_precise = 1
     else:
-        v.breakB = v.posB
-        v.breakB_precise = 1
-    v.join_type = f"{v.strandA}to{v.strandB}"
-
+        if v.strandB == 3:
+            v.breakB = v.endB
+        else:
+            v.breakB = v.posB
+        v.breakB_precise = 0
+    
+    jtA = "5" if v.breakA == v.posA else "3"
+    jtB = "5" if v.breakB == v.posB else "3"
+    v.join_type = jtA + "to" + jtB
+    
     cdef int query_gap = 0
     cdef int query_overlap = 0
     if v.rA == v.rB:  # same read
-        if v.b_qstart < v.a_qstart:  # B is first on query
+        if v.b_qstart < v.a_qstart:
             query_gap = v.a_qstart - v.b_qend
         else:
             query_gap = v.b_qstart - v.a_qend
         if query_gap < 0:
-            query_overlap = abs(query_gap)
+            query_overlap = -query_gap
             query_gap = 0
 
     v.query_gap = query_gap
     v.query_overlap = query_overlap
+
+
 
 cdef void classify_d(AlignmentItem v):  #, debug=False):
 

@@ -13,29 +13,10 @@ for calling structural variants using paired-end or long read sequencing data. S
 
 |Generic badge| |Li badge|
 
-`⚙️ Installation`_
-
-`🚀 Quick start`_
-
-`🎯 Calling SVs`_
-
-`🚦Filtering SVs`_
-
-`➕ Merging SVs`_
-
-`♋ Somatic SVs / tumor-normal calling / pool-of-normals`_
-
-`🔍 Genotype list of sites`_
-
-`🔪 Regions of interest / excluding regions`_
-
-`🔧 Useful parameters`_
-
-`🚑 Issues`_
-
-`🐍 Python API`_
-
-`🎓 Citation`_
+.. contents::
+   :local:
+   :depth: 1
+   :backlinks: none
 
 ----
 
@@ -52,8 +33,11 @@ Or, from conda::
 
     conda install -c conda-forge -c bioconda dysgu
 
+To build from source (htslib is also required)::
 
-To build from source, run the install script: ``bash INSTALL.sh``.
+    git clone https://github.com/kcleal/dysgu
+    cd dysgu
+    pip install .
 
 Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kcleal/dysgu/>`_::
 
@@ -61,7 +45,11 @@ Alternatively, pull from `dockerhub <https://hub.docker.com/repository/docker/kc
 
 Run tests::
 
-    $ dysgu test
+    dysgu test
+
+For development use::
+
+    pip install -e . --no-build-isolation --config-settings=builddir=build-meson
 
 🚀 Quick start
 --------------
@@ -197,6 +185,8 @@ Remove events with low probability::
 
     dysgu filter --min-prob 0.2 input.vcf > output.vcf
 
+For the QUAL vcf field, dysgu converts the PROB value to into PHRED-scale.
+
 Remove events with low support fraction::
 
     dysgu filter --support-fraction 0.15 input.vcf > output.vcf
@@ -317,6 +307,34 @@ Also of note, the ``--ignore-sample-sites`` option is set to True by default. Th
  being ignored from a multi-sample sites file. This may not be the deired behavior if trying to re-genotype a sample using different
  read types, for example.
 
+🔫 Phasing Support
+------------------
+
+Since v1.8, dysgu supports phased variant calling. Phasing information helps determine which
+variants occur on the same chromosome (haplotype), improving accuracy for complex structural variant detection.
+
+Dysgu automatically detects and uses phasing information if your input bam/cram has::
+
+    HP tags (haplotype identifier)
+    PS tags (phase set identifier)
+
+For long reads, haplotagged bams (created with tools like hiphase, whatshap, or longshot etc) provide phasing information
+and significantly improve calling accuracy. Existing phasing tags will be automatically incorporated into the output VCF.
+
+Dysgu uses a specialized phasing format in its output VCF::
+
+    ##FORMAT=<ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
+    ##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. \
+        Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
+
+The HP tag contains detailed information about read support for each haplotype:
+
+- 10|12 means 10 reads support haplotype 1, 12 reads support haplotype 2, and no unphased reads
+- 8|7_3 means 8 reads support haplotype 1, 7 support haplotype 2, and 3 reads are unphased
+- _4 means all 4 reads are unphased (no phasing information)
+- Support for multiple haplotypes is indicated with pipe-delimited values: HP1|HP2|...HPn
+
+The PSET tag identifies which variants belong to the same phased block (currently PS tag is reserved for 'plus-strand' read support).
 
 🔪 Regions of interest / excluding regions
 ------------------------------------------

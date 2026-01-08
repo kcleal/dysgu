@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <iostream>
 #include <functional>
@@ -8,10 +10,12 @@
 #include <fstream>
 #include <sstream>
 
-#include "robin_hood.h"
-#include "xxhash64.h"
 #include <htslib/sam.h>
 #include <htslib/hfile.h>
+
+#include "unordered_dense.h"
+#include "xxhash64.h"
+#include "transcripts.hpp"
 
 
 void remove_extraneous_tags(bam1_t* src, int remove_extra_tags) {
@@ -122,12 +126,13 @@ class CoverageTrack
 };
 
 
-int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>& scope, std::vector<bam1_t*>& write_queue,
+int process_alignment(int& current_tid, std::string& current_chrom, std::deque<std::pair<uint64_t, bam1_t*>>& scope, std::vector<bam1_t*>& write_queue,
                        const int max_scope, const int max_write_queue, const int clip_length,
-                       robin_hood::unordered_set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
+                       ankerl::unordered_dense::set<uint64_t>& read_names, CoverageTrack& cov_track, uint64_t& total,
                        const int n_chromosomes, const int mapq_thresh, const int check_clips, const int min_within_size,
                        sam_hdr_t **samHdr, htsFile **f_out,
-                       std::string& temp_folder, const bool write_all, long *n_aligned_bases, int remove_extra_tags) {
+                       std::string& temp_folder, const bool write_all, long *n_aligned_bases, int remove_extra_tags,
+                       Tr::TranscriptData& transcript_gaps) {
 
     int result;
     bam1_t* aln;
@@ -162,25 +167,23 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     // Process current alignment as it arrives in scope. Add rname to hash if it is an SV read. Add coverage info
     aln = scope.back().second;
     const uint16_t flag = aln->core.flag;
-    const uint32_t* cigar;
+    const uint32_t n_cigar = aln->core.n_cigar;
 
     // Skip uninteresting reads before putting on queue
     // unmapped, not primary, duplicate
-    if (flag & 1284 || aln->core.n_cigar == 0 || aln->core.l_qname == 0) {
+    if (flag & 1284 || n_cigar == 0 || aln->core.l_qname == 0) {
         // Next item will overwrite this record
         return 0;
     }
-
     const uint16_t tid = aln->core.tid;
-
     if (tid != current_tid && tid <= n_chromosomes) {  // prepare coverage array
-        if (current_tid != -1 ) {
-            const char* rname = sam_hdr_tid2name(*samHdr, current_tid);
-            if (rname != NULL) {
-                std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
-                cov_track.write_track(&out_name[0]);
-            }
+        const char* rname = sam_hdr_tid2name(*samHdr, current_tid);
+        if (current_tid != -1 && rname != NULL) {  // Write last cov_track
+            std::string out_name = temp_folder + "/" + std::string(rname) + ".dysgu_chrom.bin";
+            cov_track.write_track(&out_name[0]);
         }
+        rname = sam_hdr_tid2name(*samHdr, tid);
+        current_chrom = rname;
         int chrom_length = sam_hdr_tid2len(*samHdr, tid);
         if (chrom_length == 0) {
             return 0;
@@ -189,13 +192,14 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         current_tid = tid;
     }
 
+    const uint32_t* cigar = bam_get_cigar(aln);
+
     if (aln->core.qual < mapq_thresh) {
-        cigar = bam_get_cigar(aln);
         int index_start = aln->core.pos;
-        for (uint32_t k=0; k < aln->core.n_cigar; k++) {
+        for (uint32_t k=0; k < n_cigar; k++) {
             uint32_t op = bam_cigar_op(cigar[k]);
             uint32_t length = bam_cigar_oplen(cigar[k]);
-            if (op == BAM_CDEL) {
+            if (op == BAM_CDEL || op == BAM_CREF_SKIP) {
                 index_start += length;
             } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
                 int index_end = index_start + length;
@@ -207,15 +211,10 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
         return 0;
     }
 
-    uint64_t precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, 0);
-
-    if (!write_all) {  // rehash read name with flag, mostly prevents other 'normal' reads from template being written
-        char flag_bytes[sizeof flag];
-        std::copy(static_cast<const char*>(static_cast<const void*>(&flag)),
-                  static_cast<const char*>(static_cast<const void*>(&flag)) + sizeof flag,
-                  flag_bytes);
-
-        precalculated_hash = XXHash64::hash(flag_bytes, aln->core.l_qname, precalculated_hash);
+    size_t precalculated_hash = 0;
+    precalculated_hash = XXHash64::hash(bam_get_qname(aln), aln->core.l_qname, precalculated_hash);
+    if (!write_all) {
+        precalculated_hash = XXHash64::hash(&aln->core.flag, sizeof(aln->core.flag), precalculated_hash);
     }
 
     scope.back().first = precalculated_hash;
@@ -224,38 +223,58 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     scope.push_back(std::make_pair(0, bam_init1()));
 
     // add alignment to coverage track, check for indels and soft-clips
-    cigar = bam_get_cigar(aln);
-    bool sv_read = false;
-
-
-    if (read_names.find(precalculated_hash) != read_names.end()) { sv_read = true; }
+    bool sv_read = read_names.find(precalculated_hash) != read_names.end();
+    if (sv_read) {
+        return 0;
+    }
 
     int index_start = aln->core.pos;
 
-    for (uint32_t k=0; k < aln->core.n_cigar; k++) {
-
+    for (uint32_t k = 0; k < n_cigar; k++) {
         uint32_t op = bam_cigar_op(cigar[k]);
         uint32_t length = bam_cigar_oplen(cigar[k]);
 
-        if (!sv_read) {
-            if ((check_clips) && (op == BAM_CSOFT_CLIP) && (length >= clip_length)) {
-                sv_read = true;
+        // Process different CIGAR operations
+        switch (op) {
+            case BAM_CDEL:
+                index_start += length;
+                break;
 
-            } else if ((op == BAM_CINS || op == BAM_CDEL) && (length >= min_within_size)) {
+            case BAM_CMATCH:
+            case BAM_CEQUAL:
+            case BAM_CDIFF: {
+                int index_end = index_start + length;
+                cov_track.add(index_start, index_end);
+                index_start = index_end;
+                *n_aligned_bases += length;
+                break;
+            }
+
+            case BAM_CREF_SKIP:
+                if (transcript_gaps.hasRefSkipGap(current_chrom, index_start,
+                                                index_start + length, 10)) {
+                    sv_read = false;
+                    goto loop_exit;  // Break out of the entire loop
+                } else {
+                    sv_read = true;
+                }
+                index_start += length;
+                break;
+        }
+
+        // Check for structural variant indicators
+        if (!sv_read) {
+            bool is_large_soft_clip = (check_clips && op == BAM_CSOFT_CLIP &&
+                                      length >= clip_length);
+            bool is_large_indel = ((op == BAM_CINS || op == BAM_CDEL) &&
+                                  length >= min_within_size);
+
+            if (is_large_soft_clip || is_large_indel) {
                 sv_read = true;
             }
         }
-
-        if (op == BAM_CDEL) {
-            index_start += length;
-
-        } else if (op == BAM_CMATCH || op == BAM_CEQUAL || op == BAM_CDIFF) {
-            int index_end = index_start + length;
-            cov_track.add(index_start, index_end);
-            index_start = index_end;
-            *n_aligned_bases += length;
-        }
     }
+    loop_exit:
 
     if (!sv_read) { // not an sv read template yet
         // Check for discordant of supplementary
@@ -269,17 +288,35 @@ int process_alignment(int& current_tid, std::deque<std::pair<uint64_t, bam1_t*>>
     }
 
     if (sv_read) {
-        read_names.insert(precalculated_hash);
+        read_names.emplace(precalculated_hash);
     }
-
     return 0;
 }
 
 
-int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
-                          int threads, int paired_end, char* temp_f, int max_coverage, char* region,
-                          char* max_cov_ignore_regions, char *fasta,
-                          const bool write_all, char* write_mode) {
+void collect_transcripts(const char* transcripts_file,
+        const char* unique_gaps_file,
+        const char* unique_blocks_file,
+        Tr::TranscriptData& t_reader) {
+    if (transcripts_file == nullptr || strlen(transcripts_file) == 0) {
+        t_reader.any_data = false;
+        return;
+    }
+    t_reader.open(transcripts_file);
+    t_reader.writeUniqueGapsToBed(unique_gaps_file);
+
+    t_reader.writeUniqueBlocksToBed(unique_blocks_file);
+
+}
+
+int search_hts_alignments(const char* infile, const char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
+                          int threads, int paired_end, const char* temp_f, int max_coverage, const char* region,
+                          const char* max_cov_ignore_regions, const char* fasta,
+                          bool write_all, const char* write_mode,
+                          const char* transcripts_file, const char* unique_gaps_file, const char* unique_blocks_file) {
+
+    Tr::TranscriptData transcript_gaps = Tr::TranscriptData();
+    collect_transcripts(transcripts_file, unique_gaps_file, unique_blocks_file, transcript_gaps);
 
     const int check_clips = (clip_length > 0) ? 1 : 0;
 
@@ -310,19 +347,19 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }
 
+    // Reads need to be cached in order for coverage values to be accurately calculated on the fly
     int max_scope = 100000;
     int max_write_queue = 100000;
-
     if (paired_end == 0) {
-        max_scope = 100;
-        max_write_queue = 100;
+        max_scope = 1000;
+        max_write_queue = 1000;
     }
     uint64_t total = 0;
 
     std::pair<uint64_t, bam1_t*> scope_item;
     std::deque<std::pair<uint64_t, bam1_t*>> scope;
     std::vector<bam1_t*> write_queue;  // Write in blocks
-    robin_hood::unordered_set<uint64_t> read_names;
+    ankerl::unordered_dense::set<uint64_t> read_names;
 
     // Initialize first item in scope, set hash once read has been read
     scope.push_back(std::make_pair(0, bam_init1()));
@@ -334,6 +371,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
     std::string temp_folder = temp_f;
 
     int current_tid = -1;
+    std::string current_chrom{};
 
     hts_itr_t *iter = NULL;
 
@@ -375,11 +413,12 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                         }
                     }
                 }
-                int success = process_alignment(current_tid, scope, write_queue,
+                int success = process_alignment(current_tid, current_chrom, scope, write_queue,
                            max_scope, max_write_queue, clip_length,
                            read_names, cov_track, total,
                            n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                           &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags);
+                           &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags,
+                           transcript_gaps);
                 if (success < 0) {
                     std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                     break;
@@ -399,11 +438,12 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
                     }
                 }
             }
-            int success = process_alignment(current_tid, scope, write_queue,
+            int success = process_alignment(current_tid, current_chrom, scope, write_queue,
                        max_scope, max_write_queue, clip_length,
                        read_names, cov_track, total,
                        n_chromosomes, mapq_thresh, check_clips, min_within_size,
-                       &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags);
+                       &samHdr, &f_out, temp_folder, write_all, &n_aligned_bases, remove_extra_tags,
+                       transcript_gaps);
             if (success < 0) {
                 std::cerr << "Failed to process input alignment. Stopping" << region << std::endl;
                 break;
@@ -411,7 +451,7 @@ int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size,
         }
     }
 
-    // Deal with reads still in the queue
+    // Deal with reads still in the queues
     bam1_t* aln;
     while (scope.size() > 0) {
         scope_item = scope[0];

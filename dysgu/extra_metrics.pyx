@@ -1,10 +1,11 @@
 #cython: language_level=3, c_string_type=unicode, c_string_encoding=utf8
 import numpy as np
 cimport numpy as np
-from dysgu.map_set_utils cimport unordered_map, EventResult, cigar_clip, clip_sizes
+from dysgu.map_set_utils cimport EventResult, cigar_clip, clip_sizes
+from dysgu.map_set_utils cimport map as ankerl_map
 from dysgu.map_set_utils import merge_intervals
 from dysgu.io_funcs import intersecter #, iitree
-from superintervals import IntervalSet
+from superintervals import IntervalMap
 from cython.operator import dereference, postincrement, postdecrement, preincrement, predecrement
 from libc.math cimport fabs as c_fabs
 from libc.stdint cimport uint32_t
@@ -88,7 +89,7 @@ cdef float soft_clip_qual_corr(reads):
     1 imply no correlation whereas closer to 0 implies that quality values are correlated"""
     cdef const unsigned char[:] quals
     cdef int idx, x, i, j
-    cdef unordered_map[int, cpp_vector[int]] qq
+    cdef ankerl_map[int, cpp_vector[int]] qq
     cdef int left_clip, right_clip
     cdef AlignedSegment r
     for r in reads:
@@ -120,7 +121,7 @@ cdef float soft_clip_qual_corr(reads):
     cdef cpp_vector[int] second
     cdef int first
     cdef float mean_second, sum_second, sum_diff
-    cdef unordered_map[int, cpp_vector[int]].iterator qq_iter
+    cdef ankerl_map[int, cpp_vector[int]].iterator qq_iter
     cdef int size;
     with nogil:
         qq_iter = qq.begin()
@@ -380,15 +381,14 @@ def sample_level_density(potential, regions, max_dist=50):
             tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
             tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
-    # nc2 = {k: iitree(v, add_value=True) for k, v in tmp_list.items()}
 
     si_sets = {}
 
     for k, v in tmp_list.items():
-        iset = IntervalSet(with_data=True)
+        iset = IntervalMap()
         for start, stop, idx in v:
-            iset.add_int_value(start, stop, idx)
-        iset.index()
+            iset.add(start, stop, idx)
+        iset.build()
         si_sets[k] = iset
 
     cdef int vv
@@ -401,13 +401,11 @@ def sample_level_density(potential, regions, max_dist=50):
         else:
             expected = 1
         if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
-            # vv = nc2[ei.chrA].countOverlappingIntervals(ei.posA, ei.posA + 1)
-            vv = si_sets[ei.chrA].count_overlaps(ei.posA, ei.posA + 1) #countOverlappingIntervals(ei.posA, ei.posA + 1)
+            vv = si_sets[ei.chrA].count(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
         if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
-            # vv = nc2[ei.chrB].countOverlappingIntervals(ei.posB, ei.posB + 1)
-            vv = si_sets[ei.chrB].count_overlaps(ei.posB, ei.posB + 1)
+            vv = si_sets[ei.chrB].count(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
         neighbors_10kb = 0.
@@ -415,8 +413,7 @@ def sample_level_density(potential, regions, max_dist=50):
         large_itv = merge_intervals(((ei.chrA, ei.posA, ei.posA + 1), (ei.chrB, ei.posB, ei.posB + 1)), pad=10000)
         for c, s, e in large_itv:
             if not intersecter(regions, c, s, e):
-                # vv = nc2[c].countOverlappingIntervals(s, e)
-                vv = si_sets[c].count_overlaps(s, e)
+                vv = si_sets[c].count(s, e)
                 neighbors_10kb += vv - len(large_itv)
                 count_10kb += 1
         if neighbors < 0:

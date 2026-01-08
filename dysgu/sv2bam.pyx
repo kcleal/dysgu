@@ -10,14 +10,13 @@ import sys
 import itertools
 import logging
 from libc.stdint cimport uint32_t
-
-import pkg_resources
+from importlib.metadata import version
 from dysgu.map_set_utils import echo
 from dysgu.coverage import auto_max_cov
 from dysgu.io_funcs import bed_iter
 
 
-# thanks to senderle https://stackoverflow.com/questions/6462272/subtract-overlaps-between-two-ranges-without-sets
+# thanks https://stackoverflow.com/questions/6462272/subtract-overlaps-between-two-ranges-without-sets
 def range_diff(r1, r2):
     s1, e1 = r1
     s2, e2 = r2
@@ -88,8 +87,6 @@ def parse_search_regions(search, exclude, bam, first_delim=":", sep=","):
     excl = defaultdict(list)
     if exclude is not None:
         for line in bed_iter(exclude):
-        # with open(exclude, "r") as bed:
-        #     for line in bed:
             if line[0] == "#":
                 continue
 
@@ -138,7 +135,8 @@ def assert_indexed_input(bam, fasta):
 cdef extern from "find_reads.hpp":
     cdef int search_hts_alignments(char* infile, char* outfile, uint32_t min_within_size, int clip_length, int mapq_thresh,
                                    int threads, int paired_end, char* temp_f, int max_coverage, char* region,
-                                   char* max_cov_ignore, char *fasta, bint write_all, char* out_write_mode_b)
+                                   char* max_cov_ignore, char *fasta, bint write_all, char* out_write_mode_b,
+                                   char* transcripts_file, char* unique_gaps_file, const char* unique_blocks_file)
 
 def process(args):
 
@@ -152,6 +150,9 @@ def process(args):
     if args["exclude"]:
         logging.info("Excluding {} from search".format(args["exclude"]))
 
+    if args['transcripts']:
+        logging.info("Reading transcripts from {}".format(args["transcripts"]))
+
     if not args["output"]:
         bname = os.path.splitext(os.path.basename(args["bam"]))[0]
         if bname == "-":
@@ -163,7 +164,7 @@ def process(args):
         out_name = args["output"]
 
     with open(os.path.join(temp_dir, "fetch_command.txt"), "w") as info:
-        info.write(f"# dysgu v{pkg_resources.require('dysgu')[0].version}\n")
+        info.write(f"# dysgu v{version('dysgu')}\n")
         info.write(" ".join(sys.argv))
 
     # update max cov automatically if applicable
@@ -171,12 +172,24 @@ def process(args):
     pe = int(args["pl"] == "pe")
 
     cdef bytes infile_string_b = args["bam"].encode("ascii")
-    cdef bytes fasta_b
+    cdef bytes fasta_b, transcripts_b, unique_gaps_b, unique_blocks_b
 
-    if "reference" in args:
+    if "reference" in args and args["reference"]:
+        if not os.path.exists(args["reference"]):
+            raise FileNotFoundError(f'Could not find {args["reference"]}')
         fasta_b = args["reference"].encode("ascii")
     else:
         fasta_b = "".encode("ascii")
+    if "transcripts" in args and args["transcripts"]:
+        if not os.path.exists(args["transcripts"]):
+            raise FileNotFoundError(f'Could not find {args["transcripts"]}')
+        transcripts_b = args["transcripts"].encode("ascii")
+        unique_gaps_b = f"{temp_dir}/unique_gaps_transcripts.bed".encode("ascii")
+        unique_blocks_b = f"{temp_dir}/unique_blocks_transcripts.bed".encode("ascii")
+    else:
+        transcripts_b = "".encode("ascii")
+        unique_gaps_b = "".encode("ascii")
+        unique_blocks_b = "".encode("ascii")
 
     cdef bytes outfile_string_b = out_name.encode("ascii")
     cdef bytes out_write_mode_b = args["compression"].encode("ascii")
@@ -206,7 +219,10 @@ def process(args):
                                   max_cov_ignore_bytes,
                                   fasta_b,
                                   write_all,
-                                  out_write_mode_b)
+                                  out_write_mode_b,
+                                  transcripts_b,
+                                  unique_gaps_b,
+                                  unique_blocks_b)
 
     if count < 0:
         logging.critical("Error reading from input file, exit code {}".format(count))

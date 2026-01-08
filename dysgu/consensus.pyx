@@ -23,7 +23,9 @@ from libc.stdlib cimport abs as c_abs
 from libc.stdint cimport uint32_t, int32_t, uint64_t
 
 from dysgu cimport map_set_utils
-from dysgu.map_set_utils cimport DiGraph, unordered_set, unordered_map, EventResult
+from dysgu.map_set_utils cimport DiGraph, EventResult
+from dysgu.map_set_utils cimport set as ankerl_set
+from dysgu.map_set_utils cimport map as ankerl_map
 from dysgu.map_set_utils cimport hash as xxhasher
 
 from pysam.libcalignedsegment cimport AlignedSegment
@@ -76,11 +78,11 @@ cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
             seq_index += length
         if opp == 1:
             seq_index += length
-        elif opp == 2:
+        elif opp == 2 or opp == 3:
             if not started:
                 start_pos += length
             pos += length
-        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
+        elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:
             if not started:
                 if abs(pos + length - approx_pos) < 500:
                     started = True
@@ -230,10 +232,10 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
                 prev_node = n
             # current_pos += 1  # <-- Reference pos increases 1
 
-        elif opp == 2: # deletion
+        elif opp == 2 or opp == 3: # deletion
             current_pos += length # + 1
 
-        elif opp == 0 or opp == 7 or opp == 8 or opp == 3:  # All match, match (=), mis-match (X), N's
+        elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:  # All match, match (=), mis-match (X), N's
             if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
                 i += length
                 current_pos += length
@@ -272,14 +274,12 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
 cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
-    cdef unordered_set[int] seen
-    cdef unordered_set[int] explored
-
-    # cdef cpp_deque[int] order
+    cdef ankerl_set[int] seen
+    cdef ankerl_set[int] explored
     cdef cpp_vector[int] fringe
     cdef cpp_vector[int] new_nodes
     cdef cpp_vector[int] neighbors
-    cdef int v, n, w
+    cdef int v, n, w, i
 
     cdef cpp_vector[int] debug_res
 
@@ -294,7 +294,7 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 
         while fringe.size() != 0:
 
-            w = fringe.back() # depth first search
+            w = fringe.back()  # depth first search
             if explored.find(w) != explored.end():  # already looked down this branch
                 fringe.pop_back()
                 continue
@@ -321,8 +321,8 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
                     new_nodes.push_back(n)
 
             if new_nodes.size() > 0:  # Add new_nodes to fringe
-                fringe.reserve(fringe.size() + new_nodes.size())
-                fringe.insert(fringe.end(), new_nodes.begin(), new_nodes.end())  # Extend
+                for i in range(new_nodes.size()):
+                    fringe.push_back(new_nodes[i])  # Extend
 
             else:  # No new nodes so w is fully explored
                 explored.insert(w)
@@ -842,7 +842,7 @@ cpdef contig_from_read_cigar(AlignedSegment r, int cigar_index):
 
 cpdef float compute_rep(seq):
 
-    cdef unordered_map[float, int] last_visited
+    cdef ankerl_map[float, int] last_visited
     cdef float tot_amount = 0
     cdef float total_seen = 0
     cdef int k, i, diff
@@ -914,8 +914,17 @@ cdef tuple get_rep(contig_seq):
     return aligned_portion, clip_rep, right_clip_start - left_clip_end
 
 
-def contig_info(events):
+def order_posA_first(events, args):
+    cdef EventResult_t d
+    for d in events:
+        d.type = args["pl"]
+        if d.posA > d.posB and d.chrA == d.chrB:
+            t = d.posA
+            d.posA = d.posB
+            d.posB = t
 
+
+def contig_info(events):
     cdef EventResult_t e
     for i in range(len(events)):
         e = events[i]
@@ -965,8 +974,6 @@ def contig_info(events):
         e.rep = round(aln_rep, 3)
         e.rep_sc = round(sc_rep, 3)
         e.ref_bases = aligned
-
-    return events
 
 
 def check_contig_match(a, b, rel_diffs=False, diffs=8, ol_length=21, supress_seq=True, return_int=False):

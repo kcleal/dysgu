@@ -36,11 +36,6 @@ python3 -m pip install pip --upgrade
 
 which pip3
 
-pip3 install numpy
-
-cat requirements.txt
-pip3 install -r requirements.txt
-
 git submodule init
 git submodule update
 

@@ -7,7 +7,7 @@ from sys import argv
 import shutil
 import time
 from multiprocessing import cpu_count
-from subprocess import run, Popen, PIPE
+from subprocess import Popen, PIPE
 from importlib.metadata import version
 import warnings
 from dysgu import cluster, view, sv2bam, filter_normals
@@ -42,7 +42,7 @@ defaults = {
             "remap": "True",
             "drop_gaps": "True",
             "trust_ins_len": "True",
-            "symbolic_sv_size": -1,
+            "symbolic_sv_size": 50_000,
             "spd": 0.3,
             "sd": 0.8,
             "thresholds": "0.45,0.45,0.45,0.45,0.45",
@@ -59,7 +59,6 @@ presets = {"nanopore-r9": {"mq": 1,
                         "clip_length": -1,
                         "trust_ins_len": "False",
                         "sd": 0.6,
-                        "symbolic_sv_size": 50000,
                         "divergence": "auto",
                         "compression": "wb3",
                         },
@@ -73,7 +72,6 @@ presets = {"nanopore-r9": {"mq": 1,
                         "trust_ins_len": "False",
                         "sd": 0.35,
                         "thresholds": "0.35,0.35,0.35,0.35,0.35",
-                        "symbolic_sv_size": 50000,
                         "compression": "wb3",
                         },
            "pacbio-sequel2": {"mq": 1,
@@ -85,7 +83,6 @@ presets = {"nanopore-r9": {"mq": 1,
                       "clip_length": -1,
                       "trust_ins_len": "True",
                       "sd": 0.45,
-                      "symbolic_sv_size": 50000,
                       "compression": "wb3",
                       },
            "pacbio-revio": {"mq": 1,
@@ -98,7 +95,6 @@ presets = {"nanopore-r9": {"mq": 1,
                       "trust_ins_len": "True",
                       "sd": 0.35,
                       "thresholds": "0.25,0.25,0.25,0.25,0.25",
-                      "symbolic_sv_size": 50000,
                       "compression": "wb3",
                       },
            "pe": {"mq": defaults["mq"],
@@ -108,7 +104,6 @@ presets = {"nanopore-r9": {"mq": 1,
                   "pl": defaults["pl"],
                   "remap": defaults["remap"],
                   "trust_ins_len": defaults["trust_ins_len"],
-                  "symbolic_sv_size": defaults["symbolic_sv_size"]
                   },
            }
 
@@ -190,6 +185,8 @@ def cli():
 @click.argument('reference', required=True, type=click.Path(exists=True))
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
+@click.option("--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
+              required=False, type=click.Path(), hidden=True)
 @click.option("--sites", help="A vcf file of known variant sites. All sites will be genotyped in the output vcf",
               required=False, type=click.Path())
 @click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
@@ -215,10 +212,10 @@ def cli():
 @click.option("-p", "--procs", help="Number of cpu cores to use", type=cpu_range, default=1,
               show_default=True)
 @click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
-                             f"| pacbio-sequel2: --mq {presets['pacbio-sequel2']['mq']} --paired False --min-support '{presets['pacbio-sequel2']['min_support']}' --max-cov {presets['pacbio-sequel2']['max_cov']} --dist-norm {presets['pacbio-sequel2']['dist_norm']} --trust-ins-len True --symbolic-sv-size {presets['pacbio-sequel2']['symbolic_sv_size']} --sd {presets['pacbio-sequel2']['sd']} --compression wb3. "
-                             f"| pacbio-revio: --mq {presets['pacbio-revio']['mq']} --paired False --min-support '{presets['pacbio-revio']['min_support']}' --max-cov {presets['pacbio-revio']['max_cov']} --dist-norm {presets['pacbio-revio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --symbolic-sv-size {presets['pacbio-revio']['symbolic_sv_size']} --sd {presets['pacbio-revio']['sd']} --compression wb3. "
-                             f"| nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore-r9']['symbolic_sv_size']} --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']} --compression wb3. "
-                             f"| nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --symbolic-sv-size {presets['nanopore-r10']['symbolic_sv_size']} --sd {presets['nanopore-r10']['sd']} --compression wb3",
+                             f"| pacbio-sequel2: --mq {presets['pacbio-sequel2']['mq']} --paired False --min-support '{presets['pacbio-sequel2']['min_support']}' --max-cov {presets['pacbio-sequel2']['max_cov']} --dist-norm {presets['pacbio-sequel2']['dist_norm']} --trust-ins-len True --sd {presets['pacbio-sequel2']['sd']} --compression wb3. "
+                             f"| pacbio-revio: --mq {presets['pacbio-revio']['mq']} --paired False --min-support '{presets['pacbio-revio']['min_support']}' --max-cov {presets['pacbio-revio']['max_cov']} --dist-norm {presets['pacbio-revio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --sd {presets['pacbio-revio']['sd']} --compression wb3. "
+                             f"| nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']} --compression wb3. "
+                             f"| nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --sd {presets['nanopore-r10']['sd']} --compression wb3",
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -236,7 +233,7 @@ def cli():
 @click.option('--dist-norm', help=f"Distance normalizer  [default: {defaults['dist_norm']}]", type=float, callback=add_option_set)
 @click.option('--spd', help=f"Span position distance [defaults: {defaults['spd']}]", type=float, callback=add_option_set)
 @click.option('--sd', help=f"Span distance, only SV span is considered, lower values separate multi-allelic sites [default={defaults['sd']}", type=float, callback=add_option_set)
-@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=20, type=float, show_default=True)
+@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=100, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -270,11 +267,11 @@ def cli():
 @click.option("--no-phase", help="Do not use HP haplotagged reads to phase variants", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
-@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
+@click.option("--symbolic-sv-size", help=f"Use symbolic representation if SV >= this size. Set to -1 to use symbolic-only representation [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
 @click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-c", "--clean", help="Remove temp files and working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA' [default: {defaults['thresholds']}", type=str, callback=add_option_set)
+@click.option("--thresholds", help=f"Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA' [default: {defaults['thresholds']}", type=str, callback=add_option_set)
 @click.pass_context
 def run_pipeline(ctx, **kwargs):
     """Run the dysgu pipeline. Important parameters are --mode, --diploid, --min-support, --min-size, --max-cov"""
@@ -316,6 +313,8 @@ def run_pipeline(ctx, **kwargs):
 @click.argument('bam', required=True, type=click.Path(exists=False))
 @click.option("--reference", help="Reference file for opening cram files",
               show_default=False, default="", required=False, type=click.Path())
+@click.option("-t", "--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
+              required=False, type=click.Path(), hidden=True)
 @click.option('--pfix', help="Post-fix to add to temp alignment files",
               default="dysgu_reads", type=str)
 @click.option("-o", "--output", help="Output reads, discordant, supplementary and soft-clipped reads to file. ",
@@ -375,10 +374,10 @@ def get_reads(ctx, **kwargs):
                              "sv-aligns)",
               default="dysgu_reads", type=str, required=False)
 @click.option('--mode', help=f"Type of input reads. Multiple options are set, overrides other options. "
-                             f"| pacbio-sequel2: --mq {presets['pacbio-sequel2']['mq']} --paired False --min-support '{presets['pacbio-sequel2']['min_support']}' --max-cov {presets['pacbio-sequel2']['max_cov']} --dist-norm {presets['pacbio-sequel2']['dist_norm']} --trust-ins-len True --symbolic-sv-size {presets['pacbio-sequel2']['symbolic_sv_size']} --sd {presets['pacbio-sequel2']['sd']}. "
-                             f"| pacbio-revio: --mq {presets['pacbio-revio']['mq']} --paired False --min-support '{presets['pacbio-revio']['min_support']}' --max-cov {presets['pacbio-revio']['max_cov']} --dist-norm {presets['pacbio-revio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --symbolic-sv-size {presets['pacbio-revio']['symbolic_sv_size']} --sd {presets['pacbio-revio']['sd']}. "
-                             f"| nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --symbolic-sv-size {presets['nanopore-r9']['symbolic_sv_size']} --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']}. "
-                             f"| nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --symbolic-sv-size {presets['nanopore-r10']['symbolic_sv_size']} --sd {presets['nanopore-r10']['sd']}",
+                             f"| pacbio-sequel2: --mq {presets['pacbio-sequel2']['mq']} --paired False --min-support '{presets['pacbio-sequel2']['min_support']}' --max-cov {presets['pacbio-sequel2']['max_cov']} --dist-norm {presets['pacbio-sequel2']['dist_norm']} --trust-ins-len True --sd {presets['pacbio-sequel2']['sd']}. "
+                             f"| pacbio-revio: --mq {presets['pacbio-revio']['mq']} --paired False --min-support '{presets['pacbio-revio']['min_support']}' --max-cov {presets['pacbio-revio']['max_cov']} --dist-norm {presets['pacbio-revio']['dist_norm']} --trust-ins-len True --thresholds {presets['pacbio-revio']['thresholds']} --sd {presets['pacbio-revio']['sd']}. "
+                             f"| nanopore-r9: --mq {presets['nanopore-r9']['mq']} --paired False --min-support '{presets['nanopore-r9']['min_support']}' --max-cov {presets['nanopore-r9']['max_cov']} --dist-norm {presets['nanopore-r9']['dist_norm']} --trust-ins-len False --sd {presets['nanopore-r9']['sd']} --divergence {presets['nanopore-r9']['divergence']}. "
+                             f"| nanopore-r10: --mq {presets['nanopore-r10']['mq']} --paired False --min-support '{presets['nanopore-r10']['min_support']}' --max-cov {presets['nanopore-r10']['max_cov']} --dist-norm {presets['nanopore-r10']['dist_norm']} --trust-ins-len False --thresholds {presets['nanopore-r10']['thresholds']} --sd {presets['nanopore-r10']['sd']}",
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
@@ -397,7 +396,7 @@ def get_reads(ctx, **kwargs):
 @click.option('--spd', help=f"Span position distance [defaults: {defaults['spd']}]", type=float, callback=add_option_set)
 
 @click.option('--sd', help=f"Span distance, only SV span is considered, lower values separate multi-allelic sites [default={defaults['sd']}", type=float, callback=add_option_set)
-@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=20, type=float, show_default=True)
+@click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=100, type=float, show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]", type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
 @click.option('--divergence', help=f"Threshold used for ignoring divergent ends of alignments. Ignored for paired-end reads. Use 'auto' to try to infer for noisy reads [default: {defaults['divergence']}]", type=str, callback=add_option_set)
@@ -432,11 +431,11 @@ def get_reads(ctx, **kwargs):
 @click.option("--no-phase", help="Do not use HP haplotagged reads to phase variants", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--metrics", help="Output additional metrics for each SV", default=False, is_flag=True, flag_value=True, show_default=True)
 @click.option("--keep-small", help="Keep SVs < min-size found during re-mapping", default=False, is_flag=True, flag_value=True, show_default=False)
-@click.option("--symbolic-sv-size", help="Use symbolic representation if SV >= this size. Set to -1 to ignore [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
+@click.option("--symbolic-sv-size", help=f"Use symbolic representation if SV >= this size. Set to -1 to use symbolic-only representation [default={defaults['symbolic_sv_size']}]", type=int, callback=add_option_set)
 @click.option("--low-mem", help="Use less memory but more temp disk space", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-x", "--overwrite", help="Overwrite temp files", is_flag=True, flag_value=True, show_default=False, default=False)
 @click.option("-c", "--clean", help="Remove temp files and working directory when finished", is_flag=True, flag_value=True, show_default=False, default=False)
-@click.option("--thresholds", help="Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA' [default: {defaults['thresholds']}", type=str, callback=add_option_set)
+@click.option("--thresholds", help=f"Probability threshold to label as PASS for 'DEL,INS,INV,DUP,TRA' [default: {defaults['thresholds']}", type=str, callback=add_option_set)
 @click.pass_context
 def call_events(ctx, **kwargs):
     """Call structural variants from bam alignment file/stdin"""
@@ -524,6 +523,7 @@ def view_data(ctx, **kwargs):
 @click.option("--max-divergence", help="Remove SV if normal_bam displays divergence > max-divergence at same location", default=0.1, type=float, show_default=True)
 @click.option("--min-prob", help="Remove SV with PROB value < min-prob", default=0.1, type=float, show_default=True)
 @click.option("--min-mapq", help="Remove SV with mean mapqq < min-mapq", default=10, type=float, show_default=True)
+@click.option("--min-af", help="Remove SV with allele frequency < min-af", default=0.05, type=float, show_default=True)
 @click.option("--pass-prob", help="Re-label SV as PASS if PROB value >= pass-prob", default=1.0, type=float, show_default=True)
 @click.option("--interval-size", help="Interval size for searching normal-vcf/normal-bams", default=1000, type=int, show_default=True)
 @click.option("--random-bam-sample", help="Choose N random normal-bams to search. Use -1 to ignore", default=-1, type=int, show_default=True)

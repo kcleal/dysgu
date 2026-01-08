@@ -14,7 +14,7 @@ from sys import stdout
 import pandas as pd
 from dysgu import coverage, graph, call_component, consensus, io_funcs, re_map, post_call, merge_svs, extra_metrics
 from dysgu.map_set_utils cimport EventResult, Py_SimpleGraph
-from dysgu.map_set_utils import to_dict, echo
+from dysgu.map_set_utils import to_dict, filter_transcript_gaps, echo
 from dysgu import sites_utils
 from dysgu.io_funcs import intersecter
 import pickle
@@ -143,12 +143,21 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     else:
         cov_track_path = None
 
+    # Look for aligned bases file in working directory
     if os.path.exists(os.path.join(tdir, "n_aligned_bases.txt")):
         n_aligned_bases_file = int(open(os.path.join(tdir, "n_aligned_bases.txt"), "r").readline().strip())
         assert n_aligned_bases_file > 0
         find_n_aligned_bases = False
     else:
         find_n_aligned_bases = True
+
+    # Look for gaps file in working directory
+    if os.path.exists(os.path.join(tdir, "unique_gaps_transcripts.bed")):
+        transcript_gaps_file = os.path.join(tdir, "unique_gaps_transcripts.bed")
+        transcript_blocks_file = os.path.join(tdir, "unique_blocks_transcripts.bed")
+    else:
+        transcript_gaps_file = ""
+        transcript_blocks_file = ""
 
     genome_scanner = coverage.GenomeScanner(infile, args["mq"], args["max_cov"], args["regions"], procs,
                                             args["buffer_size"], regions_only,
@@ -241,7 +250,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             position_distance_thresh=args['sd'],
                                             max_search_depth=args['search_depth'],
                                             max_divergence=max_divergence,
-                                            no_phase=args['no_phase']
+                                            no_phase=args['no_phase'],
+                                            transcript_gaps_file=transcript_gaps_file
     )
 
     sites_index = None
@@ -384,12 +394,12 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                         heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
                         msg_queues[w_idx][1].send(res)
             else:
-                # most partitions processed here, dict returned, or None
+                # most partitions processed here, GraphComponent returned, or None
                 res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
                                            procs, paired_end, sites_index)
-                if res:
+                if res is not None:
                     event_id += 1
-                    # Res is a dict {"parts": partitions, "s_between": sb, "reads": reads, "s_within": support_within, "n2n": n2n}
+                    # Res is a GraphComponent
                     if procs == 1:
                         potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
                                                                    insert_median,
@@ -459,22 +469,18 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     keeps = len([i for i in block_edge_events if i.site_info])
     if keeps:
         logging.info("Number of matching SVs from sites: {}".format(keeps))
-    preliminaries = []
+
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
                                                     min_support=min_support)
         logging.info("Re-alignment of soft-clips done. N candidates: {}".format(len(block_edge_events)))
+    
+    block_edge_events = filter_transcript_gaps(block_edge_events, transcript_gaps_file)
 
-    block_edge_events = consensus.contig_info(block_edge_events)  # GC info, repetitiveness
-
-    cdef EventResult_t d
-    for d in block_edge_events:
-        d.type = args["pl"]
-        if d.posA > d.posB and d.chrA == d.chrB:
-            t = d.posA
-            d.posA = d.posB
-            d.posB = t
+    # GC info, repetitiveness
+    consensus.contig_info(block_edge_events)
+    consensus.order_posA_first(block_edge_events, args)
 
     # Merge across calls
     if args["merge_within"] == "True":
@@ -501,7 +507,10 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     coverage_analyser = post_call.CoverageAnalyser(tdir)
     preliminaries = coverage_analyser.process_events(merged)
 
-    preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser, infile, args["max_cov"])
+    if transcript_blocks_file:  # RNAseq transcripts
+        preliminaries = coverage.get_raw_coverage_information_transcriptome(merged, regions, coverage_analyser, transcript_blocks_file)
+    else:
+        preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser)
 
     if auto_support:
         preliminaries = post_call.filter_auto_min_support(preliminaries)

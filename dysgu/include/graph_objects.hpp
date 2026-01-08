@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <iostream>
 #include <fstream>
@@ -10,7 +12,7 @@
 #include <cmath>
 #include <vector>
 
-#include "robin_hood.h"
+#include "unordered_dense.h"
 
 typedef std::pair<int, uint8_t> PairW;  // v, weight
 typedef std::pair<int, int> PairW2;  // v, weight
@@ -100,26 +102,22 @@ class DiGraph {
         int numberOfNodes() { return N; }
 
         void neighbors(int u, std::vector<int> &neigh) {  // Get all out edges
-            //std::vector<int> neigh;
             if (!neigh.empty()) {
                 neigh.clear();
             }
             for (const auto& val: outList[u]) {
                 neigh.push_back(val.first);
             }
-            //return neigh;
         }
 
 
         void forInEdgesOf(int u, std::vector<PairW2>& inEdges) {
-//            std::vector<PairW2> inEdges;
             if (!inEdges.empty()) {
                 inEdges.clear();
             }
             for (const auto& val: inList[u]) {
                 inEdges.push_back(val);
             }
-//            return inEdges;
         }
 
         float node_path_quality(int u, int v, int w) {
@@ -202,14 +200,12 @@ class SimpleGraph {
         }
 
         void neighbors(int u, std::vector<int>& neigh) {
-//            std::vector<int> neigh;
             if (!neigh.empty()) {
                 neigh.clear();
             }
             for (const auto& val: adjList[u]) {
                 neigh.push_back(val.first);
             }
-//            return neigh;
         }
 
         void removeNode(int u) {
@@ -329,7 +325,7 @@ class Int2IntMap
         }
 
     private:
-        robin_hood::unordered_flat_map<int, int> map;
+        ankerl::unordered_dense::map<int, int> map;
 };
 
 
@@ -351,7 +347,7 @@ class IntSet
         }
 
     private:
-        robin_hood::unordered_set<int> set;
+        ankerl::unordered_dense::set<int> set;
 };
 
 
@@ -377,7 +373,7 @@ class TwoWayMap
         }
 
         int has_tuple_key(uint64_t packed_data) {
-            robin_hood::unordered_flat_map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
+            ankerl::unordered_dense::map<uint64_t, int>::const_iterator got = string_key.find(packed_data);
             if (got == string_key.end()) {
                 return 0;
             } else {
@@ -408,7 +404,7 @@ class TwoWayMap
     private:
         uint64_t last_key = 0;  // Set this on call to has_tuple_key to prevent calculating twice
         int last_index = 0;
-        robin_hood::unordered_flat_map<uint64_t, int> string_key;
+        ankerl::unordered_dense::map<uint64_t, int> string_key;
         std::vector<uint64_t> index_key_map;
 
 };
@@ -423,8 +419,8 @@ void graph_node_2_vec(uint64_t packed_data, std::vector<int>& v) {  // used for 
 }
 
 
-typedef robin_hood::unordered_set<long> set_of_long_t;
-typedef robin_hood::unordered_map<long, set_of_long_t> mm_map_t;
+typedef ankerl::unordered_dense::set<long> set_of_long_t;
+typedef ankerl::unordered_dense::map<long, set_of_long_t> mm_map_t;
 
 class MinimizerTable
 // Key's are read-names (integer), the table value is a set with each item a minimizer (long)
