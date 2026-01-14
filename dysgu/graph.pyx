@@ -1293,7 +1293,7 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                      mm_only, clip_l, site_adder, length_from_cigar,
                      trust_ins_len, paired_end)
     ###
-    else:  # Single end
+    else:  # Single end (long-reads)
         current_overlaps_roi, next_overlaps_roi = False, False  # not supported
         if read_enum == SPLIT:
             if r.has_tag("SA"):

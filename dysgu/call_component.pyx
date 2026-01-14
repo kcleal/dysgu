@@ -2037,10 +2037,12 @@ cdef list multi(data, bam, int insert_size, int insert_stdev, float insert_ppf, 
             out_counts[v] += len(rd_v)
             if len(rd_u) == 0 or len(rd_v) == 0:
                 continue
-            if u in seen:
-                seen.remove(u)
-            if v in seen:
-                seen.remove(v)
+            
+            if u in seen and len(d[0]) > (len(data.parts[u]) / 2):
+               seen.remove(u)
+            #if v in seen:
+            if v in seen and len(d[1]) > (len(data.parts[v]) / 2):    
+               seen.remove(v)
             events += one_edge(rd_u, rd_v, clip_length, insert_size, insert_stdev, insert_ppf, min_support, 1,
                                assemble_contigs,
                                sites_info, paired_end, hp_tag)
@@ -2117,6 +2119,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
     for e in events:
         # echo(e.svtype, "svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}, {e.chrB}:{e.posB}, {e.svtype}, svlen_precise={e.svlen_precise}")
         # exit()
+        # if e.svtype == "DUP":
+            # quit()
         if e.svlen_precise:
             set_ins_seq(e)
     return events
