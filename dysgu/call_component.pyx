@@ -2121,6 +2121,8 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
         # exit()
         # if e.svtype == "DUP":
             # quit()
+        # if abs(e.posA - 25664331) < 1000 or abs(e.posB - 117326229) < 1000:
+            # echo(e.svtype, "svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}, {e.chrB}:{e.posB}, {e.svtype}, svlen_precise={e.svlen_precise}")
         if e.svlen_precise:
             set_ins_seq(e)
     return events

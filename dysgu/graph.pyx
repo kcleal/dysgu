@@ -1897,10 +1897,11 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
                 return GraphComponent(None, None, None, None, n2n, info)
-            elif len(reads) >= min_support or info:
-                return GraphComponent(None, None, None, None, n2n, info)
-            else:
-                return None
+            return GraphComponent(None, None, None, None, n2n, info)
+            #elif len(reads) >= min_support or info:
+            #    return GraphComponent(None, None, None, None, n2n, info)
+            #else:
+            #    return None
     # Debug:
     # if 14 in n2n:
     #     echo("parts", partitions)

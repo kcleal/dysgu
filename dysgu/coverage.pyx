@@ -744,7 +744,7 @@ def get_raw_coverage_information_transcriptome(events, regions, regions_depth, t
         r.mcov = max_depth
 
         # AF normalisation using transcriptome-effective depth
-        r.a_freq = r.a_freq / (reads_10kb + 1e-5)
+        r.a_freq = r.a_freq / ( min(reads_left, reads_right) + 1e-5)
         r.a_freq = round(max(0, min(r.a_freq, 1.0)), 3)
 
         new_events.append(r)

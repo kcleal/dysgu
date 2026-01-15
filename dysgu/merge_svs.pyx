@@ -566,7 +566,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
         # if ei.posA == 136934:
         # if id_key not in seen:
-        # echo("merge candidate", (id_key), ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype, 'SU=', ei.su, ej.su, ei.haplotypes, ej.haplotypes)
+        #if ei.svlen == 8548:
+        #    echo("merge candidate", (id_key), ei.svlen, ej.svlen, "positions", ei.posA, ej.posA, ei.svtype, ej.svtype, 'SU=', ei.su, ej.su, jaccard_similarity(ei.qnames, ej.qnames))
 
 
         intra = ei.chrA == ej.chrA and ei.chrB == ej.chrB
@@ -589,10 +590,11 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             # G.add_edge(idx, jdx)
             continue
 
-        if ei.spanning > 0 and ej.spanning > 0 and jaccard_similarity(ei.qnames, ej.qnames) > 0.1: #0.1:
-            #echo('qnames!', ei.qnames, ej.qnames, jaccard_similarity(ei.qnames, ej.qnames))
-            disjoint_edges.add(id_key)
-            continue
+        if ei.spanning > 0 and ej.spanning > 0 and not paired_end:
+            if jaccard_similarity(ei.qnames, ej.qnames) > 0.1:
+                #echo('qnames!', ei.qnames, ej.qnames, jaccard_similarity(ei.qnames, ej.qnames))
+                disjoint_edges.add(id_key)
+                continue
 
         if ei.posA == ej.posA and ei.svtype == ej.svtype and ei.svlen == ej.svlen:
             out_edges[idx] += 1
