@@ -208,7 +208,7 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
     if r["contigB"]:
         info_extras.append(f"CONTIGB={r['contigB']}")
 
-    if not r["variant_seq"] or r["variant_seq"][0] == "<":
+    if not r["variant_seq"] or (isinstance(r["variant_seq"], str) and r["variant_seq"][0] == "<"):
         if "left_ins_seq" in r and r["left_ins_seq"]:
             info_extras.append(f"LEFT_SVINSSEQ={r['left_ins_seq']}")
         if "right_ins_seq" in r and r["right_ins_seq"]:
