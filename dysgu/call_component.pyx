@@ -1211,7 +1211,7 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
     if is_precise and len(precise) > 1:
         cipos95 = 0
     else:
-        cipos95 = int(abs(int(np.percentile(positions, [97.5])) - median_pos))
+        cipos95 = int(abs(int(np.percentile(positions, 97.5)) - median_pos))
     return break_point, cipos95, is_precise
 
 
@@ -1865,10 +1865,10 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
     if len(spanning_alignments) > 0:
         posA_arr = [i.pos for i in spanning_alignments]
         posA = int(np.median(posA_arr))
-        posA_95 = int(abs(int(np.percentile(posA_arr, [97.5])) - posA))
+        posA_95 = int(abs(int(np.percentile(posA_arr, 97.5)) - posA))
         posB_arr = [i.end for i in spanning_alignments]
         posB = int(np.median(posB_arr))
-        posB_95 = int(abs(int(np.percentile(posB_arr, [97.5])) - posB))
+        posB_95 = int(abs(int(np.percentile(posB_arr, 97.5)) - posB))
         chrom = spanning_alignments[0].chrom
         # choose representative alignment to use
         best_index = 0
