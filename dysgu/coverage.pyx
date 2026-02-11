@@ -1,13 +1,14 @@
 #cython: language_level=3, boundscheck=False
 from __future__ import absolute_import
 from collections import deque, defaultdict
+from typing import Dict, DefaultDict, List, Set, Tuple
+import logging
 
 import superintervals
-
 from dysgu import io_funcs
 import numpy as np
 cimport numpy as np
-import logging
+from scipy.optimize import nnls
 import pysam
 DTYPE = np.float64
 ctypedef np.float_t DTYPE_t
@@ -567,7 +568,7 @@ def get_raw_coverage_information(events, regions, regions_depth):
             if r.chrA == r.chrB:
                 rA = regions[r.chrA].search_values(r.posA, r.posA + 1)
                 rB = regions[r.chrB].search_values(r.posB, r.posB + 1)
-                if rA and rB and rA[0] == rB[0]: # and rA[1] == rB[1]:
+                if rA and rB and rA[0] == rB[0]:
                     kind = "intra_regional"
                     if r.posA > r.posB:
                         switch = True
@@ -616,43 +617,24 @@ def get_raw_coverage_information(events, regions, regions_depth):
     return new_events
 
 
-def load_transcript_blocks(transcript_blocks_path):
-    tr_intervals = defaultdict(lambda: superintervals.IntervalMap())
-    blocks_by_tx = defaultdict(list)  # key: gene~transcript string -> list[(start,end)]
-    with open(transcript_blocks_path, "r") as tb:
-        for line in tb:
-            l = line.rstrip("\n").split("\t")
-            chrom = l[0]
-            start = int(l[1])
-            end = int(l[2])
-            tx = l[3]
-            tr_intervals[chrom].add(start, end, tx)
-            blocks_by_tx[tx].append((start, end))
-    for v in tr_intervals.values():
-        v.build()
-    return tr_intervals, blocks_by_tx
-
-
-
 def transcriptome_effective_depth(
     chrom: str,
     pos: int,
-    chrom_depth,              # np.int16_t[:] or numpy array
+    chrom_depth,
     tr_intervals,
     blocks_by_tx,
     bin_size: int = 10,
-    flank: int = 2000,       # only use exon bins near breakpoint
-    noise_q: float = 0.05,    # percentile of non-zero bins = noise floor
+    flank: int = 10_000,        # only use exon bins near breakpoint
     min_bins: int = 30,       # fallback if too few bins
 ):
     # Find transcripts overlapping breakpoint
     txs = tr_intervals.get(chrom, None)
     if txs is None:
-        return 0.0, 0.0, 0.0
+        return 0.0, 0.0
 
     hits = txs.search_values(pos, pos + 1)
     if not hits:
-        return 0.0, 0.0, 0.0
+        return 0.0, 0.0
 
     # Collect bin indices from exon blocks near breakpoint
     lo = pos - flank
@@ -673,81 +655,220 @@ def transcriptome_effective_depth(
                 bins.add(b)
 
     if len(bins) < min_bins:
-        return 0.0, 0.0, 0.0
+        return 0.0, 0.0
 
     depths = np.fromiter((chrom_depth[b] for b in bins), dtype=np.int32)
     nz = depths[depths > 0]
     if nz.size == 0:
-        return 0.0, 0.0, 0.0
-
-    # Noise threshold (floor); at least 1
-    thr = float(np.percentile(nz, noise_q * 100.0))
-    if thr < 1.0:
-        thr = 1.0
+        return 0.0, 0.0
 
     # Use bins above noise floor
+    thr = float(np.percentile(nz, 1))
+    if thr < 1.0:
+        thr = 1.0
     kept = nz[nz >= thr]
     if kept.size == 0:
-        return float(nz.mean()), float(nz.max()), thr
+        return float(nz.mean()), float(nz.max())
 
-    return float(kept.mean()), float(kept.max()), thr
+    return float(kept.mean()), float(kept.max())
 
 
+def load_transcript_blocks(transcript_blocks_path: str):
+    tr_intervals = defaultdict(lambda: superintervals.IntervalMap())
+    blocks_by_tx = defaultdict(list)
+    tx_strand: Dict[str, str] = {}
+    tx_chrom: Dict[str, str] = {}
+
+    with open(transcript_blocks_path, "r") as tb:
+        for line in tb:
+            if not line or line[0] == "#":
+                continue
+            l = line.rstrip("\n").split("\t")
+            if len(l) < 4:
+                continue
+            chrom = l[0]
+            start = int(l[1])
+            end = int(l[2])
+            tx = l[3]
+            strand = l[5] if len(l) > 5 else "+"
+
+            blocks_by_tx[tx].append((start, end))
+            tx_strand[tx] = strand
+            tx_chrom[tx] = chrom
+
+    # Add transcript span intervals per chromosome
+    for tx, blocks in blocks_by_tx.items():
+        if not blocks:
+            continue
+        chrom = tx_chrom[tx]
+        min_start = min(s for s, _ in blocks)
+        max_end = max(e for _, e in blocks)
+        tr_intervals[chrom].add(min_start, max_end, tx)
+
+    for imap in tr_intervals.values():
+        imap.build()
+
+    return tr_intervals, blocks_by_tx, tx_strand, tx_chrom
+
+
+def fallback_genomic(chrom, pos, regions_depth):
+    if chrom in regions_depth.chrom_cov_arrays:
+        mean_cov, mx = calculate_coverage(pos - 10000, pos + 10000, regions_depth.chrom_cov_arrays[chrom], ignore_zero=1)
+        return float(mean_cov), float(mx)
+    return 0.0, 0.0
+
+
+def depth_at(chrom, pos, regions_depth, tr_intervals, blocks_by_tx):
+    if chrom not in regions_depth.chrom_cov_arrays:
+        return 0.0, 0.0
+    mean_cov, mx = transcriptome_effective_depth(
+        chrom, pos,
+        regions_depth.chrom_cov_arrays[chrom],
+        tr_intervals, blocks_by_tx,
+        bin_size=10,
+        flank=10_000,
+        min_bins=10
+    )
+    if mean_cov == 0.0:
+        return fallback_genomic(chrom, pos, regions_depth)
+    return mean_cov, mx
+
+
+def common_transcript_overlap(tr_intervals, chrA, posA, chrB, posB) -> bool:
+    if chrA != chrB:
+        return False
+    imap = tr_intervals.get(chrA)
+    if imap is None:
+        return False
+    hitsA = imap.search_values(posA, posA + 1) or []
+    hitsB = imap.search_values(posB, posB + 1) or []
+    return bool(set(hitsA) & set(hitsB))
+
+
+def in_any_transcript(tr_intervals, chrom, pos) -> bool:
+    if chrom not in tr_intervals[chrom]:
+        return False
+    return tr_intervals[chrom].has_overlaps(pos, pos + 1)
+
+
+def collect_directional_nonzero_bins(cov_array, pos, direction, max_keep, scan_limit_bins=400) -> list:
+    # Collect up to max_keep NONZERO bins, scanning up to scan_limit_bins bins.
+    n = int(len(cov_array))
+    b0 = int(pos // 10)  # 10=bin_size
+    depths = []
+    if direction == "left":
+        i = b0
+        steps = 0
+        while i >= 0 and steps < scan_limit_bins and len(depths) < max_keep:
+            d = float(cov_array[i])
+            if d > 0:
+                depths.append(d)
+            i -= 1
+            steps += 1
+    elif direction == "right":
+        i = b0
+        steps = 0
+        while i < n and steps < scan_limit_bins and len(depths) < max_keep:
+            d = float(cov_array[i])
+            if d > 0:
+                depths.append(d)
+            i += 1
+            steps += 1
+    else:
+        raise ValueError("direction must be 'left' or 'right'")
+    return depths
+
+
+def metrics_from_depths(depths: list, use_noise_floor=False):
+    if not depths:
+        return {"thr": None, "n_nonzero": 0, "n_kept": 0, "mean": 0.0, "cv": 0.0}
+    arr = np.asarray(depths, dtype=np.float64)
+    if use_noise_floor:
+        thr = float(np.percentile(arr, 2.))
+        if thr > 0.5:
+            kept = arr[arr >= thr]
+        else:
+            kept = arr
+    else:
+        thr = 1.0
+        kept = arr
+    n_kept = int(kept.size)
+    if n_kept == 0:
+        return {"thr": float(thr), "n_nonzero": int(arr.size), "n_kept": 0, "mean": 0.0, "cv": 0.0}
+
+    mean = float(np.mean(kept))
+    if kept.size > 1 and mean > 0:
+        cv = float(np.std(kept) / mean)
+    else:
+        cv = 0.0
+    return {"thr": float(thr), "n_nonzero": int(arr.size), "n_kept": n_kept, "mean": mean, "cv": cv}
+
+
+# ------------------
+# Entry for RNAseq
+# ------------------
 def get_raw_coverage_information_transcriptome(events, regions, regions_depth, transcript_blocks_path):
     assert transcript_blocks_path
 
-    tr_intervals, blocks_by_tx = load_transcript_blocks(transcript_blocks_path)
+    max_bins_in_tx: int = 50       # if breakpoint overlaps any transcript, collect up to this many bins
+    max_bins_out_tx: int = 15      # otherwise collect up to this many bins
+
+    tr_intervals, blocks_by_tx, tx_strand, tx_chrom = load_transcript_blocks(transcript_blocks_path)
 
     new_events = []
     for r in events:
-        kind = "extra-regional"
 
-        max_depth = 0.0
+        reads_left, max_left = depth_at(r.chrA, r.posA, regions_depth, tr_intervals, blocks_by_tx)
+        reads_right, max_right = depth_at(r.chrB, r.posB, regions_depth, tr_intervals, blocks_by_tx)
 
-        def fallback_genomic(chrom, pos):
-            if chrom in regions_depth.chrom_cov_arrays:
-                mean_cov, mx = calculate_coverage(
-                    pos - 10000, pos + 10000,
-                    regions_depth.chrom_cov_arrays[chrom],
-                    ignore_zero=1
-                )
-                return float(mean_cov), float(mx), 0.0
-            return 0.0, 0.0, 0.0
-
-        def depth_at(chrom, pos):
-            if chrom not in regions_depth.chrom_cov_arrays:
-                return 0.0, 0.0, 0.0
-            mean_cov, mx, thr = transcriptome_effective_depth(
-                chrom, pos,
-                regions_depth.chrom_cov_arrays[chrom],
-                tr_intervals, blocks_by_tx,
-                bin_size=10,
-                flank=2000,
-                noise_q=0.10,
-                min_bins=10
-            )
-            if mean_cov == 0.0:
-                return fallback_genomic(chrom, pos)
-            return mean_cov, mx, thr
-
-        reads_left, max_left, thrA = depth_at(r.chrA, r.posA)
-        reads_right, max_right, thrB = depth_at(r.chrB, r.posB)
         reads_10kb = reads_left if reads_left > reads_right else reads_right
         max_depth = max(max_left, max_right)
 
-        reads_10kb = round(reads_10kb, 3)
-
-        r.kind = kind
-        r.raw_reads_10kb = reads_10kb
+        r.kind = "extra-regional"
+        r.raw_reads_10kb = round(reads_10kb, 3)
         if r.chrA != r.chrB:
             r.svlen = 1000000
         r.mcov = max_depth
+            
+        if r.chrA not in regions_depth.chrom_cov_arrays or r.chrB not in regions_depth.chrom_cov_arrays:
+            new_events.append(r)
+            continue
 
-        # AF normalisation using transcriptome-effective depth
-        r.a_freq = r.a_freq / ( min(reads_left, reads_right) + 1e-5)
+        covA = regions_depth.chrom_cov_arrays[r.chrA]
+        covB = regions_depth.chrom_cov_arrays[r.chrB]
+
+        # Choose max bins based on whether each breakpoint lies in any transcript
+        max_left = max_bins_in_tx if in_any_transcript(tr_intervals, r.chrA, r.posA) else max_bins_out_tx
+        max_right = max_bins_in_tx if in_any_transcript(tr_intervals, r.chrB, r.posB) else max_bins_out_tx
+
+        direction_A = "left" if r.join_type[0] == '3' else "right"
+        direction_B = "left" if r.join_type[-1] == '3' else "right"
+        left_depths = collect_directional_nonzero_bins(covA, r.posA, direction_A, max_keep=max_left)
+        right_depths = collect_directional_nonzero_bins(covB, r.posB, direction_B, max_keep=max_right)
+
+        L = metrics_from_depths(left_depths, use_noise_floor=True)
+        R = metrics_from_depths(right_depths, use_noise_floor=True)
+
+        reads_left = L['mean']  # Get directional coverage 
+        reads_right = R['mean']
+
+        same_tx = common_transcript_overlap(tr_intervals, r.chrA, r.posA, r.chrB, r.posB)
+        if same_tx:
+            denom = 0.5 * (reads_left + reads_right)
+        else:  # Use the min side
+            denom = min(reads_left, reads_right)
+        r.a_freq = r.a_freq / (denom + 1e-5)
         r.a_freq = round(max(0, min(r.a_freq, 1.0)), 3)
 
-        new_events.append(r)
+        # todo this hard filter may need to be a parameter
+        ratio = R['mean'] / (L['mean']+1e-6) if (L['mean'] > R['mean']) else L['mean'] / (R['mean']+1e-6)
+        keep_event = ratio > 0.01
+        if keep_event:
+            new_events.append(r)
+            # echo(f"KEPT: {r.chrA}:{r.posA}-{r.chrB}:{r.posB} su={r.su} af={r.a_freq}", L, R)
+        # else:
+            # echo(f"FILTERED: {r.chrA}:{r.posA}-{r.chrB}:{r.posB} su={r.su} af={r.a_freq}", L, R)
+        # new_events.append(r)
 
     return new_events
 

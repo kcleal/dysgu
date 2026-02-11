@@ -62,7 +62,8 @@ namespace Tr {
     public:
         std::string chrom;
         int start, end;
-        Region(std::string& chr, int s, int e) : chrom{chr}, start{s}, end{e} {}
+        char strand;
+        Region(std::string& chr, int s, int e, char st='.') : chrom{chr}, start{s}, end{e}, strand{st} {}
     };
 
     /*
@@ -208,6 +209,9 @@ namespace Tr {
                     size_t col7_start = col6_end + 1;
                     size_t col7_end = tp.find("\t", col7_start);
                     size_t col8_start = col7_end + 1;
+                    
+                    char strand_char = (col7_start < tp.length()) ? tp[col7_start] : '.';
+
                     size_t col8_end = tp.find("\t", col8_start);
                     size_t col9_start = col8_end + 1;
 
@@ -244,7 +248,7 @@ namespace Tr {
                         continue;
                     }
                     std::string gene_transcript_key = b.gene_name + "~" + b.transcript_id;
-                    transcript_exons[gene_transcript_key].push_back({b.chrom, b.start, b.end});
+                    transcript_exons[gene_transcript_key].push_back({b.chrom, b.start, b.end, strand_char});
                     track_blocks[b.transcript_id].push_back(std::move(b));
                 }
                 for (auto& kv : track_blocks) {
@@ -326,7 +330,7 @@ namespace Tr {
             }
             for (const auto& item : transcript_exons) {
                 for (const auto& b : item.second) {
-                    out << b.chrom << "\t" << b.start << "\t" << b.end << "\t" << item.first <<"\n";
+                    out << b.chrom << "\t" << b.start << "\t" << b.end << "\t" << item.first << "\t" << b.strand <<"\n";
                 }
             }
             out.close();

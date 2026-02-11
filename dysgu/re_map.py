@@ -27,6 +27,7 @@ def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
             if len(cont) - end_i > 8:
                 right_clip = cont[end_i + 1:]
                 return right_clip, 1, start_i
+    return None
 
 
 def filter_bad_alignment(align, event, idx, begin, end, break_position):
@@ -102,7 +103,8 @@ def merge_align_regions(locations):
     dist = 100_000
     for i, (s, e) in enumerate(new_l):
         mid = e - s
-        if abs(mid - 500) < dist:
+        if abs(mid - 1000) < dist:
+            dist = abs(mid - 1000)
             best_i = i
     new_l = [new_l[best_i]]
 
@@ -148,6 +150,7 @@ def matches_adjacent_ref_seq(clip_side, clip_seq, clip_length, ref_seq_big, brea
        adj_align['editDistance'] / len(clip_seq) < 0.19 and \
        adj_align['locations'][0][1] - adj_align['locations'][0][0] > clip_length * 0.85:
         return True
+    return False
 
 
 def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
@@ -186,8 +189,8 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     if avg_w > 1 or len(clip_seq) > 35 or w > 400:
         high_quality_clip = True
 
-    ref_start = break_position - 500
-    ref_end = break_position + 500
+    ref_start = break_position - 1000
+    ref_end = break_position + 1000
 
     start_idx = ref_start - gstart
     start_idx = 0 if start_idx < 0 else start_idx
@@ -259,7 +262,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 else:
                     left_ins_seq = clip_seq
 
-                e.ref_seq = ref_seq_clipped[500 - 1]
+                e.ref_seq = ref_seq_clipped[1000 - 1]
 
             else:
                 ref_gap = pos - q_end
@@ -298,7 +301,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     var_seq = clip_seq[:svlen]
                 else:
                     right_ins_seq = clip_seq
-                e.ref_seq = ref_seq_clipped[500 - 1]
+                e.ref_seq = ref_seq_clipped[1000 - 1]
 
             else:
                 ref_gap = q_begin - pos
