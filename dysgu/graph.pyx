@@ -1503,6 +1503,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
         for i in range(infile.header.nreferences):
             chr_b = infile.get_reference_name(i).encode("ascii")
             chrom_names.push_back(chr_b)
+    cdef bint filter_chimera = transcript_gaps_file and paired_end
 
     site_adder = None
     if sites:
@@ -1527,7 +1528,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef int left_clip_size, right_clip_size
 
     cdef bint hp_tag_found = False
-    cdef bint is_transcript_gap
+    cdef bint is_transcript_gap = False
     cdef int n_checked_for_hp_tag = 0
     if no_phase:
         n_checked_for_hp_tag = 10_001
@@ -1636,6 +1637,12 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             continue
                         read_enum = ReadEnum_t.BREAKEND
                     else:
+                        # RNAseq; Check for FF or RR; potential RT template-switching / PCR chimera artifacts
+                        # small template, without clip, same chrom, same strand --> ignore
+                        if filter_chimera and abs(r.tlen) < max_dist and not clipped and r.rname == r.rnext:
+                            if not ((r.flag >> 4 & 1) ^ (r.flag >> 5 & 1)):
+                                continue
+
                         read_enum = ReadEnum_t.DISCORDANT
 
                     if left_clip_size or right_clip_size:
@@ -1897,11 +1904,10 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
             if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
                 return GraphComponent(None, None, None, None, n2n, info)
-            return GraphComponent(None, None, None, None, n2n, info)
-            #elif len(reads) >= min_support or info:
-            #    return GraphComponent(None, None, None, None, n2n, info)
-            #else:
-            #    return None
+            elif len(reads) >= min_support or info:
+                return GraphComponent(None, None, None, None, n2n, info)
+            else:
+                return None
     # Debug:
     # if 14 in n2n:
     #     echo("parts", partitions)

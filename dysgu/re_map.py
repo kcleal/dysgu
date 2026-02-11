@@ -189,8 +189,8 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     if avg_w > 1 or len(clip_seq) > 35 or w > 400:
         high_quality_clip = True
 
-    ref_start = break_position - 1000
-    ref_end = break_position + 1000
+    ref_start = break_position - 500
+    ref_end = break_position + 500
 
     start_idx = ref_start - gstart
     start_idx = 0 if start_idx < 0 else start_idx
@@ -262,7 +262,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 else:
                     left_ins_seq = clip_seq
 
-                e.ref_seq = ref_seq_clipped[1000 - 1]
+                e.ref_seq = ref_seq_clipped[500 - 1]
 
             else:
                 ref_gap = pos - q_end
@@ -301,7 +301,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     var_seq = clip_seq[:svlen]
                 else:
                     right_ins_seq = clip_seq
-                e.ref_seq = ref_seq_clipped[1000 - 1]
+                e.ref_seq = ref_seq_clipped[500 - 1]
 
             else:
                 ref_gap = q_begin - pos
