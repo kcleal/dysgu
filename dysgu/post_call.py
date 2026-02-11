@@ -900,7 +900,7 @@ def update_prob_at_sites(df, events, thresholds, parse_probs, default_prob):
                 new_probs.append(p)
         else:
             new_probs.append(p)
-    df.prob = new_probs
+    df["prob"] = new_probs
     PASS = ['lowProb'] * len(df)
     for idx, (svt, i) in enumerate(zip(df["svtype"], new_probs)):
         if (svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5):
