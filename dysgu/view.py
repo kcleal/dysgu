@@ -396,11 +396,13 @@ def vcf_to_df(path):
                     else:
                         df[k] = df[k].fillna("")
                 else:
-                    df[k] = df[k].fillna(0)
+                    # VCF missing value "." can appear in numeric INFO/FORMAT fields
+                    # (e.g. for 0/0 records emitted by --all-sites True); coerce to NaN then fill.
+                    df[k] = pd.to_numeric(df[k], errors='coerce').fillna(0)
                 try:
                     df[k] = df[k].astype(dtype)
-                except ValueError or OverflowError:
-                    raise ValueError("Problem for feature {}, could not interpret as {}".format(k, dtype))
+                except (ValueError, OverflowError) as e:
+                    raise ValueError("Problem for feature {}, could not interpret as {}".format(k, dtype)) from e
     if "contigA" not in df:
         df["contigA"] = [""] * len(df)
     if "contigB" not in df:

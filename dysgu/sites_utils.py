@@ -181,7 +181,11 @@ def append_uncalled(df, site_adder, infile, parse_probs):
                         "strand_binom_t",
                         'n_gaps', "n_sa", "n_xa", "n_unmapped_mates", "double_clips", "remap_score", "remap_ed",
                         "bad_clip_count", "fcc", "n_small_tlen", "ras", 'fas', "inner_cn", "outer_cn", "compress",
-                        "ref_rep", "jitter", 'prob']
+                        "ref_rep", "jitter", 'prob',
+                        # INFO-side integer metrics: must not be "." because their headers declare Type=Integer
+                        # and downstream tools (including dysgu merge) reject "." for integer INFO fields.
+                        'grp_id', 'n_in_grp', 'cipos95A', 'cipos95B', 'n_expansion', 'stride',
+                        'ref_poly_bases', 'query_overlap', 'svlen_precise']
                 for fmt in keys:
                     r[fmt] = 0
                 if parse_probs:
