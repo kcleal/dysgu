@@ -260,7 +260,7 @@ def vcf_to_df(path):
         path_h = sys.stdin
     else:
         path_h = path
-    df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None)
+    df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None, dtype=str)
     if len(df.columns) > 10:
         msg = f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}"
         raise ValueError(msg)

@@ -1030,7 +1030,7 @@ cdef int good_quality_clip(AlignedSegment r, int clip_length):
     if clip_length <= 0:
         return 1
 
-    cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)
+    cdef uint8_t* char_ptr_rseq = bam_get_seq(r._delegate)
 
     cdef uint32_t cigar_l = r._delegate.core.n_cigar
     if cigar_l == 0:

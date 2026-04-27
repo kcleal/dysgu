@@ -20,7 +20,7 @@ from libcpp.pair cimport pair as cpp_pair
 
 from libc.math cimport exp
 from libc.stdlib cimport abs as c_abs
-from libc.stdint cimport uint32_t, int32_t, uint64_t
+from libc.stdint cimport uint8_t, uint32_t, int32_t, uint64_t
 
 from dysgu cimport map_set_utils
 from dysgu.map_set_utils cimport DiGraph, EventResult
@@ -123,7 +123,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
 
     cdef int i = 0
 
-    cdef char* char_ptr_rseq = <char*>bam_get_seq(r._delegate)  # without cast, compiler complains of unsigned char*
+    cdef uint8_t* char_ptr_rseq = bam_get_seq(r._delegate)
     cdef char base
 
     cdef const unsigned char[:] quals = r.query_qualities
