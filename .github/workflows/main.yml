@@ -34,6 +34,7 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0" >> $GITHUB_ENV
           echo "CPPFLAGS=-I$BREW_PREFIX/include $CPPFLAGS" >> $GITHUB_ENV
           echo "LDFLAGS=-L$BREW_PREFIX/lib $LDFLAGS"       >> $GITHUB_ENV
+          echo "CIBW_ENVIRONMENT_MACOS=MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0 CPPFLAGS=-I$BREW_PREFIX/include LDFLAGS=-L$BREW_PREFIX/lib PKG_CONFIG_PATH=$BREW_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
@@ -44,8 +45,6 @@ jobs:
           CIBW_ARCHS_LINUX: "auto"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_28
-
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=${{ matrix.target }}.0
 
           CIBW_BUILD_VERBOSITY: 1
 
