@@ -407,6 +407,11 @@ def vcf_to_df(path):
         df["contigA"] = [""] * len(df)
     if "contigB" not in df:
         df["contigB"] = [""] * len(df)
+    if "posB" not in df:
+        if "posB_tra" in df:
+            df["posB"] = df["posB_tra"]
+        else:
+            df["posB"] = df["posA"]
     if 'posB_tra' in df:
         df["posB"] = [i if svt != 'TRA' else j for i, j, svt in zip(df['posB'], df['posB_tra'], df['svtype'])]
         del df['posB_tra']
@@ -643,8 +648,8 @@ def shard_data(args, input_files, Global, show_progress):
     job_args = []
     for name, item in zip(names_list, input_files):
         job_args.append((args['wd'], item, name, Global, show_progress))
-    pool = multiprocessing.Pool(args['procs'])
-    results = pool.starmap(shard_job, job_args)
+    with multiprocessing.Pool(args['procs'], maxtasksperchild=1) as pool:
+        results = pool.starmap(shard_job, job_args)
     input_rows = {}
     job_blocks = defaultdict(list)
     for block_keys, rows, sample_name in results:
@@ -677,7 +682,8 @@ def shard_data(args, input_files, Global, show_progress):
     job_args2.sort(key=lambda x: x[-1], reverse=True)  # Biggest jobs first
     job_args2 = [args[:-1] for args in job_args2]
     if args['procs'] > 1:
-        pool.starmap(process_file_list, job_args2)
+        with multiprocessing.Pool(args['procs'], maxtasksperchild=1) as pool:
+            pool.starmap(process_file_list, job_args2)
     else:
         for ja in job_args2:
             process_file_list(*ja)
