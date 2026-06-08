@@ -322,13 +322,17 @@ def gen_format_fields(r, df, names, n_fields, small_output):
     if len(names) == 1:
         return {0: get_fmt(r, small_output)}, {}
     cols = {}
-    if "partners" in r:
-        if not isinstance(r["partners"], set):
-            if len(r["partners"]) == 0 or pd.isna(r["partners"]):
-                r["partners"] = []
-            else:
-                r["partners"] = [int(i.split(",")[1]) for i in r["partners"].split("|")]
-        for idx in r["partners"]:
+    partners = r.get("partners") if "partners" in r else None
+    if partners is not None and partners != ".":
+        if isinstance(partners, set):
+            partner_ids = partners
+        elif isinstance(partners, (list, tuple)):
+            partner_ids = partners
+        elif pd.isna(partners) or len(partners) == 0:
+            partner_ids = []
+        else:
+            partner_ids = [int(i.split(",")[1]) for i in partners.split("|")]
+        for idx in partner_ids:
             if idx in df.index:  # might be already dropped
                 r2 = df.loc[idx]
                 cols[r2["table_name"]] = r2
@@ -479,7 +483,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
     n_fields = len(col_names(small_output_f)[-1])
 
     for idx, r in df.iterrows():
-        if idx in seen_idx:
+        if idx in seen_idx or ("_skip_partner" in r and r["_skip_partner"]):
             continue
 
         format_f, df_rows = gen_format_fields(r, df, names, n_fields, small_output_f)

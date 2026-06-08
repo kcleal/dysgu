@@ -11,6 +11,7 @@ from collections import defaultdict
 from dysgu import io_funcs, cluster, merge_svs
 from dysgu.map_set_utils import echo, merge_intervals
 import multiprocessing
+import queue
 import gzip
 import pysam
 import numpy as np
@@ -21,6 +22,7 @@ from heapq import heappop, heappush
 import resource
 from copy import deepcopy
 import re
+import traceback
 
 
 def open_outfile(args, names_list, log_messages=True):
@@ -39,6 +41,95 @@ def open_outfile(args, names_list, log_messages=True):
             logging.info("SVs output to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
     return outfile
+
+
+def _run_process_job(func, func_args, result_queue, job_index, job_label):
+    try:
+        result = func(*func_args)
+    except BaseException:
+        result_queue.put((job_index, job_label, "error", traceback.format_exc()))
+    else:
+        result_queue.put((job_index, job_label, "ok", result))
+
+
+def run_process_jobs(func, job_args, procs, job_labels=None):
+    if not job_args:
+        return []
+
+    procs = max(1, min(procs, len(job_args)))
+    job_labels = job_labels or [str(i) for i in range(len(job_args))]
+    results = [None] * len(job_args)
+    completed = set()
+    failures = []
+    result_queue = multiprocessing.Queue()
+    running = {}
+    next_job = 0
+
+    def start_job(job_index):
+        label = job_labels[job_index]
+        proc = multiprocessing.Process(
+            target=_run_process_job,
+            args=(func, job_args[job_index], result_queue, job_index, label),
+        )
+        proc.start()
+        running[job_index] = proc
+
+    def drain_results(block=False):
+        got_any = False
+        while True:
+            try:
+                if block:
+                    job_index, label, status, payload = result_queue.get(timeout=0.2)
+                else:
+                    job_index, label, status, payload = result_queue.get_nowait()
+            except queue.Empty:
+                break
+            got_any = True
+            completed.add(job_index)
+            if status == "ok":
+                results[job_index] = payload
+            else:
+                failures.append((label, payload))
+            block = False
+        return got_any
+
+    while next_job < len(job_args) or running:
+        while next_job < len(job_args) and len(running) < procs:
+            start_job(next_job)
+            next_job += 1
+
+        got_result = drain_results()
+
+        for job_index, proc in list(running.items()):
+            if proc.exitcode is None:
+                continue
+            proc.join()
+            del running[job_index]
+            if job_index not in completed and proc.exitcode != 0:
+                failures.append((job_labels[job_index], f"worker exited with code {proc.exitcode}"))
+
+        if failures:
+            for proc in running.values():
+                proc.terminate()
+            for proc in running.values():
+                proc.join()
+            msg = "\n\n".join(f"{label}:\n{err}" for label, err in failures)
+            raise RuntimeError(f"One or more merge worker jobs failed:\n{msg}")
+
+        if not got_result:
+            time.sleep(0.1)
+
+    while len(completed) < len(job_args) and drain_results(block=True):
+        pass
+    drain_results()
+
+    missing = [job_labels[i] for i in range(len(job_args)) if i not in completed]
+    if failures or missing:
+        messages = [f"{label}:\n{err}" for label, err in failures]
+        messages += [f"{label}:\nworker exited without returning a result" for label in missing]
+        raise RuntimeError("One or more merge worker jobs failed:\n" + "\n\n".join(messages))
+
+    return results
 
 
 class dotdict(dict):
@@ -78,7 +169,7 @@ def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, p
     if progressive:
 
         d1 = [e for e in potential if e.sample == samples[0]]
-        ff = defaultdict(set)
+        components = {e.event_id: {e.event_id} for e in d1}
         for idx, samp in enumerate(samples[1:], start=1):
             d2 = [e for e in potential if e.sample == samp]
             pot = d1 + d2
@@ -86,44 +177,28 @@ def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, p
             found = merge_svs.merge_events(pot, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
                                            aggressive_ins_merge=True, same_sample=False, procs=1)
 
+            new_components = {}
             for f in found:
                 if f.partners is None:
-                    ff[f.event_id] = set([])
+                    new_components[f.event_id] = components.get(f.event_id, {f.event_id})
                 else:
-                    # Remove partners from same sample
-                    current = f["table_name"]
-                    targets = set([])
-                    passed = True
-                    for item in f["partners"]:  # Only merge with one row per sample
-                        t_name = df.loc[item]["table_name"]
-                        if t_name != current:
-                            targets.add(t_name)
-                        # if t_name != current and t_name not in targets and len(targets) < len(samples):
-                        #     targets.add(t_name)
-
-                        # elif not aggressive:
-                            # Merged with self event. Can happen with clusters of SVs with small spacing
-                            # e.g. a is merged with b and c, where a is from sample1 and b and c are from sample2
-                            # safer not to merge? otherwise variants can be lost
-                            # passed = False
-                    if passed:  # enumerate support between components
-                        g = f["partners"] + [f["event_id"]]
-                        for t1 in g:
-                            for t2 in g:
-                                if t2 != t1:
-                                    ff[t1].add(t2)
+                    members = set()
+                    for item in f["partners"] + [f["event_id"]]:
+                        members.update(components.get(item, {item}))
+                    new_components[f.event_id] = members
 
             d1 = found
+            components = new_components
             # logging.info(f"Merged {samp} ({idx}/{len(samples)}), cohort SV sites: {len(found)}")
 
     else:
         found = merge_svs.merge_events(potential, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
                                        aggressive_ins_merge=True, same_sample=False)
-        ff = defaultdict(set)
+        components = {}
 
         for f in found:
             if f.partners is None:
-                ff[f.event_id] = set([])
+                continue
             else:
                 # Remove partners from same sample
                 current = f["table_name"]
@@ -140,13 +215,18 @@ def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, p
                         # safer not to merge? otherwise variants can be lost
                         passed = False
                 if passed:  # enumerate support between components
-                    g = f["partners"] + [f["event_id"]]
-                    for t1 in g:
-                        for t2 in g:
-                            if t2 != t1:
-                                ff[t1].add(t2)
+                    components[f.event_id] = set(f["partners"] + [f["event_id"]])
 
-    df["partners"] = [ff[i] if i in ff else set([]) for i in df.index]
+    partner_map = {}
+    for rep, members in components.items():
+        if len(members) > 1:
+            members.discard(rep)
+            partner_map[rep] = members
+    skip_partner = pd.Series(False, index=df.index)
+    for members in partner_map.values():
+        skip_partner.loc[list(members)] = True
+    df["partners"] = [partner_map.get(i) for i in df.index]
+    df["_skip_partner"] = skip_partner
     return df
 
 
@@ -187,7 +267,10 @@ def to_csv(df, args, outfile, small_output):
     if args["separate"] == "False":
         p2 = []
         for idx, r in df.iterrows():
-            if len(r["partners"]) == 0:
+            partners = r["partners"]
+            partner_collection = isinstance(partners, (set, list, tuple))
+            if partners is None or (partner_collection and len(partners) == 0) or (
+                    not partner_collection and (pd.isna(partners) or len(partners) == 0)):
                 p2.append("")
                 continue
             else:
@@ -493,18 +576,26 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages, sho
     df = df.sort_values(["chrA", "posA", "chrB", "posB"])
 
     outfile = open_outfile(args, names_list, log_messages=log_messages)
-    if args["out_format"] == "vcf":
-        lens_before = list(map(len, dfs))
-        if show_progress and job_id:
-            logging.info("{} started, records {}".format(job_id, lens_before))
-        count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
-                                contig_names=contig_names, show_names=log_messages)
-        if log_messages:
-            logging.info("Sample rows before merge {}, rows after {}".format(lens_before, count))
-        elif show_progress and job_id:
-            logging.info("{} rows after {}".format(job_id, count))
-    else:
-        to_csv(df, args, outfile, small_output=False)
+    try:
+        if args["out_format"] == "vcf":
+            lens_before = list(map(len, dfs))
+            if show_progress and job_id:
+                logging.info("{} started, records {}".format(job_id, lens_before))
+            count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
+                                    contig_names=contig_names, show_names=log_messages)
+            if log_messages:
+                logging.info("Sample rows before merge {}, rows after {}".format(lens_before, count))
+            elif show_progress and job_id:
+                logging.info("{} rows after {}".format(job_id, count))
+        else:
+            to_csv(df, args, outfile, small_output=False)
+    finally:
+        if outfile is not stdout:
+            if isinstance(outfile, dict):
+                for out in outfile.values():
+                    out.close()
+            else:
+                outfile.close()
 
 
 class VcfWriter(object):
@@ -648,8 +739,8 @@ def shard_data(args, input_files, Global, show_progress):
     job_args = []
     for name, item in zip(names_list, input_files):
         job_args.append((args['wd'], item, name, Global, show_progress))
-    with multiprocessing.Pool(args['procs'], maxtasksperchild=1) as pool:
-        results = pool.starmap(shard_job, job_args)
+    job_labels = [f"split sample {name} ({item})" for name, item in zip(names_list, input_files)]
+    results = run_process_jobs(shard_job, job_args, args['procs'], job_labels)
     input_rows = {}
     job_blocks = defaultdict(list)
     for block_keys, rows, sample_name in results:
@@ -680,10 +771,11 @@ def shard_data(args, input_files, Global, show_progress):
         target_args["svs_out"] = fout
         job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id, total_size))
     job_args2.sort(key=lambda x: x[-1], reverse=True)  # Biggest jobs first
+    job_labels2 = [x[-2] for x in job_args2]
+    job_labels2 = [f"merge block {label}" for label in job_labels2]
     job_args2 = [args[:-1] for args in job_args2]
     if args['procs'] > 1:
-        with multiprocessing.Pool(args['procs'], maxtasksperchild=1) as pool:
-            pool.starmap(process_file_list, job_args2)
+        run_process_jobs(process_file_list, job_args2, args['procs'], job_labels2)
     else:
         for ja in job_args2:
             process_file_list(*ja)
