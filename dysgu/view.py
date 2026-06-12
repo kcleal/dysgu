@@ -52,7 +52,7 @@ def _run_process_job(func, func_args, result_queue, job_index, job_label):
         result_queue.put((job_index, job_label, "ok", result))
 
 
-def run_process_jobs(func, job_args, procs, job_labels=None):
+def run_process_jobs(func, job_args, procs, job_labels=None, progress=False):
     if not job_args:
         return []
 
@@ -64,9 +64,13 @@ def run_process_jobs(func, job_args, procs, job_labels=None):
     result_queue = multiprocessing.Queue()
     running = {}
     next_job = 0
+    n_jobs = len(job_args)
+    finished = 0
 
     def start_job(job_index):
         label = job_labels[job_index]
+        if progress:
+            logging.info(f"[{job_index + 1}/{n_jobs}] started {label}")
         proc = multiprocessing.Process(
             target=_run_process_job,
             args=(func, job_args[job_index], result_queue, job_index, label),
@@ -75,6 +79,7 @@ def run_process_jobs(func, job_args, procs, job_labels=None):
         running[job_index] = proc
 
     def drain_results(block=False):
+        nonlocal finished
         got_any = False
         while True:
             try:
@@ -88,6 +93,9 @@ def run_process_jobs(func, job_args, procs, job_labels=None):
             completed.add(job_index)
             if status == "ok":
                 results[job_index] = payload
+                if progress:
+                    finished += 1
+                    logging.info(f"[{finished}/{n_jobs}] finished {label}")
             else:
                 failures.append((label, payload))
             block = False
@@ -316,37 +324,14 @@ def read_from_inputfile(path):
             yield line
 
 
-def vcf_to_df(path):
-    if os.stat(path).st_size == 0:
-        logging.warning(f"File is empty: {path}")
-        return pd.DataFrame()
+def _parse_vcf_columns(df, samples):
+    """Parse a DataFrame of raw VCF columns (0-8 = standard fields, 9 = the single FORMAT-value
+    column for that record) into dysgu's internal feature DataFrame.
 
-    fin = read_from_inputfile(path)
-    header = ""
-    last = ""
-    contig_names = ""
-    for line in fin:
-        if line[:2] == "##":
-            header += line
-            if line.startswith("##contig="):
-                contig_names += line
-        else:
-            header += "\t".join(line.split("\t")[:9])
-            last = line
-            break
-    if not header:
-        logging.critical(f"File does not have vcf header: {path}")
-        quit()
-
-    sample = last.strip().split("\t")[9]
-    if path == '-':
-        path_h = sys.stdin
-    else:
-        path_h = path
-    df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None, dtype=str)
-    if len(df.columns) > 10:
-        msg = f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}"
-        raise ValueError(msg)
+    `samples` is a per-row sample-name sequence (length == len(df)). For a single-sample input every
+    row shares the same name; for an internal blob file each row carries its own originating sample.
+    Returns (df, n_fields).
+    """
     parsed = pd.DataFrame()
     parsed["chrA"] = df[0]
     parsed["posA"] = df[1]
@@ -354,11 +339,13 @@ def vcf_to_df(path):
     parsed["ref_seq"] = df[3]
     parsed["variant_seq"] = df[4]
     parsed["filter"] = df[6]
-    parsed["sample"] = [sample] * len(df)
+    parsed["sample"] = list(samples)
     info = []
     for k in list(df[7]):
         if k:
             info.append(dict(i.split("=") for i in k.split(";") if "=" in i))
+        else:
+            info.append({})
 
     n_fields = None
     for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
@@ -500,6 +487,51 @@ def vcf_to_df(path):
         del df['posB_tra']
     df["posA"] = df["posA"].astype(int) - 1  # convert to 0-indexing
     df["posB"] = df["posB"].astype(int) - 1
+    return df, n_fields
+
+
+def _read_vcf_header(path):
+    """Read the ## header block of a VCF, returning (header_str, contig_names_str, first_data_line).
+
+    header_str ends with the truncated #CHROM..FORMAT (first 9) columns of the data section, matching
+    the original vcf_to_df behaviour.
+    """
+    fin = read_from_inputfile(path)
+    header = ""
+    last = ""
+    contig_names = ""
+    for line in fin:
+        if line[:2] == "##":
+            header += line
+            if line.startswith("##contig="):
+                contig_names += line
+        else:
+            header += "\t".join(line.split("\t")[:9])
+            last = line
+            break
+    return header, contig_names, last
+
+
+def vcf_to_df(path):
+    if os.stat(path).st_size == 0:
+        logging.warning(f"File is empty: {path}")
+        return pd.DataFrame()
+
+    header, contig_names, last = _read_vcf_header(path)
+    if not header:
+        logging.critical(f"File does not have vcf header: {path}")
+        quit()
+
+    sample = last.strip().split("\t")[9]
+    if path == '-':
+        path_h = sys.stdin
+    else:
+        path_h = path
+    df = pd.read_csv(path_h, index_col=None, comment="#", sep="\t", header=None, dtype=str)
+    if len(df.columns) > 10:
+        msg = f"Can only merge files with one sample in. N samples = {len(df.columns) - 9}"
+        raise ValueError(msg)
+    df, n_fields = _parse_vcf_columns(df, [sample] * len(df))
     return df, header, n_fields, "\n" + contig_names.strip() if contig_names else contig_names
 
 
@@ -531,44 +563,81 @@ def get_names_list(file_list, ignore_csv=True):
     return seen_names, names_list
 
 
-def process_file_list(args, file_list, seen_names, names_list, log_messages, show_progress=False, job_id=None):
+def blob_to_df(path):
+    """Read an internal blob file into dysgu's feature DataFrame.
+
+    A blob line is a tab-separated record: the originating sample name followed by the 10 columns of
+    that sample's dysgu VCF record (CHROM..FORMAT, then the single sample's FORMAT values). Records
+    from many samples are mixed in one file; the per-row sample column preserves their identity so
+    merge-across works exactly as it did with one-file-per-sample input.
+    """
+    if os.stat(path).st_size == 0:
+        return pd.DataFrame()
+    raw = pd.read_csv(path, index_col=None, sep="\t", header=None, dtype=str)
+    samples = raw[0]
+    # Shift columns left by one so column i holds standard VCF field i (0..9), matching vcf_to_df.
+    body = raw.iloc[:, 1:]
+    body.columns = range(body.shape[1])
+    df, _ = _parse_vcf_columns(body, samples)
+    return df
+
+
+def process_file_list(args, file_list, seen_names, names_list, log_messages, show_progress=False, job_id=None,
+                      header=None, contig_names=None):
+    """Merge one job's records and write the intermediate VCF.
+
+    file_list is a list of blob files (each may hold records from many samples, one sample per row).
+    header/contig_names provide the VCF header for output (captured once from an input file) since a
+    blob carries no usable single header of its own. The legacy one-file-per-sample path also routes
+    here, in which case each file is a single-sample VCF/CSV read via vcf_to_df.
+    """
     dfs = []
-    header = None
-    contig_names = None
-    for bname, item in zip(names_list, file_list):
-        name, ext = os.path.splitext(item)
-
-        if ext != ".csv":  # assume vcf
-            df, header, _, contig_names = vcf_to_df(item)  # header here, assume all input has same number of fields
-        else:
+    for fi, item in enumerate(file_list):
+        _, ext = os.path.splitext(item)
+        if ext == ".csv":
             df = pd.read_csv(item, index_col=None)
-
-        name = list(set(df["sample"]))
-        if len(name) > 1:
-            msg = f"More than one sample in {item}: {name}"
-            raise ValueError(msg)
-
-        df["sample"] = [bname] * len(df)
-        df["table_name"] = [bname for _ in range(len(df))]
-        if len(set(df["sample"])) > 1:
-            raise ValueError("More than one sample per input file")
-
+        elif ext == ".blob":
+            df = blob_to_df(item)
+        else:  # single-sample vcf (legacy path with no working directory): one bname per file
+            df, header, _, contig_names = vcf_to_df(item)
+            df["sample"] = [names_list[fi]] * len(df)
+        if not len(df):
+            continue
+        df["table_name"] = list(df["sample"])
         df = mung_df(df, args)
-        if args["merge_within"] == "True":
-            l_before = len(df)
-            if show_progress and job_id:
-                logging.info("{} started, records {}".format(job_id, l_before))
-            df = merge_df(df, 1, args["merge_dist"], {}, merge_within_sample=True,
-                          aggressive=args['collapse_nearby'] == "True", log_messages=log_messages, progressive=args['progressive'])
-            if log_messages:
-                logging.info("{} rows before merge-within {}, rows after {}".format(name, l_before, len(df)))
-            elif show_progress and job_id:
-                logging.info("{} rows before merge-within {}, rows after {}".format(job_id, l_before, len(df)))
-        if "partners" in df:
-            del df["partners"]
         dfs.append(df)
 
+    if not dfs:
+        # Still emit an (empty-bodied) header-only file so downstream assembly has a valid VCF.
+        outfile = open_outfile(args, names_list, log_messages=log_messages)
+        try:
+            if args["out_format"] == "vcf" and header is not None:
+                io_funcs.to_vcf(pd.DataFrame(), args, seen_names, outfile, header=header, small_output_f=True,
+                                contig_names=contig_names, show_names=log_messages)
+        finally:
+            if outfile is not stdout:
+                outfile.close()
+        return
+
     df = pd.concat(dfs)
+
+    if args["merge_within"] == "True":
+        # merge-within is per-sample: run it on each sample's records independently.
+        l_before = len(df)
+        if show_progress and job_id:
+            logging.info("{} started, records {}".format(job_id, l_before))
+        merged_parts = []
+        for _, sub in df.groupby("table_name", sort=False):
+            sub = merge_df(sub.copy(), 1, args["merge_dist"], {}, merge_within_sample=True,
+                           aggressive=args['collapse_nearby'] == "True", log_messages=False,
+                           progressive=args['progressive'])
+            if "partners" in sub:
+                del sub["partners"]
+            merged_parts.append(sub)
+        df = pd.concat(merged_parts)
+        if show_progress and job_id:
+            logging.info("{} rows before merge-within {}, rows after {}".format(job_id, l_before, len(df)))
+
     if args["merge_across"] == "True" and len(seen_names) > 1:
         df = merge_df(df, seen_names, args["merge_dist"], {}, aggressive=args['collapse_nearby'] == "True",
                       log_messages=log_messages, progressive=args['progressive'])
@@ -578,13 +647,12 @@ def process_file_list(args, file_list, seen_names, names_list, log_messages, sho
     outfile = open_outfile(args, names_list, log_messages=log_messages)
     try:
         if args["out_format"] == "vcf":
-            lens_before = list(map(len, dfs))
             if show_progress and job_id:
-                logging.info("{} started, records {}".format(job_id, lens_before))
+                logging.info("{} started, records {}".format(job_id, len(df)))
             count = io_funcs.to_vcf(df, args, seen_names, outfile, header=header, small_output_f=True,
                                     contig_names=contig_names, show_names=log_messages)
             if log_messages:
-                logging.info("Sample rows before merge {}, rows after {}".format(lens_before, count))
+                logging.info("Rows after merge {}".format(count))
             elif show_progress and job_id:
                 logging.info("{} rows after {}".format(job_id, count))
         else:
@@ -618,42 +686,148 @@ class VcfWriter(object):
         self.vcf.write(str(r))
 
 
-def shard_job(wd, item_path, name, Global, show_progress):
-    # shards are SVTYPE+chromosome
-    shards = {}
-    vcf = pysam.VariantFile(item_path, 'r')
-    contigs = len(vcf.header.contigs)
-    if contigs == 0:
-        contigs = 250
-    ub = contigs * contigs
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    ub += soft
-    resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, ub), hard))
-    Global.soft = ub
+def _record_group_key(r):
+    """Return (group_key, anchor_pos): the grouping two SVs must share to possibly merge, plus the
+    canonical anchor position used to bin the record into a blob.
 
+    INS and DUP collapse to INSDUP. For intra-chromosomal SVs the group is the chromosome and the
+    anchor is the record's own position. For TRA (inter-chromosomal) the group is the sorted
+    chromosome pair; merge_events canonicalises these so the merge anchor is the breakpoint on the
+    lexicographically *smaller* chromosome. We therefore bin a TRA by that canonical position, so the
+    two possible orientations of the same translocation (emitted as chrA->chrB in one sample and
+    chrB->chrA in another) bin to the same coordinate and land in the same blob.
+    """
+    svtype = r.info['SVTYPE']
+    svtype = 'INSDUP' if (svtype == "INS" or svtype == "DUP") else svtype
+    if svtype != "TRA":
+        return (svtype, r.chrom), r.pos
+    chrom2 = r.info["CHR2"]
+    anchor = r.pos if r.chrom <= chrom2 else int(r.info["CHR2_POS"])
+    return (svtype, f'{min(r.chrom, chrom2)}_{max(r.chrom, chrom2)}'), anchor
+
+
+def scan_sample_keys(item_path, name):
+    """Pass 1 worker: scan one input VCF and return its grouping keys.
+
+    Returns (name, keys, n_rows) where keys is a list of (group_key, anchor_pos). Order does not
+    matter - boundaries are computed from globally sorted anchors, and each record is binned to its
+    blob independently, so no pre-sorted input is required.
+    """
+    vcf = pysam.VariantFile(item_path, 'r')
+    keys = []
     rows = 0
     for r in vcf.fetch():
-        # if r.pos != 39095237:
-        #     continue
-
-        svtype = r.info['SVTYPE']
-        svtype = 'INSDUP' if (svtype == "INS" or svtype == "DUP") else svtype
-        chrom = r.chrom
-        if svtype != "TRA":
-            key = f'{svtype}_{chrom}', name
-        else:
-            chrom2 = r.info["CHR2"]
-            key = f'{svtype}_{min(chrom, chrom2)}_{max(chrom, chrom2)}', name
-        if key not in shards:
-            shards[key] = VcfWriter(os.path.join(wd, name + "~" + key[0] + f".vcf"), vcf.header, name)
-        shards[key].write(r)
+        keys.append(_record_group_key(r))
         rows += 1
-    for v in shards.values():
-        v.close()
     vcf.close()
-    if show_progress:
-        logging.info(f"Finished splitting {item_path}")
-    return list(shards.keys()), rows, name
+    return name, keys, rows
+
+
+def compute_blob_boundaries(per_sample_keys, merge_dist, target_rows):
+    """Decide blob boundaries from every sample's grouping keys.
+
+    All records are placed in one global order by (group_index, anchor_pos). A blob is a contiguous
+    run of ~target_rows records in that order. To keep blobs full even when individual chromosomes or
+    SV types are small, a blob is allowed to span *multiple* groups - the merge step handles mixed
+    groups in one file, and records in different groups can never merge anyway.
+
+    A blob is only ended at a *safe* boundary so no mergeable pair is split: either a group change
+    (records on different chromosomes / SV types never merge) or a within-group gap wider than
+    2 * merge_dist. We don't *force* a cut at every group change - only once the blob has reached
+    target_rows.
+
+    Returns:
+      group_order: dict group_key -> its global ordering index (groups in first-seen order).
+      boundaries:  sorted list of (group_index, start_pos) blob-start keys. A record maps to the last
+                   blob whose start key is <= its own (group_index, anchor_pos).
+    """
+    group_order = {}
+    group_positions = defaultdict(list)
+    for keys in per_sample_keys:
+        for gk, pos in keys:
+            if gk not in group_order:
+                group_order[gk] = len(group_order)
+            group_positions[gk].append(pos)
+
+    gap_threshold = 2 * int(merge_dist)
+    ordered_groups = sorted(group_order, key=lambda g: group_order[g])
+
+    # Flatten into one globally ordered stream of (group_index, pos).
+    stream = []
+    for gk in ordered_groups:
+        gi = group_order[gk]
+        positions = group_positions[gk]
+        positions.sort()
+        for p in positions:
+            stream.append((gi, p))
+
+    n = len(stream)
+    boundaries = []
+    if n == 0:
+        return group_order, boundaries
+
+    boundaries.append(stream[0])  # first blob starts at the first record
+    seg_count = 0
+    for i in range(n):
+        seg_count += 1
+        if i + 1 < n:
+            cur_gi, cur_pos = stream[i]
+            nxt_gi, nxt_pos = stream[i + 1]
+            # A safe place to start a new blob: different group, or a large within-group gap.
+            safe = (nxt_gi != cur_gi) or (nxt_pos - cur_pos > gap_threshold)
+            if seg_count >= target_rows and safe:
+                boundaries.append(stream[i + 1])
+                seg_count = 0
+    return group_order, boundaries
+
+
+def _blob_index_for(group_order, boundaries, gk, pos):
+    """Map a record's (group_key, pos) to its blob index via binary search over blob-start keys.
+
+    boundaries is the sorted list of (group_index, start_pos) starts; the owning blob is the last one
+    whose start key is <= (this record's group_index, pos).
+    """
+    target = (group_order[gk], pos)
+    lo, hi = 0, len(boundaries)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if boundaries[mid] <= target:
+            lo = mid + 1
+        else:
+            hi = mid
+    return lo - 1
+
+
+def write_blobs(wd, input_files, names_list, group_order, boundaries, show_progress):
+    """Pass 2 (serial): stream every input VCF and write each record to its blob file.
+
+    Each blob line is: <sample_name>\\t<original 10-column VCF record>. Running single-threaded keeps
+    one writer per blob with no locking; writing is I/O-bound while the expensive merge stays
+    parallel. Returns (blob_paths_in_order, input_rows).
+    """
+    blob_paths = [os.path.join(wd, f"blob_{i}.blob") for i in range(len(boundaries))]
+    handles = [open(p, 'w') for p in blob_paths]
+    input_rows = {}
+    try:
+        for name, item in zip(names_list, input_files):
+            vcf = pysam.VariantFile(item, 'r')
+            rows = 0
+            for r in vcf.fetch():
+                gk, anchor = _record_group_key(r)
+                bi = _blob_index_for(group_order, boundaries, gk, anchor)
+                line = str(r)  # full VCF record line incl. trailing newline; columns 0-9 only (one sample)
+                if not line.endswith("\n"):
+                    line += "\n"
+                handles[bi].write(name + "\t" + line)
+                rows += 1
+            vcf.close()
+            input_rows[name] = rows
+            if show_progress:
+                logging.info(f"Finished splitting {item}")
+    finally:
+        for h in handles:
+            h.close()
+    return blob_paths, input_rows
 
 
 def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list):
@@ -733,52 +907,70 @@ def shard_data(args, input_files, Global, show_progress):
     to_delete = []
     seen_names, names_list = get_names_list(input_files, ignore_csv=False)
 
-    # Split files into shards
-    if show_progress:
-        logging.info("Splitting files into shards")
-    job_args = []
-    for name, item in zip(names_list, input_files):
-        job_args.append((args['wd'], item, name, Global, show_progress))
-    job_labels = [f"split sample {name} ({item})" for name, item in zip(names_list, input_files)]
-    results = run_process_jobs(shard_job, job_args, args['procs'], job_labels)
-    input_rows = {}
-    job_blocks = defaultdict(list)
-    for block_keys, rows, sample_name in results:
-        input_rows[sample_name] = rows
-        for block_id, _ in block_keys:
-            job_blocks[block_id].append(sample_name)
-            to_delete.append(os.path.join(args['wd'], block_id + '_merged.vcf'))
+    target_rows = args.get("target_rows_per_job", 50000)
 
-    # Set upper bound on open files
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    resource.setrlimit(resource.RLIMIT_NOFILE, (min(hard, max(Global.soft, soft) * len(input_files)), hard))
-
-    # Process shards
+    # Pass 1 (parallel): scan every input for its sorted grouping keys, validating sort order.
     if show_progress:
-        logging.info("Processing shards")
+        logging.info("Scanning input files")
+    scan_args = [(item, name) for name, item in zip(names_list, input_files)]
+    scan_labels = [f"scan sample {name} ({item})" for name, item in zip(names_list, input_files)]
+    scan_results = run_process_jobs(scan_sample_keys, scan_args, args['procs'], scan_labels)
+    # scan_results come back in job order, which matches names_list/input_files order.
+    per_sample_keys = [keys for _, keys, _ in scan_results]
+
+    # Compute blob boundaries: contiguous, ~target_rows-sized spans cut only at safe boundaries.
+    group_order, boundaries = compute_blob_boundaries(per_sample_keys, args["merge_dist"], target_rows)
+    logging.info(f"Merging into {len(boundaries)} blobs")
+
+    # Capture a reference header (and contig lines) from the first input for output writing.
+    ref_header, ref_contigs, _ = _read_vcf_header(input_files[0])
+    contig_names = "\n" + ref_contigs.strip() if ref_contigs else ref_contigs
+
+    # Pass 2 (serial): stream all inputs and write each record to its blob file.
+    if show_progress:
+        logging.info("Writing blobs")
+    blob_paths, input_rows = write_blobs(args['wd'], input_files, names_list, group_order, boundaries,
+                                         show_progress)
+    to_delete += blob_paths
+
+    # Pass 3 (parallel): merge each blob independently.
+    if show_progress:
+        logging.info("Processing blobs")
+    needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby",
+                                        "merge_across", "out_format", "separate", "verbosity", "add_kind",
+                                        "progressive"]}
     job_args2 = []
-    needed_args = {k: args[k] for k in ["wd", "metrics", "merge_within", "merge_dist", "collapse_nearby", "merge_across", "out_format", "separate", "verbosity", "add_kind", "progressive"]}
+    job_sizes = []
+    job_labels2 = []
     merged_outputs = []
-    for block_id, names in job_blocks.items():
-        job_files = glob.glob(os.path.join(args['wd'], '*' + block_id + '.vcf'))
-        to_delete += job_files
-        srt_keys = {os.path.basename(i).split("~")[0]: i for i in job_files}
-        file_targets = tuple(srt_keys[n] for n in names)
-        total_size = sum(os.path.getsize(f) for f in file_targets)
+    for bi, blob_path in enumerate(blob_paths):
+        if os.stat(blob_path).st_size == 0:
+            continue
         target_args = deepcopy(needed_args)
-        fout = os.path.join(args['wd'], block_id + '_merged.vcf')
-        merged_outputs.append(fout)
+        fout = os.path.join(args['wd'], f'blob_{bi}_merged.vcf')
         target_args["svs_out"] = fout
-        job_args2.append((target_args, file_targets, seen_names, names, False, show_progress, block_id, total_size))
-    job_args2.sort(key=lambda x: x[-1], reverse=True)  # Biggest jobs first
-    job_labels2 = [x[-2] for x in job_args2]
-    job_labels2 = [f"merge block {label}" for label in job_labels2]
-    job_args2 = [args[:-1] for args in job_args2]
+        merged_outputs.append(fout)
+        to_delete.append(fout)
+        # log_messages=False and show_progress=False: per-job start/finish lines are emitted by
+        # run_process_jobs so they stay one-per-job instead of interleaving across worker processes.
+        job_args2.append((target_args, [blob_path], seen_names, names_list, False, False,
+                          f"blob_{bi}", ref_header, contig_names))
+        job_sizes.append(os.path.getsize(blob_path))
+        job_labels2.append(f"merge blob_{bi}")
+
+    # Biggest jobs first so a large blob never tails the schedule alone.
+    order = sorted(range(len(job_args2)), key=lambda i: job_sizes[i], reverse=True)
+    job_args2 = [job_args2[i] for i in order]
+    job_labels2 = [job_labels2[i] for i in order]
     if args['procs'] > 1:
-        run_process_jobs(process_file_list, job_args2, args['procs'], job_labels2)
+        run_process_jobs(process_file_list, job_args2, args['procs'], job_labels2, progress=show_progress)
     else:
-        for ja in job_args2:
+        for ji, (ja, label) in enumerate(zip(job_args2, job_labels2)):
+            if show_progress:
+                logging.info(f"[{ji + 1}/{len(job_args2)}] started {label}")
             process_file_list(*ja)
+            if show_progress:
+                logging.info(f"[{ji + 1}/{len(job_args2)}] finished {label}")
 
     # Make a header with all the samples in
     vcf_header = None
