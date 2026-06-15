@@ -220,7 +220,7 @@ cdef class Py_IntSet:
 cdef int cigar_exists(AlignedSegment r) noexcept nogil:
     cigar_l = r._delegate.core.n_cigar
     if cigar_l > 0:
-        return 0
+        return 1
     return 0
 
 
@@ -411,15 +411,32 @@ cdef float position_distance(int x1, int x2, int y1, int y2) noexcept nogil:
     return c_fabs(center1 - center2)
 
 
+cdef tuple _EVENTRESULT_FIELDS = None
+
+
+cdef tuple _eventresult_fields():
+    global _EVENTRESULT_FIELDS
+    if _EVENTRESULT_FIELDS is None:
+        e = EventResult()
+        _EVENTRESULT_FIELDS = tuple(
+            v for v in dir(e) if "__" not in v and v != "to_dict" and v != "from_dict"
+        )
+    return _EVENTRESULT_FIELDS
+
+
 def to_dict(self):
-    return {v: self.__getattribute__(v) for v in dir(self) if "__" not in v and v != "to_dict" and v != "from_dict"}
+    if isinstance(self, dict):
+        return self.copy()
+    return {v: self.__getattribute__(v) for v in _eventresult_fields()}
 
 
 def from_dict(self, d):
-    allowed = python_set(dir(self))
-    for k, v in d.items():
-        if k in allowed:
-            self.__setattr__(k, v)
+    if isinstance(self, dict):
+        self.update(d)
+        return self
+    for k in _eventresult_fields():
+        if k in d:
+            self.__setattr__(k, d[k])
     return self
 
 
@@ -450,7 +467,7 @@ cdef class EventResult:
         return str(to_dict(self))
 
 
-def filter_transcript_gaps(events, gaps_file=""): 
+def filter_transcript_gaps(events, gaps_file=""):
     if not gaps_file:
         return events
     cdef TranscriptData transcript_gaps = TranscriptData()
@@ -458,11 +475,16 @@ def filter_transcript_gaps(events, gaps_file=""):
     cdef int i
     transcript_gaps.readBed(str_b)
     kept = []
+    cdef dict chr_cache = {}
+    cdef object chrom_b
     for e in events:
         if e.svtype in ('TRA', 'BND'):
             kept.append(e)
             continue
-        str_b = e.chrA.encode('ascii')
-        if not transcript_gaps.hasRefSkipGap(str_b, e.posA, e.posB, tolerance=10):
+        chrom_b = chr_cache.get(e.chrA)
+        if chrom_b is None:
+            chrom_b = e.chrA.encode('ascii')
+            chr_cache[e.chrA] = chrom_b
+        if not transcript_gaps.hasRefSkipGap(chrom_b, e.posA, e.posB, tolerance=10):
             kept.append(e)
     return kept

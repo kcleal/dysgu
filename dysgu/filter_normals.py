@@ -94,19 +94,19 @@ def load_bams(args, pths, vcf_sample, warn=True):
 
 def load_samples(args, pths):
     vcf = pysam.VariantFile(args['input_vcf'])
-    vcf_sample = list(vcf.header.samples)
-    if len(vcf_sample) != 1:
+    vcf_samples = list(vcf.header.samples)
+    if len(vcf_samples) != 1:
         if args['target_sample'] == "":
             logging.exception(
-                f"Input vcf {args['input_vcf']} has {len(vcf_sample)} samples: {vcf_sample}, but expected only 1. Use --target-sample to select sample to filter")
+                f"Input vcf {args['input_vcf']} has {len(vcf_samples)} samples: {vcf_samples}, but expected only 1. Use --target-sample to select sample to filter")
             quit()
         else:
-            logging.info(f"Multi-sample input file with samples: {vcf_sample}")
+            logging.info(f"Multi-sample input file with samples: {vcf_samples}")
             vcf_sample = args["target_sample"]
-            if not vcf_sample in vcf_sample:
-                raise ValueError(f"--target-sample was not in vcf header samples: {vcf_sample}")
+            if vcf_sample not in vcf_samples:
+                raise ValueError(f"--target-sample was not in vcf header samples: {vcf_samples}")
     else:
-        vcf_sample = vcf_sample[0]
+        vcf_sample = vcf_samples[0]
     bams = load_bams(args, pths, vcf_sample)
     logging.info(f"Filtering {args['input_vcf']} against bams {list(bams.keys())}")
     if len(bams) == 0:
@@ -145,23 +145,32 @@ def infer_paired_end(bams):
     return is_paired_end
 
 
+_tid_cache = {}
+
+
 def vcf_chroms_to_tids(r, infile):
     if infile:
-        chrom = infile.gettid(r.chrom)
-        # try and switch between "chr" representation
-        if chrom == -1:
-            if "chr" in r.chrom:
-                chrom = infile.gettid(r.chrom[3:])
+        def _get_tid(name):
+            tid = _tid_cache.get(name)
+            if tid is not None:
+                return tid
+            tid = infile.gettid(name)
+            if tid != -1:
+                _tid_cache[name] = tid
+                return tid
+            if "chr" in name:
+                alt = name[3:]
             else:
-                chrom = infile.gettid("chr" + r.chrom)
+                alt = "chr" + name
+            tid = infile.gettid(alt)
+            _tid_cache[name] = tid
+            _tid_cache[alt] = tid
+            return tid
+
+        chrom = _get_tid(r.chrom)
         if "CHROM2" in r.info:
             chrom2_info = r.info["CHROM2"]
-            chrom2 = infile.gettid(chrom2_info)
-            if chrom2 == -1:
-                if "chr" in chrom2_info:
-                    chrom2 = infile.gettid(chrom2_info[3:])
-                else:
-                    chrom2 = infile.gettid("chr" + chrom2_info)
+            chrom2 = _get_tid(chrom2_info)
         else:
             chrom2 = chrom
         if chrom == -1 or chrom2 == -1:
@@ -920,16 +929,6 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
     NMbase = 0
 
     for is_paired_end, aln in iterate_bams(bams, r.chrom, posA, r.chrom, posB, pad, bam_is_paired_end):
-        n_aligns += 1
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(aln)
-        if a_bases > 0:
-            sum_n_small_gap += n_small_gaps / a_bases
-        if aln.has_tag("NM"):
-            if a_bases:
-                nm = float(aln.get_tag("NM"))
-                sum_edit_distance += nm / a_bases
-                NMbase += (nm - large_gaps) / a_bases
-
         if is_paired_end:
             a_posA = min(aln.pos, aln.pnext)
             a_posB = max(aln.pos, aln.pnext)
@@ -952,6 +951,15 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
             cache_nearby_soft_clip(posA, posB, aln, ct, svtype, cached, distance=50, clip_length=3)
 
         else:
+            n_aligns += 1
+            a_bases, large_gaps, n_small_gaps = n_aligned_bases(aln)
+            if a_bases > 0:
+                sum_n_small_gap += n_small_gaps / a_bases
+            if aln.has_tag("NM"):
+                if a_bases:
+                    nm = float(aln.get_tag("NM"))
+                    sum_edit_distance += nm / a_bases
+                    NMbase += (nm - large_gaps) / a_bases
             cipos95 = r.info["CIPOS95"] if "CIPOS95" in r.info else 0
             if matching_gap(posA, posB, aln, svtype, is_insertion, svlen, pos_threshold=30, span_threshold=0.75,
                             paired_end=False, cipos95=cipos95):
@@ -1027,6 +1035,8 @@ def run_filtering(args):
     infile = list(bams.values())[0] if bams else None
     intervals = make_interval_tree(args, infile, sample_name, normal_vcfs)
     bam_is_paired_end = infer_paired_end(bams)
+    for b in bams.values():
+        b.close()
     bams = load_bams(args, pths, sample_name, warn=False)
     pad = args["interval_size"]
     keep_all = args["keep_all"]
@@ -1038,7 +1048,7 @@ def run_filtering(args):
     max_divergence = args['max_divergence']
     filter_results = defaultdict(int)
     written = 0
-    samp = list(vcf.header.samples)[0]
+    samp = sample_name
 
     for idx, r in enumerate(vcf):
         # if r.id != "207736":
@@ -1081,6 +1091,7 @@ def run_filtering(args):
         posB = get_posB(r)
         if chrom_tid == -1:
             logging.exception(f'Chromosome name {r.chrom} not found in bam file header')
+            continue
 
         if check_for_interval_overlap(intervals, r, chrom_tid, chrom2_tid, posB, filter_results):
             if keep_all:
@@ -1112,6 +1123,12 @@ def run_filtering(args):
                 out_vcf.write(r)
             filter_results[f'{reason}'] += 1
     out_vcf.close()
+    vcf.close()
+    for b in bams.values():
+        b.close()
+    if normal_vcfs:
+        for nv in normal_vcfs:
+            nv.close()
     logging.info(f'Filter results: {dict(sorted(filter_results.items()))}')
     logging.info("dysgu filter {} complete, n={}, h:m:s, {}".format(args['input_vcf'],
                                                                     written,

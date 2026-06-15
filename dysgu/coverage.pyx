@@ -49,13 +49,16 @@ def auto_max_cov(mc, bname):
         if bname == "-":
             raise NotImplementedError("Not possible to use max-cov == 'auto' with stdin")
         aln_f = pysam.AlignmentFile(bname)
-        if aln_f.is_cram:
-            raise NotImplementedError("Not possible to use index_stats on a cram file")
-        mc, rl = index_stats(aln_f)
-        mc = round(mc) * 6
-        if mc < 5:
-            logging.critical("Max-cov estimated as < 5? Set manually to proceed")
-        logging.info("Auto max-cov estimated {}x".format(mc))
+        try:
+            if aln_f.is_cram:
+                raise NotImplementedError("Not possible to use index_stats on a cram file")
+            mc, rl = index_stats(aln_f)
+            mc = round(mc) * 6
+            if mc < 5:
+                logging.critical("Max-cov estimated as < 5? Set manually to proceed")
+            logging.info("Auto max-cov estimated {}x".format(mc))
+        finally:
+            aln_f.close()
     else:
         try:
             mc = int(mc)
@@ -139,6 +142,8 @@ cdef class GenomeScanner:
         cdef bytes out_path
         cdef bint good_read
         cdef int mq_thresh = self.mapq_threshold
+        cdef int clip_length = self.clip_length
+        cdef int min_within_size = self.min_within_size
         cdef AlignedSegment aln
         cdef uint32_t cigar_value
         cdef uint32_t cigar_l
@@ -194,13 +199,13 @@ cdef class GenomeScanner:
                         cigar_value = cigar_p[i]
                         opp = <int> cigar_value & 15
                         length = <int> cigar_value >> 4
-                        if opp == 4 and length >= self.clip_length:
+                        if opp == 4 and length >= clip_length:
                             good_read = True
                         elif opp == 2 or opp == 3:
                             index_start += length
-                            if length >= self.min_within_size:
+                            if length >= min_within_size:
                                 good_read = True
-                        elif opp == 1 and length >= self.min_within_size:
+                        elif opp == 1 and length >= min_within_size:
                             good_read = True
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
@@ -223,7 +228,8 @@ cdef class GenomeScanner:
             # Reads must be fed into graph in sorted order, find regions of interest first
             intervals_to_check = []  # Containing include_regions, and also mate pairs
             pad = 1000
-            regions = [j.strip().split("\t")[:3] for j in open(self.include_regions, "r") if j[0] != "#"]
+            with open(self.include_regions, "r") as f:
+                regions = [j.strip().split("\t")[:3] for j in f if j.strip() and j[0] != "#"]
             for c, s, e in regions:
                 intervals_to_check.append((c, int(s), int(e)))
             for c, s, e in regions:
@@ -275,13 +281,13 @@ cdef class GenomeScanner:
                         cigar_value = cigar_p[i]
                         opp = <int> cigar_value & 15
                         length = <int> cigar_value >> 4
-                        if opp == 4 and length >= self.clip_length:
+                        if opp == 4 and length >= clip_length:
                             good_read = True
                         elif opp == 2 or opp == 3:
                             index_start += length
-                            if length >= self.min_within_size:
+                            if length >= min_within_size:
                                 good_read = True
-                        elif opp == 1 and length >= self.min_within_size:
+                        elif opp == 1 and length >= min_within_size:
                             good_read = True
                         elif opp == 0 or opp == 7 or opp == 8:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
@@ -345,27 +351,6 @@ cdef class GenomeScanner:
                 if self.no_tell:
                     self.staged_reads.append((a, tell))
                     # self._add_to_bin_buffer(a, tell)
-                    if a.rname != self.current_tid:
-                        if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
-                            out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path.outpath, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
-                            self.cpp_cov_track.write_track(out_path)
-                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(a.rname))
-                        self.current_tid = a.rname
-                        self.cpp_cov_track.set_cov_array(chrom_length)
-                    index_start = 0
-                    pos = a.pos
-                    cigar_l = a._delegate.core.n_cigar
-                    cigar_p = bam_get_cigar(a._delegate)
-                    for i in range(cigar_l):
-                        cigar_value = cigar_p[i]
-                        opp = <int> cigar_value & 15
-                        length = <int> cigar_value >> 4
-                        if opp == 2 or opp == 3:
-                            index_start += length
-                        elif opp == 0 or opp == 7 or opp == 8:
-                            end = index_start + length
-                            self.cpp_cov_track.add(pos + index_start, pos + end)
-                            index_start += length
             if find_divergence:
                 if len(divergence) < 20000:
                     non_match_count = 0
@@ -406,7 +391,6 @@ cdef class GenomeScanner:
             logging.critical("Cant infer read insert and size, no reads?")
             return -1, -1
         if find_divergence:
-            div = divergence[-max(0, len(divergence) - 500):]
             mean = np.mean(divergence)
             divergence_upper_bound = min(1, max(2.5 * mean, mean + (2.5 * np.std(divergence))))
             logging.info(f"Inferred sequence divergence upper bound {round(divergence_upper_bound,4)}")
@@ -573,7 +557,7 @@ def get_raw_coverage_information(events, regions, regions_depth):
                         switch = True
                 else:
                     kind = "inter-regional"
-                    if r.chrA != sorted([r.chrA, r.chrB])[0]:
+                    if r.chrA > r.chrB:
                         switch = True
             else:
                 kind = "inter-regional"
@@ -629,11 +613,11 @@ def transcriptome_effective_depth(
     # Find transcripts overlapping breakpoint
     txs = tr_intervals.get(chrom, None)
     if txs is None:
-        return 0.0, 0.0
+        return 0.0, 0.0, False
 
     hits = txs.search_values(pos, pos + 1)
     if not hits:
-        return 0.0, 0.0
+        return 0.0, 0.0, False
 
     # Collect bin indices from exon blocks near breakpoint
     lo = pos - flank
@@ -654,12 +638,13 @@ def transcriptome_effective_depth(
                 bins.add(b)
 
     if len(bins) < min_bins:
-        return 0.0, 0.0
+        return 0.0, 0.0, True
 
-    depths = np.fromiter((chrom_depth[b] for b in bins), dtype=np.int32)
+    bins_arr = np.fromiter(bins, dtype=np.intp)
+    depths = chrom_depth[bins_arr]
     nz = depths[depths > 0]
     if nz.size == 0:
-        return 0.0, 0.0
+        return 0.0, 0.0, True
 
     # Use bins above noise floor
     thr = float(np.percentile(nz, 1))
@@ -667,9 +652,9 @@ def transcriptome_effective_depth(
         thr = 1.0
     kept = nz[nz >= thr]
     if kept.size == 0:
-        return float(nz.mean()), float(nz.max())
+        return float(nz.mean()), float(nz.max()), True
 
-    return float(kept.mean()), float(kept.max())
+    return float(kept.mean()), float(kept.max()), True
 
 
 def load_transcript_blocks(transcript_blocks_path: str):
@@ -713,14 +698,14 @@ def load_transcript_blocks(transcript_blocks_path: str):
 def fallback_genomic(chrom, pos, regions_depth):
     if chrom in regions_depth.chrom_cov_arrays:
         mean_cov, mx = calculate_coverage(pos - 10000, pos + 10000, regions_depth.chrom_cov_arrays[chrom], ignore_zero=1)
-        return float(mean_cov), float(mx)
-    return 0.0, 0.0
+        return float(mean_cov), float(mx), False
+    return 0.0, 0.0, False
 
 
 def depth_at(chrom, pos, regions_depth, tr_intervals, blocks_by_tx):
     if chrom not in regions_depth.chrom_cov_arrays:
-        return 0.0, 0.0
-    mean_cov, mx = transcriptome_effective_depth(
+        return 0.0, 0.0, False
+    mean_cov, mx, overlaps = transcriptome_effective_depth(
         chrom, pos,
         regions_depth.chrom_cov_arrays[chrom],
         tr_intervals, blocks_by_tx,
@@ -730,7 +715,7 @@ def depth_at(chrom, pos, regions_depth, tr_intervals, blocks_by_tx):
     )
     if mean_cov == 0.0:
         return fallback_genomic(chrom, pos, regions_depth)
-    return mean_cov, mx
+    return mean_cov, mx, overlaps
 
 
 def common_transcript_overlap(tr_intervals, chrA, posA, chrB, posB) -> bool:
@@ -745,7 +730,7 @@ def common_transcript_overlap(tr_intervals, chrA, posA, chrB, posB) -> bool:
 
 
 def in_any_transcript(tr_intervals, chrom, pos) -> bool:
-    if chrom not in tr_intervals[chrom]:
+    if chrom not in tr_intervals:
         return False
     return tr_intervals[chrom].has_overlaps(pos, pos + 1)
 
@@ -817,8 +802,8 @@ def get_raw_coverage_information_transcriptome(events, regions, regions_depth, t
     new_events = []
     for r in events:
 
-        reads_left, max_left = depth_at(r.chrA, r.posA, regions_depth, tr_intervals, blocks_by_tx)
-        reads_right, max_right = depth_at(r.chrB, r.posB, regions_depth, tr_intervals, blocks_by_tx)
+        reads_left, max_left, overlaps_A = depth_at(r.chrA, r.posA, regions_depth, tr_intervals, blocks_by_tx)
+        reads_right, max_right, overlaps_B = depth_at(r.chrB, r.posB, regions_depth, tr_intervals, blocks_by_tx)
 
         reads_10kb = reads_left if reads_left > reads_right else reads_right
         max_depth = max(max_left, max_right)
@@ -837,8 +822,8 @@ def get_raw_coverage_information_transcriptome(events, regions, regions_depth, t
         covB = regions_depth.chrom_cov_arrays[r.chrB]
 
         # Choose max bins based on whether each breakpoint lies in any transcript
-        max_left = max_bins_in_tx if in_any_transcript(tr_intervals, r.chrA, r.posA) else max_bins_out_tx
-        max_right = max_bins_in_tx if in_any_transcript(tr_intervals, r.chrB, r.posB) else max_bins_out_tx
+        max_left = max_bins_in_tx if overlaps_A else max_bins_out_tx
+        max_right = max_bins_in_tx if overlaps_B else max_bins_out_tx
 
         direction_A = "left" if r.join_type[0] == '3' else "right"
         direction_B = "left" if r.join_type[-1] == '3' else "right"

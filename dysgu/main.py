@@ -122,7 +122,7 @@ def apply_preset(kwargs):
     if kwargs["mode"] == "pacbio": 
         logging.warning("Using --mode pacbio is deprecated. Use 'pacbio-sequel2' or 'pacbio-revio' instead. Mode will be set as 'pacbio-revio'")
         kwargs["mode"] = "pacbio-revio"
-    elif kwargs == ["nanopore"]:
+    elif kwargs["mode"] == "nanopore":
         logging.warning("Using --mode nanopore is deprecated. Use 'nanopore-r9' or 'nanopore-r10' instead. Mode will be set as 'nanopore-r10'")
         kwargs["mode"] = "nanopore-r10"
     if kwargs["mode"] != "pe":
@@ -186,7 +186,7 @@ def cli():
 @click.argument('working_directory', required=True, type=click.Path())
 @click.argument('bam', required=True, type=click.Path(exists=False))
 @click.option("--transcripts", help="A gff3 file of known transcripts. Required for RNAseq data.",
-              required=False, type=click.Path(), hidden=True)
+              required=False, type=click.Path())
 @click.option("--sites", help="A vcf file of known variant sites. All sites will be genotyped in the output vcf",
               required=False, type=click.Path())
 @click.option("--sites-prob", help="Prior probability that a matching variant in --sites is true",
@@ -219,7 +219,7 @@ def cli():
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {deafults['clip_length']}]", type=int, callback=add_option_set)
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
 @click.option('--max-cov', help=f"Genomic regions with coverage > max-cov discarded."
                                 f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Set to -1 to ignore",
               type=str, callback=add_option_set)
@@ -381,7 +381,7 @@ def get_reads(ctx, **kwargs):
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {deafults['clip_length']}]", type=int, callback=add_option_set)
+@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
 @click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
                                 f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Regions with > max-cov that do no overlap 'include' are discarded. Set to -1 to ignore.",
               type=str, callback=add_option_set)

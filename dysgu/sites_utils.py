@@ -25,7 +25,7 @@ def parse_variant_seqs_dysgu(r, svt, chrom, start, chrom2, stop, paired_end, ref
             if "LEFT_SVINSSEQ" in r.info and len(r.info["LEFT_SVINSSEQ"]) > 0:
                 a_left = r.info["LEFT_SVINSSEQ"]
             if "RIGHT_SVINSSEQ" in r.info and len(r.info["RIGHT_SVINSSEQ"]) > 0:
-                a_left = r.info["RIGHT_SVINSSEQ"]
+                a_right = r.info["RIGHT_SVINSSEQ"]
 
     elif svt == "DEL":
         if len(r.ref) > 1:
@@ -84,29 +84,30 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             not_parsed.append(svt)
             continue
 
-        chrom = infile.gettid(r.chrom)
+        tid_cache = {}
 
-        # try and switch between "chr" representation
-        if chrom == -1:
-            if "chr" in r.chrom:
-                chrom = infile.gettid(r.chrom[3:])
+        def _get_tid(name):
+            if name in tid_cache:
+                return tid_cache[name]
+            tid = infile.gettid(name)
+            if tid != -1:
+                tid_cache[name] = tid
+                return tid
+            if "chr" in name:
+                alt = name[3:]
             else:
-                chrom = infile.gettid("chr" + r.chrom)
+                alt = "chr" + name
+            tid = infile.gettid(alt)
+            tid_cache[name] = tid
+            tid_cache[alt] = tid
+            return tid
 
-        chrom2 = infile.gettid(chrom2_info)
-        if chrom2 == -1:
-            if "chr" in chrom2_info:
-                chrom2 = infile.gettid(chrom2_info[3:])
-            else:
-                chrom2 = infile.gettid("chr" + chrom2_info)
+        chrom = _get_tid(r.chrom)
+        chrom2 = _get_tid(chrom2_info)
 
         if chrom == -1 or chrom2 == -1:
             logging.warning(f"Chromosome from record in --sites not found in input file header CHROM={r.chrom}, POS={r.start}, CHROM2={chrom2_info}, END={r.stop}")
-
-        if isinstance(chrom, str):
-            raise ValueError(f"Could not find {chrom} in bam file header")
-        if isinstance(chrom2, str):
-            chrom2 = chrom
+            continue
 
         start = r.start  # note pysam converts to zero-based index like bam
         stop = r.stop
@@ -152,6 +153,7 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
     if not_parsed:
         logging.warning("Some records had incompatible SVTYPE: {}".format(
             str({k: v for k, v in Counter(not_parsed).items()})))
+    vcf.close()
     return {k: deque(sorted(v, key=lambda x: x[1])) for k, v in recs.items()}
 
 
@@ -159,7 +161,7 @@ def append_uncalled(df, site_adder, infile, parse_probs):
     if site_adder is None:
         raise ValueError("Sites was None type")
     # add 0/0 genotype to uncalled variants in --sites
-    found_sites = set([i for i in df["site_info"] if i])
+    found_sites = {i for i in df["site_info"] if i}
     uncalled = []
     for chrom, sites in site_adder.sites.items():
         for k in sites:

@@ -597,7 +597,7 @@ cdef class TemplateEdges:
         self.templates_s[key].resize(self.templates_s[key].size() + 1)
         cdef TemplateNode *t = &self.templates_s[key].back()
         t.query_start = query_start
-        t.flag = t.flag
+        t.flag = flag
         t.node = node
 
 
@@ -647,7 +647,7 @@ cdef void add_template_edges(Py_SimpleGraph G, TemplateEdges template_edges):
             else:
                 if n2 > 1:
                     read2_aligns.sort()
-                for (_, node, flag) in read1_aligns:
+                for (_, node, flag) in read2_aligns:
                     if not (flag & 2304):
                         primary2 = node
                         break
@@ -729,6 +729,9 @@ cdef class NodeToName:
         cdef NodeNameItem *nd
         nd = &self.stored_nodes[idx]
         return NodeName(nd.hash_val, nd.flag, nd.pos, nd.chrom, nd.tell, nd.cigar_index, nd.event_pos)
+
+    cpdef int get_cigar_index(self, int idx):
+        return self.stored_nodes[idx].cigar_index
 
     cdef bint same_template(self, int query_node, int target_node):
         if self.stored_nodes[query_node].hash_val == self.stored_nodes[target_node].hash_val:
@@ -1200,7 +1203,6 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
     cdef int pos2 = r.pnext
     cdef int flag = r.flag
     cdef int left_clip, right_clip
-    cdef str qname = r.qname
     cdef ReadEnum_t inferred_clip_type
     cdef uint64_t v
     cdef bint success
@@ -1379,19 +1381,19 @@ class SiteAdder:
             for i in range(left_index):
                 self.scope.pop(0)
         left_index = self.scope.bisect_left(self.lookup(pos))
-        if left_index == len(self.scope):
-            p = self.scope[left_index - 1]
-        elif left_index != len(self.scope) - 1:
-            left_p = self.scope[left_index]
-            right_p = self.scope[left_index + 1]
+        if left_index == 0:
+            p = self.scope[0]
+        elif left_index == len(self.scope):
+            p = self.scope[-1]
+        else:
+            left_p = self.scope[left_index - 1]
+            right_p = self.scope[left_index]
             left_dis = abs(left_p.start - pos)
             right_dis = abs(right_p.start - pos)
             if left_dis <= right_dis:
                 p = left_p
             else:
                 p = right_p
-        else:
-            p = self.scope[left_index]
         if abs(p.start - pos) <= cluster_dist:
             return self.sites_index_r[p]
         else:
@@ -1869,7 +1871,6 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     if min_support >= 3 and len(component) == 1 and not sites_index:
         return None
 
-    cdef NodeName key
     for v in component:
         # Add information from --sites, keep any read found that link to --sites variants
         if sites_index and v in sites_index:
@@ -1881,14 +1882,19 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
             continue
         if procs == 1 and v in read_buffer:
             reads[v] = read_buffer[v]
-        key = node_to_name.getitem(v)
-        if key.cigar_index != -1:
+        if node_to_name.get_cigar_index(v) != -1:
             support_estimate += 2
         else:
             support_estimate += 1
-        n2n[v] = key
     if support_estimate < min_support:
         return None
+
+    cdef NodeName key
+    for v in component:
+        if sites_index and v in sites_index:
+            continue
+        key = node_to_name.getitem(v)
+        n2n[v] = key
 
     # Explore component for locally interacting nodes; create partitions using these
     partitions = get_partitions(G, component)

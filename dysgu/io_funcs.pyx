@@ -13,8 +13,9 @@ import os
 import sys
 import gzip
 import random
+from operator import itemgetter
 
-from libc.stdlib cimport malloc
+from libc.stdlib cimport malloc, free
 
 
 cdef char *basemap = [ b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
@@ -23,7 +24,7 @@ cdef char *basemap = [ b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b
                        b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
                        b'\0', b'T', b'\0',  b'G', b'\0', b'\0', b'\0',  b'C', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',  b'N', b'\0',
                        b'\0', b'\0', b'\0', b'\0',  b'A',  b'A', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
-                       b'\0', b't', b'\0',  b'g', b'\0', b'\0', b'\0',  b'c', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0',
+                       b'\0', b't', b'\0',  b'g', b'\0', b'\0', b'\0',  b'c', b'\0', b'\0', b'\0', b'\0', b'\0', b'\0', b'n', b'\0',
                        b'\0', b'\0', b'\0', b'\0',  b'a',  b'a' ]
 
 np.random.seed(0)
@@ -38,7 +39,9 @@ cpdef str reverse_complement(str seq, int seq_len):
     cdef int i = 0
     for i in range(seq_len):
         seq_dest[seq_len - i - 1] = basemap[<int>seq_src[i]]
-    return seq_dest[:seq_len].decode('ascii')
+    cdef str result = seq_dest[:seq_len].decode('ascii')
+    free(seq_dest)
+    return result
 
 
 def bed_iter(path):
@@ -107,7 +110,8 @@ def get_include_reads(include_regions, bam):
     if not include_regions:
         for r in bam:
             yield r
-    regions = [i.strip().split("\t")[:3] for i in open(include_regions, "r") if i[0] != "#"]
+    with open(include_regions, "r") as f:
+        regions = [i.strip().split("\t")[:3] for i in f if i[0] != "#"]
     for c, s, e in regions:
         logging.info("Reading {}:{}-{}".format(c, s, e))
         for r in bam.fetch(c, int(s), int(e)):
@@ -135,6 +139,10 @@ cpdef list col_names(small_output):
 def prob_to_phred(prob, max_qual=30):
     # Apply sigmoid-like transformation to stretch the middle range
     transformed_prob = 1 - (1 - prob) * (1 - prob)  # Square the error probability
+    if transformed_prob >= 1.0:
+        return str(max_qual)
+    if transformed_prob <= 0.0:
+        return "0"
     qual = min(max_qual, int(-10 * np.log10(1 - transformed_prob)))
     return str(round(qual))
 
@@ -262,8 +270,8 @@ def make_main_record(r, dysgu_version, index, format_f, df_rows, add_kind, small
         fmt_keys = "GT:GQ:PSET:HP:AF:NMP:NMS:NMB:MAPQP:MAPQS:NP:MAS:SU:WR:PE:SR:SC:BND:SQC:SCW:SQR:BE:COV:MCOV:LNK:NEIGH:NEIGH10:RB:PS:MS:SBT:NG:NSA:NXA:NMU:NDC:RMS:RED:BCC:FCC:STL:RAS:FAS:ICN:OCN:CMP:RR:JIT:PROB"
 
     if "variant_seq" in r and isinstance(r["variant_seq"], str):
-        if r['svtype'] == "INS" or r.variant_seq:
-            alt_field = r.variant_seq.upper()
+        if r['svtype'] == "INS" or r["variant_seq"]:
+            alt_field = r["variant_seq"].upper()
         else:
             alt_field = f"<{r['svtype']}>"
     else:
@@ -318,7 +326,7 @@ def get_fmt(r, small_output):
         return v
 
 
-def gen_format_fields(r, df, names, n_fields, small_output):
+def gen_format_fields(r, idx_to_row, names, n_fields, small_output):
     if len(names) == 1:
         return {0: get_fmt(r, small_output)}, {}
     cols = {}
@@ -333,8 +341,8 @@ def gen_format_fields(r, df, names, n_fields, small_output):
         else:
             partner_ids = [int(i.split(",")[1]) for i in partners.split("|")]
         for idx in partner_ids:
-            if idx in df.index:  # might be already dropped
-                r2 = df.loc[idx]
+            if idx in idx_to_row:  # might be already dropped
+                r2 = idx_to_row[idx]
                 cols[r2["table_name"]] = r2
     if "table_name" in r:
         cols[r["table_name"]] = r
@@ -476,17 +484,23 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
         df["contigA"] = [''] * len(df)
         df["contigB"] = [''] * len(df)
     elif args["verbosity"] == '1':
-        has_alt = [True if (isinstance(i, str) and len(i) >= 1 and i[0] != '<') else False for i in df['variant_seq']]
+        variant_seq = df['variant_seq']
+        is_str = variant_seq.map(type) == str
+        has_alt = is_str & (variant_seq.str.len() >= 1) & ~variant_seq.str.startswith('<', na=False)
         df["contigA"] = ['' if a else c for c, a in zip(df['contigA'], has_alt)]
         df["contigB"] = ['' if a else c for c, a in zip(df['contigB'], has_alt)]
 
     n_fields = len(col_names(small_output_f)[-1])
 
-    for idx, r in df.iterrows():
+    idx_to_row = {}
+    for row in df.itertuples(index=True):
+        idx_to_row[row.Index] = row._asdict()
+
+    for idx, r in idx_to_row.items():
         if idx in seen_idx or ("_skip_partner" in r and r["_skip_partner"]):
             continue
 
-        format_f, df_rows = gen_format_fields(r, df, names, n_fields, small_output_f)
+        format_f, df_rows = gen_format_fields(r, idx_to_row, names, n_fields, small_output_f)
         if "partners" in r and r["partners"] is not None and r["partners"] != ".":
             seen_idx |= set(r["partners"])
 
@@ -495,7 +509,7 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
         count += 1
 
     if sort_output:
-        for rec in sorted(recs, key=lambda x: (x[0], x[1])):
+        for rec in sorted(recs, key=itemgetter(0, 1)):
             outfile.write("\t".join(list(map(str, rec))) + "\n")
     else:
         for rec in recs:

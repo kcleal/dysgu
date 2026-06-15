@@ -67,7 +67,7 @@ cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
     cdef int index = 0
     cdef int start_index = 0
     cdef int start_pos = pos
-    cdef int end_index = cigar_l - 1
+    cdef int end_index = cigar_l
     cdef bint started = False
     cdef int opp, length
 
@@ -164,7 +164,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
         opp = <int> cigar_value & 15
         length = <int> cigar_value >> 4
         if opp == 4 and length > 250:
-            i = length - 250
+            i = i + length - 250
             length = 250
 
         if opp == 4:
@@ -452,7 +452,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef tuple t
     cdef int item
 
-    cdef str sequence = ""
+    cdef list seq_parts = []
     cigar = []
     cdef int m, u, w
 
@@ -479,7 +479,7 @@ cdef dict get_consensus(rd, int position, int max_distance):
 
         if vec[3] != MATCHED:
             m = vec[0]
-            sequence += lowermap[m]
+            seq_parts.append(lowermap[m])
             if vec[3] == INSERTION:
                 if len(cigar) == 0 or cigar[-1][0] != 1:
                     cigar.append([1, 1])
@@ -509,12 +509,12 @@ cdef dict get_consensus(rd, int position, int max_distance):
                 cigar.append([2, vec[1] - last_pos - 1])
                 last_pos = -1
 
-            sequence += basemap[m]
+            seq_parts.append(basemap[m])
 
         vec.assign(vec.size(), 0)
 
         count += 1
-    seq = sequence
+    seq = "".join(seq_parts)
 
     # Trim off bad sequence
     cdef int i, start_seq, end_seq
@@ -540,13 +540,13 @@ cdef dict get_consensus(rd, int position, int max_distance):
     cdef float left_clip_weight = 0
     if longest_left_sc > 0:
         for i in range(start_seq, start_seq + longest_left_sc):
-            left_clip_weight += node_weights[i]
+            left_clip_weight += node_weights[path2[i]]
         left_clip_weight = left_clip_weight / longest_left_sc
 
     cdef float right_clip_weight = 0
     if longest_right_sc > 0:
         for i in range(len(seq) - original_right_sc, end_seq):
-            right_clip_weight += node_weights[i]
+            right_clip_weight += node_weights[path2[i]]
         right_clip_weight = right_clip_weight / longest_right_sc
 
     if start_seq != 0 or end_seq != len(seq):
@@ -591,7 +591,7 @@ cdef trim_sequence_from_cigar(AlignedSegment r, int approx_pos, int max_distance
 
     cdef int start_pos = r.pos  # starting genome position of cigar at start_index
     cdef int pos = start_pos  # current genome position
-    cdef int end_index = cigar_l - 1
+    cdef int end_index = cigar_l
     cdef bint started = False
     cdef int opp, length, keep_start, keep_end
 
@@ -694,7 +694,7 @@ cpdef dict base_assemble(rd, int position, int max_distance):
         else:
             longest_left_sc = 0
             longest_right_sc = 0
-            seq = ""
+            seq_parts = []
             begin = 0
 
             for i in range(cigar_l):
@@ -703,7 +703,7 @@ cpdef dict base_assemble(rd, int position, int max_distance):
                 length = cigar_value >> 4
 
                 if opp == 4 or opp == 1:
-                    seq += rseq[begin:begin + length].lower()
+                    seq_parts.append(rseq[begin:begin + length].lower())
                     if opp == 4:
                         if begin == 0:
                             longest_left_sc = length
@@ -711,8 +711,9 @@ cpdef dict base_assemble(rd, int position, int max_distance):
                             longest_right_sc = length
                     begin += length
                 elif opp == 0 or opp == 7 or opp == 8 or opp == 3:
-                    seq += rseq[begin:begin + length]
+                    seq_parts.append(rseq[begin:begin + length])
                     begin += length
+            seq = "".join(seq_parts)
             return {"contig": seq,
                     "left_clips": longest_left_sc,
                     "right_clips": longest_right_sc,
@@ -842,13 +843,13 @@ cpdef contig_from_read_cigar(AlignedSegment r, int cigar_index):
 
 cpdef float compute_rep(seq):
 
-    cdef ankerl_map[float, int] last_visited
+    cdef ankerl_map[uint64_t, int] last_visited
     cdef float tot_amount = 0
     cdef float total_seen = 0
     cdef int k, i, diff
     cdef float decay, max_amount, amount
 
-    cdef bytes s_bytes = bytes(seq.encode("ascii"))
+    cdef bytes s_bytes = seq.encode("ascii")
     cdef const unsigned char* sub_ptr = s_bytes
 
     for k in (2, 3, 4, 5, 6):
@@ -904,7 +905,7 @@ cdef tuple get_rep(contig_seq):
         clip_rep += compute_rep(clip)
         clip_seen += 1
 
-    elif right_clip_start < len(contig_seq):
+    if right_clip_start < len(contig_seq):
         clip = contig_seq[right_clip_start:]
         clip_rep += compute_rep(clip)
         clip_seen += 1
@@ -926,6 +927,7 @@ def order_posA_first(events, args):
 
 def contig_info(events):
     cdef EventResult_t e
+    cdef Py_ssize_t gc_count, seq_length
     for i in range(len(events)):
         e = events[i]
         gc_count = 0
@@ -933,16 +935,12 @@ def contig_info(events):
         if e.contig:
             cont = e.contig.upper()
             seq_length += len(cont)
-            for letter in cont:
-                if letter == "G" or letter == "C":
-                    gc_count += 1
+            gc_count += cont.count("G") + cont.count("C")
 
         if e.contig2:
             cont = e.contig2.upper()
             seq_length += len(cont)
-            for letter in cont:
-                if letter == "G" or letter == "C":
-                    gc_count += 1
+            gc_count += cont.count("G") + cont.count("C")
 
         if seq_length > 0:
             e.gc = round((gc_count / seq_length) * 100, 2)

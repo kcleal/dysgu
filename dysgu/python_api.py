@@ -263,6 +263,8 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
             df["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df.index]
         return DysguSV._mung_df(df)
     df2 = pd.DataFrame.from_records(found)
+    if not df2.empty:
+        df2.set_index("event_id", inplace=True)
     if add_partners:
         df2["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df2.index]
     else:
@@ -370,7 +372,7 @@ class DysguSV:
                 raise ValueError(f"Option {option} not available, see dysgu.default_args().keys() for a full list")
             self.args[option] = value
         else:
-            ValueError("Option must be instance of str or dict")
+            raise ValueError("Option must be instance of str or dict")
         self.args = self._fix_args(self.args)
 
     def _fix_args(self, args):
@@ -492,7 +494,7 @@ class DysguSV:
         df["sample"] = [self.sample_name] * len(df)
 
         # fix variant seq column
-        df["variant_seq"] = [i.upper() if svt == "INS" and i is not None and len(i) > 0 else f"<{svt}>" for i, svt in zip(df["variant_seq"], df["svtype"], strict=False)]
+        df["variant_seq"] = [i.upper() if svt == "INS" and i is not None and len(i) > 0 else f"<{svt}>" for i, svt in zip(df["variant_seq"], df["svtype"])]
         return self._mung_df(df)
 
     def to_vcf(self, dataframe, output_file):

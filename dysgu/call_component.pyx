@@ -99,14 +99,11 @@ cpdef n_aligned_bases(AlignedSegment aln):
     return float(aligned), float(large_gaps), float(n_small_gaps)
 
 
-cdef base_quals_aligned_clipped(AlignedSegment a):
+cdef base_quals_aligned_clipped(AlignedSegment a, int left_clip, int right_clip):
     cdef float aligned_base_quals = 0
     cdef float aligned_bases = 0
     cdef float clipped_base_quals = 0
-    cdef int left_clip = 0
-    cdef int right_clip = 0
-    clip_sizes(a, &left_clip, &right_clip)
-    clipped_bases = left_clip + right_clip
+    cdef int clipped_bases = left_clip + right_clip
     cdef const unsigned char[:] quals = a.query_qualities
     cdef int i
     for i in range(left_clip):
@@ -117,6 +114,44 @@ cdef base_quals_aligned_clipped(AlignedSegment a):
     for i in range(len(quals) - right_clip, len(quals)):
         clipped_base_quals += quals[i]
     return aligned_base_quals, aligned_bases, clipped_base_quals, clipped_bases
+
+
+cdef inline void cigar_stats(AlignedSegment a, int* aligned, int* large_gaps, int* n_small_gaps,
+                             int* soft_left, int* soft_right, int* hard_left, int* hard_right) noexcept nogil:
+    cdef uint32_t cigar_l = a._delegate.core.n_cigar
+    cdef uint32_t* cigar_p = bam_get_cigar(a._delegate)
+    cdef uint32_t cigar_value
+    cdef int opp, l, i
+    aligned[0] = 0
+    large_gaps[0] = 0
+    n_small_gaps[0] = 0
+    soft_left[0] = 0
+    soft_right[0] = 0
+    hard_left[0] = 0
+    hard_right[0] = 0
+    if cigar_l == 0:
+        return
+    for i in range(cigar_l):
+        cigar_value = cigar_p[i]
+        opp = <int> cigar_value & 15
+        l = <int> cigar_value >> 4
+        if opp == 0 or opp == 7 or opp == 8:
+            aligned[0] += l
+        elif opp == 1 or opp == 2:
+            if l >= 30:
+                large_gaps[0] += l
+            else:
+                n_small_gaps[0] += 1
+        if i == 0:
+            if opp == 4:
+                soft_left[0] = l
+            elif opp == 5:
+                hard_left[0] = l
+        if i == cigar_l - 1:
+            if opp == 4:
+                soft_right[0] = l
+            elif opp == 5:
+                hard_right[0] = l
 
 
 cdef collect_phase_tags(bint get_hp_tag, AlignedSegment a, EventResult_t er):
@@ -151,52 +186,60 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     cdef float clipped_base_quals = 0
     cdef float clipped_bases = 0
     cdef int abq, ab, cbq, cb
-    cdef int left_clip, right_clip
+    cdef int soft_left, soft_right, hard_left, hard_right
     paired_end = set([])
     seen = set([])
     er.spanning = len(spanning)
     er.bnd = len(generic_ins)
     cdef int flag, index, this_as
-    cdef float a_bases, large_gaps, n_small_gaps
+    cdef int a_bases, large_gaps, n_small_gaps
+    cdef bint is_paired, has_nm, has_as, has_sa, has_xa
+    cdef float nm
     cdef AlignedSegment a
     for index, a in enumerate(itertools.chain(reads1, reads2, [i.read_a for i in generic_ins])):
         seen.add(a.qname)
         flag = a.flag
+        is_paired = flag & 1
         if flag & 2:
             er.NP += 1
-        if a.flag & 1 and a.tlen and abs(a.tlen) < insert_ppf:
+        if is_paired and a.tlen and abs(a.tlen) < insert_ppf:
             er.n_small_tlen += 1
-        if paired_end_reads and paired_end and flag & 8:
+        if paired_end_reads and flag & 8:
             er.n_unmapped_mates += 1
-        left_clip = 0
-        right_clip = 0
-        clip_sizes_hard(a, &left_clip, &right_clip)
-        if left_clip > 0 and right_clip > 0:
+
+        soft_left = 0
+        soft_right = 0
+        hard_left = 0
+        hard_right = 0
+        cigar_stats(a, &a_bases, &large_gaps, &n_small_gaps, &soft_left, &soft_right, &hard_left, &hard_right)
+        if (soft_left + hard_left) > 0 and (soft_right + hard_right) > 0:
             er.double_clips += 1
+
         has_sa = a.has_tag("SA")
         if has_sa:
             n_sa += a.get_tag("SA").count(";")
-        if a.has_tag("XA"):
+        has_xa = a.has_tag("XA")
+        if has_xa:
             n_xa += a.get_tag("XA").count(";")
 
         collect_phase_tags(get_hp_tag, a, er)
 
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
-
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
+        has_nm = a.has_tag("NM")
+        if has_nm:
+            nm = float(a.get_tag("NM"))
+        has_as = a.has_tag("AS")
+        if has_as:
+            this_as = a.get_tag("AS")
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
             er.supp += 1
             MAPQsupp += a.mapq
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    NMsupp += nm / a_bases
-                    NMbase += (nm - large_gaps) / a_bases
-            if a.has_tag("AS"):
-                this_as = a.get_tag("AS")
-                if this_as > maxASsupp:
-                    maxASsupp = this_as
+            if has_nm and a_bases:
+                NMsupp += nm / a_bases
+                NMbase += (nm - large_gaps) / a_bases
+            if has_as and this_as > maxASsupp:
+                maxASsupp = this_as
         else:  # Primary reads
             total_pri += 1
             MAPQpri += a.mapq
@@ -205,23 +248,18 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
                     er.pe += 1
                 else:
                     paired_end.add(a.qname)
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    NMpri += nm / a_bases
-                    NMbase += (nm - large_gaps) / a_bases
+            if has_nm and a_bases:
+                NMpri += nm / a_bases
+                NMbase += (nm - large_gaps) / a_bases
         if flag & 16:
             er.minus += 1
         else:
             er.plus += 1
 
-        left_clip = 0
-        right_clip = 0
-        clip_sizes(a, &left_clip, &right_clip)
-        if left_clip or right_clip:
+        if soft_left or soft_right:
             er.sc += 1
-        if a.flag & 1:  # paired read
-            abq, ab, cbq, cb = base_quals_aligned_clipped(a)
+        if is_paired:
+            abq, ab, cbq, cb = base_quals_aligned_clipped(a, soft_left, soft_right)
             aligned_base_quals += abq
             aligned_bases += ab
             clipped_base_quals += cbq
@@ -230,34 +268,41 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     for a in spanning:
         seen.add(a.qname)
         flag = a.flag
+        is_paired = flag & 1
         if flag & 2:
             er.NP += 1
-        left_clip = 0
-        right_clip = 0
-        clip_sizes_hard(a, &left_clip, &right_clip)
-        if left_clip > 0 and right_clip > 0:
+
+        soft_left = 0
+        soft_right = 0
+        hard_left = 0
+        hard_right = 0
+        cigar_stats(a, &a_bases, &large_gaps, &n_small_gaps, &soft_left, &soft_right, &hard_left, &hard_right)
+        if (soft_left + hard_left) > 0 and (soft_right + hard_right) > 0:
             er.double_clips += 1
-        if a.has_tag("SA"):
+        has_sa = a.has_tag("SA")
+        if has_sa:
             n_sa += a.get_tag("SA").count(";")
-        if a.has_tag("XA"):
+        has_xa = a.has_tag("XA")
+        if has_xa:
             n_xa += a.get_tag("XA").count(";")
 
         collect_phase_tags(get_hp_tag, a, er)
-        a_bases, large_gaps, n_small_gaps = n_aligned_bases(a)
 
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
+        has_nm = a.has_tag("NM")
+        if has_nm:
+            nm = float(a.get_tag("NM"))
+        has_as = a.has_tag("AS")
+        if has_as:
+            this_as = a.get_tag("AS")
         if flag & 2304:  # Supplementary
             MAPQsupp += a.mapq
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    NMsupp += nm / a_bases
-                    NMbase += (nm - large_gaps) / a_bases
-            if a.has_tag("AS"):
-                this_as = a.get_tag("AS")
-                if this_as > maxASsupp:
-                    maxASsupp = this_as
+            if has_nm and a_bases:
+                NMsupp += nm / a_bases
+                NMbase += (nm - large_gaps) / a_bases
+            if has_as and this_as > maxASsupp:
+                maxASsupp = this_as
         else:  # Primary reads
             MAPQpri += a.mapq
             total_pri += 1
@@ -266,17 +311,15 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
                     er.pe += 1
                 else:
                     paired_end.add(a.qname)
-            if a.has_tag("NM"):
-                if a_bases:
-                    nm = float(a.get_tag("NM"))
-                    NMpri += nm / a_bases
-                    NMbase += (nm - large_gaps) / a_bases
+            if has_nm and a_bases:
+                NMpri += nm / a_bases
+                NMbase += (nm - large_gaps) / a_bases
         if flag & 16:
             er.minus += 1
         else:
             er.plus += 1
-        if a.flag & 1:
-            abq, ab, cbq, cb = base_quals_aligned_clipped(a)
+        if is_paired:
+            abq, ab, cbq, cb = base_quals_aligned_clipped(a, soft_left, soft_right)
             aligned_base_quals += abq
             aligned_bases += ab
             clipped_base_quals += cbq
@@ -364,7 +407,7 @@ cdef guess_informative_pair(aligns):
             return (ci,
                     a.rname,
                     event_pos,
-                    event_pos + 1 if ci.op == 1 else event_pos + cigar_l + 1,
+                    within_read_end_position(event_pos, ci),
                     a,
                     cigar_index)
         elif 0 < b_cigar_info.cigar_index < cigar_len_b - 1:
@@ -379,7 +422,7 @@ cdef guess_informative_pair(aligns):
             return (ci,
                     b.rname,
                     event_pos,
-                    event_pos + 1 if ci.op == 1 else event_pos + cigar_l + 1,
+                    within_read_end_position(event_pos, ci),
                     b,
                     cigar_index)
         a_pos = a_cigar_info.event_pos  # Position may have been inferred from SA tag, use this if available
@@ -715,12 +758,12 @@ def assign_sites_to_clusters(sites_info, clusters, informative, coords, cluster_
     while len(un_partitioned) > 0 and c > 0 and len(c_xy) > 0:
         s = un_partitioned.pop()
         best_id = -1
-        best_dist = 1e9
+        best_dist_sq = 1e18
         for cluster_id, (x, y) in c_xy.items():
-            sep = np.sqrt((s.start - x)**2 + (s.end - y)**2)
-            if sep < best_dist:
+            sep_sq = (s.start - x)**2 + (s.end - y)**2
+            if sep_sq < best_dist_sq:
                 best_id = cluster_id
-                best_dist = sep
+                best_dist_sq = sep_sq
         if best_id == -1:
             raise ValueError("best_id", best_id, coords, sites_info, cluster_id)
         sites_to_clusters[best_id] = s
@@ -739,6 +782,7 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
     cdef int firstB = informative[0].breakB
     cdef int br_a, br_b, seperation
     cdef bint try_cluster = False
+    cdef int insert_size_sq = insert_size * insert_size
     if insert_size != -1 and len(informative) > 1:  # paired end mode
         for v_item in informative:
             br_a = v_item.breakA
@@ -747,8 +791,7 @@ cdef partition_single(informative, insert_size, insert_stdev, insert_ppf, spanni
             coords[idx, 1] = br_b
             idx += 1
             if idx > 0 and not try_cluster:
-                sep = np.sqrt((br_a - firstA)**2 + (br_b - firstB)**2)
-                if sep > insert_size:
+                if (br_a - firstA)**2 + (br_b - firstB)**2 > insert_size_sq:
                     try_cluster = True
         # sites added here to influence clustering
         if sites_info and len(informative) > 1:
@@ -930,13 +973,21 @@ cdef linear_scan_clustering(spanning, bint hp_tag):
                 cluster_lengths(clusters, lengths, hp_spanning, eps)
             # Merge near-identical haplotype
             if len(clusters) > 1:
-                cl_srt = sorted([ [ np.mean([c.cigar_item.len for c in clst]), clst ] for clst in clusters], key=lambda x: x[0])
+                cl_srt = []
+                for clst in clusters:
+                    total_len = 0
+                    for c in clst:
+                        total_len += c.cigar_item.len
+                    cl_srt.append([total_len / len(clst), clst, total_len, len(clst)])
+                cl_srt.sort(key=lambda x: x[0])
                 merged_haps = [cl_srt[0]]
                 for i in range(1, len(cl_srt)):
                     current_l = cl_srt[i][0]
                     if merged_haps[-1][0] / current_l > 0.98:
                         merged_haps[-1][1] += cl_srt[i][1]
-                        merged_haps[-1][0] = np.mean([c.cigar_item.len for c in merged_haps[-1][1]])
+                        merged_haps[-1][2] += cl_srt[i][2]
+                        merged_haps[-1][3] += cl_srt[i][3]
+                        merged_haps[-1][0] = merged_haps[-1][2] / merged_haps[-1][3]
                     else:
                         merged_haps.append(cl_srt[i])
                 clusters = [c[1] for c in merged_haps]
@@ -1094,7 +1145,7 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
             if opp == 0 or opp == 1 or opp == 4 or opp == 7 or opp == 8:
                 start_ins += cigar_value >> 4
         er.variant_seq = best_align.seq[start_ins:start_ins + target_len]
-        er.ref_seq = best_align.seq[start_ins - 1]
+        er.ref_seq = best_align.seq[start_ins - 1] if start_ins > 0 else best_align.seq[0]
     return er
 
 
@@ -1105,7 +1156,7 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
     cdef int min_distance = insert_size + (2*insert_stdev)
-    cdef int n_templates = len(set([i.qname for _, i in rds]))
+    cdef int n_templates = len({i.qname for _, i in rds})
     if n_templates == 1:
         if not any((not i.flag & 1) or (not i.flag & 2) or i.rname != i.rnext or node_info.cigar_index != 2 or
                    (i.flag & 1 and abs(i.tlen) > min_distance)
@@ -1327,8 +1378,15 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     # echo("MAKE_CALL")
     cdef int limit = insert_size + insert_stdev
     cdef AlignmentItem i
-    positionsA = [i.breakA for i in informative]
-    positionsB = [i.breakB for i in informative]
+    positionsA = []
+    positionsB = []
+    cdef float q_overlaps_sum = 0
+    cdef int q_overlaps_count = 0
+    for i in informative:
+        positionsA.append(i.breakA)
+        positionsB.append(i.breakB)
+        q_overlaps_sum += i.query_overlap
+        q_overlaps_count += 1
     cdef float median_A = np.median(positionsA)
     cdef float median_B = np.median(positionsB)
     cdef int main_A_break = 0
@@ -1415,9 +1473,14 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
         svlen = -1
     if svlen == 0:
         svlen = -1
-    q_overlaps = int(np.mean([i.query_overlap for i in informative]))
-    if q_overlaps != q_overlaps:
+    cdef float q_overlaps
+    if q_overlaps_count == 0:
         q_overlaps = 0
+    else:
+        q_overlaps = q_overlaps_sum / q_overlaps_count
+        if q_overlaps != q_overlaps:
+            q_overlaps = 0
+    q_overlaps = int(q_overlaps)
     if svlen > 0:
         jitter = ((cipos95A + cipos95B) / 2) / svlen
     else:
@@ -1434,7 +1497,7 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
     er.preciseB = preciseB
     er.svlen_precise = svlen_precise
     er.svlen = svlen
-    er.query_overlap = q_overlaps
+    er.query_overlap = <int>q_overlaps
     er.jitter = jitter
 
 
@@ -1650,7 +1713,9 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
     cdef uint32_t *cigar_p_b
 
 
-    for qname in [k for k in grp_u if k in grp_v]:  # Qname found on both sides
+    for qname in grp_u:  # Qname found on both sides
+        if qname not in grp_v:
+            continue
         u = grp_u[qname]
         v = grp_v[qname]
         pair = informative_pair(u, v)
@@ -1752,11 +1817,11 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
                         site = info[0]
                     else:
                         best_i = 0
-                        best_sep = 1000000000
+                        best_sep_sq = 1000000000000000000.0
                         for si, site in enumerate(info):
-                            sep = np.sqrt((site.start - er.posA)**2 + (site.end - er.posB)**2)
-                            if sep < best_sep:
-                                best_sep = sep
+                            sep_sq = (site.start - er.posA)**2 + (site.end - er.posB)**2
+                            if sep_sq < best_sep_sq:
+                                best_sep_sq = sep_sq
                                 best_i = si
                         site = info[best_i]
                     er.site_info = site
@@ -1827,7 +1892,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
             spanning_alignments.append(Spanning(ci,      # cigar_item
                                         a.rname,         # chrom
                                         event_pos,       # event_pos
-                                        event_pos + 1 if ci.op == 1 else event_pos + cigar_len + 1,  # event end
+                                        within_read_end_position(event_pos, ci),  # event end
                                         a,               # align
                                         cigar_index))    # cigar_index
 
@@ -1849,7 +1914,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
             spanning_alignments.append(Spanning(ci,
                                         a.rname,
                                         event_pos,
-                                        event_pos + 1 if ci.op == 1 else event_pos + cigar_len + 1,
+                                        within_read_end_position(event_pos, ci),
                                         a,
                                         cigar_index))
 
@@ -1925,18 +1990,18 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
                     start_ins += cigar_value >> 4
 
             er.variant_seq = best_align.seq[start_ins:start_ins+svlen]
-            er.ref_seq = best_align.seq[start_ins - 1]
+            er.ref_seq = best_align.seq[start_ins - 1] if start_ins > 0 else best_align.seq[0]
         if info:
             info = [i for i in info if i.svtype == er.svtype]
             if len(info) > 0:
                 site = info[0]
                 if len(info) > 1:
                     best_i = 0
-                    best_sep = 1000000000
+                    best_sep_sq = 1000000000000000000.0
                     for si, site in enumerate(info):
-                        sep = np.sqrt((site.start - er.posA)**2 + (site.end - er.posB)**2)
-                        if sep < best_sep:
-                            best_sep = sep
+                        sep_sq = (site.start - er.posA)**2 + (site.end - er.posB)**2
+                        if sep_sq < best_sep_sq:
+                            best_sep_sq = sep_sq
                             best_i = si
                     site = info[best_i]
                 er.site_info = site

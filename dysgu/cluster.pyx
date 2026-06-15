@@ -41,11 +41,10 @@ def filter_potential(input_events, tree, regions_only):
             i.sqc = -1
         if i.svtype == "INS" and i.svlen_precise == 0 and not i.contig and not i.contig2:
             continue
-        # Remove events for which both ends are in --regions but no contig was found
-        posA_intersects = intersecter(tree, i.chrA, i.posA, i.posA + 1)
-        posB_intersects = intersecter(tree, i.chrB, i.posB, i.posB + 1)
         # Remove events for which neither end is in --regions (if --regions provided)
         if tree and regions_only:
+            posA_intersects = intersecter(tree, i.chrA, i.posA, i.posA + 1)
+            posB_intersects = intersecter(tree, i.chrB, i.posB, i.posB + 1)
             if not posA_intersects and not posB_intersects:
                 continue
         potential.append(i)
@@ -145,7 +144,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
 
     # Look for aligned bases file in working directory
     if os.path.exists(os.path.join(tdir, "n_aligned_bases.txt")):
-        n_aligned_bases_file = int(open(os.path.join(tdir, "n_aligned_bases.txt"), "r").readline().strip())
+        with open(os.path.join(tdir, "n_aligned_bases.txt"), "r") as f:
+            n_aligned_bases_file = int(f.readline().strip())
         assert n_aligned_bases_file > 0
         find_n_aligned_bases = False
     else:
@@ -339,6 +339,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         completed_file = None
     cdef int last_i = 0
     cdef int start_i, end_i, ci, cmp_idx, item_index, item  # cmp is a flat array of indexes. item == -1 signifies end of component
+    cdef int comp_n
+    cdef int[::1] cmp_view
     for item_idx in range(length_components):
         if low_mem:
             item = cmp_mmap[item_idx]
@@ -349,14 +351,14 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
             start_i = last_i
             end_i = item_idx
             last_i = item_idx + 1
-            component = np.zeros(end_i - start_i)
-            ci = 0
-            for cmp_idx in range(start_i, end_i):
-                if low_mem:
-                    component[ci] = cmp_mmap[cmp_idx]
-                else:
-                    component[ci] = cmp[cmp_idx]
-                ci += 1
+            if low_mem:
+                component = cmp_mmap[start_i:end_i].copy()
+            else:
+                comp_n = end_i - start_i
+                component = np.empty(comp_n, dtype=np.int32)
+                if comp_n > 0:
+                    cmp_view = <int[:comp_n:1]>(&cmp[start_i])
+                    component[:] = cmp_view
             if len(component) > 100_000:
                 reduced = graph.break_large_component(G, component, min_support)
                 for cmp2 in reduced:
@@ -602,12 +604,14 @@ def cluster_reads(args):
         im, istd = map(float, args["I"].split(","))
         args["insert_median"] = im
         args["insert_stdev"] = istd
+    close_outfile = False
     if args["svs_out"] == "-" or args["svs_out"] is None:
         logging.info("Writing vcf to stdout")
         outfile = stdout
     else:
         logging.info("Writing SVs to {}".format(args["svs_out"]))
         outfile = open(args["svs_out"], "w")
+        close_outfile = True
     logging.info("Running pipeline")
     _debug_k = []
     regions = io_funcs.overlap_regions(args["regions"])
@@ -623,6 +627,8 @@ def cluster_reads(args):
     if not events:
         logging.critical("No events found")
         outfile.write(io_funcs.get_header(contig_header_lines) + "\n")
+        if close_outfile:
+            outfile.close()
         return
 
     df = pd.DataFrame.from_records([to_dict(e) for e in events])
@@ -654,6 +660,9 @@ def cluster_reads(args):
                             sort_output=False)
     else:
         outfile.write(io_funcs.get_header(contig_header_lines) + "\n")
+
+    if close_outfile:
+        outfile.close()
 
     logging.info("dysgu call {} complete, n={}, time={} h:m:s".format(
                args["sv_aligns"],

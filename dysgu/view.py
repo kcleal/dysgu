@@ -20,7 +20,6 @@ import networkx as nx
 from sys import stdout
 from heapq import heappop, heappush
 import resource
-from copy import deepcopy
 import re
 import traceback
 
@@ -175,11 +174,14 @@ def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, p
     # logging.info(f"{samples[0]}")
 
     if progressive:
+        by_sample = defaultdict(list)
+        for e in potential:
+            by_sample[e.sample].append(e)
 
-        d1 = [e for e in potential if e.sample == samples[0]]
+        d1 = by_sample.get(samples[0], [])
         components = {e.event_id: {e.event_id} for e in d1}
         for idx, samp in enumerate(samples[1:], start=1):
-            d2 = [e for e in potential if e.sample == samp]
+            d2 = by_sample.get(samp, [])
             pot = d1 + d2
 
             found = merge_svs.merge_events(pot, merge_dist, tree, try_rev=False, pick_best=False, add_partners=True,
@@ -282,7 +284,7 @@ def to_csv(df, args, outfile, small_output):
                 p2.append("")
                 continue
             else:
-                key = "|".join([f"{df.loc[idx]['table_name']},{idx}" for idx in r["partners"]])
+                key = "|".join([f"{df.at[idx, 'table_name']},{idx}" for idx in r["partners"]])
                 p2.append(key)
         df["partners"] = p2
         df[keytable].to_csv(outfile, index=False)
@@ -295,7 +297,7 @@ def to_csv(df, args, outfile, small_output):
                 if not item:
                     ori.append("")
                 else:
-                    ori.append("|".join([f"{df.loc[i]['table_name']},{df.loc[i]['event_id']}" for i in item]))
+                    ori.append("|".join([f"{df.at[i, 'table_name']},{df.at[i, 'event_id']}" for i in item]))
             df2["partners"] = ori
             del df2["table_name"]
             df2[keytable].to_csv(outfile[k], index=False)
@@ -347,11 +349,13 @@ def _parse_vcf_columns(df, samples):
         else:
             info.append({})
 
+    fmt_cols = df[8].str.split(':')
+    sample_cols = df[9].str.split(':')
     n_fields = None
-    for idx, (k1, k2), in enumerate(zip(df[8], df[9])):  # Overwrite info column with anything in format
+    for idx, (k1, k2) in enumerate(zip(fmt_cols, sample_cols)):  # Overwrite info column with anything in format
         if n_fields is None:
-            n_fields = len(k1.split(":"))
-        info[idx].update({i: j for i, j in zip(k1.split(":"), k2.split(":"))})
+            n_fields = len(k1)
+        info[idx].update({i: j for i, j in zip(k1, k2)})
 
     info_df = pd.DataFrame.from_records(info)
     df = pd.concat([parsed, info_df], axis=1)
@@ -830,22 +834,46 @@ def write_blobs(wd, input_files, names_list, group_order, boundaries, show_progr
     return blob_paths, input_rows
 
 
+def _open_vcf_text(path):
+    """Open a text VCF (plain or gzipped), consume its header, and return the
+    file handle positioned at the first data line together with the list of
+    sample names declared in the #CHROM header line.
+    """
+    if path.endswith('.gz'):
+        f = gzip.open(path, 'rt')
+    else:
+        f = open(path, 'r')
+    samples = None
+    for line in f:
+        if line.startswith('#CHROM'):
+            samples = line.rstrip('\n').split('\t')[9:]
+            break
+    if samples is None:
+        f.close()
+        return None, None
+    return f, samples
+
+
 def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list):
     outf = VcfWriter(out_f, target_header=vcf_header)
     file_iterators = []
-    count = 0
+    file_samples = []
     for item in file_paths_to_combine:
-        file_iterators.append(pysam.VariantFile(item, 'r'))
-        count += 1
+        f, samples = _open_vcf_text(item)
+        if f is None:
+            continue
+        file_iterators.append(f)
+        file_samples.append(samples)
     if not file_iterators:
         return 0
 
     var_q = []
     done_count = 0
-    for idx, item in enumerate(file_iterators):
+    for idx, f in enumerate(file_iterators):
         try:
-            v = item.__next__()
-            heappush(var_q, (v.chrom, v.pos, idx, v))
+            line = next(f)
+            parts = line.rstrip('\n').split('\t')
+            heappush(var_q, (parts[0], int(parts[1]), idx, line))
         except StopIteration:
             file_iterators[idx].close()
             file_iterators[idx] = None
@@ -854,12 +882,13 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
     written = 0
     while done_count < len(file_iterators):
         if var_q:
-            chrom, pos, idx, v = heappop(var_q)
+            chrom, pos, idx, line = heappop(var_q)
             # ensure correct sample ordering
-            str_v = str(v).strip().split('\t')
-            main_record = str_v[:9]
-            samp_records = str_v[9:]
-            record_samples = {k: v for k, v in zip(v.samples.keys(), samp_records)}
+            parts = line.rstrip('\n').split('\t')
+            main_record = parts[:9]
+            samp_records = parts[9:]
+            record_samples = {k: v for k, v in zip(file_samples[idx], samp_records)}
+            n_fmt = len(parts[8].split(':'))
             rd = []
             c = 0
             for samp in sample_list:
@@ -867,7 +896,7 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
                     rd.append(record_samples[samp])
                     c += 1
                 else:
-                    rd.append('0/0:' + ':'.join(list('0' * (len(v.format.keys()) - 1))))
+                    rd.append('0/0:' + ':'.join(['0'] * (n_fmt - 1)))
             if c < len(record_samples):
                 raise RuntimeError('Number of samples in record was greater than out file, please report this')
             main_record += rd
@@ -877,19 +906,21 @@ def sort_into_single_file(out_f, vcf_header, file_paths_to_combine, sample_list)
             if file_iterators[idx] is None:
                 continue
             try:
-                v = file_iterators[idx].__next__()
-                heappush(var_q, (v.chrom, v.pos, idx, v))
+                line = next(file_iterators[idx])
+                parts = line.rstrip('\n').split('\t')
+                heappush(var_q, (parts[0], int(parts[1]), idx, line))
             except StopIteration:
                 file_iterators[idx].close()
                 file_iterators[idx] = None
                 done_count += 1
         else:
-            for idx, item in enumerate(file_iterators):
-                if item is None:
+            for idx, f in enumerate(file_iterators):
+                if f is None:
                     continue
                 try:
-                    v = item.__next__()
-                    heappush(var_q, (v.chrom, v.pos, idx, v))
+                    line = next(f)
+                    parts = line.rstrip('\n').split('\t')
+                    heappush(var_q, (parts[0], int(parts[1]), idx, line))
                 except StopIteration:
                     file_iterators[idx].close()
                     file_iterators[idx] = None
@@ -946,7 +977,7 @@ def shard_data(args, input_files, Global, show_progress):
     for bi, blob_path in enumerate(blob_paths):
         if os.stat(blob_path).st_size == 0:
             continue
-        target_args = deepcopy(needed_args)
+        target_args = needed_args.copy()
         fout = os.path.join(args['wd'], f'blob_{bi}_merged.vcf')
         target_args["svs_out"] = fout
         merged_outputs.append(fout)

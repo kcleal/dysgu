@@ -50,11 +50,11 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
         max_score_rev = 0
         max_score_forward = 0
         if e.contig and len(e.contig) < 1000:
+            query = StripedSmithWaterman(e.contig, gap_extend_penalty=1, suppress_sequences=True)
             clip_res = re_map.get_clipped_seq(e.contig, e.posA, e.contig_ref_start, e.contig_ref_end)
             if clip_res:
                 fc = clip_res[0]
                 rc = reverse_complement(fc, len(fc))
-                query = StripedSmithWaterman(e.contig, gap_extend_penalty=1, suppress_sequences=True)
                 align = query(rc)
                 if align.optimal_alignment_score > max_score_rev:
                     max_score_rev = align.optimal_alignment_score
@@ -63,11 +63,11 @@ def get_badclip_metric(events, bad_clip_counter, bam, regions):
                     max_score_forward = align.optimal_alignment_score
 
         if e.contig2 and len(e.contig2) < 1000:
+            query = StripedSmithWaterman(e.contig2, gap_extend_penalty=1, suppress_sequences=True)
             clip_res = re_map.get_clipped_seq(e.contig2, e.posB, e.contig2_ref_start, e.contig2_ref_end)
             if clip_res:
                 fc = clip_res[0]
                 rc = reverse_complement(fc, len(fc))
-                query = StripedSmithWaterman(e.contig2, gap_extend_penalty=1, suppress_sequences=True)
                 align = query(rc)
                 if align.optimal_alignment_score > max_score_rev:
                     max_score_rev = align.optimal_alignment_score
@@ -348,47 +348,43 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
             continue
         fetch_size = abs(e.posB - e.posA)
         symbolic_repr = fetch_size >= symbolic_sv_size
+        # Fetch the cheap anchor base first; only request the full interval when the anchor is valid.
+        anchor = get_bases(ref_genome, e.chrA, e.posA, e.posA + 1)
         if e.svtype == 'DEL':
             # Fetch deleted seq
-            if not symbolic_repr:
+            if not symbolic_repr and anchor and anchor != 'N':
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
                 if bases and bases != 'N':
                     e.ref_seq = bases
                     e.variant_seq = bases[0]
                 else:  # Use symbolic
-                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-                    e.ref_seq = bases
+                    e.ref_seq = anchor
                     e.variant_seq = '<DEL>'
             else:
-                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-                e.ref_seq = bases
+                e.ref_seq = anchor
                 e.variant_seq = '<DEL>'
 
         elif e.svtype == 'DUP':
-            if not symbolic_repr:
+            if not symbolic_repr and anchor and anchor != 'N':
                 bases = get_bases(ref_genome, e.chrA, e.posA, e.posB)
                 if bases and bases != 'N':
                     e.ref_seq = bases[0]
                     e.variant_seq = bases
                 else:
-                    bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-                    e.ref_seq = bases
+                    e.ref_seq = anchor
                     e.variant_seq = '<DUP>'
             else:
-                bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-                e.ref_seq = bases
+                e.ref_seq = anchor
                 e.variant_seq = '<DUP>'
 
         elif e.svtype == 'INS':
-            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-            e.ref_seq = bases
+            e.ref_seq = anchor
             # the variant_seq is set elsewhere, so only set symbolic here
             if symbolic_repr:
                 e.variant_seq = '<INS>'
 
         elif e.svtype in ('TRA', 'INV', 'BND', 'SKIP'):
-            bases = get_bases(ref_genome, e.chrA, e.posA, e.posA+1)
-            e.ref_seq = bases
+            e.ref_seq = anchor
             e.variant_seq = f'<{e.svtype}>'
 
         # Sanity check
@@ -409,7 +405,7 @@ def binom_prob(n, k, p):
     n = n if n <= 1000 else 1000
     binom = 0
     q = 1-p
-    while k < n:
+    while k <= n:
         binom += nCk(n, k) * q**(n-k) * p**k
         k += 1
     return binom
@@ -626,7 +622,7 @@ def fix_inconsistent_gt(events):
                 e2.GT = "0/1"
             continue
 
-        if e1.svtype not in 'DELDUPINV' or e1.svtype not in 'DELDUPINV':
+        if e1.svtype not in 'DELDUPINV' or e2.svtype not in 'DELDUPINV':
             continue
 
         if is_reciprocal_overlapping(e1.posA, e1.posB, e2.posA, e2.posB):
@@ -672,7 +668,7 @@ def join_phase_sets(events, ps_id):
     for e in events:
         if not e.phase_set_counts:
             continue
-        new_p = list(set([new_phase_set[n] for n in e.phase_set_counts.values() if n in new_phase_set]))
+        new_p = list(set([new_phase_set[n] for n in e.phase_set_counts.keys() if n in new_phase_set]))
         if not new_p:
             e.phase_set = -1
         else:
@@ -833,7 +829,7 @@ def apply_model(df, mode, contigs, diploid, thresholds, model_path=None):
         raise ValueError("Model must be pickle file with .pkl or .pkl.gz extension")
 
     if diploid == 'False' and contigs == 'False':
-        raise NotImplemented("Choose either diploid == False or contigs == False, not both")
+        raise NotImplementedError("Choose either diploid == False or contigs == False, not both")
 
     # i.e. key is "nanopore_classifier_no_contigs"
     col_key = f"{mode}_cols{'_no_contigs' if contigs == 'False' else ''}{'_nodip' if diploid == 'False' else ''}"

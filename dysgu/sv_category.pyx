@@ -212,7 +212,7 @@ cdef void two_primary(AlignmentItem v):
 
             if not (v.right_clipA or v.right_clipB) and (v.left_clipA or v.left_clipB):
                 v.breakA = v.posA
-                if v.right_clipA:
+                if v.left_clipA:
                     v.breakA_precise = 1
 
                 v.breakB = v.posB

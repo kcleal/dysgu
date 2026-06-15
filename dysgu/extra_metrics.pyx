@@ -67,7 +67,7 @@ class BadClipCounter:
         cdef int i = np.searchsorted(py_a, start)
         if i < 0:
             i = 0
-        if i >= len_a - 1:
+        if i >= len_a:
             return 0
         # search forward and backwards
         cdef int count = 0
@@ -106,7 +106,7 @@ cdef float soft_clip_qual_corr(reads):
                 qq[x].push_back(quals[idx])
                 idx += 1
         if right_clip:
-            end_pos = r.query_alignment_end + right_clip
+            end_pos = r.reference_end + right_clip - 1
             for idx in range(-1, - right_clip, -1):
                 qq[end_pos].push_back(quals[idx])
                 end_pos -= 1
@@ -118,7 +118,7 @@ cdef float soft_clip_qual_corr(reads):
     cdef bint seen = False
     cdef cpp_vector[int] all_v
     cdef float sum_all_v = 0
-    cdef cpp_vector[int] second
+    cdef cpp_vector[int]* second_ptr
     cdef int first
     cdef float mean_second, sum_second, sum_diff
     cdef ankerl_map[int, cpp_vector[int]].iterator qq_iter
@@ -126,17 +126,17 @@ cdef float soft_clip_qual_corr(reads):
     with nogil:
         qq_iter = qq.begin()
         while qq_iter != qq.end():
-            second = dereference(qq_iter).second
-            size = second.size()
+            second_ptr = &dereference(qq_iter).second
+            size = second_ptr[0].size()
             if size > 1:
                 sum_second = 0
                 for i in range(size):
-                    sum_second += second[i]
+                    sum_second += second_ptr[0][i]
                 mean_second = sum_second / float(size)
                 for i in range(size):
-                    all_z += c_fabs(second[i] - mean_second)
+                    all_z += c_fabs(second_ptr[0][i] - mean_second)
                 sum_all_v += sum_second
-                all_v.insert(all_v.end(), second.begin(), second.end())  # concat
+                all_v.insert(all_v.end(), second_ptr[0].begin(), second_ptr[0].end())  # concat
                 seen = True
             preincrement(qq_iter)
     if not seen:
@@ -217,22 +217,39 @@ cdef void window_rate(WindowRate *result, uint32_t cigar_l, uint32_t *cigar_p, i
 
 cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
     # This trys to check if the ends of reads are poorly aligned by looking at the rate of non-matching cigar events
-    cdef int i, index_begin, index_end, start_i, end_i, cigar_index
+    cdef int i, j, index_begin, index_end, cigar_index, stop_idx
+    cdef int ws = 2000
+    cdef int opp, length, cov_acc, mat_acc, n_acc, mat_acc_capped
+    cdef int matches_total, n_total
     cdef float threshold, w_rate, mean, std
     cdef uint32_t cigar_value
     cdef uint32_t cigar_l
     cdef uint32_t *cigar_p
-    cdef WindowRate window_r
     cdef AlignedSegment alignment
+    cdef list cov_ops, mat_ops, n_ops
     rates = []
     for item in spanning_alignments:
         alignment = item.align
         if alignment.flag & 2048:
             continue
         cigar_l = alignment._delegate.core.n_cigar
+        if cigar_l == 0:
+            continue
         cigar_p = bam_get_cigar(alignment._delegate)
-        window_rate(&window_r, cigar_l, cigar_p, 0, 1_000_000_000, <bint>False)
-        rates.append(window_r.rate)
+        matches_total = 0
+        n_total = 0
+        for i in range(cigar_l):
+            cigar_value = cigar_p[i]
+            opp = <int> cigar_value & BAM_CIGAR_MASK
+            length = <int> cigar_value >> BAM_CIGAR_SHIFT
+            if opp == CMATCH or opp == CEQUAL:
+                matches_total += length
+            elif opp == CDEL or opp == CINS or opp == CSOFT_CLIP or opp == CHARD_CLIP or opp == CDIFF:
+                n_total += 1
+        if matches_total == 0:
+            rates.append(0.0)
+        else:
+            rates.append(n_total / float(matches_total + n_total))
     if rates:
         mean = np.mean(rates)
         std = np.std(rates)
@@ -246,26 +263,95 @@ cpdef filter_poorly_aligned_ends(spanning_alignments, float divergence=0.02):
     for item in spanning_alignments:
         alignment = item.align
         cigar_l = alignment._delegate.core.n_cigar
+        if cigar_l == 0:
+            continue
         cigar_p = bam_get_cigar(alignment._delegate)
         cigar_index = item.cigar_index
-        index_begin = 0
+
+        cov_ops = [0] * <int> cigar_l
+        mat_ops = [0] * <int> cigar_l
+        n_ops = [0] * <int> cigar_l
         for i in range(cigar_l):
-            window_rate(&window_r, cigar_l, cigar_p, i, 2000, <bint>False)
-            w_rate = window_r.rate
-            start_i = window_r.index
+            cigar_value = cigar_p[i]
+            opp = <int> cigar_value & BAM_CIGAR_MASK
+            length = <int> cigar_value >> BAM_CIGAR_SHIFT
+            if opp == CMATCH or opp == CEQUAL:
+                cov_ops[i] = length
+                mat_ops[i] = length
+            elif opp == CDEL:
+                cov_ops[i] = length
+                n_ops[i] = 1
+            elif opp == CINS or opp == CSOFT_CLIP or opp == CHARD_CLIP or opp == CDIFF:
+                n_ops[i] = 1
+
+        # Forward scan: find the first poorly-aligned prefix window.
+        index_begin = 0
+        j = 0
+        cov_acc = 0
+        mat_acc = 0
+        n_acc = 0
+        for i in range(<int> cigar_l):
+            while j < <int> cigar_l and cov_acc < ws:
+                cov_acc += cov_ops[j]
+                mat_acc += mat_ops[j]
+                n_acc += n_ops[j]
+                j += 1
+            if cov_acc >= ws:
+                mat_acc_capped = mat_acc if mat_acc < ws else ws
+                if mat_acc_capped == 0:
+                    w_rate = 0.0
+                else:
+                    w_rate = n_acc / float(mat_acc_capped + n_acc)
+                stop_idx = j
+            else:
+                if mat_acc == 0:
+                    w_rate = 0.0
+                else:
+                    w_rate = n_acc / float(mat_acc + n_acc)
+                stop_idx = <int> cigar_l
             if w_rate < threshold:
                 break
-            index_begin = start_i
-        index_end = cigar_l
-        for i in range(cigar_l-1, index_begin -1, -1):
-            window_rate(&window_r, cigar_l, cigar_p, i, 2000, <bint>True)
-            w_rate = window_r.rate
-            end_i = window_r.index
+            index_begin = stop_idx
+            cov_acc -= cov_ops[i]
+            mat_acc -= mat_ops[i]
+            n_acc -= n_ops[i]
+
+        # Reverse scan: find the first poorly-aligned suffix window.
+        index_end = <int> cigar_l
+        j = <int> cigar_l - 1
+        cov_acc = 0
+        mat_acc = 0
+        n_acc = 0
+        for i in range(<int> cigar_l - 1, index_begin - 1, -1):
+            while j > -1 and cov_acc < ws:
+                cov_acc += cov_ops[j]
+                mat_acc += mat_ops[j]
+                n_acc += n_ops[j]
+                j -= 1
+            if cov_acc >= ws:
+                mat_acc_capped = mat_acc if mat_acc < ws else ws
+                if mat_acc_capped == 0:
+                    w_rate = 0.0
+                else:
+                    w_rate = n_acc / float(mat_acc_capped + n_acc)
+                stop_idx = j
+            else:
+                if mat_acc == 0:
+                    w_rate = 0.0
+                else:
+                    w_rate = n_acc / float(mat_acc + n_acc)
+                stop_idx = -1
             if w_rate < threshold:
                 break
-            index_end = end_i
+            index_end = stop_idx
+            cov_acc -= cov_ops[i]
+            mat_acc -= mat_ops[i]
+            n_acc -= n_ops[i]
+
         if index_begin <= cigar_index <= index_end:
             spanning.append(item)
+    if not spanning_alignments:
+        return spanning, 0
     return spanning, 1 - (len(spanning) / len(spanning_alignments))
 
 
@@ -373,14 +459,19 @@ def sample_level_density(potential, regions, max_dist=50):
     tmp_list = defaultdict(list)
     cdef EventResult_t ei
     cdef int start, stop, idx
+    cdef bint inA, inB
+    cdef list region_flags = []
 
     for idx in range(len(potential)):
         ei = potential[idx]
         # Only find density for non-region calls, otherwise too dense to be meaningful
-        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+        inA = intersecter(regions, ei.chrA, ei.posA, ei.posA + 1)
+        inB = intersecter(regions, ei.chrB, ei.posB, ei.posB + 1)
+        if not inA:
             tmp_list[ei.chrA].append((ei.posA - max_dist, ei.posA + max_dist, idx))
-        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+        if not inB:
             tmp_list[ei.chrB].append((ei.posB - max_dist, ei.posB + max_dist, idx))
+        region_flags.append((inA, inB))
 
     si_sets = {}
 
@@ -400,11 +491,12 @@ def sample_level_density(potential, regions, max_dist=50):
             expected = 2
         else:
             expected = 1
-        if not intersecter(regions, ei.chrA, ei.posA, ei.posA + 1):
+        inA, inB = region_flags[idx]
+        if not inA:
             vv = si_sets[ei.chrA].count(ei.posA, ei.posA + 1)
             neighbors += vv - expected
             count += 1
-        if not intersecter(regions, ei.chrB, ei.posB, ei.posB + 1):
+        if not inB:
             vv = si_sets[ei.chrB].count(ei.posB, ei.posB + 1)
             neighbors += vv - expected
             count += 1
@@ -438,9 +530,9 @@ cdef bint same_k(int start1, int start2, int n, const unsigned char[:] seq):
 
 
 cpdef dict search_ssr_kc(ori):
-    seq = ori.upper()
-    cdef const unsigned char[:] string_view = bytes(seq.encode("ascii"))  # use for indexing
-    cdef int str_len = len(seq)
+    cdef bytes seq_b = ori.upper().encode("ascii")
+    cdef const unsigned char[:] string_view = seq_b  # use for indexing
+    cdef int str_len = len(seq_b)
     cdef int rep_len = min(7, str_len)
     cdef int i = 0
     cdef int t, start, count, mm, good_i, successive_bad, size, finish
@@ -450,7 +542,7 @@ cpdef dict search_ssr_kc(ori):
     expansion_seq = ""
     cdef unsigned char starting_base
     while i < str_len:
-        if seq[i] == b"N":
+        if seq_b[i] == 78:  # ord('N')
             i += 1
             continue
         for t in range(1, rep_len):
