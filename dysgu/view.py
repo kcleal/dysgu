@@ -460,7 +460,9 @@ def _parse_vcf_columns(df, samples):
     for value_name, default_value in missing_original_columns.items():
         df[value_name] = [default_value] * len(df)
 
-    df["GQ"] = pd.to_numeric(df["GQ"], errors='coerce').fillna(".")
+    # GQ is a reserved Integer FORMAT field; keep it as an integer string or missing
+    gq_numeric = pd.to_numeric(df["GQ"], errors='coerce')
+    df["GQ"] = gq_numeric.apply(lambda x: str(int(x)) if pd.notna(x) else ".")
     for k, dtype in col_map.values():
         if k in df:
             if df[k].dtype != dtype:

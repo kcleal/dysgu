@@ -715,13 +715,19 @@ def get_hp_format(events):
                     e.GT = "0|1"
 
             hp_string = ''
+            unphased = all_haps['u'] if 'u' in all_haps else 0
             if n_haps >= 1:
-                unphased = all_haps['u'] if 'u' in all_haps else 0
                 hp_string = '|'.join([str(phased_haps[k]) if k in phased_haps else '0' for k in keys])
                 if unphased:
                     hp_string += f'_{unphased}'
                 if not hp_string:
                     hp_string = "0"
+            elif unphased:
+                # Only unphased reads support the SV; leading underscore is documented in the VCF header
+                hp_string = f'_{unphased}'
+            else:
+                # No haplotype information at all
+                hp_string = '.'
 
             e.haplotype = hp_string
 

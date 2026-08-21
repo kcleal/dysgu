@@ -41,6 +41,7 @@ def dysgu_default_args():
                 'merge_dist': None,
                 'merge_within': True,
                 'metrics': True,
+                'no_phase': False,
                 'min_size': 30,
                 'min_support': 3,
                 'mode': 'pe',
@@ -176,7 +177,7 @@ def load_dysgu_vcf(path, drop_na_columns=True):
     :return: A dataframe of SVs
     :rtype: pandas.DataFrame
     """
-    df, header, n_fields = vcf_to_df(path)
+    df, header, n_fields, _contig_names = vcf_to_df(path)
     if "SVMETHOD" in df:
         del df["SVMETHOD"]
     if drop_na_columns:

@@ -402,7 +402,7 @@ def get_header(contig_names=""):
 ##ALT=<ID=INV,Description="Inversion">
 ##ALT=<ID=TRA,Description="Translocation">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Float,Description="Genotype quality phred scaled">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality phred scaled">
 ##FORMAT=<ID=PSET,Number=1,Type=Integer,Description="Phase-set ID for phased SVs">
 ##FORMAT=<ID=HP,Number=1,Type=String,Description="Phased read support HP1[|HP2|...HPn]_unphased. Leading underscore (e.g. _4) indicates all reads unphased. No underscore implies no unphased reads">
 ##FORMAT=<ID=AF,Number=1,Type=Float,Description="Allele frequency">
@@ -473,6 +473,17 @@ def to_vcf(df, args, names, outfile, show_names=True,  contig_names="", header=N
     for col in ['maxASsupp', 'neigh', 'neigh10kb']:
         if col in df.columns:
             df[col] = [int(i) if (i == i and i is not None) else 0 for i in df[col]]
+
+    # GQ is a reserved FORMAT field that must be Integer per the VCF spec
+    if "GQ" in df.columns:
+        def _int_gq(v):
+            if v is None or v == "" or v == "." or (isinstance(v, float) and np.isnan(v)):
+                return "."
+            try:
+                return str(int(float(v)))
+            except (ValueError, TypeError):
+                return "."
+        df["GQ"] = df["GQ"].apply(_int_gq)
 
     count = 0
     recs = []
