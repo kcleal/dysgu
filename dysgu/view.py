@@ -244,7 +244,7 @@ def merge_df(df, samples, merge_dist, tree=None, merge_within_sample=False, aggr
              progressive=False):
     if log_messages:
         logging.info("Merge distance: {} bp".format(merge_dist))
-    df.reset_index(inplace=True)
+    df = df.reset_index()
     df["event_id"] = df.index
     df["contig"] = df["contigA"]
     df["contig2"] = df["contigB"]
@@ -454,7 +454,7 @@ def _parse_vcf_columns(df, samples):
             missing_original_columns[new_col] = required[new_col]
 
     # Now rename the columns that are present
-    df.rename(columns={k: v[0] for k, v in col_map.items() if k in df.columns}, inplace=True)
+    df = df.rename(columns={k: v[0] for k, v in col_map.items() if k in df.columns})
 
     # Add the missing columns after renaming
     for value_name, default_value in missing_original_columns.items():

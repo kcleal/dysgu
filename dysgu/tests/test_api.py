@@ -42,8 +42,6 @@ class TestConstruct(unittest.TestCase):
         df2 = dysgu.apply_model(df)
         assert len(df2) == 1
 
-        return 0
-
     @unittest.skipUnless(os.path.exists("/Users/kezcleal/Desktop/HG002.bam"),
                          "requires local HG002.bam/NA12878.bam")
     def test_merge(self):
@@ -76,11 +74,14 @@ class TestConstruct(unittest.TestCase):
         df = dysgu(f_iter)
         df = df[df['filter'] == 'PASS']
         assert len(df) >= 1
-        # Duplicate a row so we can test int/float/missing GQ coercion
+        # Duplicate a row so we can test int/float/missing GQ coercion.
+        # Build an object column: pandas >=3 rejects setting str/float into int64 via .loc
         df = pd.concat([df, df.copy(), df.copy()], ignore_index=True)
-        df.loc[df.index[0], "GQ"] = 30
-        df.loc[df.index[1], "GQ"] = 30.0
-        df.loc[df.index[2], "GQ"] = "."
+        gq = df["GQ"].astype(object).tolist()
+        gq[0] = 30
+        gq[1] = 30.0
+        gq[2] = "."
+        df["GQ"] = gq
 
         out = StringIO()
         dysgu.to_vcf(df, out)

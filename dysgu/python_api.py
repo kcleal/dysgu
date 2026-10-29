@@ -209,7 +209,7 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
     df["table_name"] = table_names
     n_samples = len(dataframes)
 
-    df.reset_index(inplace=True)
+    df = df.reset_index()
 
     df["event_id"] = df.index
     df["contig"] = df["contigA"]
@@ -220,8 +220,8 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
         df["preciseA"] = [1] * len(df)
         df["preciseB"] = [1] * len(df)
     else:
-        df["preciseA"].fillna(1, inplace=True)
-        df["preciseB"].fillna(1, inplace=True)
+        df["preciseA"] = df["preciseA"].fillna(1)
+        df["preciseB"] = df["preciseB"].fillna(1)
     df["contigA"] = [None if pd.isna(i) else i for i in df["contigA"]]
     df["contigB"] = [None if pd.isna(i) else i for i in df["contigB"]]
 
@@ -266,7 +266,7 @@ def merge_dysgu_df(*dataframes, merge_distance=500, pick_best=True, add_partners
         return DysguSV._mung_df(df)
     df2 = pd.DataFrame.from_records(found)
     if not df2.empty:
-        df2.set_index("event_id", inplace=True)
+        df2 = df2.set_index("event_id")
     if add_partners:
         df2["partners"] = [[(df.loc[j].table_name, df.loc[j].event_id) for j in ff[i]] if i in ff else set([]) for i in df2.index]
     else:
@@ -422,8 +422,8 @@ class DysguSV:
 
     @staticmethod
     def _mung_df(df):
-        df.reset_index(inplace=True)
-        df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
+        df = df.reset_index()
+        df = df.rename(columns={"contig": "contigA", "contig2": "contigB"})
         order = ['chrA', 'posA', 'event_id', 'ref_seq', 'variant_seq', 'filter',
                  'sample', 'svtype', 'posB', 'chrB', 'grp_id', 'n_in_grp', 'join_type',
                  'cipos95A', 'cipos95B', 'svlen', 'contigB', 'kind', 'rep', 'rep_sc',
@@ -439,8 +439,8 @@ class DysguSV:
                  'ras', 'fas', 'inner_cn', 'outer_cn', 'compress', 'ref_rep', 'jitter',
                 'contigA', 'right_ins_seq', 'left_ins_seq', 'partners', 'prob']
 
-        df["contigA"].replace(np.nan, "", inplace=True)
-        df["contigB"].replace(np.nan, "", inplace=True)
+        df["contigA"] = df["contigA"].replace(np.nan, "")
+        df["contigB"] = df["contigB"].replace(np.nan, "")
 
         return df[order]
 
