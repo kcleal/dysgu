@@ -1,6 +1,7 @@
 # cython: language_level=3, boundscheck=False, c_string_type=unicode, c_string_encoding=utf8, infer_types=True
 
 from __future__ import absolute_import
+from bisect import bisect_right
 from collections import defaultdict, deque, namedtuple
 import numpy as np
 cimport numpy as np
@@ -793,7 +794,7 @@ cdef void parse_cigar(str cigar, int *start, int *end, int *ref_end):
 
 
 AlnBlock = namedtuple("SA", ["query_start", "query_end", "ref_start", "ref_end", "chrom", "mq", "strand", "this"])
-JoinEvent = namedtuple("JE", ["chrom", "event_pos", "chrom2", "pos2", "query_pos", "query_end", "read_enum", "cigar_index"])
+JoinEvent = namedtuple("JE", ["chrom", "event_pos", "chrom2", "pos2", "query_pos", "query_end", "read_enum", "cigar_index", "flip"])
 
 
 class AlignmentsSA:
@@ -882,14 +883,15 @@ class AlignmentsSA:
         else:
             pos2 = b.ref_start
         chrom2 = b.chrom
+        flip = 1 if (b.strand != self.aln_strand and chrom == chrom2) else 0
         if b.mq < mq_thresh:
-            self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index))
+            self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index, 0))
             return
         elif self.paired:
             if not r.flag & 2304 and r.flag & 2 and r.pnext <= event_pos and (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):
-                self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index))
+                self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index, 0))
                 return
-        self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, query_pos, query_end, read_enum, cigar_index))
+        self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, query_pos, query_end, read_enum, cigar_index, flip))
 
     def _connect_right(self, r, max_dist, mq_thresh, read_enum):
         a = self.query_aligns[self.index]
@@ -908,18 +910,130 @@ class AlignmentsSA:
         else:
             pos2 = b.ref_end
         chrom2 = b.chrom
+        flip = 1 if (b.strand != self.aln_strand and chrom == chrom2) else 0
         if b.mq < mq_thresh:
-            self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index))
+            self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index, 0))
             return
         elif self.paired:
             # If paired, and SA block fits between two normal primary alignments, and block is not local, then
             # ignore block and try and call insertion
             if not r.flag & 2304 and r.flag & 2 and r.pnext >= event_pos and (chrom != chrom2 or abs(pos2 - event_pos) > max_dist):  # is primary, is proper pair. Use primary mate info, not SA
-                self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index))
+                self.join_result.append(JoinEvent(chrom, event_pos, chrom, event_pos, query_pos, query_end, ReadEnum_t.BREAKEND, cigar_index, 0))
                 return
-        self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, query_pos, query_end, read_enum, cigar_index))
+        self.join_result.append(JoinEvent(chrom, event_pos, chrom2, pos2, query_pos, query_end, read_enum, cigar_index, flip))
 
-#
+
+cdef class ExonIndex:
+    """Transcript exon blocks for RNA-seq INV gating. Decides whether an
+    inversion-signature event should be accepted or probabilistically sampled:
+    cross-gene and exon--non-exon events are permitted; same-exon events are dropped;
+    small same-transcript events are downsampled by ArtifactStats.p_for.
+
+    Coordinate-compressed segment map: exon breakpoints define atomic segments,
+    each tagged with the sorted tuple of covering transcript ids, so stabbing
+    queries are O(log n) via bisect rather than a linear scan over all exons."""
+
+    cdef public int exon_threshold
+    cdef dict seg_coords  # chrom -> sorted segment start coordinates
+    cdef dict seg_ends    # chrom -> segment exclusive end coordinates
+    cdef dict seg_txs     # chrom -> per segment, sorted tuple of tx indices
+    cdef list tx_ids      # tx index -> tx name
+
+    def __init__(self, blocks_file, int exon_threshold):
+        self.exon_threshold = exon_threshold
+        self.seg_coords = {}
+        self.seg_ends = {}
+        self.seg_txs = {}
+        self.tx_ids = []
+        if not blocks_file:
+            return
+        cdef dict blocks = {}
+        cdef dict tx_index = {}
+        cdef int s, e, ti
+        for line in open(blocks_file):
+            if not line or line[0] == "#":
+                continue
+            f = line.rstrip("\n").split("\t")
+            if len(f) < 4:
+                continue
+            s = int(f[1]); e = int(f[2])
+            if e < s:
+                continue
+            ti = tx_index.get(f[3], -1)
+            if ti == -1:
+                ti = len(self.tx_ids)
+                tx_index[f[3]] = ti
+                self.tx_ids.append(f[3])
+            blocks.setdefault(f[0], []).append((s, e, ti))
+        cdef list events, coords, ends, txs
+        cdef set active
+        cdef int i, n, c
+        for chrom in blocks:
+            bl = blocks[chrom]
+            bl.sort()
+            events = []
+            ap = events.append
+            for s, e, ti in bl:
+                ap((s, 1, ti))
+                ap((e + 1, -1, ti))
+            events.sort()
+            coords = []
+            ends = []
+            txs = []
+            active = set()
+            i = 0
+            n = len(events)
+            while i < n:
+                c = events[i][0]
+                while i < n and events[i][0] == c:
+                    if events[i][1] == 1:
+                        active.add(events[i][2])
+                    else:
+                        active.discard(events[i][2])
+                    i += 1
+                if active and i < n:
+                    coords.append(c)
+                    ends.append(events[i][0])
+                    txs.append(tuple(sorted(active)))
+            self.seg_coords[chrom] = coords
+            self.seg_ends[chrom] = ends
+            self.seg_txs[chrom] = txs
+
+    def decision(self, chromA, posA, chromB, posB):
+        # returns "accept" | "sample". Cross-gene and exon--non-exon events are
+        # permitted; same-transcript events smaller than the exon-space threshold
+        # (including same-exon) are probabilistically downsampled
+        if chromA != chromB:
+            return "accept"
+        C = self.seg_coords.get(chromA)
+        if C is None:
+            return "accept"
+        E = self.seg_ends[chromA]
+        T = self.seg_txs[chromA]
+        i = bisect_right(C, posA) - 1
+        if i < 0 or posA >= E[i]:
+            return "accept"  # posA outside exons: exon--non-exon permitted
+        j = bisect_right(C, posB) - 1
+        if j < 0 or posB >= E[j]:
+            return "accept"
+        if set(T[i]) & set(T[j]):
+            if abs(posB - posA) < self.exon_threshold:
+                return "sample"
+        return "accept"  # different genes permitted
+
+
+cdef bint gate_inv_read(AlignedSegment r, int chromA, int posA, int chromB, int posB, artifact_stats, ExonIndex exon_index, chrom_names):
+    # Inversion-signature read gating for RNA-seq. Returns True to keep the read.
+    if exon_index is None or artifact_stats is None:
+        return True
+    dec = exon_index.decision(chrom_names[chromA], posA, chrom_names[chromB], posB)
+    if dec == "accept":
+        return True
+    p = artifact_stats.p_for(chrom_names[chromA], posA)
+    h = xxhasher(bam_get_qname(r._delegate), len(r.qname), 42)
+    return (h % 10000) < <uint64_t>(p * 10000)
+
+
 cdef int cluster_clipped(Py_SimpleGraph G, r, ClipScoper clip_scope, chrom, pos, node_name):
     cdef int other_node
     cdef int count = 0
@@ -989,18 +1103,6 @@ cdef void add_to_graph(Py_SimpleGraph G, AlignedSegment r, PairedEndScoper pe_sc
 
     if read_enum < 2:  # Prevents joining up within-read svs with between-read svs
         template_edges.add(r.qname, flag, node_name, query_pos)
-
-    # Debug:
-    # if r.qname == "1e05ec04-cb97-4df6-b3d2-59b8d126d0aa":
-    #     echo("---", r.qname, read_enum, node_name, (event_pos, pos2), length_from_cigar, list(other_nodes))
-    # look = {129,128 }
-    # if node_name == 25:
-    # if r.qname in look:
-    # # if r.qname == "D00360:18:H8VC6ADXX:1:1210:7039:44052":
-    #     echo(r.qname, length_from_cigar, "nodename:", node_name, list(other_nodes), (chrom, event_pos), (chrom2, pos2),
-    #          f"enum={read_enum}")
-    # echo(list(other_nodes))
-
 
 cdef int[16] basecounts
 
@@ -1194,7 +1296,8 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                             TemplateEdges template_edges, NodeToName node_to_name,
                             int cigar_pos2, int mapq_thresh, ClipScoper clip_scope,
                             ReadEnum_t read_enum, bad_clip_counter, bint mm_only, site_adder,
-                            int length_from_cigar, bint trust_ins_len):
+                            int length_from_cigar, bint trust_ins_len,
+                            artifact_stats=None, ExonIndex exon_index=None, chrom_names=None):
     cdef int other_node, clip_left, clip_right
     cdef bint current_overlaps_roi, next_overlaps_roi
     cdef bint add_primary_link, add_insertion_link
@@ -1251,6 +1354,11 @@ cdef void process_alignment(Py_SimpleGraph G, AlignedSegment r, int clip_l, int 
                     query_pos = j.query_pos
                     read_enum = j.read_enum
                     cigar_index = j.cigar_index
+                    if j.flip and artifact_stats is not None:
+                        # strand-flipped same-chrom join (inversion signature): gate
+                        if not gate_inv_read(r, chrom, event_pos, chrom2, pos2,
+                                             artifact_stats, exon_index, chrom_names):
+                            continue
                     if read_enum == BREAKEND:
                         if mm_only and current_overlaps_roi and next_overlaps_roi:  # Probably too many reads in ROI to reliably separate out break end reads
                             return
@@ -1472,7 +1580,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                             float norm_thresh=100, float spd_thresh=0.3, bint mm_only=False,
                             sites=None, bint trust_ins_len=True, bint low_mem=False, temp_dir=".",
                             bint find_n_aligned_bases=True, float position_distance_thresh=0.8, int max_search_depth=20,
-                            float max_divergence=0.2, bint no_phase=False, transcript_gaps_file=""):
+                            float max_divergence=0.2, bint no_phase=False, transcript_gaps_file="",
+                            artifact_stats=None, transcript_blocks_file=""):
     logging.info("Building cluster graph")
 
     # Edges are added between alignments from same template, after building main graph
@@ -1500,12 +1609,17 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
     cdef vector[string] chrom_names
     cdef bytes chr_b
     cdef int i
-    if transcript_gaps_file:
-        transcript_gaps.readBed(transcript_gaps_file)
+    if transcript_gaps_file or artifact_stats is not None:
+        transcript_gaps.readBed(transcript_gaps_file) if transcript_gaps_file else None
         for i in range(infile.header.nreferences):
             chr_b = infile.get_reference_name(i).encode("ascii")
             chrom_names.push_back(chr_b)
     cdef bint filter_chimera = transcript_gaps_file and paired_end
+
+    # RNA-seq INV gating: exon index + empirical artifact rates (PE + transcripts only)
+    cdef ExonIndex exon_index = None
+    if artifact_stats is not None and transcript_blocks_file and paired_end:
+        exon_index = ExonIndex(transcript_blocks_file, artifact_stats.exon_threshold)
 
     site_adder = None
     if sites:
@@ -1562,7 +1676,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                   overlap_regions, clustering_dist, pe_scope,
                                   cigar_index, event_pos, paired_end, tell, genome_scanner,
                                   template_edges, node_to_name, pos2, mapq_thresh, clip_scope, ReadEnum_t.SPLIT,
-                                  bad_clip_counter, mm_only, site_adder, 0, trust_ins_len)
+                                  bad_clip_counter, mm_only, site_adder, 0, trust_ins_len,
+                                  artifact_stats, exon_index, chrom_names)
                 added = True
             for cigar_index in range(cigar_l):
                 cigar_value = cigar_p[cigar_index]
@@ -1618,7 +1733,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       pos2, mapq_thresh, clip_scope, ReadEnum_t.BREAKEND, bad_clip_counter,
-                                      mm_only, site_adder, 0, trust_ins_len)
+                                      mm_only, site_adder, 0, trust_ins_len,
+                                      artifact_stats, exon_index, chrom_names)
             else:
                 # Use whole read, could be normal or discordant
                 if not paired_end:
@@ -1631,7 +1747,8 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                           cigar_index, event_pos, paired_end, tell, genome_scanner,
                                           template_edges, node_to_name,
                                           pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                          mm_only, site_adder, 0, trust_ins_len)
+                                          mm_only, site_adder, 0, trust_ins_len,
+                                          artifact_stats, exon_index, chrom_names)
 
                 else:
                     if r.flag & 2 and abs(r.tlen) < max_dist and r.rname == r.rnext:
@@ -1647,6 +1764,14 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
 
                         read_enum = ReadEnum_t.DISCORDANT
 
+                    if artifact_stats is not None and (r.flag >> 4 & 1) == (r.flag >> 5 & 1):
+                        # FF/RR-patterned pair (inversion signature): gate small same-transcript events
+                        lo = r.pos if r.pos < r.pnext else r.pnext
+                        hi = r.pnext if r.pos < r.pnext else r.pos
+                        if not gate_inv_read(r, r.rname, lo, r.rnext, hi,
+                                             artifact_stats, exon_index, chrom_names):
+                            continue
+
                     if left_clip_size or right_clip_size:
                         if left_clip_size > right_clip_size:
                             event_pos = r.pos  # else reference_end is used
@@ -1655,7 +1780,7 @@ cpdef tuple construct_graph(genome_scanner, infile, int max_dist, int clustering
                                       cigar_index, event_pos, paired_end, tell, genome_scanner,
                                       template_edges, node_to_name,
                                       pos2, mapq_thresh, clip_scope, read_enum, bad_clip_counter,
-                                      mm_only, site_adder, 0, trust_ins_len)
+                                      mm_only, site_adder, 0, trust_ins_len, artifact_stats, exon_index, chrom_names)
         # process within-read events
         if not events_to_add.empty():
             itr_events = events_to_add.begin()
@@ -1867,6 +1992,7 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
     reads = {}
     cdef int support_estimate = 0
     cdef int v
+    cdef int n_buffered = 0  # count only; not stored, so GraphComponent stays light to pickle and results are --procs independent
     info = None
     if min_support >= 3 and len(component) == 1 and not sites_index:
         return None
@@ -1880,8 +2006,8 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
                 info[v] = sites_index[v]
             min_support = len(info) + 1
             continue
-        if procs == 1 and v in read_buffer:
-            reads[v] = read_buffer[v]
+        if v in read_buffer:
+            n_buffered += 1
         if node_to_name.get_cigar_index(v) != -1:
             support_estimate += 2
         else:
@@ -1902,13 +2028,13 @@ cpdef proc_component(node_to_name, component, read_buffer, infile, Py_SimpleGrap
 
     if not support_between and not support_within:
         if not paired_end:
-            if len(n2n) >= min_support or len(reads) >= min_support or info:
+            if len(n2n) >= min_support or n_buffered >= min_support or info:
                 return GraphComponent(None, None, None, None, n2n, info)
             else:
                 return None
         else:
             # single paired end template can have 3 nodes e.g. two reads plus supplementary
-            if min_support == 1 and (len(n2n) >= min_support or len(reads) >= min_support):
+            if min_support == 1 and (len(n2n) >= min_support or n_buffered >= min_support):
                 return GraphComponent(None, None, None, None, n2n, info)
             return GraphComponent(None, None, None, None, n2n, info)
             #elif len(reads) >= min_support or info:

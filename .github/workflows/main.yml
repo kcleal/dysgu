@@ -66,7 +66,9 @@ jobs:
           CIBW_TEST_REQUIRES: |
             cython click>=8.0 superintervals>=0.3.0 numpy scipy pandas pysam>=0.23.3 networkx>=2.4 scikit-learn>=0.22 sortedcontainers lightgbm
 
-          CIBW_TEST_COMMAND: dysgu test --verbose
+          CIBW_TEST_COMMAND: >
+            dysgu test --verbose &&
+            python -m unittest dysgu.tests.test_api -v
 
       - uses: actions/upload-artifact@v4
         with:

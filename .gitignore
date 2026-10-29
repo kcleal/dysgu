@@ -28,3 +28,6 @@ dev
 /builddir/
 /build-meson/
 /wd*/
+
+# stale pre-refactor backups
+/old/

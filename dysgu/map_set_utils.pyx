@@ -457,6 +457,11 @@ cdef class EventResult:
         self.n_gaps = 0
         self.compress = 0
         self.a_freq = 0
+        self.gt_alt = -1
+        self.gt_ref = -1
+        self.gt_ll_ref = 0.0
+        self.gt_ll_het = 0.0
+        self.gt_ll_hom = 0.0
         self.qnames = python_set([])
         self.haplotype = "-1"
         self.phase_set = -1
@@ -467,7 +472,7 @@ cdef class EventResult:
         return str(to_dict(self))
 
 
-def filter_transcript_gaps(events, gaps_file=""):
+def filter_transcript_gaps(events, gaps_file="", tolerance=50, exempt_supp=False):
     if not gaps_file:
         return events
     cdef TranscriptData transcript_gaps = TranscriptData()
@@ -477,14 +482,27 @@ def filter_transcript_gaps(events, gaps_file=""):
     kept = []
     cdef dict chr_cache = {}
     cdef object chrom_b
+    cdef int start
+    cdef int end
     for e in events:
-        if e.svtype in ('TRA', 'BND'):
+        if e.chrA != e.chrB:
             kept.append(e)
             continue
         chrom_b = chr_cache.get(e.chrA)
         if chrom_b is None:
             chrom_b = e.chrA.encode('ascii')
             chr_cache[e.chrA] = chrom_b
-        if not transcript_gaps.hasRefSkipGap(chrom_b, e.posA, e.posB, tolerance=10):
+        if e.posA <= e.posB:
+            start = e.posA
+            end = e.posB
+        else:
+            start = e.posB
+            end = e.posA
+        # Boundary tolerance needs to cover breakpoint uncertainty (CIPOS95/CIEND95);
+        # discordant-pair derived events can sit >10bp from the annotated splice sites.
+        # Events with split-read support are never treated as transcript gaps: splicing
+        # cannot create CIGAR-I/D or inversion signatures
+        if not transcript_gaps.hasRefSkipGap(chrom_b, start, end, tolerance=tolerance) or \
+                (exempt_supp and e.supp > 0):
             kept.append(e)
     return kept

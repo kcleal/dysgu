@@ -6,7 +6,7 @@ from multiprocessing import Pool
 
 import numpy as np
 import random
-from collections import defaultdict, deque
+from collections import defaultdict
 import networkx as nx
 from dysgu import consensus
 from dysgu.map_set_utils cimport is_reciprocal_overlapping, EventResult
@@ -26,6 +26,13 @@ def get_chrom_key(ei):
     if ei.chrA != ei.chrB:
         return min(ei.chrA, ei.chrB), max(ei.chrA, ei.chrB)
     return ei.chrA
+
+
+def _exact_twin(ei, ej):
+    # Same locus and type; used to diagnose why identical events escape merging
+    return (ei.chrA == ej.chrA and ei.chrB == ej.chrB and
+            ei.posA == ej.posA and ei.posB == ej.posB and
+            ei.svtype == ej.svtype and ei.svlen == ej.svlen)
 
 
 class EventCanonicaliser:
@@ -139,7 +146,9 @@ def compare_subset(potential, max_dist, max_comparisons, same_sample):
         # echo(ols, ols2)
         ols = [i for i in set(ols) if i != idx]
         if len(ols) > max_comparisons:
-            random.shuffle(ols)
+            # Per-event seeded shuffle: deterministic across --procs and processes
+            # (global random state differs between parent and spawned workers)
+            random.Random(idx).shuffle(ols)
             ols = ols[:max_comparisons]
         for jdx in ols:
             ej = potential[jdx]
@@ -394,6 +403,21 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
     ins_like = {"INS", "DUP", "TRA"}
     job = []
     pool = Pool(procs) if procs > 1 else None
+
+    def add_contig_edge(a, b):
+        # Contig alignment verifies the sequences are similar, but in tandem
+        # repeats contigs from very different-sized events align end-to-end.
+        # When both sizes are trustworthy (svlen_precise) and discordant, keep
+        # the edge but make it weak so forbidden pairs can still be separated.
+        ea, eb = potential[a], potential[b]
+        strong = True
+        if same_sample and ea.chrA == eb.chrA and ea.chrB == eb.chrB and \
+                ea.svlen_precise and eb.svlen_precise:
+            ml = max(int(ea.svlen), int(eb.svlen))
+            if ml > 0 and min(int(ea.svlen), int(eb.svlen)) / ml < 0.5:
+                strong = False
+        G.add_edge(a, b, loci_same=strong)
+
     try:
         for ei, ej, idx, jdx in event_iter:
 
@@ -405,14 +429,14 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                             continue
                         out_edges[edge[0]] += 1
                         out_edges[edge[1]] += 1
-                        G.add_edge(edge[0], edge[1], loci_same=True)
+                        add_contig_edge(edge[0], edge[1])
                 else:
                     for edge in pool.starmap(process_contig_alignments, job):
                         if not edge:
                             continue
                         out_edges[edge[0]] += 1
                         out_edges[edge[1]] += 1
-                        G.add_edge(edge[0], edge[1], loci_same=True)
+                        add_contig_edge(edge[0], edge[1])
                 job = []
 
             i_id, j_id = ei.event_id, ej.event_id
@@ -423,13 +447,25 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if id_key in seen:
                 continue
 
+            if same_sample and _exact_twin(ei, ej):
+                seen.add(id_key)
+                out_edges[idx] += 1
+                out_edges[jdx] += 1
+                G.add_edge(idx, jdx, loci_same=True)
+                continue
+
             if not same_sample and ei.svtype != ej.svtype:
                 seen.add(id_key)
                 continue
             if same_sample and \
                 ei.su > avg_su_thresh and ej.su > avg_su_thresh and \
                 ei.spanning > 0 and ej.spanning > 0 and \
-                ei.svlen != ej.svlen:
+                ei.svlen != ej.svlen and \
+                not (paired_end and ei.svtype in ins_like and ej.svtype in ins_like) and \
+                not (paired_end and ei.svtype == "SKIP" and ej.svtype == "SKIP" and ei.supp == 0 and ej.supp == 0):
+                # For PE insertion-like or split-read-less SKIP events the span is a
+                # pseudo-span of discordant pairs, so differing svlen does not imply
+                # different alleles; let the l_ratio rule below decide
                 seen.add(id_key)
                 disjoint_edges.add(id_key)
                 continue
@@ -441,7 +477,7 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                 continue
 
             if (same_sample and i_id == j_id) or \
-                (same_sample and (out_edges[idx] > 100 or out_edges[jdx] > 100)) or \
+                (same_sample and (out_edges[idx] > 250 or out_edges[jdx] > 250)) or \
                 (not same_sample and (out_edges[idx] > 10 or out_edges[jdx] > 10)):
                     seen.add(id_key)
                     continue
@@ -459,6 +495,15 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
             if ei.type != ej.type and (ei.type == 'pe' or ej.type == 'pe'):
                 out_edges[idx] += 1
                 out_edges[jdx] += 1
+                continue
+
+            # For long reads a DEL and an INS at the same locus are different
+            # alleles (possibly on different haplotypes); do not merge them.
+            if not paired_end and same_sample and \
+                    ((ei.svtype == "DEL" and ej.svtype == "INS") or
+                     (ei.svtype == "INS" and ej.svtype == "DEL")):
+                seen.add(id_key)
+                disjoint_edges.add(id_key)
                 continue
 
             # qnames can collide by chance across different BAMs, so this heuristic
@@ -509,8 +554,8 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
 
             # Loci are similar, check contig match or reciprocal overlap
             if not any_contigs_to_check:
-                one_is_imprecise = (not ei.preciseA or not ei.preciseB or ei.svlen_precise or
-                                    not ej.preciseA or not ej.preciseB or ej.svlen_precise)
+                one_is_imprecise = (not ei.preciseA or not ei.preciseB or not ei.svlen_precise or
+                                    not ej.preciseA or not ej.preciseB or not ej.svlen_precise)
                 if ml > 0 and (l_ratio > 0.5 or (one_is_imprecise and l_ratio > 0.3)):
                     out_edges[idx] += 1
                     out_edges[jdx] += 1
@@ -520,25 +565,24 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
                     out_edges[idx] += 1
                     out_edges[jdx] += 1
                     G.add_edge(idx, jdx, loci_same=False)
-            elif procs > 1:
-                job.append(
-                    (ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_end, idx, jdx, same_sample)
-                )
-            else:
-                edge = process_contig_alignments(ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_end, idx, jdx, same_sample)
-                if not edge:
-                    continue
-                out_edges[edge[0]] += 1
-                out_edges[edge[1]] += 1
-                G.add_edge(edge[0], edge[1], loci_same=True)
+            # Defer contig alignments to batched flushes in ALL modes. Processing
+            # them inline for procs==1 changes edge-insertion order into G (and
+            # hence merge tie-breaks) versus the pooled path.
+            job.append(
+                (ci, ci2, ci_alt, cj, cj2, cj_alt, ei, ej, paired_end, idx, jdx, same_sample)
+            )
 
         if job:
-            for edge in pool.starmap(process_contig_alignments, job):
+            if procs > 1:
+                results = pool.starmap(process_contig_alignments, job)
+            else:
+                results = [process_contig_alignments(*item) for item in job]
+            for edge in results:
                 if not edge:
                     continue
                 out_edges[edge[0]] += 1
                 out_edges[edge[1]] += 1
-                G.add_edge(edge[0], edge[1], loci_same=True)
+                add_contig_edge(edge[0], edge[1])
     finally:
         if pool is not None:
             pool.close()
@@ -547,55 +591,63 @@ def enumerate_events(G, potential, max_dist, try_rev, tree, paired_end=False, re
     return G, disjoint_edges
 
 
-def split_graph_by_forbidden_edges(G, forbidden_pairs, potential):
+def split_graph_by_forbidden_edges(G, forbidden_pairs):
+    """Separate forbidden node pairs by removing edges.
 
-    def bfs_find_and_cut(start, target, work_graph, potential):
-        queue = deque([(start, None)])  # (node, parent)
-        visited = {start}
-        parent_map = {}  # Keep track of how we reached each node
-        while queue:
-            current, parent = queue.popleft()
-            for neighbor in work_graph.neighbors(current):
-                if neighbor == target:
-                    work_graph.remove_edge(current, neighbor)
-                    return True
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    parent_map[neighbor] = current
-                    queue.append((neighbor, current))
-        return False
-
+    This is the minimum-multicut problem; instances here are small (components
+    are capped at ~50 nodes), so a greedy loop of single-pair min-cuts
+    (max-flow) with strength-weighted edges is near-optimal in practice.
+    loci_same (contig-verified/identical-loci) edges are weighted heavily so
+    they are only cut when no cheaper cut separates the pair; the exact-twin
+    rejoin in merge_events is the backstop when they are cut anyway.
+    """
+    STRONG_W = 10 ** 6  # loci_same edges: cut only as a last resort
     work_graph = G.copy()
-    node_component_size = {}
-    components = nx.connected_components(work_graph)
+    for u, v, attr in work_graph.edges(data=True):
+        work_graph[u][v]['capacity'] = STRONG_W if attr.get('loci_same') else 1
 
-    for idx, component in enumerate(components):
-        component_size = len(component)
-        if len(component) > 3:  # If one node connects all others, don't cut
-            max_degree = max(work_graph.degree(u) for u in component)
-            if max_degree == len(component) - 1:
+    def components_info():
+        comp_root = {}
+        comp_size = {}
+        is_star = {}
+        for comp in nx.connected_components(work_graph):
+            root = min(comp)
+            size = len(comp)
+            star = size > 3 and max(dict(work_graph.degree(comp)).values(), default=0) == size - 1
+            for n in comp:
+                comp_root[n] = root
+                comp_size[n] = size
+                is_star[n] = star
+        return comp_root, comp_size, is_star
+
+    pending = sorted({(min(a, b), max(a, b)) for a, b in forbidden_pairs})
+    while pending:
+        comp_root, comp_size, is_star = components_info()
+        progressed = False
+
+        for a, b in pending:
+            if a not in work_graph or b not in work_graph:
                 continue
-        for node in component:
-            node_component_size[node] = component_size
-
-    for node1, node2 in forbidden_pairs:
-        if node1 not in work_graph or node2 not in work_graph:
-            continue
-        # For n=3, assume nodes really should be merged. This can arise when
-        # one large INDEL matches two smaller INDELS that are adjacent on the same read
-        # Don't cut if graph is triangle, do otherwise
-        component_size = node_component_size.get(node1, 0)
-        if component_size > 50:
-            continue
-        # echo('component size', node1, node2, component_size, work_graph.edges(node1), work_graph.edges(node2))
-        if node_component_size.get(node1, 0) == 3:
-            # if len(work_graph.edges(node1)) == 2 and len(work_graph.edges(node2)) == 2:
+            if comp_root.get(a) != comp_root.get(b):
+                continue  # already separated
+            if comp_size.get(a, 0) > 50 or comp_size.get(a, 0) == 3 or is_star.get(a, False):
+                continue  # exemptions: leave the component as one group
+            if not nx.has_path(work_graph, a, b):
                 continue
-        # echo('n out edges', (node1, node2), node_component_size.get(node1, 0), len(work_graph.edges(node1)), len(work_graph.edges(node2)))
-        bfs_find_and_cut(node1, node2, work_graph, potential)
+            cut_value, (reach, non_reach) = nx.minimum_cut(work_graph, a, b)
+            if cut_value <= 0:
+                continue
+            cut_edges = [(u, v) for u in reach for v in work_graph[u] if v in non_reach]
+            if not cut_edges:
+                continue
+            work_graph.remove_edges_from(cut_edges)
+            progressed = True
+        if not progressed:
+            break
+        comp_root, _, _ = components_info()
+        pending = [p for p in pending if comp_root.get(p[0]) == comp_root.get(p[1])]
 
-    final_components = [work_graph.subgraph(c).copy() for c in nx.connected_components(work_graph)]
-    return final_components
+    return [work_graph.subgraph(c).copy() for c in nx.connected_components(work_graph)]
 
 
 def srt_func(item1, item2):
@@ -642,6 +694,16 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
     # Cluster events on graph
     G = nx.Graph()
+    # Force-link exact duplicate loci before enumerate_events: the hot-locus guards
+    # there (out_edges cap, max_comparisons truncation) can otherwise drop the edge
+    # between identical events from the same component
+    exact_groups = defaultdict(list)
+    for idx0, ei0 in enumerate(potential):
+        exact_groups[(ei0.chrA, ei0.posA, ei0.chrB, ei0.posB, ei0.svtype, ei0.svlen)].append(idx0)
+    exact_twin_groups = [v for v in exact_groups.values() if len(v) > 1]
+    for idxs0 in exact_twin_groups:
+        for other0 in idxs0[1:]:
+            G.add_edge(idxs0[0], other0, loci_same=True)
     G, forbidden_edges = enumerate_events(G, potential, max_dist, try_rev, tree, paired_end, rel_diffs, diffs, same_sample,
                         aggressive_ins_merge=aggressive_ins_merge,
                         debug=debug, max_comparisons=max_comparisons, procs=procs)
@@ -654,7 +716,37 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
 
     # Try and merge SVs with identical breaks, then merge ones with less accurate breaks - this helps prevent
     # over merging SVs that are close together
-    components = split_graph_by_forbidden_edges(G, forbidden_edges, potential)
+    components = split_graph_by_forbidden_edges(G, forbidden_edges)
+    if exact_twin_groups:
+        # Forbidden-edge cuts are allowed to sever any edge along a BFS path; rejoin
+        # components that exact twins were split across so identical events still merge
+        comp_of = {}
+        for ci, grp in enumerate(components):
+            for n in grp:
+                comp_of[n] = ci
+        parent = list(range(len(components)))
+
+        def _find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        rejoined = False
+        for idxs0 in exact_twin_groups:
+            if not all(i in comp_of for i in idxs0):
+                continue
+            root0 = _find(comp_of[idxs0[0]])
+            for other0 in idxs0[1:]:
+                root1 = _find(comp_of[other0])
+                if root1 != root0:
+                    parent[root1] = root0
+                    rejoined = True
+        if rejoined:
+            regrouped = defaultdict(list)
+            for ci, grp in enumerate(components):
+                regrouped[_find(ci)].extend(grp)
+            components = list(regrouped.values())
     #node_to_event = {i.event_id: i for i in potential}
     cdef int k
     for grp in components:
@@ -715,11 +807,12 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                             if best_var_seq:
                                 best_var_seq = None
                                 w0.variant_seq = None
-                        if best_var_seq is None and isinstance(item.variant_seq, str):
+                        if best_var_seq is None and isinstance(item.variant_seq, str) and \
+                                abs(int(item.svlen) - int(w0.svlen)) < 20:
                             w0.variant_seq = item.variant_seq
                             w0.svlen = item.svlen
                             best_var_seq = item.variant_seq
-                        if w0.posA == w0.posB < item.posB:
+                        if w0.posA == w0.posB < item.posB and abs(int(item.svlen) - int(w0.svlen)) < 20:
                             w0.posB = item.posB
                 if item.sqc != -1 and sqc == 1:
                     w0.sqc = sqc

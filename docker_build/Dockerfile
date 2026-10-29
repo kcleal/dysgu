@@ -1,5 +1,5 @@
-# sudo docker build -t kcleal/dysgu .
-FROM --platform=linux/amd64 python:3.11-bullseye
+
+FROM python:3.11-bullseye
 
 MAINTAINER Kez Cleal clealk@cardiff.ac.uk
 
@@ -9,30 +9,35 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+RUN pip install --upgrade pip && \
+    pip config list && \
+    pip index versions dysgu || echo "dysgu not found via index" && \
+    pip search dysgu || echo "search failed" && \
+    pip install --dry-run dysgu || echo "dry run failed" \
+    
 # Install dysgu and required Python dependencies
 RUN pip install --upgrade pip && \
-    pip install "superintervals>=0.2.10" && \
-    pip install dysgu
+    pip install "superintervals>=0.2.10" "dysgu"
 
-# Install samtools 1.18 for connveience
+# Install samtools 1.18
 RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.18.tar.bz2 && \
     tar -xvf samtools-1.18.tar.bz2 && \
     rm samtools-1.18.tar.bz2 && \
     mv samtools-1.18 samtools && \
     cd samtools && \
     ./configure && \
-    make -j$(nproc) && \
+    make && \
     make install && \
     cd ../
 
-# Install bcftools 1.18 for connveience
+# Install bcftools 1.18
 RUN wget https://github.com/samtools/bcftools/releases/download/1.18/bcftools-1.18.tar.bz2 && \
     tar -xvf bcftools-1.18.tar.bz2 && \
     rm bcftools-1.18.tar.bz2 && \
     mv bcftools-1.18 bcftools && \
     cd bcftools && \
     ./configure && \
-    make -j$(nproc) && \
+    make && \
     make install && \
     cd ../
 

@@ -117,6 +117,24 @@ more reads being filtered and lower sensitivity::
 
     dysgu call --divergence auto --mode nanopore reference.fa temp_dir input.bam > svs.vcf
 
+RNA-seq
+*******
+Dysgu can call SVs (including fusion genes) and alternative splice events from paired-end RNA-seq alignments (long-read RNA-seq is untested).
+A gff3 file of transcript annotations is required so that splicing can be distinguished from genuine SVs::
+
+    dysgu run --transcripts transcripts.gff3 reference.fa temp_dir input.bam > svs.vcf
+
+With --transcripts, intron-spanning events are reported as SKIP, those matching annotated splice sites are filtered from the
+output, and event support and allelic fraction are estimated using transcript-aware coverage. As expressed genes have high
+and variable depth, the default coverage filters are usually too strict. The following settings are a good default
+for RNA-seq libraries::
+
+    dysgu run --transcripts transcripts.gff3 --clip-length -1 --min-support 50 --min-size 100 --max-cov -1 reference.fa temp_dir input.bam > svs.vcf
+
+Small inversions within a transcript are a common reverse-transcription template-switching artifact in RNA-seq. When
+--transcripts is used, these are suppressed by default using empirically measured artifact rates, while cross-gene and
+exon--non-exon inversions (potential fusion events) are unaffected. The filter can be disabled using --rna-inv-filter False.
+
 Pipeline overview
 ~~~~~~~~~~~~~~~~~
 The first stage of the "run" pipeline is to separate SV-associated reads - split/discordant reads,

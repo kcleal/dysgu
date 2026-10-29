@@ -45,7 +45,11 @@ def filter_bad_alignment(align, event, idx, begin, end, break_position):
     if not seq1 or not seq2:
         return -1
     if align.target_begin > 8 and len(align.target_sequence) - align.target_end_optimal > 8:
-        return -2
+        # Gaps at both ends of the alignment: reject as a chance/paralogous hit only when
+        # the aligned span explains a minority of the clip; a majority-aligned clip is a
+        # genuine local placement (e.g. repeat-derived clips flanked by minor overhangs)
+        if span < len(align.target_sequence) * 0.5:
+            return -2
 
     distance_to_break = min(abs(begin - break_position), abs(end - break_position))
     large_gap_penalty = 24
@@ -82,7 +86,7 @@ def filter_bad_alignment(align, event, idx, begin, end, break_position):
     return -6
 
 
-def merge_align_regions(locations):
+def merge_align_regions(locations, break_idx):
     # Merge any similar alignment regions found by edlib, used to get the bounds of the alignment region
     if len(locations) <= 1:
         return locations
@@ -98,13 +102,16 @@ def merge_align_regions(locations):
             new_l.append([s, e])
             # break
             # return None
-    # Choose block closest to break point
+    # Choose block closest to break point; ties go to the block spanning more of the clip
     best_i = 0
-    dist = 100_000
+    best_d = None
     for i, (s, e) in enumerate(new_l):
-        mid = e - s
-        if abs(mid - 1000) < dist:
-            dist = abs(mid - 1000)
+        if s <= break_idx <= e:
+            d = 0
+        else:
+            d = min(abs(s - break_idx), abs(e - break_idx))
+        if best_d is None or d < best_d or (d == best_d and e - s > new_l[best_i][1] - new_l[best_i][0]):
+            best_d = d
             best_i = i
     new_l = [new_l[best_i]]
 
@@ -139,15 +146,44 @@ def switch_sides(e):
     return e
 
 
+ADJACENT_MAX_EDIT = 0.15
+UNGAPPED_MAX_DIV = 0.22
+
+
+def ungapped_adjacent_divergence(clip_side, clip_seq, clip_length, ref_seq_big, break_position, gstart):
+    # Minimum mismatch fraction between clip and same-length adjacent reference over
+    # small shifts, gaps not allowed. Complements the gapped test: catches clips
+    # whose divergence is SNV-dominated and consumes without gaps, while being
+    # insensitive to homopolymer slippage that only gapped alignment can absorb --
+    # each test fires where the other cannot.
+    best = 1.0
+    off = break_position - gstart
+    for shift in range(-10, 11):
+        s = off - clip_length + shift if clip_side == 0 else off + shift
+        if s < 0:
+            continue
+        seg = ref_seq_big[s:s + clip_length]
+        if len(seg) < clip_length:
+            continue
+        mm = sum(1 for a, b in zip(clip_seq.upper(), seg.upper()) if a != b)
+        d = mm / len(clip_seq)
+        if d < best:
+            best = d
+    return best
+
+
 def matches_adjacent_ref_seq(clip_side, clip_seq, clip_length, ref_seq_big, break_position, gstart):
     # Check for weaker match to adjacent ref seq (as a check for a poor soft-clip alignment)
+    if ungapped_adjacent_divergence(clip_side, clip_seq, clip_length, ref_seq_big,
+                                    break_position, gstart) < UNGAPPED_MAX_DIV:
+        return True
     if clip_side == 0:
         adjacent_seq = ref_seq_big[break_position - gstart - clip_length:break_position - gstart]
     else:
         adjacent_seq = ref_seq_big[break_position - gstart:break_position - gstart + clip_length]
     adj_align = edlib.align(clip_seq.upper(), adjacent_seq.upper(), mode="HW", task="locations")
     if adj_align['locations'] and \
-       adj_align['editDistance'] / len(clip_seq) < 0.19 and \
+       adj_align['editDistance'] / len(clip_seq) < ADJACENT_MAX_EDIT and \
        adj_align['locations'][0][1] - adj_align['locations'][0][0] > clip_length * 0.85:
         return True
     return False
@@ -207,7 +243,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
 
     # Large alignment region
     el = edlib.align(clip_seq.upper(), ref_seq_clipped, mode="HW", task="locations")
-    locs = merge_align_regions(el['locations'])
+    locs = merge_align_regions(el['locations'], break_position - ref_seq_start)
 
     if not locs:
         return to_add, True, high_quality_clip, clip_length
@@ -231,6 +267,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     q_begin = ref_start2 + aln_q_begin
     q_end = ref_start2 + aln_q_end
     edit_dist = filter_bad_alignment(a, e, idx, q_begin, q_end, break_position)
+
 
     # notes
     # -----
@@ -370,7 +407,64 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
     return to_add, skip_event, high_quality_clip, clip_length
 
 
-def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
+def unify_remapped(candidates, min_size):
+    # Remap can split one locus into several overlapping same-type calls (placement
+    # fragments of a single allele inside a tandem repeat). The general merge stage then
+    # unites the fragments but may pick a sub-min-size representative, killing the whole
+    # group at the size filter. Instead, pool each fragment group's support into a single
+    # survivor here: prefer the best-supported fragment that passes the size filter, and
+    # never alter coordinates, so model features stay consistent with each call's placement.
+    # Runs only at the call stage (inside remap_soft_clips); dysgu merge on finished VCFs
+    # never invokes this path.
+    if len(candidates) <= 1:
+        return candidates
+    used = [False] * len(candidates)
+    out = []
+    for i, e in enumerate(candidates):
+        if used[i]:
+            continue
+        used[i] = True
+        if e.svtype not in ("DEL", "INS") or not e.remap_score:
+            out.append(e)
+            continue
+        group = [e]
+        extended = True
+        while extended:
+            extended = False
+            gA = min(x.posA for x in group)
+            gB = max(x.posB for x in group)
+            for j, o in enumerate(candidates):
+                if used[j] or o.svtype != e.svtype or not o.remap_score:
+                    continue
+                if o.posA <= gB and o.posB >= gA:
+                    used[j] = True
+                    group.append(o)
+                    extended = True
+        if len(group) == 1:
+            out.append(e)
+            continue
+        eligible = [x for x in group if x.svlen >= min_size]
+        primary = max(eligible if eligible else group, key=lambda x: (x.su, x.svlen))
+        for o in group:
+            if o is primary:
+                continue
+            if primary.qnames is not None and o.qnames is not None:
+                primary.qnames |= o.qnames
+            primary.pe += o.pe
+            primary.supp += o.supp
+            primary.sc += o.sc
+            primary.su += o.su
+            primary.NP += o.NP
+            primary.block_edge += o.block_edge
+            primary.plus += o.plus
+            primary.minus += o.minus
+            primary.spanning += o.spanning
+            primary.n_small_tlen += o.n_small_tlen
+        out.append(primary)
+    return out
+
+
+def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3, min_size=30):
 
     new_events = []
     ref_locs = []
@@ -384,6 +478,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
         e.remap_score = 0
         e.remap_ed = 0
         e.scw = 0
+
 
         if e.chrA != e.chrB or e.spanning > 0 or e.chrA not in allowed_chroms or e.chrB not in allowed_chroms:
             new_events.append(e)
@@ -437,6 +532,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
             logging.warning("Error fetching reference chromosome: {}".format(chrom))
             continue
 
+        interval_events = []
         for index in grp_idxs:
 
             e = events[index]
@@ -462,7 +558,7 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                     high_quality_clip = True
 
                 if to_add:
-                    new_events.append(e)
+                    interval_events.append(e)
                     break
                 elif skip_event:
                     break
@@ -478,7 +574,9 @@ def remap_soft_clips(events, ref_genome, keep_unmapped=True, min_support=3):
                     if clip_res[1] == 1:
                         e.right_ins_seq = clip_res[0]
 
-                    new_events.append(e)
+                    interval_events.append(e)
+
+        new_events.extend(unify_remapped(interval_events, min_size))
 
     return new_events
 
@@ -525,7 +623,20 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
             logging.warning("Error fetching reference chromosome: {}".format(chrom))
             continue
         try:
-            if ref_seq_big[0] == "N" or ref_seq_big[-1] == "N" or ref_seq_big[int(len(ref_seq_big) / 2)] == "N":
+            # Only substantial N runs count as gaps: small ambiguity patches (a few
+            # dozen bp of Ns inside repeats) are not assembly gaps and real events can
+            # legitimately break right next to them
+            run = 0
+            is_gap = False
+            for base in ref_seq_big:
+                if base == "N":
+                    run += 1
+                    if run >= 50:
+                        is_gap = True
+                        break
+                else:
+                    run = 0
+            if is_gap:
                 bad_i |= s_gi
 
         except IndexError:
@@ -536,3 +647,5 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
     new_events = [events[i] for i in range(len(events)) if i not in bad_i]
 
     return new_events
+
+

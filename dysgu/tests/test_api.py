@@ -44,6 +44,8 @@ class TestConstruct(unittest.TestCase):
 
         return 0
 
+    @unittest.skipUnless(os.path.exists("/Users/kezcleal/Desktop/HG002.bam"),
+                         "requires local HG002.bam/NA12878.bam")
     def test_merge(self):
         bam = pysam.AlignmentFile("/Users/kezcleal/Desktop/HG002.bam")
         bam2 = pysam.AlignmentFile("/Users/kezcleal/Desktop/NA12878.bwa.bam")
@@ -66,13 +68,15 @@ class TestConstruct(unittest.TestCase):
     def test_gq_is_integer(self):
         """GQ is a reserved VCF FORMAT field and must be declared as Integer."""
         test = os.path.abspath(os.path.dirname(__file__))
-        repo_root = os.path.dirname(os.path.dirname(test))
         bam = pysam.AlignmentFile(test + "/small.bam")
         genome = pysam.FastaFile(test + "/ref.fa")
         dysgu = DysguSV(genome, bam, remap=False, drop_gaps=False, min_support=3, metrics=False)
 
-        df = load_dysgu_vcf(repo_root + "/test.dysgu1.9.0.vcf", drop_na_columns=False)
-        # Duplicate the single row so we can test int/float/missing GQ coercion
+        f_iter = bam.fetch(until_eof=True)
+        df = dysgu(f_iter)
+        df = df[df['filter'] == 'PASS']
+        assert len(df) >= 1
+        # Duplicate a row so we can test int/float/missing GQ coercion
         df = pd.concat([df, df.copy(), df.copy()], ignore_index=True)
         df.loc[df.index[0], "GQ"] = 30
         df.loc[df.index[1], "GQ"] = 30.0

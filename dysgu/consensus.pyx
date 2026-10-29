@@ -158,118 +158,121 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
         cigar_start, cigar_end, current_pos, i, i_end = trim_cigar(cigar_l, cigar_p, pos, approx_position)
 
     cdef int cigar_index
+    cdef int sc_end
 
-    for cigar_index in range(cigar_start, cigar_end):
-        cigar_value = cigar_p[cigar_index]
-        opp = <int> cigar_value & 15
-        length = <int> cigar_value >> 4
-        if opp == 4 and length > 250:
-            i = i + length - 250
-            length = 250
+    with nogil:
+        for cigar_index in range(cigar_start, cigar_end):
+            cigar_value = cigar_p[cigar_index]
+            opp = <int> cigar_value & 15
+            length = <int> cigar_value >> 4
+            if opp == 4 and length > 250:
+                i = i + length - 250
+                length = 250
 
-        if opp == 4:
-            if start:
-                for o in range(length, 0, -1):
-                    qual = quals[i]
-                    base = bam_seqi(char_ptr_rseq, i)
-                    i += 1
-                    # 0 = left soft clip
-                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>LEFT_CLIPPED)
-                    if ndict_r2.has_tuple_key(key):
-                        n = ndict_r2.get_index_prev()
-                    else:
-                        n = G.addNode()
-                        if n >= nweight.size():
-                            nweight.push_back(0)
-                        ndict_r2.insert_tuple_key(key, n)
-                    nweight[n] += qual
-                    if prev_node != -1:
-                        G.updateEdge(prev_node, n, qual)
-                    prev_node = n
+            if opp == 4:
+                if start:
+                    for o in range(length, 0, -1):
+                        qual = quals[i]
+                        base = bam_seqi(char_ptr_rseq, i)
+                        i += 1
+                        # 0 = left soft clip
+                        key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>LEFT_CLIPPED)
+                        if ndict_r2.has_tuple_key(key):
+                            n = ndict_r2.get_index_prev()
+                        else:
+                            n = G.addNode()
+                            if n >= nweight.size():
+                                nweight.push_back(0)
+                            ndict_r2.insert_tuple_key(key, n)
+                        nweight[n] += qual
+                        if prev_node != -1:
+                            G.updateEdge(prev_node, n, qual)
+                        prev_node = n
 
-            else:
-                for o in range(1, min(250, length + 1), 1):
-                    qual = quals[i]
-                    base = bam_seqi(char_ptr_rseq, i)
-                    i += 1
-                    # 1 = right soft clip
-                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>RIGHT_CLIPPED)
-                    if ndict_r2.has_tuple_key(key):
-                        n = ndict_r2.get_index_prev()
-                    else:
-                        n = G.addNode()
-                        if n >= nweight.size():
-                            nweight.push_back(0)
-                        ndict_r2.insert_tuple_key(key, n)
-                    nweight[n] += qual
-                    if prev_node != -1:
-                        G.updateEdge(prev_node, n, qual)
-                    prev_node = n
-
-        elif opp == 1:  # Insertion
-            if c_abs(<int32_t>current_pos - approx_position) > max_distance:
-                i += length
-                if current_pos > approx_position:
-                    break  # out of range
-                continue
-
-            for o in range(1, length + 1, 1):
-                qual = quals[i]
-                base = bam_seqi(char_ptr_rseq, i)
-                i += 1
-                # 2 = insertion
-                key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>INSERTION)
-                if ndict_r2.has_tuple_key(key):
-                    n = ndict_r2.get_index_prev()
                 else:
-                    n = G.addNode()
-                    if n >= nweight.size():
-                        nweight.push_back(0)
-                    ndict_r2.insert_tuple_key(key, n)
-                nweight[n] += qual
-                if prev_node != -1:
-                    G.updateEdge(prev_node, n, qual)
-                prev_node = n
-            # current_pos += 1  # <-- Reference pos increases 1
+                    sc_end = length + 1
+                    if sc_end > 250:
+                        sc_end = 250
+                    for o in range(1, sc_end, 1):
+                        qual = quals[i]
+                        base = bam_seqi(char_ptr_rseq, i)
+                        i += 1
+                        # 1 = right soft clip
+                        key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>RIGHT_CLIPPED)
+                        if ndict_r2.has_tuple_key(key):
+                            n = ndict_r2.get_index_prev()
+                        else:
+                            n = G.addNode()
+                            if n >= nweight.size():
+                                nweight.push_back(0)
+                            ndict_r2.insert_tuple_key(key, n)
+                        nweight[n] += qual
+                        if prev_node != -1:
+                            G.updateEdge(prev_node, n, qual)
+                        prev_node = n
 
-        elif opp == 2 or opp == 3: # deletion
-            current_pos += length # + 1
-
-        elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:  # All match, match (=), mis-match (X), N's
-            if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
-                i += length
-                current_pos += length
-                continue
-
-            for p in range(current_pos, current_pos + length):
-                current_pos = p
-                if current_pos < approx_position and approx_position - current_pos > max_distance:
-                    i += 1
+            elif opp == 1:  # Insertion
+                if c_abs(<int32_t>current_pos - approx_position) > max_distance:
+                    i += length
+                    if current_pos > approx_position:
+                        break  # out of range
                     continue
-                # elif current_pos > approx_position and current_pos - approx_position > max_distance:
-                #     break
-                ref_bases += 1
-                if ref_bases > target_bases:
-                    return
-                qual = quals[i]
-                base = bam_seqi(char_ptr_rseq, i)
-                i += 1
-                key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>MATCHED)
-                if ndict_r2.has_tuple_key(key):
-                    n = ndict_r2.get_index_prev()
-                else:
-                    n = G.addNode()
-                    if n >= nweight.size():
-                        nweight.push_back(0)
-                    ndict_r2.insert_tuple_key(key, n)
-                nweight[n] += qual
-                if prev_node != -1:
-                    G.updateEdge(prev_node, n, qual)
-                prev_node = n
 
-            current_pos += 1
+                for o in range(1, length + 1, 1):
+                    qual = quals[i]
+                    base = bam_seqi(char_ptr_rseq, i)
+                    i += 1
+                    # 2 = insertion
+                    key = ndict_r2.key_2_64(base, current_pos, o, <uint64_t>INSERTION)
+                    if ndict_r2.has_tuple_key(key):
+                        n = ndict_r2.get_index_prev()
+                    else:
+                        n = G.addNode()
+                        if n >= nweight.size():
+                            nweight.push_back(0)
+                        ndict_r2.insert_tuple_key(key, n)
+                    nweight[n] += qual
+                    if prev_node != -1:
+                        G.updateEdge(prev_node, n, qual)
+                    prev_node = n
+                # current_pos += 1
 
-        start = False
+            elif opp == 2 or opp == 3: # deletion
+                current_pos += length # + 1
+
+            elif opp == 0 or opp == 7 or opp == 8: # or opp == 3:  # All match, match (=), mis-match (X), N's
+                if current_pos < approx_position and current_pos + length < approx_position - max_distance: # abs(<int32_t>current_pos - approx_position + length) > max_distance:
+                    i += length
+                    current_pos += length
+                    continue
+
+                for p in range(current_pos, current_pos + length):
+                    current_pos = p
+                    if current_pos < approx_position and approx_position - current_pos > max_distance:
+                        i += 1
+                        continue
+                    ref_bases += 1
+                    if ref_bases > target_bases:
+                        return
+                    qual = quals[i]
+                    base = bam_seqi(char_ptr_rseq, i)
+                    i += 1
+                    key = ndict_r2.key_2_64(base, current_pos, <uint64_t>0, <uint64_t>MATCHED)
+                    if ndict_r2.has_tuple_key(key):
+                        n = ndict_r2.get_index_prev()
+                    else:
+                        n = G.addNode()
+                        if n >= nweight.size():
+                            nweight.push_back(0)
+                        ndict_r2.insert_tuple_key(key, n)
+                    nweight[n] += qual
+                    if prev_node != -1:
+                        G.updateEdge(prev_node, n, qual)
+                    prev_node = n
+
+                current_pos += 1
+
+            start = False
 
 
 cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
@@ -334,7 +337,7 @@ cdef int topo_sort2(DiGraph& G, cpp_deque[int]& order): #  except -1:
 cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, cpp_vector[int]& n_weights):
 
     cdef cpp_vector[int] node_scores = n_weights  # Copy; total base quality at each node
-    cdef Py_Int2IntMap pred_trace2 = map_set_utils.Py_Int2IntMap()
+    cdef ankerl_map[int, int] pred_trace2
 
     cdef int best_score = -1
     cdef int best_node = -1
@@ -384,7 +387,7 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
                     best_local_i = pred.first
 
             if best_local_i != -1:
-                pred_trace2.insert(u, best_local_i)
+                pred_trace2[u] = best_local_i
 
     if best_node == -1:
         return path
@@ -392,9 +395,9 @@ cdef cpp_deque[int] score_best_path(DiGraph& G, cpp_deque[int]& nodes_to_visit, 
     u = best_node
     while True:
         path.push_front(u)
-        if pred_trace2.has_key(u) == 0:
+        if pred_trace2.find(u) == pred_trace2.end():
             break
-        u = pred_trace2.get(u)
+        u = pred_trace2[u]
 
     return path
 

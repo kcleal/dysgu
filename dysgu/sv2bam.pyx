@@ -165,6 +165,10 @@ def process(args):
         bname = "-"
         out_name = args["output"]
 
+    out_name = os.path.abspath(out_name)
+    if os.path.abspath(args["bam"]) == out_name:
+        raise ValueError("Fetch output path is the same as the input BAM, refusing to overwrite input")
+
     with open(os.path.join(temp_dir, "fetch_command.txt"), "w") as info:
         info.write(f"# dysgu v{version('dysgu')}\n")
         info.write(" ".join(sys.argv))
@@ -173,7 +177,7 @@ def process(args):
     args["max_cov"] = auto_max_cov(args["max_cov"], args["bam"])
     pe = int(args["pl"] == "pe")
 
-    cdef bytes infile_string_b = args["bam"].encode("ascii")
+    cdef bytes infile_string_b = os.path.abspath(args["bam"]).encode("ascii")
     cdef bytes fasta_b, transcripts_b, unique_gaps_b, unique_blocks_b
 
     if "reference" in args and args["reference"]:

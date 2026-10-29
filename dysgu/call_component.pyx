@@ -3,9 +3,10 @@ from __future__ import absolute_import
 from collections import Counter, defaultdict
 import logging
 import math
+import random
+import zlib
 import numpy as np
 cimport numpy as np
-from numpy.random import normal
 import itertools
 
 from dysgu import consensus
@@ -25,7 +26,6 @@ from scipy.cluster.hierarchy import fcluster
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.simplefilter(action='ignore', category=FutureWarning)
-
 
 np.random.seed(1)
 
@@ -189,8 +189,21 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     cdef int soft_left, soft_right, hard_left, hard_right
     paired_end = set([])
     seen = set([])
+    # NB: er.spanning keeps its legacy meaning (all spanning reads); it is a model
+    # feature in post_call and must not be redefined
     er.spanning = len(spanning)
     er.bnd = len(generic_ins)
+    cdef int n_span_support = 0
+    # A spanning read supports SU only when its internal CIGAR op matches the call type
+    # (D/DEL, I/INS, N/SKIP). INV/DUP/TRA/BND have no internal CIGAR op, so every
+    # spanning read at such a call is wild-type and must not feed SU
+    cdef int expect_op = -1
+    if er.svtype == "DEL":
+        expect_op = 2
+    elif er.svtype == "INS":
+        expect_op = 1
+    elif er.svtype == "SKIP":
+        expect_op = 3
     cdef int flag, index, this_as
     cdef int a_bases, large_gaps, n_small_gaps
     cdef bint is_paired, has_nm, has_as, has_sa, has_xa
@@ -265,10 +278,13 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
             clipped_base_quals += cbq
             clipped_bases += cb
 
-    for a in spanning:
+    for sp in spanning:
+        a = sp.align
         seen.add(a.qname)
         flag = a.flag
         is_paired = flag & 1
+        if sp.cigar_item.op == expect_op:
+            n_span_support += 1
         if flag & 2:
             er.NP += 1
 
@@ -339,7 +355,7 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     er.maxASsupp = maxASsupp
     if paired_end_reads and len(reads2) == 0:
         er.pe = len(reads1)
-    er.su = er.pe + er.supp + (2*er.spanning) + er.bnd
+    er.su = er.pe + er.supp + (2*n_span_support) + er.bnd
     if clipped_bases > 0 and aligned_bases > 0 and clipped_base_quals > 0:
         er.clip_qual_ratio = (aligned_base_quals / aligned_bases) / (clipped_base_quals / clipped_bases)
     else:
@@ -524,6 +540,7 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     v_item.read_overlaps_mate = 0
     cdef int dist_to_break = 0
     cdef int rand_insert_pos = 0
+    cdef uint64_t rseed
     if v_item.left_clipA:  # use clip to guess break point
         v_item.breakA = aln.pos
         v_item.breakB = aln.pos
@@ -553,7 +570,11 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     v_item.size_inferred = 1
     cdef int left_clip, right_clip
     if insert_std > 0:
-        rand_insert_pos = abs(insert_size - aln_span + int(normal(0, insert_std)))
+        # Draw the insert-size jitter deterministically per read. A global RNG
+        # here made svlen estimates depend on how many reads were processed
+        # before this one, so --procs 1 and --procs 4 produced different output.
+        rseed = <uint64_t>zlib.crc32(aln.qname.encode(), aln.pos & 0xffffffff) ^ <uint64_t>aln.flag
+        rand_insert_pos = abs(insert_size - aln_span + int(random.Random(<long>(rseed & 0x7fffffffffffffff)).gauss(0, insert_std)))
     else:  # single read mode
         v_item.svtype = "BND"
         left_clip = 0
@@ -1069,7 +1090,7 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
 
     er.qnames = set([])
     for item in spanning_alignments:
-        er.qnames.add(hash(item.align.qname))
+        er.qnames.add(zlib.crc32(item.align.qname.encode()))
 
     ab = abs(posB - posA)
     if svlen > 0:
@@ -1105,7 +1126,7 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
         informative_reads.append(v_item.read_a)
         if v_item.read_b is not None:
             informative_reads.append(v_item.read_b)
-    count_attributes2(informative_reads, [], [i.align for i in spanning_alignments], insert_ppf, generic_insertions, er,
+    count_attributes2(informative_reads, [], spanning_alignments, insert_ppf, generic_insertions, er,
                       paired_end, hp_tag)
 
     er.contig = None
@@ -1149,9 +1170,14 @@ def process_spanning(bint paired_end, spanning_alignments, float divergence, len
     return er
 
 
+cdef inline bint _majority_skip_op(list spanning_alignments):
+    # CIGAR op 3 = N (reference skip). For skip events the spanning reads are the
+    # event; pooled informative/generic reads are not support
+    return Counter([i.cigar_item.op for i in spanning_alignments]).most_common(1)[0][0] == 3
+
+
 cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_length, int min_support,
             int to_assemble, sites_info, bint paired_end, int length_extend, float divergence, bint hp_tag):
-    # echo("SINGLE")
     # Infer the other breakpoint from a single group
     # Make sure at least one read is worth calling
     # The group may need to be split into multiple calls using the partition_single function
@@ -1170,22 +1196,23 @@ cdef single(rds, int insert_size, int insert_stdev, float insert_ppf, int clip_l
         generic_insertions = []
     if n_spanning and len(informative) > n_spanning * 20:
         informative = []
-
     if len(spanning_alignments) > 0:
         # if not paired_end:
             candidates = []
             clst_res = linear_scan_clustering(spanning_alignments, hp_tag)
             if not clst_res:
+                if _majority_skip_op(spanning_alignments):
+                    informative, generic_insertions = [], []
                 cand = process_spanning(paired_end, spanning_alignments, divergence, length_extend, informative,
                                 generic_insertions, insert_ppf, <bint>to_assemble, hp_tag)
                 if cand:
                     candidates.append(cand)
             else:
                 for clst in clst_res:
-                    cand = process_spanning(paired_end, clst, divergence, length_extend, [], generic_insertions, insert_ppf, <bint>to_assemble, hp_tag)
+                    gi = [] if _majority_skip_op(clst) else generic_insertions
+                    cand = process_spanning(paired_end, clst, divergence, length_extend, [], gi, insert_ppf, <bint>to_assemble, hp_tag)
                     if cand:
                         candidates.append(cand)
-
             return candidates
         # else:
             # single event
@@ -1239,10 +1266,10 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
         v = -1
     for i in precise:
         ops.append((i, 1, 1))
-        if v == -1:
-            ops.append((i + v + 1, -1, 1))
-        else:
-            ops.append((i + v, -1, 1))
+        # Unit step at i: +1 at i, -1 one base in the scan direction. The previous
+        # i + v + 1 placed the -1 at i when v == -1, cancelling the +1 so precise
+        # breaks were silently ignored on negative-direction sweeps
+        ops.append((i + v, -1, 1))
     ops.sort(reverse=limit < 0)
     cdef int cum_sum = 0
     cdef int max_sum = 0
@@ -1255,6 +1282,38 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
             max_sum_i = idx
     cdef int break_point, cipos95, is_precise
     break_point, _, is_precise = ops[max_sum_i]
+    # Best-step override: when support is a dominant junction mass plus a scattered
+    # tail wider than the interval limit (e.g. a transposed inverted segment, where
+    # mates scatter across the segment but the far junction is fixed), the interval
+    # argmax lands mid-scatter. Cluster nearby break positions (junctions show a few
+    # bp of split-read jitter) and use the dominant cluster instead. Gated on wide
+    # scatter so tight clusters are never touched.
+    cdef int n_items = len(positions) + len(precise)
+    cdef int best_d = 0, second_d = 0, override_pos = 0, d_at
+    if n_items > 0:
+        deltas = {}
+        for op in ops:
+            deltas[op[0]] = deltas.get(op[0], 0) + op[1]
+        xs = sorted(p for p in deltas if deltas[p] > 0)
+        if xs and xs[-1] - xs[0] > abs(limit):
+            cstart = xs[0]; cmass = 0; prev = xs[0]
+            clusters = []
+            for p in xs:
+                if p - prev > 10:
+                    clusters.append((cstart, prev, cmass))
+                    cstart = p; cmass = 0
+                cmass += deltas[p]
+                prev = p
+            clusters.append((cstart, prev, cmass))
+            clusters.sort(key=lambda t: -t[2])
+            c0 = clusters[0]
+            best_d = c0[2]
+            second_d = clusters[1][2] if len(clusters) > 1 else 0
+            in_c = [p for p in positions if c0[0] <= p <= c0[1]] + [p for p in precise if c0[0] <= p <= c0[1]]
+            override_pos = int(np.median(in_c))
+            if override_pos != break_point and best_d >= 5 and best_d * 4 >= n_items and (second_d == 0 or best_d >= 3 * second_d):
+                break_point = override_pos
+                is_precise = 0
     cipos95 = 0
     if not is_precise:
         if any(i == break_point for i in precise):
@@ -1269,7 +1328,11 @@ cdef tuple break_ops(positions, precise, int limit, float median_pos):
 def value_closest_to_m(l):
     # cdef float svlen_m = np.mean(l)
     svlen_m = np.median(l)
-    return min(l, key=lambda x:abs(x-svlen_m))
+    # ties (common for discrete CIGAR-derived lengths, where two values can be
+    # exactly equidistant from the median) resolve to the smallest value, so the
+    # result does not depend on the order reads were collected in -- this must
+    # not depend on read order, which differs between --procs settings
+    return min(l, key=lambda x: (abs(x - svlen_m), x))
 
 
 cdef void set_ins_seq(EventResult_t er):
@@ -1693,6 +1756,49 @@ cdef void assemble_partitioned_reads(EventResult_t er, u_reads, v_reads, int blo
     er.ref_bases = rbases
 
 
+cdef bint one_sided_read_consistent(AlignedSegment r, int tid, int pos, int window):
+    # An unpaired read supports a called break if its alignment is near the
+    # break and it has a clip at the break-consistent end
+    cdef int clip_left = 0, clip_right = 0
+    if r.rname != tid:
+        return False
+    if abs(r.pos - pos) > window and abs(r.reference_end - pos) > window:
+        return False
+    clip_sizes_hard(r, &clip_left, &clip_right)
+    if r.reference_end <= pos:
+        return clip_right > 0
+    if r.pos >= pos:
+        return clip_left > 0
+    return clip_left > 0 or clip_right > 0  # alignment spans the break
+
+
+cdef int assign_one_sided_reads(list one_sided, EventResult_t er, int window, list u_reads, list v_reads):
+    # Reads whose qname was not part of an informative pair can still support a
+    # call: assign them if they are consistent with one of the breaks. Each
+    # read is assigned to at most one call. Returns the number of assigned
+    # reads that are not supplementary (supplementary reads are already counted
+    # via er.supp in count_attributes2, so they are excluded from the return
+    # value to avoid double counting when crediting su)
+    cdef AlignedSegment r
+    cdef list remaining = []
+    cdef int n_assigned = 0
+    cdef int window_a = window + er.cipos95A
+    cdef int window_b = window + er.cipos95B
+    for r in one_sided:
+        if one_sided_read_consistent(r, er.chrA, er.posA, window_a):
+            u_reads.append(r)
+            if (r.flag & 2304) == 0:
+                n_assigned += 1
+        elif one_sided_read_consistent(r, er.chrB, er.posB, window_b):
+            v_reads.append(r)
+            if (r.flag & 2304) == 0:
+                n_assigned += 1
+        else:
+            remaining.append(r)
+    one_sided[:] = remaining
+    return n_assigned
+
+
 cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_stdev, float insert_ppf, int min_support,
                      int block_edge, int assemble, info, bint paired_end, bint hp_tag):
     # echo("CALL_FROM_READS")
@@ -1771,6 +1877,22 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
     if not informative:
         return []
 
+    # Reads whose qname was not seen on both sides (e.g. clipped reads with an
+    # uneventful mate) are not part of an informative pair; collect them so
+    # they can be assigned to a call below
+    used_reads = set()
+    for v_item in informative:
+        used_reads.add(id(v_item.read_a))
+        used_reads.add(id(v_item.read_b))
+    one_sided = []
+    cdef AlignedSegment r_one
+    for _info, r_one in u_reads_info:
+        if id(r_one) not in used_reads:
+            one_sided.append(r_one)
+    for _info, r_one in v_reads_info:
+        if id(r_one) not in used_reads:
+            one_sided.append(r_one)
+
     svtypes_counts = [[], [], [], []]
     for i in informative:
         if i.svtype == "DEL":
@@ -1784,48 +1906,63 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
     svtypes_counts.sort(key=sort_by_length, reverse=True)
     results = []
     cdef EventResult_t er
+    cdef int n_assigned
+    cdef list call_groups
     for sub_informative in svtypes_counts:
         if len(sub_informative) >= min_support:
             svtype = sub_informative[0].svtype
             if svtype == "INV" or svtype == "TRA":
-                jointype = Counter([i.join_type for i in sub_informative]).most_common(1)[0][0]
+                # Items with different join types are different junctions (or
+                # incompatible observation frames of the same junction), so
+                # their break coordinates must not be pooled into one call
+                jt_groups = defaultdict(list)
+                for v_item in sub_informative:
+                    jt_groups[v_item.join_type].append(v_item)
+                call_groups = sorted(jt_groups.values(), key=sort_by_length, reverse=True)
             else:
-                jointype = sub_informative[0].join_type
-            precise_a = []
-            precise_b = []
-            u_reads = []
-            v_reads = []
-            for v_item in sub_informative:
-                if v_item.breakA_precise:
-                    precise_a.append(v_item.breakA)
-                if v_item.breakB_precise:
-                    precise_b.append(v_item.breakB)
-                u_reads.append(v_item.read_a)
-                v_reads.append(v_item.read_b)
+                call_groups = [sub_informative]
+            for grp in call_groups:
+                if len(grp) < min_support:
+                    continue
+                jointype = grp[0].join_type
+                precise_a = []
+                precise_b = []
+                u_reads = []
+                v_reads = []
+                for v_item in grp:
+                    if v_item.breakA_precise:
+                        precise_a.append(v_item.breakA)
+                    if v_item.breakB_precise:
+                        precise_b.append(v_item.breakB)
+                    u_reads.append(v_item.read_a)
+                    v_reads.append(v_item.read_b)
 
-            er = EventResult()
-            make_call(sub_informative, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
-            count_attributes2(u_reads, v_reads, [], insert_ppf, [], er, paired_end, hp_tag)
-            if er.su < min_support:
-                continue
-            er.svlen_precise = 1  # prevent remapping
-            assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
-            if info:
-                info = [st for st in info if st.svtype == er.svtype]
-                if len(info) > 0:
-                    if len(info) == 1:
-                        site = info[0]
-                    else:
-                        best_i = 0
-                        best_sep_sq = 1000000000000000000.0
-                        for si, site in enumerate(info):
-                            sep_sq = (site.start - er.posA)**2 + (site.end - er.posB)**2
-                            if sep_sq < best_sep_sq:
-                                best_sep_sq = sep_sq
-                                best_i = si
-                        site = info[best_i]
-                    er.site_info = site
-            results.append(er)
+                er = EventResult()
+                make_call(grp, precise_a, precise_b, svtype, jointype, insert_size, insert_stdev, er)
+                n_assigned = 0
+                if one_sided:
+                    n_assigned = assign_one_sided_reads(one_sided, er, insert_size + insert_stdev, u_reads, v_reads)
+                count_attributes2(u_reads, v_reads, [], insert_ppf, [], er, paired_end, hp_tag)
+                er.su += n_assigned
+                if er.su < min_support:
+                    continue
+                assemble_partitioned_reads(er, u_reads, v_reads, block_edge, assemble)
+                if info:
+                    sites = [st for st in info if st.svtype == er.svtype]
+                    if len(sites) > 0:
+                        if len(sites) == 1:
+                            site = sites[0]
+                        else:
+                            best_i = 0
+                            best_sep_sq = 1000000000000000000.0
+                            for si, site in enumerate(sites):
+                                sep_sq = (site.start - er.posA)**2 + (site.end - er.posB)**2
+                                if sep_sq < best_sep_sq:
+                                    best_sep_sq = sep_sq
+                                    best_i = si
+                            site = sites[best_i]
+                        er.site_info = site
+                results.append(er)
 
     return results
 
@@ -1956,7 +2093,12 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
             jitter = -1
 
         er = EventResult()
-        er.svtype = "DEL" if svtype_m == 2 else "INS"
+        if svtype_m == 2:
+            er.svtype = "DEL"
+        elif svtype_m == 3:
+            er.svtype = "SKIP"
+        else:
+            er.svtype = "INS"
         er.join_type = "3to5"
         er.chrA = chrom
         er.chrB = chrom
@@ -1971,7 +2113,7 @@ cdef one_edge(u_reads_info, v_reads_info, int clip_length, int insert_size, int 
         er.query_overlap = 0
         u_reads = [i.align for i in spanning_alignments]
         v_reads = []
-        count_attributes2(u_reads, v_reads, [i.align for i in spanning_alignments], insert_ppf, [], er, paired_end, hp_tag)
+        count_attributes2(u_reads, v_reads, spanning_alignments, insert_ppf, [], er, paired_end, hp_tag)
         if er.su < min_support:
             return []
 
@@ -2182,12 +2324,6 @@ cpdef list call_from_block_model(bam, data, clip_length, insert_size, insert_std
                 events.append(ev)
     events = [e for e in events if e and (e.svlen > 0 or e.svtype == "TRA")]
     for e in events:
-        # echo(e.svtype, "svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}, {e.chrB}:{e.posB}, {e.svtype}, svlen_precise={e.svlen_precise}")
-        # exit()
-        # if e.svtype == "DUP":
-            # quit()
-        # if abs(e.posA - 25664331) < 1000 or abs(e.posB - 117326229) < 1000:
-            # echo(e.svtype, "svlen=", e.svlen, f" support={e.su}, {e.chrA}:{e.posA}, {e.chrB}:{e.posB}, {e.svtype}, svlen_precise={e.svlen_precise}")
         if e.svlen_precise:
             set_ins_seq(e)
     return events

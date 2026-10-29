@@ -22,7 +22,7 @@ copyright = '2022, Kez Cleal'
 author = 'Kez Cleal'
 
 # The full version, including alpha/beta/rc tags
-release = '1.3.8'
+release = '1.10.0'
 
 
 # -- General configuration ---------------------------------------------------

@@ -323,26 +323,27 @@ int search_hts_alignments(const char* infile, const char* outfile, uint32_t min_
     int result;
 
     samFile *fp_in = sam_open(infile, "r");
+    if (fp_in == nullptr) { return -1; }
     result = hts_set_fai_filename(fp_in, fasta);
-    if (result != 0) { return -1; }
+    if (result != 0) { sam_close(fp_in); return -1; }
 
     hts_idx_t *index;
 
     if (threads > 1) {  // set additional threads beyond main thread
         result = hts_set_threads(fp_in, threads - 1);
-        if (result != 0) { return -1; }
+        if (result != 0) { sam_close(fp_in); return -1; }
     }
 
     sam_hdr_t* samHdr = sam_hdr_read(fp_in);  // read header
+    if (!samHdr) { sam_close(fp_in); return -1; }
 
     int n_chromosomes = samHdr->n_targets;
 
-    if (!samHdr) { return -1;}
-
     htsFile *f_out = hts_open(outfile, write_mode);  // "wb0"
+    if (f_out == nullptr) { sam_hdr_destroy(samHdr); sam_close(fp_in); return -1; }
 
     result = hts_set_threads(f_out, 1);
-    if (result != 0) { return -1; }
+    if (result != 0) { sam_close(f_out); sam_hdr_destroy(samHdr); sam_close(fp_in); return -1; }
 
     result = sam_hdr_write(f_out, samHdr);
     if (result != 0) { return -1; }

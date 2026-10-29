@@ -46,7 +46,8 @@ defaults = {
             "spd": 0.3,
             "sd": 0.8,
             "thresholds": "0.45,0.45,0.45,0.45,0.45",
-            "divergence": "0.02"
+            "divergence": "0.02",
+            "rna_inv_filter": "True"
             }
 
 
@@ -234,6 +235,11 @@ def cli():
 @click.option('--spd', help=f"Span position distance [defaults: {defaults['spd']}]", type=float, callback=add_option_set)
 @click.option('--sd', help=f"Span distance, only SV span is considered, lower values separate multi-allelic sites [default={defaults['sd']}", type=float, callback=add_option_set)
 @click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=100, type=float, show_default=True)
+@click.option('--rna-inv-filter', help="RNA-seq only: suppress small same-transcript inversion artifacts (RT template-switching). "
+                                       "Active when --transcripts is supplied. Permits cross-gene and exon--non-exon inversions; "
+                                       "drops same-exon inversions and probabilistically downsamples small same-transcript ones "
+                                       "using empirically measured artifact rates",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -397,6 +403,11 @@ def get_reads(ctx, **kwargs):
 
 @click.option('--sd', help=f"Span distance, only SV span is considered, lower values separate multi-allelic sites [default={defaults['sd']}", type=float, callback=add_option_set)
 @click.option('--search-depth', help="Search through this many local reads for matching SVs. Increase this to identify low frequency events", default=100, type=float, show_default=True)
+@click.option('--rna-inv-filter', help="RNA-seq only: suppress small same-transcript inversion artifacts (RT template-switching). "
+                                       "Active when --transcripts is supplied. Permits cross-gene and exon--non-exon inversions; "
+                                       "drops same-exon inversions and probabilistically downsamples small same-transcript ones "
+                                       "using empirically measured artifact rates",
+              default="True", type=click.Choice(["True", "False"]), show_default=True)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]", type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
 @click.option('--divergence', help=f"Threshold used for ignoring divergent ends of alignments. Ignored for paired-end reads. Use 'auto' to try to infer for noisy reads [default: {defaults['divergence']}]", type=str, callback=add_option_set)

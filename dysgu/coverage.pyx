@@ -23,6 +23,128 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 
+class ArtifactStats:
+    """Empirical RT-switch/chimera artifact rates for RNA-seq INV filtering.
+
+    Genome-wide scan measuring (a) per-bin FF/RR-pair and strand-flipped-SA rates
+    and (b) the CIGAR N-length distribution, whose median + 5*MAD gives the
+    'clustering size in exon space' used to define small same-transcript inversions.
+    """
+    def __init__(self):
+        self.bin_size = 20000
+        self.bins = {}          # chrom -> (pairs, ffrr, flipsa) per bin, as 3 lists
+        self.median_rate = 0.0
+        self.exon_threshold = 1000
+        self.n_len = []
+
+    def p_for(self, chrom, pos):
+        # Acceptance probability: squeeze locally-elevated artifact rates toward
+        # 2x the genome-wide median rate; floor at 0.1
+        b = self.bins.get(chrom)
+        if not b:
+            return 1.0
+        pairs, ffrr, flipsa = b
+        i = pos // self.bin_size
+        if i >= len(pairs) or pairs[i] == 0:
+            return 1.0
+        local = (ffrr[i] + flipsa[i]) / pairs[i]
+        if local <= 0:
+            return 1.0
+        p = (2.0 * self.median_rate) / local
+        if p > 1.0:
+            return 1.0
+        if p < 0.1:
+            return 0.1
+        return p
+
+
+def measure_artifact_rates(bam_path, int bin_size=20000, bint paired=True):
+    cdef object ibam = pysam.AlignmentFile(bam_path, "rb")
+    st = ArtifactStats()
+    st.bin_size = bin_size
+    pairs_d = {}
+    ffrr_d = {}
+    flipsa_d = {}
+    n_lens = []
+    cdef int n_len_seen = 0
+    cdef AlignedSegment a
+    cdef uint32_t cigar_l, cigar_value
+    cdef uint32_t *cigar_p
+    cdef int i, opp, length
+    cdef int nb = 0
+    for a in ibam:
+        if a.flag & 1284 or a.mapq < 1:  # secondary/supp/unmapped/qcfail
+            continue
+        nb += 1
+        chrom = a.reference_name
+        if chrom is None:
+            continue
+        # CIGAR N lengths (sampled) for the exon-space clustering size
+        if n_len_seen < 300000:
+            cigar_l = a._delegate.core.n_cigar
+            if cigar_l > 1:
+                cigar_p = bam_get_cigar(a._delegate)
+                for i in range(cigar_l):
+                    cigar_value = cigar_p[i]
+                    opp = <int> cigar_value & 15
+                    length = <int> cigar_value >> 4
+                    if opp == 3 and length >= 20:
+                        n_lens.append(length)
+                        n_len_seen += 1
+        if paired:
+            if not a.is_paired or a.mate_is_unmapped or (a.flag & 128):
+                continue
+            if a.reference_name != a.next_reference_name:
+                continue
+        idx = a.reference_start // bin_size
+        P = pairs_d.setdefault(chrom, {})
+        F = ffrr_d.setdefault(chrom, {})
+        S = flipsa_d.setdefault(chrom, {})
+        P[idx] = P.get(idx, 0) + 1
+        if paired and (bool(a.flag & 16) == bool(a.flag & 32)):
+            F[idx] = F.get(idx, 0) + 1
+        if a.has_tag("SA"):
+            flipped = False
+            for sa in str(a.get_tag("SA")).split(";"):
+                pp = sa.split(",")
+                if len(pp) >= 3 and pp[0] == chrom and ((pp[2] == "-") != bool(a.flag & 16)):
+                    flipped = True
+                    break
+            if flipped:
+                S[idx] = S.get(idx, 0) + 1
+    for chrom, P in pairs_d.items():
+        mx = max(P) + 1
+        pr = [0] * mx
+        ff = [0] * mx
+        sa = [0] * mx
+        for k, v in P.items():
+            pr[k] = v
+        for k, v in ffrr_d.get(chrom, {}).items():
+            ff[k] = v
+        for k, v in flipsa_d.get(chrom, {}).items():
+            sa[k] = v
+        st.bins[chrom] = (pr, ff, sa)
+    rates = []
+    for chrom, (pr, ff, sa) in st.bins.items():
+        for i in range(len(pr)):
+            if pr[i] >= 50:
+                rates.append((ff[i] + sa[i]) / pr[i])
+    if rates:
+        rates.sort()
+        st.median_rate = rates[len(rates) // 2]
+    if len(n_lens) >= 100:
+        arr = np.array(n_lens, dtype=np.float64)
+        med = np.median(arr)
+        mad = np.median(np.abs(arr - med))
+        st.exon_threshold = int(min(max(med + 5 * mad, 200), 100000))
+        st.n_len = n_lens
+    logging.info(f"RNA-seq INV filter: same-transcript INV < {st.exon_threshold}bp dropped/sampled "
+                 f"(median artifact rate {st.median_rate:.4f})")
+    logging.debug(f"Artifact scan: {nb} reads; threshold from {len(n_lens)} CIGAR N lengths (median + 5*MAD), bin size {bin_size}bp")
+    ibam.close()
+    return st
+
+
 def index_stats(f, rl=None):
     if rl is None:
         rl = []
@@ -353,9 +475,11 @@ cdef class GenomeScanner:
                     # self._add_to_bin_buffer(a, tell)
             if find_divergence:
                 if len(divergence) < 20000:
+                    cigar_l = a._delegate.core.n_cigar
+                    if a.flag & 1284 or a.mapq < self.mapq_threshold or cigar_l == 0:
+                        continue
                     non_match_count = 0
                     matched_bases = 0
-                    cigar_l = a._delegate.core.n_cigar
                     cigar_p = bam_get_cigar(a._delegate)
                     for i in range(cigar_l):
                         cigar_value = cigar_p[i]
@@ -365,7 +489,8 @@ cdef class GenomeScanner:
                             matched_bases += length
                         elif opp == 1 or opp == 2 or opp == 8:
                             non_match_count += 1
-                    divergence.append(non_match_count / (non_match_count + matched_bases))
+                    if matched_bases + non_match_count > 0:
+                        divergence.append(non_match_count / (non_match_count + matched_bases))
                 else:
                     break
             else:
@@ -718,23 +843,6 @@ def depth_at(chrom, pos, regions_depth, tr_intervals, blocks_by_tx):
     return mean_cov, mx, overlaps
 
 
-def common_transcript_overlap(tr_intervals, chrA, posA, chrB, posB) -> bool:
-    if chrA != chrB:
-        return False
-    imap = tr_intervals.get(chrA)
-    if imap is None:
-        return False
-    hitsA = imap.search_values(posA, posA + 1) or []
-    hitsB = imap.search_values(posB, posB + 1) or []
-    return bool(set(hitsA) & set(hitsB))
-
-
-def in_any_transcript(tr_intervals, chrom, pos) -> bool:
-    if chrom not in tr_intervals:
-        return False
-    return tr_intervals[chrom].has_overlaps(pos, pos + 1)
-
-
 def collect_directional_nonzero_bins(cov_array, pos, direction, max_keep, scan_limit_bins=400) -> list:
     # Collect up to max_keep NONZERO bins, scanning up to scan_limit_bins bins.
     n = int(len(cov_array))
@@ -763,39 +871,15 @@ def collect_directional_nonzero_bins(cov_array, pos, direction, max_keep, scan_l
     return depths
 
 
-def metrics_from_depths(depths: list, use_noise_floor=False):
-    if not depths:
-        return {"thr": None, "n_nonzero": 0, "n_kept": 0, "mean": 0.0, "cv": 0.0}
-    arr = np.asarray(depths, dtype=np.float64)
-    if use_noise_floor:
-        thr = float(np.percentile(arr, 2.))
-        if thr > 0.5:
-            kept = arr[arr >= thr]
-        else:
-            kept = arr
-    else:
-        thr = 1.0
-        kept = arr
-    n_kept = int(kept.size)
-    if n_kept == 0:
-        return {"thr": float(thr), "n_nonzero": int(arr.size), "n_kept": 0, "mean": 0.0, "cv": 0.0}
-
-    mean = float(np.mean(kept))
-    if kept.size > 1 and mean > 0:
-        cv = float(np.std(kept) / mean)
-    else:
-        cv = 0.0
-    return {"thr": float(thr), "n_nonzero": int(arr.size), "n_kept": n_kept, "mean": mean, "cv": cv}
-
-
 # ------------------
 # Entry for RNAseq
 # ------------------
 def get_raw_coverage_information_transcriptome(events, regions, regions_depth, transcript_blocks_path):
     assert transcript_blocks_path
 
-    max_bins_in_tx: int = 50       # if breakpoint overlaps any transcript, collect up to this many bins
-    max_bins_out_tx: int = 15      # otherwise collect up to this many bins
+    max_bins_in_tx: int = 300      # if breakpoint overlaps any transcript, collect up to this many bins
+    max_bins_out_tx: int = 100     # otherwise collect up to this many bins
+    scan_limit: int = 1000         # scan at most 10kb (1000 x 10bp bins) in each direction
 
     tr_intervals, blocks_by_tx, tx_strand, tx_chrom = load_transcript_blocks(transcript_blocks_path)
 
@@ -827,32 +911,56 @@ def get_raw_coverage_information_transcriptome(events, regions, regions_depth, t
 
         direction_A = "left" if r.join_type[0] == '3' else "right"
         direction_B = "left" if r.join_type[-1] == '3' else "right"
-        left_depths = collect_directional_nonzero_bins(covA, r.posA, direction_A, max_keep=max_left)
-        right_depths = collect_directional_nonzero_bins(covB, r.posB, direction_B, max_keep=max_right)
+        left_depths = collect_directional_nonzero_bins(covA, r.posA, direction_A, max_keep=max_left, scan_limit_bins=scan_limit)
+        right_depths = collect_directional_nonzero_bins(covB, r.posB, direction_B, max_keep=max_right, scan_limit_bins=scan_limit)
 
-        L = metrics_from_depths(left_depths, use_noise_floor=True)
-        R = metrics_from_depths(right_depths, use_noise_floor=True)
+        # Junction-supporting fragments derive from within a transcript, so a breakpoint
+        # sitting at a coverage cliff (TSS, exon edge) must not drag the estimate onto the
+        # off-transcript side. Use a high quantile per side to skip ramps/intronic background.
+        p95_left = float(np.percentile(left_depths, 95)) if left_depths else 0.0
+        p95_right = float(np.percentile(right_depths, 95)) if right_depths else 0.0
 
-        reads_left = L['mean']  # Get directional coverage 
-        reads_right = R['mean']
+        # Where a break overlaps a transcript, prefer the exon-bin effective depth from
+        # depth_at: the directional walk above keys on SV orientation, not transcript
+        # strand, and can walk off an exon onto the intron and dilute the estimate
+        if overlaps_A and reads_left > 0:
+            p95_left = reads_left
+        if overlaps_B and reads_right > 0:
+            p95_right = reads_right
 
-        same_tx = common_transcript_overlap(tr_intervals, r.chrA, r.posA, r.chrB, r.posB)
-        if same_tx:
-            denom = 0.5 * (reads_left + reads_right)
-        else:  # Use the min side
-            denom = min(reads_left, reads_right)
-        r.a_freq = r.a_freq / (denom + 1e-5)
+        # Which side's depth is relevant depends on the event's transcriptional units:
+        # same transcript -> gene-body side (max); two disjoint transcripts (fusion) ->
+        # support is limited by the lesser-expressed partner (min); one expressed side
+        # (exon-to-intergenic) -> that side; neither -> conservative max.
+        hitsA = []
+        hitsB = []
+        if r.chrA in tr_intervals:
+            hitsA = tr_intervals[r.chrA].search_values(r.posA, r.posA + 1) or []
+        if r.chrB in tr_intervals:
+            hitsB = tr_intervals[r.chrB].search_values(r.posB, r.posB + 1) or []
+        if hitsA and hitsB and set(hitsA) & set(hitsB):
+            denom = p95_left if p95_left > p95_right else p95_right
+        elif hitsA and hitsB:
+            denom = p95_left if p95_left < p95_right else p95_right
+        elif hitsA or hitsB:
+            denom = p95_left if hitsA else p95_right
+        else:
+            denom = p95_left if p95_left > p95_right else p95_right
+
+        if r.svtype == "SKIP":  # recount has already re-scored support into 'spanning'
+            support = r.spanning
+        else:
+            support = r.a_freq
+        r.a_freq = support / (denom + 1e-5)
         r.a_freq = round(max(0, min(r.a_freq, 1.0)), 3)
 
         # todo this hard filter may need to be a parameter
-        ratio = R['mean'] / (L['mean']+1e-6) if (L['mean'] > R['mean']) else L['mean'] / (R['mean']+1e-6)
+        mean_left = float(np.mean(left_depths)) if left_depths else 0.0
+        mean_right = float(np.mean(right_depths)) if right_depths else 0.0
+        ratio = mean_right / (mean_left+1e-6) if (mean_left > mean_right) else mean_left / (mean_right+1e-6)
         keep_event = ratio > 0.01
         if keep_event:
             new_events.append(r)
-            # echo(f"KEPT: {r.chrA}:{r.posA}-{r.chrB}:{r.posB} su={r.su} af={r.a_freq}", L, R)
-        # else:
-            # echo(f"FILTERED: {r.chrA}:{r.posA}-{r.chrB}:{r.posB} su={r.su} af={r.a_freq}", L, R)
-        # new_events.append(r)
 
     return new_events
 

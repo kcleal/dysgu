@@ -6,6 +6,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstdio>
+#include <cassert>
 #include <fstream>
 #include <memory>
 #include <utility>
@@ -45,6 +46,23 @@ namespace Tr {
             return true;
         else
             return false;
+    }
+
+    std::string cleanGff3Id(std::string value) {
+        size_t colon_pos = value.rfind(':');
+        if (colon_pos != std::string::npos && colon_pos + 1 < value.size()) {
+            value = value.substr(colon_pos + 1);
+        }
+        return value;
+    }
+
+    void appendGff3Ids(const std::string& value, std::vector<std::string>& ids) {
+        for (const auto& item : split(value, ',')) {
+            std::string cleaned = cleanGff3Id(item);
+            if (!cleaned.empty()) {
+                ids.push_back(cleaned);
+            }
+        }
     }
 
     enum FType {
@@ -229,27 +247,38 @@ namespace Tr {
 
                     // Extract attributes (column 9)
                     std::string attributes = tp.substr(col9_start);
+                    std::vector<std::string> transcript_ids;
                     for (const auto &item : split(attributes, ';')) {
                         assert (kind == GFF3_NOI); // {
                         std::vector<std::string> keyval = split(item, '=');
                         if (keyval.size() >= 2) {  // Safety check
                             if (keyval[0] == "transcript_id") {
-                                b.transcript_id = keyval[1];
+                                b.transcript_id = cleanGff3Id(keyval[1]);
                             }
-                            if (keyval[0] == "gene_name") {
+                            if (keyval[0] == "Parent") {
+                                appendGff3Ids(keyval[1], transcript_ids);
+                            }
+                            if (keyval[0] == "gene_name" || keyval[0] == "gene_id" || keyval[0] == "gene") {
                                 b.gene_name = keyval[1];
-                            }
-                            if (!b.gene_name.empty() && !b.transcript_id.empty()) {
-                                break;
                             }
                         }
                     }
-                    if (b.gene_name.empty() && b.transcript_id.empty()) {
+                    if (transcript_ids.empty() && !b.transcript_id.empty()) {
+                        transcript_ids.push_back(b.transcript_id);
+                    }
+                    if (transcript_ids.empty()) {
                         continue;
                     }
-                    std::string gene_transcript_key = b.gene_name + "~" + b.transcript_id;
-                    transcript_exons[gene_transcript_key].push_back({b.chrom, b.start, b.end, strand_char});
-                    track_blocks[b.transcript_id].push_back(std::move(b));
+                    if (b.gene_name.empty()) {
+                        b.gene_name = ".";
+                    }
+                    for (const auto& transcript_id : transcript_ids) {
+                        TrackBlock tx_block = b;
+                        tx_block.transcript_id = transcript_id;
+                        std::string gene_transcript_key = tx_block.gene_name + "~" + tx_block.transcript_id;
+                        transcript_exons[gene_transcript_key].push_back({tx_block.chrom, tx_block.start, tx_block.end, strand_char});
+                        track_blocks[tx_block.transcript_id].push_back(std::move(tx_block));
+                    }
                 }
                 for (auto& kv : track_blocks) {
                     if (kv.second.size() <= 1) {
@@ -306,6 +335,35 @@ namespace Tr {
                 }
             }
             return false;
+        }
+
+        double bestRefSkipOverlap(std::string& chrom, int start, int end) {
+            // Best reciprocal-overlap score between [start, end) and any known transcript
+            // gap; used to test if a read's skip is better explained by an annotated intron
+            double best = 0.0;
+            if (!any_data) {
+                return best;
+            }
+            int len = end - start;
+            if (len <= 0) {
+                return best;
+            }
+            for (const auto &ol : this->allBlocks[chrom].search_keys(start, end)) {
+                int olen = ol.second - ol.first;
+                if (olen <= 0) {
+                    continue;
+                }
+                int ov = (ol.second < end ? ol.second : end) - (ol.first > start ? ol.first : start);
+                if (ov <= 0) {
+                    continue;
+                }
+                int mx = len > olen ? len : olen;
+                double s = (double)ov / (double)mx;
+                if (s > best) {
+                    best = s;
+                }
+            }
+            return best;
         }
 
         void writeUniqueGapsToBed(const char* out_file) {

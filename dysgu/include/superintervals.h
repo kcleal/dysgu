@@ -1,4 +1,4 @@
-// Version 0.3.7
+// Version 1.0.2
 #pragma once
 
 #include <algorithm>
@@ -132,9 +132,10 @@ class IntervalMap {
     /**
      * @brief Retrieves an interval at a specific index
      * @param index The index of the interval to retrieve
-     * @return The Interval at the specified index
+     * @return The Interval at the specified index (by value; assembled from the
+     *         separate start/end/data arrays, so there is nothing to reference).
      */
-    const Interval<S, T>& at(size_t index) const {
+    Interval<S, T> at(size_t index) const {
         return Interval<S, T>{starts[index], ends[index], data[index]};
     }
     /**
@@ -179,7 +180,7 @@ class IntervalMap {
                 return;
             }
             if (query_start_ <= parent_->ends[current_pos_]) {
-                value_ = parent_->data[current_pos_];
+                value_ = current_pos_;
                 current_pos_ -= 1;
                 has_value_ = true;
                 return;
@@ -190,7 +191,7 @@ class IntervalMap {
                     break;
                 }
                 if (query_start_ <= parent_->ends[current_pos_]) {
-                    value_ = parent_->data[current_pos_];
+                    value_ = current_pos_;
                     current_pos_ -= 1;
                     has_value_ = true;
                     return;
@@ -865,8 +866,17 @@ class IntervalMap {
         if (starts.empty()) {
             return false;
         }
-        const size_t idx = upper_bound(end);
-        return idx != SIZE_MAX && start <= ends[idx];
+        // The interval reaching furthest right is not necessarily at upper_bound(end)
+        // (e.g. a long interval hidden behind a shorter nested one); follow the branch
+        // chain, which always leads to it. Early-exit on the first hit.
+        size_t i = upper_bound(end);
+        while (i != SIZE_MAX) {
+            if (start <= ends[i]) {
+                return true;
+            }
+            i = branch[i];
+        }
+        return false;
     }
 
     /**
@@ -888,10 +898,10 @@ class IntervalMap {
             --i;
         }
         if (i == SIZE_MAX) {
-            found.insert(found.end(), CountingIterator(0), CountingIterator(idx + 1));
+            found.insert(found.end(), CountingIterator(idx), CountingIterator(SIZE_MAX));  // 0 wraps to SIZE_MAX
             return;
         }
-        found.insert(found.end(), CountingIterator(i + 1), CountingIterator(idx + 1));
+        found.insert(found.end(), CountingIterator(idx), CountingIterator(i));
         i = branch[i];
         while (i != SIZE_MAX) {
             if (start <= ends[i]) {
@@ -1019,6 +1029,9 @@ class IntervalMap {
             found.push_back(data[i]);
             --i;
         }
+        if (i == SIZE_MAX) {
+            return;
+        }
         i = branch[i];
         while (i != SIZE_MAX) {
             if (point <= ends[i]) {
@@ -1030,7 +1043,360 @@ class IntervalMap {
         }
     }
 
+    // ---------------------------------------------------------------------
+    // Set-like operations.
+    //
+    // Each operation returns a NEW IntervalMap that is NOT indexed. Call build()
+    // on the result before querying it.
+    //
+    // Merging coalesces overlapping intervals only. The data payload T is
+    // handled by an optional combiner function. Where two intervals
+    // fold into one output interval the combiner decides the resulting T; by
+    // default the first interval's data is kept. Operations that query 'other'
+    // require 'other' to already be built.
+    // ---------------------------------------------------------------------
+
+    /**
+     * @brief Coalesces all stored intervals into a disjoint, non-overlapping set.
+     * @param combine Folds the data of intervals that merge together:
+     *                T combine(const T& accumulated, const T& next).
+     * @return A new, UNINDEXED IntervalMap holding the merged intervals (call build() to query).
+     * @note This is the foundational set operation; gaps/union/difference build on it.
+     */
+    template<typename Combine>
+    IntervalMap<S, T> merge_overlaps(Combine combine) const {
+        IntervalMap<S, T> out;
+        if (starts.empty()) {
+            return out;
+        }
+        // After build() starts is sorted ascending; if intervals were added
+        // without a subsequent build() we must not assume sortedness, so walk a
+        // locally sorted index order (cheap when already sorted).
+        std::vector<size_t> order = sorted_order();
+        S cur_start = starts[order[0]];
+        S cur_end = ends[order[0]];
+        T cur_data = data[order[0]];
+        for (size_t k = 1; k < order.size(); ++k) {
+            const size_t idx = order[k];
+            if (starts[idx] <= cur_end) {  // overlap -> extend
+                if (ends[idx] > cur_end) {
+                    cur_end = ends[idx];
+                }
+                cur_data = combine(cur_data, data[idx]);
+            } else {  // disjoint -> flush
+                out.add(cur_start, cur_end, cur_data);
+                cur_start = starts[idx];
+                cur_end = ends[idx];
+                cur_data = data[idx];
+            }
+        }
+        out.add(cur_start, cur_end, cur_data);
+        return out;
+    }
+
+    /// @overload Keeps the first interval's data on each merge.
+    IntervalMap<S, T> merge_overlaps() const {
+        return merge_overlaps([](const T& a, const T&) { return a; });
+    }
+
+    /**
+     * @brief Computes the gaps (uncovered regions) within [lo, hi].
+     * @param lo  Lower bound of the span to examine.
+     * @param hi  Upper bound of the span to examine (inclusive).
+     * @param fill Data value assigned to gap intervals (which match no input). Defaults to T{}.
+     * @return A new, UNINDEXED IntervalMap holding the complement within [lo, hi] (call build() to query).
+     * @note Intervals are end-inclusive, so a gap runs from one merged end + 1 to the
+     *       next merged start - 1; this requires S to support +/- 1 sensibly (integral S).
+     */
+    IntervalMap<S, T> gaps(S lo, S hi, const T& fill = T{}) const {
+        IntervalMap<S, T> out;
+        IntervalMap<S, T> merged = merge_overlaps();  // already start-sorted, disjoint
+        S cursor = lo;
+        for (size_t k = 0; k < merged.starts.size(); ++k) {
+            const S s = merged.starts[k];
+            const S e = merged.ends[k];
+            if (e < lo || s > hi) {
+                continue;  // entirely outside the span
+            }
+            if (s > cursor) {
+                out.add(cursor, s - 1, fill);  // gap before this interval
+            }
+            if (e + 1 > cursor) {
+                cursor = e + 1;
+            }
+        }
+        if (cursor <= hi) {
+            out.add(cursor, hi, fill);  // trailing gap
+        }
+        return out;
+    }
+
+    /**
+     * @brief Union of this set with another: all covered regions, coalesced.
+     * @param other The other IntervalMap (its raw stored intervals are used; build() not required).
+     * @param combine Folds data of intervals that merge together.
+     * @return A new, UNINDEXED IntervalMap holding the merged union (call build() to query).
+     */
+    template<typename Combine>
+    IntervalMap<S, T> union_with(const IntervalMap<S, T>& other, Combine combine) const {
+        IntervalMap<S, T> combined;
+        combined.reserve(starts.size() + other.starts.size());
+        for (size_t k = 0; k < starts.size(); ++k) {
+            combined.add(starts[k], ends[k], data[k]);
+        }
+        for (size_t k = 0; k < other.starts.size(); ++k) {
+            combined.add(other.starts[k], other.ends[k], other.data[k]);
+        }
+        return combined.merge_overlaps(combine);
+    }
+
+    /// @overload Keeps the first interval's data on each merge.
+    IntervalMap<S, T> union_with(const IntervalMap<S, T>& other) const {
+        return union_with(other, [](const T& a, const T&) { return a; });
+    }
+
+    /**
+     * @brief Intersection of this set with another: regions covered by both.
+     * @param other The other IntervalMap. Must already be built (it is queried via its index).
+     * @param combine Produces the output data from the overlapping pair:
+     *                T combine(const T& a_data, const T& b_data).
+     * @return A new, UNINDEXED IntervalMap holding every overlapping sub-region (call build() to query).
+     * @note Output pieces are the geometric overlaps and are NOT coalesced; call
+     *       merge_overlaps() on the result if a disjoint set is required.
+     */
+    template<typename Combine>
+    IntervalMap<S, T> intersection(const IntervalMap<S, T>& other, Combine combine) const {
+        IntervalMap<S, T> out;
+        std::vector<size_t> hits;
+        for (size_t k = 0; k < starts.size(); ++k) {
+            hits.clear();
+            other.search_idxs(starts[k], ends[k], hits);
+            for (size_t h : hits) {
+                const S s = std::max(starts[k], other.starts[h]);
+                const S e = std::min(ends[k], other.ends[h]);
+                if (s <= e) {
+                    out.add(s, e, combine(data[k], other.data[h]));
+                }
+            }
+        }
+        return out;
+    }
+
+    /// @overload Keeps this side's data for each overlapping piece.
+    IntervalMap<S, T> intersection(const IntervalMap<S, T>& other) const {
+        return intersection(other, [](const T& a, const T&) { return a; });
+    }
+
+    /**
+     * @brief Difference: regions of this set not covered by other (A \ B).
+     * @param other The other IntervalMap. Must already be built (it is queried via its index).
+     * @return A new, UNINDEXED IntervalMap. Output pieces are sub-ranges of this set's
+     *         intervals and inherit their source data directly (call build() to query).
+     * @note Requires integral S (uses +/- 1 to exclude covered points).
+     */
+    IntervalMap<S, T> difference(const IntervalMap<S, T>& other) const {
+        IntervalMap<S, T> out;
+        std::vector<std::pair<S, S>> cover;
+        for (size_t k = 0; k < starts.size(); ++k) {
+            cover.clear();
+            other.search_keys(starts[k], ends[k], cover);
+            std::sort(cover.begin(), cover.end());
+            S cursor = starts[k];
+            for (const auto& c : cover) {
+                const S cs = std::max(c.first, starts[k]);
+                const S ce = std::min(c.second, ends[k]);
+                if (cs > cursor) {
+                    out.add(cursor, cs - 1, data[k]);  // uncovered piece
+                }
+                if (ce + 1 > cursor) {
+                    cursor = ce + 1;
+                }
+            }
+            if (cursor <= ends[k]) {
+                out.add(cursor, ends[k], data[k]);  // trailing uncovered piece
+            }
+        }
+        return out;
+    }
+
+    /**
+     * @brief Symmetric difference: regions in exactly one of the two sets (A \ B) ∪ (B \ A).
+     * @param other The other IntervalMap. Must already be built.
+     * @return A new, UNINDEXED IntervalMap holding the union of both one-sided differences (call build() to query).
+     * @note Requires integral S.
+     */
+    IntervalMap<S, T> symmetric_difference(const IntervalMap<S, T>& other) const {
+        IntervalMap<S, T> a_minus_b = difference(other);
+        IntervalMap<S, T> b_minus_a = other.difference(*this);
+        return a_minus_b.union_with(b_minus_a);
+    }
+
+    /**
+     * @brief Smallest interval enclosing every stored interval (convex hull / span).
+     * @param result Pair set to {min start, max end}. Unchanged if the set is empty.
+     * @return true if a span exists (non-empty set), false otherwise.
+     */
+    bool span(std::pair<S, S>& result) const {
+        if (starts.empty()) {
+            return false;
+        }
+        S lo = starts[0];
+        S hi = ends[0];
+        for (size_t k = 1; k < starts.size(); ++k) {
+            if (starts[k] < lo) lo = starts[k];
+            if (ends[k] > hi) hi = ends[k];
+        }
+        result = {lo, hi};
+        return true;
+    }
+
+    /**
+     * @brief Grows (or shrinks) every interval by a fixed amount.
+     * @param left  Amount to subtract from each start (extends to the left). May be negative to shrink.
+     * @param right Amount to add to each end (extends to the right). May be negative to shrink.
+     * @param lo    Optional lower clamp: no start falls below this. Defaults to the type minimum.
+     * @param hi    Optional upper clamp: no end rises above this. Defaults to the type maximum.
+     * @return A new, UNINDEXED IntervalMap with the resized intervals (call build() to query).
+     * @note Data is carried over unchanged. If an interval is shrunk past itself (start > end)
+     *       it is dropped. To grow both sides equally, pass the same value for left and right.
+     * @note Requires integral S for the +/- arithmetic and clamping to be meaningful.
+     */
+    IntervalMap<S, T> expand(S left, S right,
+                             S lo = std::numeric_limits<S>::min(),
+                             S hi = std::numeric_limits<S>::max()) const {
+        IntervalMap<S, T> out;
+        out.reserve(starts.size());
+        for (size_t k = 0; k < starts.size(); ++k) {
+            // Clamp to [lo, hi] without forming lo+left or starts-lo at the extremes.
+            // When left>0 we short-circuit once starts<=lo, so starts[k]-lo below is
+            // always >0 (no underflow); symmetrically for the right side. left/right
+            // may be negative (shrink), in which case no clamp guard is needed.
+            S s;
+            if (left > 0 && starts[k] <= lo) {
+                s = lo;
+            } else if (left > 0 && starts[k] - lo < left) {
+                s = lo;
+            } else {
+                s = starts[k] - left;
+                if (s < lo) s = lo;
+            }
+            S e;
+            if (right > 0 && ends[k] >= hi) {
+                e = hi;
+            } else if (right > 0 && hi - ends[k] < right) {
+                e = hi;
+            } else {
+                e = ends[k] + right;
+                if (e > hi) e = hi;
+            }
+            if (s <= e) {
+                out.add(s, e, data[k]);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * @brief Creates flanking intervals beside each interval.
+     * @param left  Width of the flank placed immediately to the LEFT of each interval (0 = none).
+     * @param right Width of the flank placed immediately to the RIGHT of each interval (0 = none).
+     * @param lo    Lower clamp: flanks are truncated so no start falls below this. Defaults to the type minimum.
+     * @param hi    Upper clamp: flanks are truncated so no end rises above this. Defaults to the type maximum.
+     * @return A new, UNINDEXED IntervalMap holding the flank intervals only (NOT the originals; call build() to query).
+     * @note Intervals are end-inclusive: the left flank is [start - left, start - 1] and the
+     *       right flank is [end + 1, end + right]. Zero-width or out-of-range flanks are skipped.
+     *       Each flank inherits its source interval's data. Requires integral S.
+     */
+    IntervalMap<S, T> flank(S left, S right,
+                            S lo = std::numeric_limits<S>::min(),
+                            S hi = std::numeric_limits<S>::max()) const {
+        IntervalMap<S, T> out;
+        for (size_t k = 0; k < starts.size(); ++k) {
+            if (left > 0 && starts[k] > lo) {
+                S le = starts[k] - 1;
+                // Compare against lo without forming lo+left (avoids underflow at extremes).
+                S ls = (starts[k] - lo < left) ? lo : starts[k] - left;
+                if (ls < lo) ls = lo;
+                if (ls <= le && le <= hi) {
+                    out.add(ls, le, data[k]);
+                }
+            }
+            if (right > 0 && ends[k] < hi) {
+                S rs = ends[k] + 1;
+                S re = (hi - ends[k] < right) ? hi : ends[k] + right;
+                if (re > hi) re = hi;
+                if (rs <= re && rs >= lo) {
+                    out.add(rs, re, data[k]);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * @brief Keeps only one interval per distinct (start, end) coordinate pair.
+     * @param combine Folds the data of duplicate intervals into one:
+     *                T combine(const T& kept, const T& duplicate).
+     * @return A new, UNINDEXED IntervalMap with duplicates removed (call build() to query).
+     * @note Unlike merge_overlaps(), this collapses only EXACT coordinate duplicates;
+     *       distinct-but-overlapping intervals are all preserved. Output is start-sorted.
+     */
+    template<typename Combine>
+    IntervalMap<S, T> unique(Combine combine) const {
+        IntervalMap<S, T> out;
+        if (starts.empty()) {
+            return out;
+        }
+        std::vector<size_t> order = sorted_order();  // (start, end) ascending
+        size_t run = order[0];
+        T acc = data[order[0]];
+        for (size_t k = 1; k < order.size(); ++k) {
+            const size_t idx = order[k];
+            if (starts[idx] == starts[run] && ends[idx] == ends[run]) {
+                acc = combine(acc, data[idx]);  // same coordinates -> fold
+            } else {
+                out.add(starts[run], ends[run], acc);
+                run = idx;
+                acc = data[idx];
+            }
+        }
+        out.add(starts[run], ends[run], acc);
+        return out;
+    }
+
+    /// @overload Keeps the first interval's data among duplicates.
+    IntervalMap<S, T> unique() const {
+        return unique([](const T& a, const T&) { return a; });
+    }
+
     protected:
+
+    // Returns indices into starts/ends/data in ascending (start, end) order.
+    // Cheap when already sorted (the common post-build() case).
+    std::vector<size_t> sorted_order() const {
+        std::vector<size_t> order(starts.size());
+        for (size_t k = 0; k < order.size(); ++k) order[k] = k;
+        // start_sorted/end_sorted are maintained incrementally by add()/build(). When
+        // both hold the data is fully (start,end)-ordered, so skip the verification scan
+        // and the sort. (start_sorted alone is insufficient: equal-start intervals may
+        // have unordered ends, which would break callers that need exact grouping.)
+        bool sorted = start_sorted && end_sorted;
+        if (!sorted) {
+            sorted = true;
+            for (size_t k = 1; k < starts.size(); ++k) {
+                if (starts[k] < starts[k - 1] ||
+                    (starts[k] == starts[k - 1] && ends[k] < ends[k - 1])) {
+                    sorted = false; break;
+                }
+            }
+        }
+        if (!sorted) {
+            std::sort(order.begin(), order.end(), [this](size_t x, size_t y) {
+                return starts[x] < starts[y] || (starts[x] == starts[y] && ends[x] < ends[y]);
+            });
+        }
+        return order;
+    }
 
     enum class simd_kind { none, avx2, neon };
 
@@ -1091,7 +1457,7 @@ class IntervalMap {
 
         explicit CountingIterator(size_t v) : value(v) {}
         size_t operator*() const { return value; }
-        CountingIterator& operator++() { ++value; return *this; }
+        CountingIterator& operator++() { --value; return *this; }
         bool operator!=(const CountingIterator& other) const { return value != other.value; }
     };
 };
@@ -1130,7 +1496,6 @@ public:
             }
             br.emplace_back() = {this->ends[i], i};
         }
-//        this->idx = 0;
     }
 
     /**

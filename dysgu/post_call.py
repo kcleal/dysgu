@@ -589,6 +589,39 @@ def bayes_gt2(ref, alt, is_dup, a, b):
     return lp_het, lp_homalt
 
 
+def bayes_gt_soft(e):
+    """3-state posterior from the soft fragment likelihoods accumulated by
+    genotype_counts_from_bam, where each fragment carries an asymmetric error
+    model (a, r) per evidence class. Adds (1) a fold-coverage-change (FCC)
+    term for large DEL/DUP/INV events: FCC is middle/sides for DEL (~1 ref,
+    ~0.5 het, ~0 hom-alt) and sides/middle for DUP/INV, which carries the
+    genotype signal when no normal fragment can physically span the event
+    (het DELs >= the insert size)."""
+    states = ((0.005, 1e-6), (0.5, 0.7), (0.99, 0.3))
+    ll = [e.gt_ll_ref, e.gt_ll_het, e.gt_ll_hom]
+    if e.fcc >= 0 and e.svlen >= 250:
+        if e.svtype == "DEL":
+            means = (1.0, 0.5, 0.05)
+        elif e.svtype == "DUP":
+            means = (1.0, 2 / 3.0, 0.5)
+        elif e.svtype == "INV":
+            means = (1.0, 0.9, 0.8)
+        else:
+            means = None
+        if means:
+            s = 0.18
+            for i in range(3):
+                d = (e.fcc - means[i]) / s
+                ll[i] += -0.5 * d * d
+    lps = [ll[i] / math.log(10) + math.log(states[i][1], 10) for i in range(3)]
+    best = max(range(3), key=lambda i: lps[i])
+    mx = lps[best]
+    denom = sum(10 ** (lp - mx) for lp in lps)
+    post_best = 1.0 / denom
+    gq = min(-10 * math.log10(1.0 - post_best), 200) if post_best < 1.0 else 200
+    return best, int(gq)
+
+
 def fix_inconsistent_gt(events):
 
     def is_reciprocal_overlapping(x1,x2, y1,y2):
@@ -749,6 +782,34 @@ def get_gt_metric2(events, mode, add_gt=True):
         return events
 
     for e in events:
+        if e.gt_alt >= 0:
+            # soft fragment likelihoods from genotype_counts_from_bam (default
+            # when the input BAM is indexed; see cluster.pyx pipe1)
+            if e.gt_alt + e.gt_ref <= 0:
+                e.GQ = '.'
+                e.GT = './.'
+                continue
+            gt_idx, gq = bayes_gt_soft(e)
+            if gt_idx == 2 and mode != "pe":
+                # hom-alt requires the alt fragments to account for most of the
+                # local depth; on long reads ref-allele reads at repetitive
+                # loci often fail to span or map uniquely (invisible to the
+                # recount), so homozygosity is not proven - defer to the
+                # default genotyping model
+                depth = e.outer_cn if e.outer_cn > 0 else e.mcov
+                if depth >= 10 and e.gt_alt < 0.75 * depth:
+                    gt_idx = -1
+            if gt_idx == 0:
+                e.GQ = '.'
+                e.GT = './.'
+                continue
+            if gt_idx > 0:
+                e.GQ = gq
+                if gt_idx == 1:
+                    e.GT = '0/1'
+                else:
+                    e.GT = '1/1'
+                continue
         a_params, b_params = pp[e.svtype]
 
         if e.svtype == "DEL" or e.svtype == "TRA":
@@ -860,6 +921,7 @@ def apply_model(df, mode, contigs, diploid, thresholds, model_path=None):
         if c in X:
             X[c] = [i if i == i and i is not None else 0 for i in X[c]]
             X[c] = X[c].astype("category")
+
     pred = np.round(models[model_key].predict_proba(X)[:, 1], 3)
     df = df.assign(prob=pred)
     df = df.assign(filter=["PASS" if ((svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5)) else "lowProb" for svt, i in zip(df["svtype"], pred)])

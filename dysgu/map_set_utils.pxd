@@ -9,6 +9,7 @@ import numpy as np
 cimport numpy as np
 
 from libc.stdint cimport uint64_t, int32_t, int8_t
+from libc.stddef cimport size_t
 
 from pysam.libcalignedsegment cimport AlignedSegment
 from pysam.libchtslib cimport bam_get_qname, bam_seqi, bam_get_seq, bam_get_cigar
@@ -90,6 +91,7 @@ cdef extern from "include/transcripts.hpp" namespace "Tr" nogil:
         void open(const char*)
         void readBed(const char*)
         bint hasRefSkipGap(cpp_string& chrom, int start, int end, int tolerance) noexcept
+        double bestRefSkipOverlap(cpp_string& chrom, int start, int end) noexcept
 
 
 cdef extern from "include/graph_objects.hpp" nogil:
@@ -288,6 +290,8 @@ cdef class EventResult:
     cdef public np.float32_t NMpri, NMsupp, MAPQpri, MAPQsupp, NMbase, n_sa, n_xa, n_gaps
 
     cdef public int32_t posA, posB, svlen, query_gap, query_overlap, block_edge, ref_bases, remap_score, bad_clip_count, remap_ed, n_in_grp
+    cdef public int32_t gt_alt, gt_ref
+    cdef public np.float32_t gt_ll_ref, gt_ll_het, gt_ll_hom
     cdef public np.float32_t jitter, sqc, scw, clip_qual_ratio, outer_cn, inner_cn, fcc, rep, rep_sc, gc, neigh, neigh10kb, raw_reads_10kb, mcov, strand_binom_t
     cdef public bint preciseA, preciseB, linked, modified, remapped
     cdef public int8_t svlen_precise

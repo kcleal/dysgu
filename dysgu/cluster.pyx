@@ -51,11 +51,11 @@ def filter_potential(input_events, tree, regions_only):
     return potential
 
 
-def component_job(infile, component, regions, event_id, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
+def component_job(infile, component, regions, event_id, ord_tag, clip_length, insert_med, insert_stdev, insert_ppf, min_supp, lower_bound_support,
                   merge_dist, regions_only, assemble_contigs, rel_diffs, diffs, min_size, max_single_size,
                   sites_index, paired_end, length_extend, divergence, hp_tag):
     potential_events = []
-    grp_id = event_id
+    grp_id = ord_tag  # globally unique per dispatch; worker-local event_id would collide across workers
     cdef EventResult_t event
     for event in call_component.call_from_block_model(infile,
                                                       component,
@@ -101,9 +101,9 @@ def process_job(msg_queue, args):
         msg = msg_queue.recv()
         if msg == 0:
             break
-        res = msg
+        ord_tag, res = msg
         event_id += 1
-        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+        potential_events, event_id = component_job(infile, res, regions, event_id, ord_tag, clip_length,
                                                    insert_median,
                                                    insert_stdev,
                                                    insert_ppf,
@@ -116,9 +116,7 @@ def process_job(msg_queue, args):
                                                    max_single_size=max_single_size, sites_index=sites_index,
                                                    paired_end=paired_end, length_extend=length_extend, divergence=divergence,
                                                    hp_tag=hp_tag)
-        if potential_events:
-            for res in potential_events:
-                pickle.dump(res, completed_file)
+        pickle.dump((ord_tag, potential_events), completed_file)
     completed_file.close()
 
 
@@ -216,10 +214,22 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     min_size = args["min_size"]
     length_extend = args["length_extend"]
     divergence = args["divergence"]
+    if divergence <= 0:
+        logging.warning(f"Non-positive sequence divergence ({divergence}), using default 0.02")
+        divergence = 0.02
+        args["divergence"] = divergence
     max_divergence = divergence * 13
 
     read_buffer = genome_scanner.read_buffer
     sites_info = sites_utils.vcf_reader(args["sites"], infile, args["parse_probs"], sample_name, args["ignore_sample_sites"] == "True", args["sites_prob"], args["sites_pass_only"] == "True")
+
+    # Empirical artifact rates for RNA-seq INV gating (PE + transcripts mode only)
+    artifact_stats = None
+    if args.get("rna_inv_filter", "True") == "True":
+        if paired_end and transcript_blocks_file and ibam is not None:
+            artifact_stats = coverage.measure_artifact_rates(args['ibam'])
+        elif transcript_blocks_file:
+            logging.info("rna-inv-filter requires paired-end reads and an indexed --ibam BAM; skipping")
 
     cdef Py_SimpleGraph G
     G, node_to_name, bad_clip_counter, sites_adder, n_aligned_bases, hp_tag_found = graph.construct_graph(genome_scanner,
@@ -251,7 +261,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                             max_search_depth=args['search_depth'],
                                             max_divergence=max_divergence,
                                             no_phase=args['no_phase'],
-                                            transcript_gaps_file=transcript_gaps_file
+                                            transcript_gaps_file=transcript_gaps_file,
+                                            artifact_stats=artifact_stats,
+                                            transcript_blocks_file=transcript_blocks_file
     )
 
     sites_index = None
@@ -333,6 +345,8 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     num_jobs = 0
     completed = 0
     components_seen = 0
+    tagged_results = []  # (submission ordinal, [EventResult]); sorted by ordinal at gather time
+    submit_ord = 0       # so output is identical for any --procs
     if procs == 1 and low_mem:
         completed_file = open(f"{tdir}/job_0.done.pkl", "wb")
     else:
@@ -368,7 +382,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                         continue
                     event_id += 1
                     if procs == 1:
-                        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                        potential_events, event_id = component_job(infile, res, regions, event_id, submit_ord, clip_length,
                                                                    insert_median,
                                                                    insert_stdev,
                                                                    insert_ppf,
@@ -385,16 +399,15 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                                                    length_extend=length_extend,
                                                                    divergence=divergence,
                                                                    hp_tag=hp_tag_found)
-                        if potential_events:
-                            if not low_mem:
-                                block_edge_events += potential_events
-                            else:
-                                for res in potential_events:
-                                    pickle.dump(res, completed_file)
+                        if low_mem:
+                            pickle.dump((submit_ord, potential_events), completed_file)
+                        tagged_results.append((submit_ord, potential_events))
+                        submit_ord += 1
                     else:
                         j_submitted, w_idx = heapq.heappop(minhq)
                         heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
-                        msg_queues[w_idx][1].send(res)
+                        msg_queues[w_idx][1].send((submit_ord, res))
+                        submit_ord += 1
             else:
                 # most partitions processed here, GraphComponent returned, or None
                 res = graph.proc_component(node_to_name, component, read_buffer, infile, G, lower_bound_support,
@@ -403,7 +416,7 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                     event_id += 1
                     # Res is a GraphComponent
                     if procs == 1:
-                        potential_events, event_id = component_job(infile, res, regions, event_id, clip_length,
+                        potential_events, event_id = component_job(infile, res, regions, event_id, submit_ord, clip_length,
                                                                    insert_median,
                                                                    insert_stdev,
                                                                    insert_ppf,
@@ -418,16 +431,15 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
                                                                    paired_end=paired_end,
                                                                    length_extend=length_extend, divergence=divergence,
                                                                    hp_tag=hp_tag_found)
-                        if potential_events:
-                            if not low_mem:
-                                block_edge_events += potential_events
-                            else:
-                                for res in potential_events:
-                                    pickle.dump(res, completed_file)
+                        if low_mem:
+                            pickle.dump((submit_ord, potential_events), completed_file)
+                        tagged_results.append((submit_ord, potential_events))
+                        submit_ord += 1
                     else:
                         j_submitted, w_idx = heapq.heappop(minhq)
                         heapq.heappush(minhq, (j_submitted + len(res.n2n), w_idx))
-                        msg_queues[w_idx][1].send(res)
+                        msg_queues[w_idx][1].send((submit_ord, res))
+                        submit_ord += 1
 
     if completed_file is not None:
         completed_file.close()
@@ -437,33 +449,39 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     if low_mem:
         os.remove(component_path)
     gc.collect()
-    # #
+    # Gather results and restore single-dispatch event order. Every dispatched
+    # job carries a submission ordinal; workers finish in any order, so sorting
+    # by ordinal makes the flattened stream --procs-independent. merge_events
+    # tie-breaks on list order, so this also makes downstream output identical.
     if procs > 1 or low_mem:
         for w in msg_queues:
             w[1].send(0)
         for n in consumers:
             n.join()
-        event_id = 0
-        last_seen_grp_id = None
-        new_grp = None
+        tagged_results = []
         for p in range(procs):
             jf = open(f"{tdir}/job_{p}.done.pkl", "rb")
             while 1:
                 try:
-                    res = pickle.load(jf)
-                    event_id += 1
-                    current_id = res.event_id
-                    current_grp = res.grp_id
-                    if last_seen_grp_id != current_grp:
-                        last_seen_grp_id = current_grp
-                        new_grp = event_id  # replace old grp id with new_grp (id of first in group)
-                    res.event_id = event_id
-                    res.grp_id = new_grp
-                    block_edge_events.append(res)
+                    tagged_results.append(pickle.load(jf))
                 except EOFError:
                     break
-            last_grp_id = event_id
             os.remove(f"{tdir}/job_{p}.done.pkl")
+    tagged_results.sort(key=lambda x: x[0])
+    block_edge_events = []
+    event_id = 0
+    last_seen_grp_id = None
+    new_grp = None
+    for ord_tag, events in tagged_results:
+        for res in events:
+            event_id += 1
+            current_grp = res.grp_id
+            if last_seen_grp_id != current_grp:
+                last_seen_grp_id = current_grp
+                new_grp = event_id  # replace old grp id with new_grp (id of first in group)
+            res.event_id = event_id
+            res.grp_id = new_grp
+            block_edge_events.append(res)
     if len(block_edge_events) == 0:
         return [], None
 
@@ -475,10 +493,13 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     if args["remap"] == "True" and args["contigs"] == "True":
         block_edge_events = re_map.remap_soft_clips(block_edge_events, ref_genome,
                                                     keep_unmapped=True if args["pl"] == "pe" else False,
-                                                    min_support=min_support)
+                                                    min_support=min_support,
+                                                    min_size=args["min_size"])
         logging.info("Re-alignment of soft-clips done. N candidates: {}".format(len(block_edge_events)))
-    
-    block_edge_events = filter_transcript_gaps(block_edge_events, transcript_gaps_file)
+    # Conservative pass before merging: only near-exact intron boundary matches. A second
+    # pass after the RNA-seq support recount (with final split-read counts) catches
+    # discordant-pair pseudo-events sitting further from the annotated splice sites
+    block_edge_events = filter_transcript_gaps(block_edge_events, transcript_gaps_file, tolerance=10)
 
     # GC info, repetitiveness
     consensus.contig_info(block_edge_events)
@@ -494,6 +515,16 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         merged = block_edge_events
     logging.info("Number of candidate SVs merged: {}".format(len(block_edge_events) - len(merged)))
     logging.info("Number of candidate SVs after merge: {}".format(len(merged)))
+
+    if transcript_blocks_file:
+        if ibam is not None:
+            merged = extra_metrics.recount_support_from_bam(merged, ibam, args["mq"], read_len, insert_median,
+                                                            insert_stdev, bool(paired_end), gaps_file=transcript_gaps_file)
+        else:
+            logging.info("Skipping RNA-seq BAM support recount: --ibam not supplied")
+
+    # Second transcript-gap pass with final support: split-read-backed events are exempt
+    merged = filter_transcript_gaps(merged, transcript_gaps_file, tolerance=50, exempt_supp=True)
 
     before = len(merged)
 
@@ -526,6 +557,19 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
 
     preliminaries = extra_metrics.find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call.compressability(preliminaries)
+
+    # Fragment genotyping by re-counting alt/ref fragments from the input BAM
+    # is the default for paired-end data. Long reads keep the legacy genotyper,
+    # which is more accurate (and faster) for LR data. Requires an indexed BAM;
+    # falls back to the default genotyping model otherwise (streamed input etc.)
+    if paired_end and ibam is not None and ibam.has_index():
+        max_dist = int(insert_median + (insert_stdev * 5))  # same definition as cluster.pyx
+        preliminaries = extra_metrics.genotype_counts_from_bam(
+            preliminaries, ibam, args["mq"], args["min_size"], max_dist, insert_median, insert_stdev,
+            args["clip_length"], bool(paired_end), int(args["procs"]), args["ibam"], ref_genome)
+    elif paired_end:
+        logging.info("Skipping fragment genotyping: --ibam is not indexed, using default genotyping")
+
     preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], True)
 
     preliminaries = post_call.get_ref_base(preliminaries, ref_genome, args["symbolic_sv_size"])
@@ -643,7 +687,7 @@ def cluster_reads(args):
     if len(df) > 0:
 
         df = df.sort_values(["chrA", "posA", "event_id"])
-        df["sample"] = [sample_name] * len(df)
+        df = df.assign(sample=sample_name)
         df.rename(columns={"contig": "contigA", "contig2": "contigB"}, inplace=True)
         if args["out_format"] == "csv":
             small_output_f = True
