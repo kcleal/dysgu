@@ -464,7 +464,7 @@ def _parse_vcf_columns(df, samples):
     gq_numeric = pd.to_numeric(df["GQ"], errors='coerce')
     df["GQ"] = gq_numeric.apply(lambda x: str(int(x)) if pd.notna(x) else ".")
     for k, dtype in col_map.values():
-        if k in df:
+        if k in df and k != "GQ":  # GQ is normalized above; on pandas 3 its dtype is str, not object
             if df[k].dtype != dtype:
                 if dtype == str:
                     if k == "GT":

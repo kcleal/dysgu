@@ -113,9 +113,9 @@ class TestConstruct(unittest.TestCase):
             tmp_path = tmp.name
         df2 = load_dysgu_vcf(tmp_path, drop_na_columns=False)
         os.unlink(tmp_path)
-        self.assertTrue(all(str(v) == "." or re.fullmatch(r"-?\d+", str(v))
-                            for v in df2["GQ"]),
-                        "GQ values became non-integer after round-trip")
+        bad = [str(v) for v in df2["GQ"]
+               if str(v) != "." and not re.fullmatch(r"-?\d+", str(v))]
+        self.assertEqual(bad, [], "GQ values became non-integer after round-trip")
 
     def test_hp_unphased_only(self):
         """When only unphased reads support an SV, HP must be '_N', never blank."""
