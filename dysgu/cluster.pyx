@@ -558,17 +558,20 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
     preliminaries = extra_metrics.find_repeat_expansions(preliminaries, insert_stdev)
     preliminaries = post_call.compressability(preliminaries)
 
-    # Fragment genotyping by re-counting alt/ref fragments from the input BAM
-    # is the default for paired-end data. Long reads keep the legacy genotyper,
-    # which is more accurate (and faster) for LR data. Requires an indexed BAM;
-    # falls back to the default genotyping model otherwise (streamed input etc.)
-    if paired_end and ibam is not None and ibam.has_index():
-        max_dist = int(insert_median + (insert_stdev * 5))  # same definition as cluster.pyx
+    # Fragment genotyping by re-counting alt/ref fragments from the input BAM.
+    # Default on for paired-end data and off for long reads (overridden using
+    # --fragment-gt). Requires an indexed input BAM (--ibam); falls back to the
+    # default genotyping model otherwise (streamed input etc.)
+    if args["fragment_gt"] == "True" and ibam is not None and ibam.has_index():
+        max_dist = int(insert_median + (insert_stdev * 5)) if paired_end else 0  # unused for single-end
         preliminaries = extra_metrics.genotype_counts_from_bam(
             preliminaries, ibam, args["mq"], args["min_size"], max_dist, insert_median, insert_stdev,
             args["clip_length"], bool(paired_end), int(args["procs"]), args["ibam"], ref_genome)
-    elif paired_end:
-        logging.info("Skipping fragment genotyping: --ibam is not indexed, using default genotyping")
+    elif args["fragment_gt"] == "True":
+        if ibam is None:
+            logging.info("Skipping fragment genotyping: --ibam not supplied, using default genotyping")
+        else:
+            logging.info("Skipping fragment genotyping: --ibam has no index, using default genotyping")
 
     preliminaries = post_call.get_gt_metric2(preliminaries, args["mode"], True)
 

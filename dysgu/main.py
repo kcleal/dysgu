@@ -47,7 +47,8 @@ defaults = {
             "sd": 0.8,
             "thresholds": "0.45,0.45,0.45,0.45,0.45",
             "divergence": "0.02",
-            "rna_inv_filter": "True"
+            "rna_inv_filter": "True",
+            "fragment_gt": "True"
             }
 
 
@@ -62,6 +63,7 @@ presets = {"nanopore-r9": {"mq": 1,
                         "sd": 0.6,
                         "divergence": "auto",
                         "compression": "wb3",
+                        "fragment_gt": "False",
                         },
             "nanopore-r10": {"mq": 1,
                         "min_support": "auto",
@@ -74,6 +76,7 @@ presets = {"nanopore-r9": {"mq": 1,
                         "sd": 0.35,
                         "thresholds": "0.35,0.35,0.35,0.35,0.35",
                         "compression": "wb3",
+                        "fragment_gt": "False",
                         },
            "pacbio-sequel2": {"mq": 1,
                       "min_support": "auto",
@@ -85,6 +88,7 @@ presets = {"nanopore-r9": {"mq": 1,
                       "trust_ins_len": "True",
                       "sd": 0.45,
                       "compression": "wb3",
+                      "fragment_gt": "False",
                       },
            "pacbio-revio": {"mq": 1,
                       "min_support": "auto",
@@ -97,6 +101,7 @@ presets = {"nanopore-r9": {"mq": 1,
                       "sd": 0.35,
                       "thresholds": "0.25,0.25,0.25,0.25,0.25",
                       "compression": "wb3",
+                      "fragment_gt": "False",
                       },
            "pe": {"mq": defaults["mq"],
                   "min_support": defaults["min_support"],
@@ -240,6 +245,10 @@ def cli():
                                        "drops same-exon inversions and probabilistically downsamples small same-transcript ones "
                                        "using empirically measured artifact rates",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option('--fragment-gt', help="Genotype by re-counting alt/ref fragments from the input BAM (requires an indexed "
+                                    "--ibam; falls back to the default genotyper otherwise). Default on for paired-end "
+                                    "data, off for long reads",
+              type=click.Choice(["True", "False"]), callback=add_option_set)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]",
               type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
@@ -408,6 +417,10 @@ def get_reads(ctx, **kwargs):
                                        "drops same-exon inversions and probabilistically downsamples small same-transcript ones "
                                        "using empirically measured artifact rates",
               default="True", type=click.Choice(["True", "False"]), show_default=True)
+@click.option('--fragment-gt', help="Genotype by re-counting alt/ref fragments from the input BAM (requires an indexed "
+                                    "--ibam; falls back to the default genotyper otherwise). Default on for paired-end "
+                                    "data, off for long reads",
+              type=click.Choice(["True", "False"]), callback=add_option_set)
 @click.option('--trust-ins-len', help=f"Trust insertion length from cigar, for high error rate reads use False  [default: {defaults['trust_ins_len']}]", type=str, callback=add_option_set)
 @click.option('--length-extend', help=f"Extend SV length if any nearby gaps found with length >= length-extend. Ignored for paired-end reads", type=int, default=15, show_default=True)
 @click.option('--divergence', help=f"Threshold used for ignoring divergent ends of alignments. Ignored for paired-end reads. Use 'auto' to try to infer for noisy reads [default: {defaults['divergence']}]", type=str, callback=add_option_set)

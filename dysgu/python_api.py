@@ -48,6 +48,7 @@ def dysgu_default_args():
                 'model': None,
                 'mq': 1,
                 'rna_inv_filter': 'True',
+                'fragment_gt': 'True',
                 'overwrite': True,
                 'paired': True,
                 'parse_probs': False,
@@ -112,7 +113,8 @@ def dysgu_preset_args(mode):
                         "trust_ins_len": "False",
                         "sd": 0.6,
                         "symbolic_sv_size": 50000,
-                        "divergence": "auto"
+                        "divergence": "auto",
+                        "fragment_gt": 'False',
                         },
                 "nanopore-r10": {"mq": 1,
                         "min_support": "auto",
@@ -128,7 +130,8 @@ def dysgu_preset_args(mode):
                                 'INV': 0.35,
                                 'DUP': 0.35,
                                 'TRA': 0.35},
-                        "symbolic_sv_size": 50000
+                        "symbolic_sv_size": 50000,
+                        'fragment_gt': 'False',
                         },
                "pacbio-sequel2": {"mq": 1,
                       "min_support": "auto",
@@ -139,7 +142,8 @@ def dysgu_preset_args(mode):
                       "clip_length": -1,
                       "trust_ins_len": "True",
                       "sd": 0.45,
-                      "symbolic_sv_size": 50000
+                      "symbolic_sv_size": 50000,
+                      'fragment_gt': 'False',
                       },
                "pacbio-revio": {"mq": 1,
                       "min_support": "auto",
@@ -155,7 +159,8 @@ def dysgu_preset_args(mode):
                                 'INV': 0.25,
                                 'DUP': 0.25,
                                 'TRA': 0.25},
-                      "symbolic_sv_size": 50000
+                      "symbolic_sv_size": 50000,
+                      'fragment_gt': 'False',
                       },
            }
     if mode in presets:
