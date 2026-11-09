@@ -56,8 +56,8 @@ cdef extern from "graph_objects.hpp" nogil:
     cdef void graph_node_2_vec(uint64_t, cpp_vector[int]) nogil
 
 
-basemap = np.array([ '.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', 'N', 'N', 'N'])
-lowermap = np.array([ '.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', 'n', 'n', 'n'])
+basemap = ('.', 'A', 'C', '.', 'G', '.', '.', '.', 'T', '.', '.', '.', '.', '.', 'N', 'N', 'N')
+lowermap = ('.', 'a', 'c', '.', 'g', '.', '.', '.', 't', '.', '.', '.', '.', '.', 'n', 'n', 'n')
 
 
 cdef trim_cigar(uint32_t cigar_l, uint32_t *cigar_p, int pos, int approx_pos):
@@ -146,7 +146,7 @@ cdef void add_to_graph(DiGraph& G, AlignedSegment r, cpp_vector[int]& nweight, T
     cdef cpp_vector[int] vv = [0, 0, 0, 0]
 
     cdef int r_end = r.reference_end
-    if r.reference_end + 100 < approx_position or approx_position < current_pos - 100:
+    if r_end + 100 < approx_position or approx_position < current_pos - 100:
         return  # shouldn't happen
 
     cdef uint32_t cigar_value

@@ -24,7 +24,7 @@ def get_clipped_seq(cont, position, cont_ref_start, cont_ref_end):
                 left_clip = cont[:start_i]
                 return left_clip, 0, len(cont) - end_i
         else:
-            if len(cont) - end_i > 8:
+            if len(cont) - end_i - 1 > 8:
                 right_clip = cont[end_i + 1:]
                 return right_clip, 1, start_i
     return None
@@ -148,6 +148,7 @@ def switch_sides(e):
 
 ADJACENT_MAX_EDIT = 0.15
 UNGAPPED_MAX_DIV = 0.22
+N_RUN_50 = "N" * 50
 
 
 def ungapped_adjacent_divergence(clip_side, clip_seq, clip_length, ref_seq_big, break_position, gstart):
@@ -158,6 +159,7 @@ def ungapped_adjacent_divergence(clip_side, clip_seq, clip_length, ref_seq_big, 
     # each test fires where the other cannot.
     best = 1.0
     off = break_position - gstart
+    clip_up = clip_seq.upper()
     for shift in range(-10, 11):
         s = off - clip_length + shift if clip_side == 0 else off + shift
         if s < 0:
@@ -165,7 +167,7 @@ def ungapped_adjacent_divergence(clip_side, clip_seq, clip_length, ref_seq_big, 
         seg = ref_seq_big[s:s + clip_length]
         if len(seg) < clip_length:
             continue
-        mm = sum(1 for a, b in zip(clip_seq.upper(), seg.upper()) if a != b)
+        mm = sum(1 for a, b in zip(clip_up, seg.upper()) if a != b)
         d = mm / len(clip_seq)
         if d < best:
             best = d
@@ -299,7 +301,8 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                 else:
                     left_ins_seq = clip_seq
 
-                e.ref_seq = ref_seq_clipped[500 - 1]
+                # base before the break; index the full window so a clamped start near a chromosome end is handled
+                e.ref_seq = ref_seq_big[max(0, break_position - gstart - 1)]
 
             else:
                 ref_gap = pos - q_end
@@ -338,7 +341,7 @@ def process_contig(e, cont, break_position, clip_res, gstart, ref_seq_big, idx):
                     var_seq = clip_seq[:svlen]
                 else:
                     right_ins_seq = clip_seq
-                e.ref_seq = ref_seq_clipped[500 - 1]
+                e.ref_seq = ref_seq_big[max(0, break_position - gstart - 1)]
 
             else:
                 ref_gap = q_begin - pos
@@ -626,17 +629,7 @@ def drop_svs_near_reference_gaps(events, paired_end, ref_genome, drop_gaps):
             # Only substantial N runs count as gaps: small ambiguity patches (a few
             # dozen bp of Ns inside repeats) are not assembly gaps and real events can
             # legitimately break right next to them
-            run = 0
-            is_gap = False
-            for base in ref_seq_big:
-                if base == "N":
-                    run += 1
-                    if run >= 50:
-                        is_gap = True
-                        break
-                else:
-                    run = 0
-            if is_gap:
+            if N_RUN_50 in ref_seq_big:
                 bad_i |= s_gi
 
         except IndexError:

@@ -225,7 +225,7 @@ def cli():
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
+@click.option('--clip-length', help=f"Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
 @click.option('--max-cov', help=f"Genomic regions with coverage > max-cov discarded."
                                 f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Set to -1 to ignore",
               type=str, callback=add_option_set)
@@ -396,7 +396,7 @@ def get_reads(ctx, **kwargs):
               default="pe", type=click.Choice(["pe", "pacbio-sequel2", "pacbio-revio", "nanopore-r9", "nanopore-r10", "pacbio", "nanopore"]), show_default=True)
 @click.option('--pl', help=f"Type of input reads  [default: {defaults['pl']}]",
               type=click.Choice(["pe", "pacbio", "nanopore"]), callback=add_option_set)
-@click.option('--clip-length', help="Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
+@click.option('--clip-length', help=f"Minimum soft-clip length, >= threshold are kept. Set to -1 to ignore [default: {defaults['clip_length']}]", type=int, callback=add_option_set)
 @click.option('--max-cov', help=f"Regions with > max-cov that do no overlap 'include' are discarded."
                                 f" Use 'auto' to estimate a value from the alignment index file [default: {defaults['max_cov']}]. Regions with > max-cov that do no overlap 'include' are discarded. Set to -1 to ignore.",
               type=str, callback=add_option_set)
@@ -473,7 +473,7 @@ def call_events(ctx, **kwargs):
             if os.path.exists(pth):
                 kwargs["sv_aligns"] = pth
             else:
-                raise ValueError("Could not find '{}'".format(kwargs["sv_aligns"]))
+                raise ValueError("Could not find '{}'".format(pth))
     if kwargs["diploid"] == "False" and kwargs["contigs"] == "False":
         raise ValueError("Only dip=False or contigs=False are supported, not both")
     if kwargs["sv_aligns"].endswith(".cram"):
@@ -617,10 +617,10 @@ def test_command(ctx, **kwargs):
     for t in tests:
         c = " ".join(t)
         process = Popen(shlex.split(c), stdout=PIPE, stderr=PIPE, text=True)
+        _, err = process.communicate()
         if kwargs["verbose"]:
-            for line in process.stderr:
+            for line in err.splitlines():
                 click.echo(line.strip(), err=True)
-        process.wait()
         if process.returncode != 0:
             logging.warning(f"WARNING: Command failed with return code {process.returncode}\n{c}")
         else:

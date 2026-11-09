@@ -65,7 +65,8 @@ def vcf_reader(pth, infile, parse_probs, sample_name, ignore_sample, default_pro
             continue
         if ignore_sample and sample_name in r.samples and "GT" in r.samples[sample_name]:
             this_gt = r.samples[sample_name]['GT']
-            if not (this_gt == (0, 0) or this_gt == "0/0" or this_gt == "0" or this_gt == "." or this_gt == "./." or this_gt == "0|0"):
+            # pysam returns GT as a tuple, e.g. (0, 0), (None, None) for ./., (0,) for haploid 0
+            if this_gt is not None and any(a not in (0, None) for a in this_gt):
                 continue
         if "CHROM2" in r.info:
             chrom2_info = r.info["CHROM2"]

@@ -110,6 +110,7 @@ def get_include_reads(include_regions, bam):
     if not include_regions:
         for r in bam:
             yield r
+        return
     with open(include_regions, "r") as f:
         regions = [i.strip().split("\t")[:3] for i in f if i[0] != "#"]
     for c, s, e in regions:

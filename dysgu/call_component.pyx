@@ -17,10 +17,16 @@ from dysgu.sv_category cimport AlignmentItem, classify_d
 from dysgu.extra_metrics cimport soft_clip_qual_corr
 from dysgu.extra_metrics import filter_poorly_aligned_ends, gap_size_upper_bound
 from pysam.libcalignedsegment cimport AlignedSegment
-from pysam.libchtslib cimport bam_get_qname, bam_get_cigar
+from pysam.libchtslib cimport bam_get_qname, bam_get_cigar, bam_aux_get, bam_aux2i
 from cython.operator cimport dereference
-from libc.stdint cimport uint32_t
+from libc.stdint cimport uint32_t, uint8_t
 from libc.stdint cimport uint64_t
+
+
+cdef inline bint aux_is_int(const uint8_t* p):
+    # aux type codes for integer tags: c C s S i I
+    return p[0] == 99 or p[0] == 67 or p[0] == 115 or p[0] == 83 or p[0] == 105 or p[0] == 73
+
 from scipy.cluster.hierarchy import linkage
 from scipy.cluster.hierarchy import fcluster
 import warnings
@@ -209,13 +215,18 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
     cdef bint is_paired, has_nm, has_as, has_sa, has_xa
     cdef float nm
     cdef AlignedSegment a
+    cdef const uint8_t* aux_p
+    cdef long tlen
+    cdef int n_reads1 = len(reads1)
     for index, a in enumerate(itertools.chain(reads1, reads2, [i.read_a for i in generic_ins])):
-        seen.add(a.qname)
-        flag = a.flag
+        qn = a.qname
+        seen.add(qn)
+        flag = a._delegate.core.flag
         is_paired = flag & 1
         if flag & 2:
             er.NP += 1
-        if is_paired and a.tlen and abs(a.tlen) < insert_ppf:
+        tlen = a._delegate.core.isize
+        if is_paired and tlen and abs(tlen) < insert_ppf:
             er.n_small_tlen += 1
         if paired_end_reads and flag & 8:
             er.n_unmapped_mates += 1
@@ -239,15 +250,17 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
-        has_nm = a.has_tag("NM")
+        aux_p = bam_aux_get(a._delegate, b"NM")
+        has_nm = aux_p != NULL
         if has_nm:
-            nm = float(a.get_tag("NM"))
-        has_as = a.has_tag("AS")
+            nm = <float>bam_aux2i(aux_p) if aux_is_int(aux_p) else float(a.get_tag("NM"))
+        aux_p = bam_aux_get(a._delegate, b"AS")
+        has_as = aux_p != NULL
         if has_as:
-            this_as = a.get_tag("AS")
+            this_as = <int>bam_aux2i(aux_p) if aux_is_int(aux_p) else a.get_tag("AS")
         if flag & 2304:  # Supplementary (and not primary if -M if flagged using bwa)
             er.supp += 1
-            MAPQsupp += a.mapq
+            MAPQsupp += a._delegate.core.qual
             if has_nm and a_bases:
                 NMsupp += nm / a_bases
                 NMbase += (nm - large_gaps) / a_bases
@@ -255,12 +268,12 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
                 maxASsupp = this_as
         else:  # Primary reads
             total_pri += 1
-            MAPQpri += a.mapq
+            MAPQpri += a._delegate.core.qual
             if paired_end_reads:
-                if index >= len(reads1) and a.qname in paired_end:
+                if index >= n_reads1 and qn in paired_end:
                     er.pe += 1
                 else:
-                    paired_end.add(a.qname)
+                    paired_end.add(qn)
             if has_nm and a_bases:
                 NMpri += nm / a_bases
                 NMbase += (nm - large_gaps) / a_bases
@@ -280,8 +293,9 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
     for sp in spanning:
         a = sp.align
-        seen.add(a.qname)
-        flag = a.flag
+        qn = a.qname
+        seen.add(qn)
+        flag = a._delegate.core.flag
         is_paired = flag & 1
         if sp.cigar_item.op == expect_op:
             n_span_support += 1
@@ -306,27 +320,29 @@ cdef count_attributes2(reads1, reads2, spanning, float insert_ppf, generic_ins,
 
         if a_bases > 0:
             n_gaps += n_small_gaps / a_bases
-        has_nm = a.has_tag("NM")
+        aux_p = bam_aux_get(a._delegate, b"NM")
+        has_nm = aux_p != NULL
         if has_nm:
-            nm = float(a.get_tag("NM"))
-        has_as = a.has_tag("AS")
+            nm = <float>bam_aux2i(aux_p) if aux_is_int(aux_p) else float(a.get_tag("NM"))
+        aux_p = bam_aux_get(a._delegate, b"AS")
+        has_as = aux_p != NULL
         if has_as:
-            this_as = a.get_tag("AS")
+            this_as = <int>bam_aux2i(aux_p) if aux_is_int(aux_p) else a.get_tag("AS")
         if flag & 2304:  # Supplementary
-            MAPQsupp += a.mapq
+            MAPQsupp += a._delegate.core.qual
             if has_nm and a_bases:
                 NMsupp += nm / a_bases
                 NMbase += (nm - large_gaps) / a_bases
             if has_as and this_as > maxASsupp:
                 maxASsupp = this_as
         else:  # Primary reads
-            MAPQpri += a.mapq
+            MAPQpri += a._delegate.core.qual
             total_pri += 1
             if paired_end_reads:
-                if a.qname in paired_end:  # If two primary reads from same pair
+                if qn in paired_end:  # If two primary reads from same pair
                     er.pe += 1
                 else:
-                    paired_end.add(a.qname)
+                    paired_end.add(qn)
             if has_nm and a_bases:
                 NMpri += nm / a_bases
                 NMbase += (nm - large_gaps) / a_bases
@@ -503,15 +519,17 @@ cdef AlignmentItem make_sv_alignment_item(a, b):
     a_start, a_end = a.pos, a.reference_end
     b_start, b_end = b.pos, b.reference_end
     read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
+    cdef int aflag = a.flag
+    cdef int bflag = b.flag
     cdef AlignmentItem v_item = AlignmentItem(a_chrom, b_chrom,
-                                              int(not a.flag & 2304),  # is primary
-                                              int(not b.flag & 2304),
-                                              1 if a.flag & 64 else 2,
-                                              1 if b.flag & 64 else 2,
+                                              int(not aflag & 2304),  # is primary
+                                              int(not bflag & 2304),
+                                              1 if aflag & 64 else 2,
+                                              1 if bflag & 64 else 2,
                                               a_start, a_end,
                                               b_start, b_end,
-                                              3 if a.flag & 16 == 0 else 5,
-                                              3 if b.flag & 16 == 0 else 5,
+                                              3 if aflag & 16 == 0 else 5,
+                                              3 if bflag & 16 == 0 else 5,
                                               left_clip_a, right_clip_a,
                                               left_clip_b, right_clip_b,
                                               a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,
@@ -533,8 +551,11 @@ cdef AlignmentItem make_sv_alignment_item(a, b):
 
 
 cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
-    if aln.flag & 2304:  # skip supplementary
+    cdef int aflag = aln.flag
+    if aflag & 2304:  # skip supplementary
         return None
+    cdef int apos = aln.pos
+    cdef int aref_end = aln.reference_end
     cdef AlignmentItem v_item = make_sv_alignment_item(aln, aln)
     v_item.read_b = None
     v_item.read_overlaps_mate = 0
@@ -542,38 +563,38 @@ cdef make_generic_insertion_item(aln, int insert_size, int insert_std):
     cdef int rand_insert_pos = 0
     cdef uint64_t rseed
     if v_item.left_clipA:  # use clip to guess break point
-        v_item.breakA = aln.pos
-        v_item.breakB = aln.pos
+        v_item.breakA = apos
+        v_item.breakB = apos
         v_item.breakA_precise = 1
         v_item.breakB_precise = 1
         v_item.join_type = "5to3"
     elif v_item.right_clipA:
-        v_item.breakA = aln.reference_end
-        v_item.breakB = aln.reference_end
+        v_item.breakA = aref_end
+        v_item.breakB = aref_end
         v_item.breakA_precise = 1
         v_item.breakB_precise = 1
         v_item.join_type = "3to5"
     else:
-        if aln.flag & 1 and aln.flag & 2: # paired and normal primary pairing
-            if aln.flag & 16:  # guess left
-                v_item.breakA = aln.pos
-                v_item.breakB = aln.pos
+        if aflag & 1 and aflag & 2: # paired and normal primary pairing
+            if aflag & 16:  # guess left
+                v_item.breakA = apos
+                v_item.breakB = apos
                 v_item.join_type = "5to3"
             else:
-                v_item.breakA = aln.reference_end
-                v_item.breakB = aln.reference_end
+                v_item.breakA = aref_end
+                v_item.breakB = aref_end
                 v_item.join_type = "3to5"
         else:
             return None
     v_item.svtype = "INS"
-    aln_span = aln.reference_end - aln.pos
+    aln_span = aref_end - apos
     v_item.size_inferred = 1
     cdef int left_clip, right_clip
     if insert_std > 0:
         # Draw the insert-size jitter deterministically per read. A global RNG
         # here made svlen estimates depend on how many reads were processed
         # before this one, so --procs 1 and --procs 4 produced different output.
-        rseed = <uint64_t>zlib.crc32(aln.qname.encode(), aln.pos & 0xffffffff) ^ <uint64_t>aln.flag
+        rseed = <uint64_t>zlib.crc32(aln.qname.encode(), apos & 0xffffffff) ^ <uint64_t>aflag
         rand_insert_pos = abs(insert_size - aln_span + int(random.Random(<long>(rseed & 0x7fffffffffffffff)).gauss(0, insert_std)))
     else:  # single read mode
         v_item.svtype = "BND"
@@ -900,9 +921,8 @@ cdef group_read_subsets(rds, insert_ppf, insert_size, insert_stdev):
     cdef int cigar_index
 
     for temp_name, alignments in tmp.items():
-        l_align = list(alignments)
-        if len(l_align) > 1:
-            item = guess_informative_pair(l_align)
+        if len(alignments) > 1:
+            item = guess_informative_pair(alignments)
             if item is not None:
                 if len(item) == 2:
                     a, b = item
@@ -1359,7 +1379,7 @@ cdef void set_ins_seq(EventResult_t er):
                             break
                     start2_i = end2_i + 1 - svlen
                     if start2_i >= 0:
-                        seq = cont2[start2_i: end2_i]
+                        seq = cont2[start2_i: end2_i + 1]
                         er.variant_seq = seq
                         done = True
                     # try and use the left contig instead
@@ -1371,14 +1391,14 @@ cdef void set_ins_seq(EventResult_t er):
                             if start_i == lc:
                                 break
                         end_i = start_i + svlen
-                        if end_i < (lc - start_i):
+                        if end_i <= lc:
                             seq = cont[start_i: end_i]
                             er.variant_seq = seq
                         else:
                             if start_i > 20:
                                 er.left_ins_seq = cont[:start_i]
                             if lc2 - end2_i > 20:
-                                er.right_ins_seq = cont2[-end2_i:]
+                                er.right_ins_seq = cont2[end2_i + 1:]
                 # else:
                 #     happens rarely
 
@@ -1461,8 +1481,8 @@ cdef void make_call(informative, breakA_precise, breakB_precise, svtype, jointyp
             main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, limit, median_A)
             main_B_break, cipos95B, preciseB = break_ops(positionsB, breakB_precise, -limit, median_B)
         else:
-            main_B_break, cipos95B, preciseA = break_ops(positionsB, breakB_precise, limit, median_B)
-            main_A_break, cipos95A, preciseB = break_ops(positionsA, breakA_precise, -limit, median_A)
+            main_B_break, cipos95B, preciseB = break_ops(positionsB, breakB_precise, limit, median_B)
+            main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, -limit, median_A)
     elif svtype == "DUP":
         if median_A < median_B:
             main_A_break, cipos95A, preciseA = break_ops(positionsA, breakA_precise, -limit, median_A)
@@ -1760,14 +1780,16 @@ cdef bint one_sided_read_consistent(AlignedSegment r, int tid, int pos, int wind
     # An unpaired read supports a called break if its alignment is near the
     # break and it has a clip at the break-consistent end
     cdef int clip_left = 0, clip_right = 0
-    if r.rname != tid:
+    if r._delegate.core.tid != tid:
         return False
-    if abs(r.pos - pos) > window and abs(r.reference_end - pos) > window:
+    cdef int rpos = r._delegate.core.pos
+    cdef int ref_end = r.reference_end
+    if abs(rpos - pos) > window and abs(ref_end - pos) > window:
         return False
     clip_sizes_hard(r, &clip_left, &clip_right)
-    if r.reference_end <= pos:
+    if ref_end <= pos:
         return clip_right > 0
-    if r.pos >= pos:
+    if rpos >= pos:
         return clip_left > 0
     return clip_left > 0 or clip_right > 0  # alignment spans the break
 
@@ -1836,16 +1858,18 @@ cdef call_from_reads(u_reads_info, v_reads_info, int insert_size, int insert_std
         a_start, a_end = a.pos, a.reference_end
         b_start, b_end = b.pos, b.reference_end
         read_overlaps_mate = same_read_overlaps_mate(a_chrom, b_chrom, a_start, a_end, b_start, b_end, a, b)
-        v_item = AlignmentItem(a.rname,
-                               b.rname,
-                               int(not a.flag & 2304),  # Is primary
-                               int(not b.flag & 2304),
-                               1 if a.flag & 64 else 2,
-                               1 if b.flag & 64 else 2,
-                               a.pos, a.reference_end,
-                               b.pos, b.reference_end,
-                               3 if a.flag & 16 == 0 else 5,
-                               3 if b.flag & 16 == 0 else 5,
+        aflag = a.flag
+        bflag = b.flag
+        v_item = AlignmentItem(a_chrom,
+                               b_chrom,
+                               int(not aflag & 2304),  # Is primary
+                               int(not bflag & 2304),
+                               1 if aflag & 64 else 2,
+                               1 if bflag & 64 else 2,
+                               a_start, a_end,
+                               b_start, b_end,
+                               3 if aflag & 16 == 0 else 5,
+                               3 if bflag & 16 == 0 else 5,
                                left_clip_a, right_clip_a,
                                left_clip_b, right_clip_b,
                                a_qstart, a_qend, b_qstart, b_qend, a_len, b_len,

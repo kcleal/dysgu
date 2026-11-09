@@ -300,7 +300,7 @@ def ref_repetitiveness(events, ref_genome):
                 logging.warning(
                     f"Error fetching reference chromosome: chrA={e.chrA}, posA={e.posA}, chrB={e.chrB}, posB={e.posB}. Error: {str(errors)}"
                 )
-                e.ref_seq = 0
+                e.ref_rep = 0
     return events
 
 
@@ -396,8 +396,7 @@ def get_ref_base(events, ref_genome, symbolic_sv_size):
 
 
 def nCk(n,k):
-    f = math.factorial
-    return f(n) // f(k) // f(n-k)
+    return math.comb(n, k)
 
 
 def binom_prob(n, k, p):
@@ -968,7 +967,8 @@ def update_prob_at_sites(df, events, thresholds, parse_probs, default_prob):
     PASS = ['lowProb'] * len(df)
     for idx, (svt, i) in enumerate(zip(df["svtype"], new_probs)):
         if (svt in thresholds and i >= thresholds[svt]) or (svt not in thresholds and i >= 0.5):
-            PASS.append('PASS')
+            PASS[idx] = 'PASS'
+    df["filter"] = PASS
     keep = [True] * len(df)
     for i, e in enumerate(events):
         if e.site_info:

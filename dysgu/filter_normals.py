@@ -71,7 +71,7 @@ def get_bam_paths(args):
 
     if args["random_bam_sample"] > 0:
         n = min(args["random_bam_sample"], len(pths))
-        pths = random.choices(pths, k=n)
+        pths = random.sample(pths, k=min(n, len(pths)))
         logging.info(f'Random bam sample: {pths}')
     return pths
 
@@ -201,6 +201,11 @@ def get_sv_type(r, chrom, chrom2):
     return svt
 
 
+def gt_carries_alt(gt):
+    # pysam GT is a tuple, e.g. (0, 0) for 0/0, (None, None) for ./., (0,) for haploid 0
+    return gt is not None and any(a not in (0, None) for a in gt)
+
+
 def get_record_af(r, sample, fallback=True):
     d = r.samples[sample]
     if "AF" in d and d["AF"] is not None:
@@ -209,7 +214,6 @@ def get_record_af(r, sample, fallback=True):
             if len(af) == 0:
                 return None
             af = af[0]
-            echo('got af', af)
         try:
             return float(af)
         except Exception:
@@ -243,10 +247,10 @@ def make_interval_tree(args, infile, sample_name, normal_vcfs):
                 in_sample = False
                 in_any = False
                 for k in list(r.samples):
-                    if k == sample_name and r.samples[k]['GT'] != (0,):
+                    if k == sample_name and gt_carries_alt(r.samples[k]['GT']):
                         in_sample = True
                         break
-                    elif r.samples[k]['GT'] != (0,):
+                    elif gt_carries_alt(r.samples[k]['GT']):
                         in_any = True
                 if in_sample or not in_any:
                     continue
@@ -648,10 +652,10 @@ def any_nearby_soft_clip(posA, posB, align, join_type, svtype, distance=30, clip
 
 
 def has_clip(r):
-    if r.cigartuples[0][0] == CSOFT_CLIP or r.cigartuples[-1][0] == CSOFT_CLIP or r.cigartuples[0][0] == CHARD_CLIP or \
-            r.cigartuples[-1][0] == CHARD_CLIP:
-        return True
-    return False
+    ct = r.cigartuples  # not cached by pysam, so read once
+    first = ct[0][0]
+    last = ct[-1][0]
+    return first == CSOFT_CLIP or last == CSOFT_CLIP or first == CHARD_CLIP or last == CHARD_CLIP
 
 
 def clip_align_matches(seq1, seq2, clip_side, paired_end, is_alt_seq=False):
@@ -771,9 +775,9 @@ def has_low_covering_support(covering_reads, n_mapq0):
         return True
 
 
-def too_many_clipped_reads(r, clipped_reads, support_fraction):
+def too_many_clipped_reads(r, clipped_reads, support_fraction, sample):
     sf = support_fraction / 2
-    d = r.samples[r.samples.keys()[0]]
+    d = r.samples[sample]
     # cov = r.samples[r.samples.keys()[0]]['COV']
     m = max(d['ICN'], d['OCN'])
     if m == 0:
@@ -814,7 +818,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
     next_end = posB + pad
     cached = []
     nearby_soft_clips = 0
-    has_contig = 'CONTIG' in r.info or 'CONTIG2' in r.info or r.alts[0][0] != "<"
+    has_contig = 'CONTIGA' in r.info or 'CONTIGB' in r.info or r.alts[0][0] != "<"
     is_paired_end = False
     good_step = good_step_translocation(r, sample)
     sum_edit_distance = 0
@@ -899,7 +903,7 @@ def process_translocation(r, chromB, posB, bams, infile, bam_is_paired_end, pad,
             elif any_nearby_soft_clip(posA, posB, aln, ct, "TRA", 30, clip_length=250):
                 return "lowSupport"
 
-    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
+    if not is_paired_end and too_many_clipped_reads(r, nearby_soft_clips, support_fraction, sample):
         return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
         return "normal"
@@ -980,7 +984,7 @@ def process_intra(r, posB, bams, infile, bam_is_paired_end, support_fraction, pa
         return "lowSupport"
     if not is_paired_end and has_low_WR_support(r, sample, support_fraction, n_overlpapping, n_mapq_0):
         return "lowSupport"
-    if svtype in "INVTRA" and not any_contigs and too_many_clipped_reads(r, nearby_soft_clips, support_fraction):
+    if svtype in "INVTRA" and not any_contigs and too_many_clipped_reads(r, nearby_soft_clips, support_fraction, sample):
         return "lowSupport"
     if cached and matching_soft_clips(r, cached, is_paired_end):
         return "normal"

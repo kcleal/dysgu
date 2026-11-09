@@ -546,8 +546,9 @@ def pipe1(args, infile, kind, regions, ibam, ref_genome, sample_name, bam_iter=N
         preliminaries = coverage.get_raw_coverage_information(merged, regions, coverage_analyser)
 
     if auto_support:
+        n_before_support = len(preliminaries)
         preliminaries = post_call.filter_auto_min_support(preliminaries)
-        logging.info("Number of candidate SVs dropped with support < min support: {}".format(before - len(merged)))
+        logging.info("Number of candidate SVs dropped with support < min support: {}".format(n_before_support - len(preliminaries)))
 
     preliminaries = post_call.get_badclip_metric(preliminaries, bad_clip_counter, infile, regions)
 

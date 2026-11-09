@@ -252,7 +252,7 @@ cdef bint bad_insertion_coverage(char *c_cigar, seq, bint is_query, float ins_ga
                 if op == b'D' and not is_query:
                     seq_index += num
             if op == b'M':
-                for i in range(seq_index, seq_index + num - 1):
+                for i in range(seq_index, seq_index + num):
                     if seq[i].islower():
                         matches += 1
                 seq_index += num
@@ -272,11 +272,11 @@ cdef bint bad_alignment(alignment, ei, ej, v, paired_end,
         return True
 
     qs = alignment.query_begin
-    qe = alignment.query_end
+    qe = alignment.query_end + 1  # SSW end is inclusive
     qlen = len(v[0])
     tlen = len(v[1])
     ts = alignment.target_begin
-    te = alignment.target_end_optimal
+    te = alignment.target_end_optimal + 1  # SSW end is inclusive
 
     q_right_clip = qlen - qe
     t_right_clip = tlen - te
@@ -815,7 +815,7 @@ def merge_events(potential, max_dist, tree, paired_end=False, try_rev=False, pic
                         if w0.posA == w0.posB < item.posB and abs(int(item.svlen) - int(w0.svlen)) < 20:
                             w0.posB = item.posB
                 if item.sqc != -1 and sqc == 1:
-                    w0.sqc = sqc
+                    w0.sqc = item.sqc
                     sqc = item.sqc
                 # Average weight these
                 wt = item.pe + item.supp + item.spanning

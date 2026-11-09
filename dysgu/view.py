@@ -215,7 +215,7 @@ def merge_across_samples(df, potential, merge_dist, tree, aggressive, samples, p
                 targets = set([])
                 passed = True
                 for item in f["partners"]:  # Only merge with one row per sample
-                    t_name = df.loc[item]["table_name"]
+                    t_name = df.at[item, "table_name"]
                     if t_name != current and t_name not in targets and len(targets) < len(samples):
                         targets.add(t_name)
 
@@ -1069,7 +1069,7 @@ def find_similar_candidates(current_cohort_file, variant_table, samp):
         candidates = [i for i in variant_table[key].search_values(r.pos, r.pos+1)]
         if len(candidates):
             # NMB is skipped for older versions of dysgu
-            numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB"}
+            numeric = {k: v if v is not None else 0 for k, v in r.samples[samp].items() if k != "GT" and k != "NMB" and k != "HP"}
             target_keys = numeric.keys()
             r_format_array = np.array(list(numeric.values())) + 1e-4
             candidates = get_cosine_similarity(r_format_array, candidates, samp, target_keys)

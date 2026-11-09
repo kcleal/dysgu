@@ -446,7 +446,7 @@ cdef void same_read(AlignmentItem v):
                 else:
                     v.breakB = v.endB
 
-                v.svtype = "INS"
+                v.svtype = "DUP"
                 # Check if gap on query is bigger than gap on reference
                 ref_gap = abs(v.breakA - v.breakB)
 

@@ -270,6 +270,7 @@ cdef class GenomeScanner:
         cdef uint32_t cigar_value
         cdef uint32_t cigar_l
         cdef uint32_t *cigar_p
+        cdef int flag, tid
 
         if not self.include_regions or not self.regions_only:
             # Some reads may have been staged from getting read_length (if file is streamed from stdin)
@@ -281,7 +282,7 @@ cdef class GenomeScanner:
                 for aln in self.input_bam:
                     cigar_l = aln._delegate.core.n_cigar
 
-                    if aln.flag & 1284 or aln.mapq < mq_thresh or cigar_l == 0:  # not primary, duplicate or unmapped?
+                    if aln._delegate.core.flag & 1284 or aln._delegate.core.qual < mq_thresh or cigar_l == 0:  # not primary, duplicate or unmapped?
                         continue
                     yield aln, tell
                     tell = 0 if self.no_tell else self.input_bam.tell()
@@ -297,24 +298,25 @@ cdef class GenomeScanner:
                 for aln in f_iter:
 
                     cigar_l = aln._delegate.core.n_cigar
-                    if cigar_l == 0 or aln.flag & 1284:
+                    flag = aln._delegate.core.flag
+                    if cigar_l == 0 or flag & 1284:
                         # tell = 0 if self.no_tell else self.input_bam.tell()
                         continue
-
-                    if aln.rname != self.current_tid:
+                    tid = aln._delegate.core.tid
+                    if tid != self.current_tid:
                         if self.current_tid != -1 and self.current_tid <= self.input_bam.nreferences:
                             out_path = "{}/{}.dysgu_chrom.bin".format(self.cov_track_path, self.input_bam.get_reference_name(self.current_tid)).encode("ascii")
                             self.cpp_cov_track.write_track(out_path)
-                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(aln.rname))
-                        self.current_tid = aln.rname
+                        chrom_length = self.input_bam.get_reference_length(self.input_bam.get_reference_name(tid))
+                        self.current_tid = tid
                         self.cpp_cov_track.set_cov_array(chrom_length)
                     # Add to coverage track here
                     index_start = 0
-                    pos = aln.pos
+                    pos = aln._delegate.core.pos
                     good_read = False
-                    if aln.flag & 2048:
+                    if flag & 2048:
                         good_read = True
-                    elif not aln.flag & 2:
+                    elif not flag & 2:
                         good_read = True
                     cigar_p = bam_get_cigar(aln._delegate)
                     for i in range(cigar_l):
@@ -333,7 +335,7 @@ cdef class GenomeScanner:
                             self.cpp_cov_track.add(pos + index_start, pos + index_start + length)
                             index_start += length
 
-                    if aln.mapq < mq_thresh or not good_read or not self.cpp_cov_track.cov_val_good(self.current_tid, aln.rname, pos):
+                    if aln._delegate.core.qual < mq_thresh or not good_read or not self.cpp_cov_track.cov_val_good(self.current_tid, tid, pos):
                         continue
                     yield aln, tell
                     tell = 0 if self.no_tell else self.input_bam.tell()
@@ -496,7 +498,7 @@ cdef class GenomeScanner:
             else:
                 if len(approx_read_length_l) < 200000:
                     flag = a.flag
-                    if a.seq is not None:
+                    if a._delegate.core.l_qseq > 0:  # same condition pysam uses for seq is None
                         rl = a.infer_read_length()
                         if rl:
                             approx_read_length_l.append(rl)

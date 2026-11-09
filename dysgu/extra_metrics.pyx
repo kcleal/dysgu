@@ -344,7 +344,7 @@ def recount_support_from_bam(events, bam, int mapq_threshold=0, int read_length=
         if have_gaps:
             chrom_b = references[tid]
         for aln in bam.fetch(references[tid], roi_start, roi_end):
-            if aln.is_unmapped or aln.is_duplicate:
+            if aln._delegate.core.flag & 1028:  # unmapped or duplicate
                 continue
             alignments_seen += 1
             if aln._delegate.core.tid != tid:

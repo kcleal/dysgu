@@ -167,7 +167,7 @@ def dysgu_preset_args(mode):
         for k, v in presets[mode].items():
             args[k] = v
     elif mode != "pe":
-        raise ValueError("mode must be either: pe | pacbio-sequel2 | nanopore-r9 | nanopore-r10")
+        raise ValueError("mode must be one of: pe | " + " | ".join(presets.keys()))
     return args
 
 
@@ -385,7 +385,8 @@ class DysguSV:
     def _fix_args(self, args):
         # covert some bool's to string format i.e. True to 'True'
         str_format = {'remap', 'drop_gaps', 'trust_ins_len', 'sites_pass_only', 'paired', 'contigs', 'diploid',
-                      'regions_only', 'parse_probs', 'all_sites', 'regions_mm_only', 'add_kind', 'verbosity', 'merge_within'}
+                      'regions_only', 'parse_probs', 'all_sites', 'regions_mm_only', 'add_kind', 'verbosity', 'merge_within',
+                      'fragment_gt', 'rna_inv_filter'}
         args["no_gt"] = args["add_gt"]
         return {k: v if k not in str_format else str(v) for k, v in args.items()}
 
@@ -476,7 +477,13 @@ class DysguSV:
             iterable = region
 
         regions = None
-        events, site_adder = pipe1(self.args, self.bam, self.kind, regions, self.args['ibam'],
+        ibam = self.args['ibam']
+        if isinstance(ibam, str):
+            ref_path = getattr(self.ref_genome, "filename", None)
+            if isinstance(ref_path, bytes):
+                ref_path = ref_path.decode()
+            ibam = pysam.AlignmentFile(ibam, reference_filename=ref_path)
+        events, site_adder = pipe1(self.args, self.bam, self.kind, regions, ibam,
                                                    self.ref_genome, self.sample_name, bam_iter=iterable)
         if len(events) == 0:
             return None
@@ -489,10 +496,11 @@ class DysguSV:
         df = self.apply_model(df)
         args = self.args
         if args["sites"]:
+            # site_info is excluded from df, so take site ids from events before rows are filtered
+            df["site_id"] = ["." if not e.site_info else e.site_info.id for e in events]
             df = post_call_metrics.update_prob_at_sites(df, events, args["thresholds"],
                                                         parse_probs=args["parse_probs"] == "True",
                                                         default_prob=args["sites_prob"])
-            df["site_id"] = ["." if not s else s.id for s in df["site_info"]]
             if args["all_sites"] == "True":
                 raise NotImplementedError("all-sites is not supported using the python-api currently")
 
